@@ -1,0 +1,36 @@
+{
+  "rules": {
+    "messages": {
+      ".read": true,
+      ".write": true
+    },
+    "reactions": {
+      ".read": true,
+      ".write": true
+    },
+    "chatMeta": {
+      ".read": true,
+      ".write": true
+    },
+    "status": {
+      ".read": true,
+      ".write": true
+    },
+    "users": {
+      ".read": true,
+      ".write": true
+    },
+    "pomodoro": {
+      ".read": true,
+      ".write": true
+    },
+    "attendance": {
+      ".read": true,
+      ".write": true
+    },
+    "config": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

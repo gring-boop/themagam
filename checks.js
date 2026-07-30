@@ -29,6 +29,40 @@ const WATCH=["container","app-head","head-tools","chat-sidebar","cards-area","si
 const miss=WATCH.filter(c=>!new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS));
 ok(miss.length===0, "CSS 규칙 없는 클래스: "+miss.join(", "));
 
+/* ---- 1.5 index.html 구조 검사 ----
+
+   [왜 넣었나] 설정 블록 하나를 지우면서 닫는 </div> 를 잘못 잘라, 설정
+   모달이 중간에서 끝나버렸습니다. 그러자 뒤따르던 패널과 "닫기" 버튼이
+   모달 밖으로 흘러나와 화면 절반을 덮었습니다. 게다가 같은 블록이
+   중복돼 id 가 둘이 되면서 선택 상자도 먹지 않았습니다.
+
+   눈으로는 잡기 어렵고 브라우저는 조용히 넘어가는 종류의 사고라,
+   기계가 세게 합니다. */
+{
+  const t = HTML.replace(/<!--[\s\S]*?-->/g, "");
+  const open  = (t.match(/<div\b/g)  || []).length;
+  const close = (t.match(/<\/div>/g) || []).length;
+  ok(open === close, `<div> 여닫이 개수가 맞다 (열림 ${open} / 닫힘 ${close})`);
+
+  const ids = t.match(/id="([^"]+)"/g).map(x => x.slice(4, -1));
+  const dup = [...new Set(ids.filter((v, i) => ids.indexOf(v) !== i))];
+  ok(dup.length === 0, "중복된 id 가 없다" + (dup.length ? " — " + dup.join(", ") : ""));
+
+  /* 설정 탭과 패널이 짝이 맞는가 */
+  const tabs   = (t.match(/data-tab="(\w+)"/g) || []).map(x => x.slice(10, -1));
+  const panels = (t.match(/id="panel-(\w+)"/g) || []).map(x => x.slice(10, -1));
+  tabs.forEach(k => ok(panels.includes(k), `설정 탭 ${k} 에 짝이 되는 패널이 있다`));
+
+  /* 모달의 닫기 버튼이 모달 안에 있는가 (밖으로 새면 화면을 덮습니다) */
+  ["settings-modal", "goals-modal", "record-modal", "manual-modal"].forEach(id => {
+    const i = t.indexOf(`id="${id}"`);
+    if (i < 0) return;
+    const seg = t.slice(i);
+    const end = seg.indexOf("\n</div>");
+    ok(end > 0 && /닫기/.test(seg.slice(0, end)), `${id} 의 닫기 버튼이 모달 안에 있다`);
+  });
+}
+
 /* ---- 2. 칸 배치 전수 검사 ---- */
 const ctx={window:{addEventListener(){}},document:{readyState:"complete",addEventListener(){},
   getElementById(){return null},querySelectorAll(){return []},querySelector(){return null},
@@ -239,6 +273,503 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   ok(/if \(st === "away"\) return;/.test(seg), "자리비움이면 세지 않는다");
   ok(seg.indexOf('st === "away"') < seg.indexOf("_getTodaySessionCount() + 1"),
      "세기 전에 걸러낸다");
+}
+
+/* TheMagam — 카드가 조작판인가 */
+{
+  const rt  = fs.readFileSync(DIR+"script_realtime.js","utf8");
+  const lay = fs.readFileSync(DIR+"script_layout.js","utf8");
+  const prof= fs.readFileSync(DIR+"script_profile.js","utf8");
+  const tl  = fs.readFileSync(DIR+"script_timelog.js","utf8");
+  const ui  = fs.readFileSync(DIR+"script_ui.js","utf8");
+
+  /* A1 프사 → 프로필 */
+  ok(/card-avatar-wrap\$\{isMine \? " is-clickable"/.test(rt), "내 프사만 누를 수 있다");
+  ok(/data-edit-profile="1"/.test(rt), "프사에 프로필 편집 표시가 붙는다");
+  ok(/\[data-edit-profile\]/.test(prof), "프사 클릭을 받는다");
+
+  /* A2 아래칸 → 목표·투두 */
+  ok(/window\.openGoals\?\.\(\)/.test(tl), "내 카드 아래칸은 목표·투두를 연다");
+  ok(/function openGoals/.test(prof) && /id="goals-modal"/.test(HTML), "목표·투두 팝업이 있다");
+  ok(/id="panel-goals"/.test(HTML) && /data-tab="goals"/.test(HTML), "설정에도 목표·투두 탭이 있다");
+  ok(/name === "goals"\)\s+mountGoalBlocks/.test(prof), "설정 탭을 열면 옮겨 넣는다");
+  /* 실제 덩어리는 하나뿐이어야 합니다 — 두 벌이면 저장이 엉킵니다 */
+  ok((HTML.match(/id="status-block"/g) || []).length === 1, "목표 덩어리는 하나뿐이다");
+  ok((HTML.match(/id="todo-block"/g)   || []).length === 1, "투두 덩어리는 하나뿐이다");
+  /* ★ 가장 위험한 부분 — 뿌리를 비울 때 이 둘이 함께 지워지면 안 됩니다 */
+  {
+    const i = lay.indexOf('attic.appendChild(el);');
+    const j = lay.indexOf('root.innerHTML = ""');
+    ok(/\["status-block", "todo-block"\]\.forEach/.test(lay),
+       "목표·투두를 보관함으로 피신시킨다");
+    ok(lay.indexOf('["status-block", "todo-block"].forEach') < j,
+       "피신이 뿌리 비우기보다 먼저다");
+    void i;
+  }
+
+  /* A3 상태표 → 고르기 */
+  ok(/data-pick-status="1"/.test(rt), "내 상태표만 누를 수 있다");
+  ok(/window\.openStatusPicker/.test(prof), "상태 고르기 판이 있다");
+  {
+    const i = prof.indexOf("const CHOICES = [");
+    const seg = prof.slice(i, i + 400);
+    const vals = (seg.match(/v: "(\w+)"/g) || []).map(x => x.slice(4, -1));
+    ok(vals.join(",") === "writing,focus,rest,away", "상태 네 가지가 맞다 ("+vals.join(",")+")");
+    ok(/🔥초집중🔥/.test(seg), "집중 이름이 초집중이다");
+  }
+  ok(/getElementById\("db-status"\)/.test(prof), "기존 저장 흐름을 그대로 탄다");
+  ok(!/🔥WORK🔥/.test(rt) && !/🔥WORK🔥/.test(HTML), "옛 이름이 남아 있지 않다");
+
+  /* B1 가로만 */
+  ok(/function currentOrientation\(\) \{ return "landscape"; \}/.test(ui),
+     "세로 보기를 없앴다");
+  ok(!/aria-label="보기"/.test(HTML), "설정에서 세로 선택지를 뺐다");
+  ok(/aria-label="좌우 뒤집기"/.test(HTML), "좌우 뒤집기는 남겼다");
+
+  /* B2 팝업 + 닫기 */
+  /* 치우기·팝업·되돌리기는 통째로 없앴습니다.
+     남아 있으면 같은 일을 하는 길이 둘이 되어 헷갈립니다. */
+  ok(!/data-popup=/.test(lay), "치운 창 팝업이 없다");
+  ok(!/id="panel-modal"/.test(HTML), "창 팝업 마크업이 없다");
+  ok(!/hidden-panels/.test(HTML), "치워둔 창 자리가 없다");
+  ok(!/function addPanelCloseButtons/.test(lay), "창마다 ✕ 가 없다");
+  ok(!/renderSlotPicker/.test(lay), "자리별 선택 목록이 없다");
+  ok(!/id="chat-collapse-btn"/.test(HTML), "채팅만 접는 버튼이 없다");
+  ok(!/data-restore=/.test(lay), "옛 되돌리기 방식이 남아 있지 않다");
+  /* 팝업 크기와 덜어낸 것들 */
+  ok(/#goals-modal \.modal-content\{ width: min\(416px/.test(CSS), "목표 팝업이 416px 다");
+  ok(/id="goals-title"/.test(HTML) && /goals-title">/.test(HTML), "목표 팝업 제목이 남아 있다");
+  {
+    /* 화면에서는 감추되 지우지는 않아야 합니다 —
+       지우면 낭독기가 팝업 이름을 못 읽고, 저장 흐름이 끊깁니다. */
+    const t = HTML.match(/<h2 class="([^"]*)" id="goals-title"/);
+    ok(t && /sr-only/.test(t[1]), "목표 팝업 제목이 화면에서 감춰져 있다");
+    ok(/<h4 class="personal-title">🎯 오늘 목표<\/h4>/.test(HTML), "소제목에서 '상태'를 뺐다");
+    ok(/<select id="db-status" class="w-full hidden"/.test(HTML), "상태 선택박스가 감춰져 있다");
+    ok(/id="db-status"/.test(HTML), "상태 선택박스를 지우지는 않았다 (저장 중계기)");
+    ok(/<div class="mini-row end hidden">/.test(HTML), "WORK 시작 버튼이 감춰져 있다");
+  }
+
+  /* 오른쪽 줄 접기 */
+  {
+    ok(/function isSideCollapsed/.test(lay), "접힘 상태를 기억한다");
+    ok(/window\.toggleSideCollapsed/.test(lay), "접기·펼치기 스위치가 있다");
+    ok(/id="side-toggle-btn"/.test(HTML), "머리말에 접기 버튼이 있다");
+    ok(/isSideCollapsed\(\)/.test(lay.slice(lay.indexOf("const sig = JSON.stringify"), lay.indexOf("const sig = JSON.stringify") + 200)),
+       "접으면 배치를 다시 짠다");
+    /* ★ 핵심 — 숨기는 게 아니라 아예 빼야 빈 공간이 안 생깁니다 */
+    ok(/node\.kids\.filter\(k => typeof k === "string" \|\| !hasSidePanels\(k, map\)\)/.test(lay),
+       "접힌 줄을 배치에서 아예 뺀다 (숨기기만 하면 빈 자리가 남음)");
+    ok(/function hasSidePanels/.test(lay), "어느 가지가 곁줄인지 판단한다");
+    /* 뒤집어도 같은 가지가 접혀야 합니다 */
+    {
+      const map = { s1: "prof", s2: "pomo", s3: "chat" };
+      const leaf = (n, o = []) => { if (typeof n === "string") { if (map[n]) o.push(map[n]); return o; }
+                                    n.kids.forEach(k => leaf(k, o)); return o; };
+      const hasSide = n => { const ids = leaf(n); return ids.length > 0 && ids.every(i => i !== "prof"); };
+      ok(hasSide({ kids: ["s2", "s3"] }) === true, "뽀모+채팅 가지는 곁줄이다");
+      ok(hasSide("s1") === false || hasSide({ kids: ["s1"] }) === false, "접속자 가지는 곁줄이 아니다");
+      ok(hasSide({ kids: ["s1", "s2"] }) === false, "접속자가 섞인 가지는 접지 않는다");
+    }
+  }
+
+  /* ② ③ 스위치만 남기기 */
+  ok(/window\.swapSideSlots/.test(lay), "② ③ 서로 바꾸기가 있다");
+  ok(/onclick="swapSideSlots\(\)"/.test(HTML), "설정에 바꾸기 버튼이 있다");
+  {
+    const i = lay.indexOf("window.swapSideSlots");
+    const seg = lay.slice(i, i + 400);
+    ok(!/s1/.test(seg), "접속자(①) 자리는 건드리지 않는다");
+  }
+  ok(!/— 비우기 —|비우기/.test(HTML.replace(/<!--[\s\S]*?-->/g, "")), "비우기 선택지가 없다");
+  /* 예전에 비워둔 채로 저장된 분도 창이 돌아와야 합니다 */
+  {
+    const n = ctx.window.LayoutSlots.normalizeSlotMap;
+    const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    const std = { s1: "prof", s2: "pomo", s3: "chat" };
+    const flip = { s1: "prof", s2: "chat", s3: "pomo" };
+    ok(eq(n(null, "landscape"), std), "저장값이 없으면 기본 배치");
+    ok(eq(n({ s1: null, s2: null, s3: null }, "landscape"), std), "비어 있던 저장값도 되살린다");
+    ok(eq(n({ s1: "prof", s2: "chat", s3: "pomo" }, "landscape"), flip), "채팅을 위로 둔 것은 지킨다");
+    ok(eq(n({ s1: "todo", s2: "stat" }, "landscape"), std), "옛 창 이름이 남아 있어도 되살린다");
+    ok(Object.values(n({}, "landscape")).every(Boolean), "빈 칸이 생기지 않는다");
+  }
+
+  /* 설정 — 뽀모도로 탭 */
+  ok(/🍅 뽀모도로<\/button>/.test(HTML), "타이머 탭 이름이 뽀모도로다");
+  ok(/id="set-pomo-part"/.test(HTML), "설정에 참여·알림 스위치가 있다");
+  {
+    /* 같은 스위치가 두 곳에 있으니 한 함수가 둘을 같이 칠해야 합니다 */
+    const i = ui.indexOf("function _renderParticipationButton");
+    const seg = ui.slice(i, i + 500);
+    ok(/pomo-opt-btn/.test(seg) && /set-pomo-part/.test(seg),
+       "두 곳의 스위치를 함께 갱신한다");
+  }
+
+  /* 업적이 정말로 사라졌는가 */
+  ok(!/trophyCount|crownCount|weeklyWeeks/.test(rt), "업적 계산이 남아 있지 않다");
+  ok(!/ach-test/.test(HTML), "업적 테스트 UI 가 없다");
+  ok(!/achievementOverrides/.test(rt), "업적 덮어쓰기가 없다");
+  ok(/const achChips = "";/.test(rt), "카드 배지 줄이 비었다");
+  ok(!/weekly-gold/.test(rt), "금빛 테두리를 쓰지 않는다");
+
+  /* 펫 — 그림 */
+  {
+    const Pet = require(DIR + "script_pet.js");
+    ok(Pet.SPECIES_IDS.length === 19, `19종이다 (${Pet.SPECIES_IDS.length})`);
+    /* 종류마다 그리는 함수가 실제로 있어야 합니다 —
+       없으면 조용히 고양이로 대체되어 "다 고양이"가 됩니다. */
+    {
+      const src = fs.readFileSync(DIR+"script_pet.js","utf8");
+      const drawn = (src.match(/^    (\w+)\(g\) \{/gm) || []).map(x => x.trim().replace("(g) {", ""));
+      const missing = Pet.SPECIES_IDS.filter(id => !drawn.includes(id));
+      ok(missing.length === 0, "모든 종류에 그리는 함수가 있다" + (missing.length ? " — 없음: " + missing.join(", ") : ""));
+    }
+    /* 껍데기 — Lv.1 은 종류를 숨겨야 합니다 */
+    {
+      const groups = [...new Set(Pet.SPECIES.map(s => s.group))];
+      ok(groups.length === 5, `껍데기가 5가지다 (${groups.length})`);
+      groups.forEach(gp => ok(!!Pet.SHELLS[gp], `${gp} 껍데기에 이름이 있다`));
+      /* 같은 껍데기를 쓰는 두 종류의 Lv.1 그림이 같아야 종류가 안 드러납니다.
+         (aria-label 과 clipPath id 만 다릅니다) */
+      const strip = sv => sv.replace(/aria-label="[^"]*"/, "").replace(/petclip\d+/g, "C");
+      const byGroup = {};
+      Pet.SPECIES.forEach(sp => { (byGroup[sp.group] = byGroup[sp.group] || []).push(sp.id); });
+      let leak = [];
+      Object.entries(byGroup).forEach(([gp, ids]) => {
+        const first = strip(Pet.petSvg(ids[0], "blue", 1, 56, false));
+        ids.slice(1).forEach(id => {
+          if (strip(Pet.petSvg(id, "blue", 1, 56, false)) !== first) leak.push(gp + "/" + id);
+        });
+      });
+      ok(leak.length === 0, "Lv.1 껍데기가 종류를 드러내지 않는다" + (leak.length ? " — " + leak.join(", ") : ""));
+      /* Lv.2 는 껍데기를 걸치고, Lv.3 부터는 벗어야 합니다 */
+      ok(Pet.petSvg("cat", "blue", 2, 56, false).length > Pet.petSvg("cat", "blue", 3, 56, false).length - 400,
+         "Lv.2 는 껍데기 조각을 걸친다");
+      /* 보자기의 clipPath id 가 매번 달라야 합니다 (도감에서 여러 마리를 그림) */
+      const a1 = Pet.petSvg("cat", "blue", 1, 56, false).match(/petclip(\d+)/)[1];
+      const a2 = Pet.petSvg("dog", "pink", 1, 56, false).match(/petclip(\d+)/)[1];
+      ok(a1 !== a2, "보자기 잘라내기 틀 id 가 겹치지 않는다");
+    }
+    /* 껍데기 고르기 — 고르는 것은 껍데기까지, 안은 비밀 */
+    {
+      const groups = [...new Set(Pet.SPECIES.map(s2 => s2.group))];
+      groups.forEach(gp => {
+        const got = Pet.pickInGroup(gp, {}, () => 0.5);
+        ok(!!got && Pet.speciesGroup(got) === gp, `${Pet.SHELLS[gp]} 를 고르면 그 안에서 뽑힌다`);
+      });
+      /* 여러 번 뽑으면 서로 다른 것이 나와야 합니다 (노려서 뽑을 수 없게) */
+      const seen2 = new Set();
+      let r = 0;
+      for (let i = 0; i < 40; i++) seen2.add(Pet.pickInGroup("egg", {}, () => ((r = (r * 9301 + 49297) % 233280) / 233280)));
+      ok(seen2.size > 1, `같은 껍데기에서 여러 종류가 나온다 (${seen2.size}가지)`);
+      /* 이미 모은 종류보다 못 모은 종류를 먼저 */
+      const dexAll = {}; Pet.SPECIES.filter(x => x.group === "egg").slice(0, 3)
+        .forEach(x => { dexAll[Pet.dexKey(x.id, "blue")] = 1; });
+      const rest = Pet.SPECIES.filter(x => x.group === "egg").slice(3).map(x => x.id);
+      let ok2 = true;
+      for (let i = 0; i < 20; i++) if (!rest.includes(Pet.pickInGroup("egg", dexAll, Math.random))) ok2 = false;
+      ok(ok2, "못 모은 종류를 먼저 뽑는다");
+    }
+
+    /* 판다는 색 규칙이 뒤집혀 있습니다 */
+    {
+      const pp = Pet.palette("blue", "panda");
+      ok(pp.body === "#F2F0EA" && pp.mark === Pet.colorHex("blue"),
+         "판다는 몸이 흰빛이고 고른 색이 무늬로 들어간다");
+    }
+      ok(Pet.COLOR_IDS.length === 12, `12색이다 (${Pet.COLOR_IDS.length})`);
+    ok(Pet.HOURS_PER_LEVEL === 4 && Pet.MAX_LEVEL === 10, "4시간 1레벨 · Lv.10 만렙");
+
+    /* ★ 8종 × 10레벨 × 12색 전수 — 좌표에 NaN 이 새면 그림이 통째로 깨집니다 */
+    let bad = [];
+    for (const sp of Pet.SPECIES_IDS) {
+      for (const c of Pet.COLOR_IDS) {
+        for (let lv = 1; lv <= 10; lv++) {
+          const svg = Pet.petSvg(sp, c, lv, 56, lv === 10);
+          if (/NaN|undefined|Infinity/.test(svg)) bad.push(`${sp}/${c}/Lv${lv}`);
+          if (!/<svg/.test(svg) || !/<\/svg>/.test(svg)) bad.push(`${sp}/${c}/Lv${lv} 열림닫힘`);
+        }
+      }
+    }
+    ok(bad.length === 0, `펫 그림 ${Pet.SPECIES_IDS.length * Pet.COLOR_IDS.length * 10}조합이 온전하다${bad.length ? " — " + bad.slice(0,3).join(", ") : ""}`);
+
+    /* 용의 뿔은 몸 색과 무관하게 금색 */
+    ok(Pet.COLOR_IDS.every(c => Pet.petSvg("dragon", c, 10, 56, true).includes(Pet.HORN_GOLD)),
+       "용 뿔은 어떤 몸 색에서도 금색이다");
+    /* 뿔 가지는 레벨에 따라 늘어납니다 */
+    const horn = lv => (Pet.petSvg("dragon", "green", lv, 56, false).match(/<path d="M/g) || []).length;
+    ok(horn(1) < horn(5) && horn(5) < horn(8), "용 뿔이 레벨에 따라 뻗는다");
+    /* 날개는 Lv.8 에 */
+    ok(!/q10 -17/.test(Pet.petSvg("dragon","green",7,56,false)) &&
+        /q10 -17/.test(Pet.petSvg("dragon","green",8,56,false)), "용 날개는 Lv.8 에 돋는다");
+    /* 반짝이는 정말 다 채운 뒤에만 */
+    ok(!/EF9F27/.test(Pet.petSvg("cat","blue",10,56,false)), "Lv.10 도달만으로는 반짝이지 않는다");
+    ok(/EF9F27/.test(Pet.petSvg("cat","blue",10,56,true)), "만렙이면 반짝인다");
+
+    /* 레벨 계산 */
+    const H = 3600e3;
+    ok(Pet.petProgress(0, 0).level === 1, "0시간은 Lv.1");
+    ok(Pet.petProgress(3.9 * H, 0).level === 1, "3시간 54분은 아직 Lv.1");
+    ok(Pet.petProgress(4 * H, 0).level === 2, "4시간에 Lv.2");
+    ok(Pet.petProgress(36 * H, 0).level === 10, "36시간에 Lv.10 도달");
+    ok(Pet.petProgress(36 * H, 0).isMax === false, "36시간은 아직 만렙이 아니다");
+    ok(Pet.petProgress(40 * H, 0).isMax === true, "40시간에 만렙");
+    ok(Pet.petProgress(100 * H, 0).level === 10, "넘겨도 Lv.10 에서 멈춘다");
+    /* 만렙 펫이 있으면 그만큼 빼고 센다 */
+    ok(Pet.petProgress(41 * H, 1).level === 1, "만렙 1마리 뒤 41시간은 새 펫 Lv.1");
+    ok(Pet.petProgress(84 * H, 2).level === 2, "만렙 2마리 뒤 84시간은 Lv.2");
+    /* 다음 레벨까지 남은 시간 */
+    ok(Pet.petProgress(5 * H, 0).toNextMs === 3 * H, "Lv.2 에서 다음까지 3시간");
+    ok(Pet.petProgress(40 * H, 0).toNextMs === 0, "만렙이면 남은 시간 0");
+
+    /* ★ 승계 — 같은 펫이 또 나오지 않아야 합니다 */
+    let dex = {}, seen = [];
+    const rnd = (() => { let i = 0; return () => ((i = (i * 9301 + 49297) % 233280) / 233280); })();
+    for (let n = 0; n < 8; n++) {
+      const p2 = Pet.pickNextPet(dex, rnd);
+      seen.push(p2.species);
+      dex[Pet.dexKey(p2.species, p2.color)] = 1;
+    }
+    ok(new Set(seen).size === 8, `연속 8마리가 모두 다른 종류다 (${new Set(seen).size})`);
+    /* 8종을 다 모은 뒤에도 이미 가진 조합은 안 나옵니다 */
+    let dupe = 0;
+    for (let n = 0; n < 40; n++) {
+      const p3 = Pet.pickNextPet(dex, rnd);
+      const k = Pet.dexKey(p3.species, p3.color);
+      if (dex[k]) dupe++;
+      dex[k] = 1;
+    }
+    ok(dupe === 0, `이미 모은 조합은 다시 안 나온다 (겹침 ${dupe})`);
+    /* 96칸을 다 채워도 죽지 않습니다 */
+    const full = {};
+    Pet.SPECIES_IDS.forEach(sp => Pet.COLOR_IDS.forEach(c => { full[Pet.dexKey(sp, c)] = 1; }));
+    const last = Pet.pickNextPet(full, rnd);
+    ok(!!last && Pet.SPECIES_IDS.includes(last.species), "도감을 다 채운 뒤에도 펫이 나온다");
+
+    /* 색 계산 */
+    ok(/^#[0-9a-f]{6}$/i.test(Pet.shade("#378ADD", 0.4)), "밝게 만든 색이 올바른 형식");
+    ok(/^#[0-9a-f]{6}$/i.test(Pet.shade("#378ADD", -0.5)), "어둡게 만든 색이 올바른 형식");
+    ok(Pet.shade("#000000", 1) === "#ffffff" && Pet.shade("#ffffff", -1) === "#000000",
+       "색 계산이 범위를 넘지 않는다");
+  }
+
+  /* 펫 — 붙어 있는가 */
+  {
+    const Pet = require(DIR + "script_pet.js");
+    const tl = fs.readFileSync(DIR+"script_timelog.js","utf8");
+    const pu = fs.readFileSync(DIR+"script_pet_ui.js","utf8");
+    ok(/workMsTotal/.test(tl), "집필 누적을 따로 쌓는다");
+    /* WORK·초집중만 밥이 됩니다 */
+    const i = tl.indexOf('if (seg.s === "writing" || seg.s === "focus")');
+    ok(i > 0, "WORK 와 초집중만 누적한다");
+    ok(/\.transaction\(v => \(Number\(v\) \|\| 0\) \+ len\)/.test(tl),
+       "여러 창을 열어도 어긋나지 않게 트랜잭션으로 올린다");
+    ok(/function promoteIfMaxed/.test(tl), "만렙이면 승계한다");
+    ok(/window\.startPet/.test(tl) && /window\.startPet\?\.\(\)/.test(fs.readFileSync(DIR+"script_profile.js","utf8")),
+       "입장할 때 펫을 시작한다");
+    ok(/function renderPetPanel/.test(pu) && /id="panel-pet"/.test(HTML), "펫 관리 창이 있다");
+    ok(/data-tab="pet"/.test(HTML), "설정에 펫 탭이 있다");
+    ok(/petSpecies/.test(rt) && /petLevel/.test(rt), "카드에 펫 요약을 실어 보낸다");
+    ok(/card-pet/.test(rt) && /\.card-pet\{/.test(CSS), "카드에 펫 자리가 있다");
+    ok(/name === "pet"\)\s+window\.renderPetPanel/.test(fs.readFileSync(DIR+"script_profile.js","utf8")),
+       "펫 탭을 열면 그린다");
+
+    /* ★ 관리 창을 실제로 끝까지 그려봅니다.
+
+       [왜 넣었나] 블록 하나를 옮기다가 색 고르기 덩어리를 통째로
+       지웠습니다. 그러자 정의되지 않은 변수를 쓰게 되어 함수가 예외로
+       죽고, 펫 탭이 텅 빈 채로 열렸습니다. 브라우저 화면에는 오류가
+       안 뜨니 눈으로만 보면 "왜 안 나오지?" 로만 보입니다.
+
+       파일을 읽어 문자열을 찾는 검사로는 이런 사고를 못 잡습니다.
+       그래서 가짜 화면을 만들어 실제로 호출합니다. */
+    {
+      const stub = () => ({
+        innerHTML: "", _petBound: false, style: {},
+        addEventListener() {}, remove() {}, setAttribute() {},
+        querySelector() { return null; }, appendChild() {},
+        classList: { add() {}, remove() {}, toggle() {} }
+      });
+      const host = stub();
+      const mk = (level) => ({
+        level, isMax: level >= 10, curMs: level * 4 * 3600e3,
+        totalNeed: Pet.PET_MS, ratio: level / 10,
+        toNextMs: 2 * 3600e3, species: "cat", color: "blue"
+      });
+      const c2 = {
+        window: { Pet, petDex: () => ({ "dog/pink": 1 }) },
+        document: { getElementById: id => (id === "panel-pet" ? host : null),
+                    createElement: stub, body: { appendChild() {} } },
+        console
+      };
+      c2.window.document = c2.document;
+      vm.createContext(c2);
+      vm.runInContext(fs.readFileSync(DIR + "script_pet_ui.js", "utf8"), c2);
+
+      let threw = null, sizes = {};
+      for (const lv of [1, 2, 5, 10]) {
+        c2.window.petState = () => mk(lv);
+        host.innerHTML = "";
+        try { c2.window.renderPetPanel(); } catch (e) { threw = `Lv.${lv}: ${e.message}`; }
+        sizes[lv] = host.innerHTML.length;
+      }
+      ok(!threw, "관리 창이 예외 없이 그려진다" + (threw ? " — " + threw : ""));
+      ok(Object.values(sizes).every(v => v > 800),
+         `모든 레벨에서 내용이 채워진다 (${JSON.stringify(sizes)})`);
+
+      /* Lv.1 에만 껍데기 선택지, 색은 늘 */
+      c2.window.petState = () => mk(1); host.innerHTML = ""; c2.window.renderPetPanel();
+      const h1 = host.innerHTML;
+      ok((h1.match(/data-pet-shell/g) || []).length === 5, "Lv.1 에 껍데기 5개가 나온다");
+      ok((h1.match(/data-pet-color/g) || []).length === Pet.COLOR_IDS.length, "색 12개가 나온다");
+      /* 종류가 새는지는 "글자가 어디 나오나" 로 보면 안 됩니다.
+         나무 상자에는 "나무" 가 들어 있고, "정해집니다" 에는 "해" 가
+         들어 있어서 애먼 곳이 걸립니다. 이름이 실제로 쓰이는 두 자리만
+         정확히 꺼내서 봅니다. */
+      {
+        const nameLine = (h1.match(/class="pet-cur-name">([\s\S]*?)<\/div>/) || [])[1] || "";
+        ok(/아직 안 태어났어요/.test(nameLine), "Lv.1 은 아직 안 태어났다고 알린다");
+        ok(Object.values(Pet.SHELLS).some(l => nameLine.includes(l)),
+           "이름 줄에 껍데기 이름이 나온다");
+
+        const btnLabels = [...h1.matchAll(/data-pet-shell="(\w+)"[\s\S]*?<span>([^<]+)<\/span>/g)]
+          .map(m => [m[1], m[2].trim()]);
+        ok(btnLabels.length === 5, `껍데기 버튼이 5개다 (${btnLabels.length})`);
+        const wrong = btnLabels.filter(([gp, lab]) => lab !== Pet.SHELLS[gp]);
+        ok(wrong.length === 0, "껍데기 버튼에 껍데기 이름만 쓴다" +
+           (wrong.length ? " — " + wrong.map(x => x.join(":")).join(", ") : ""));
+        /* 종류 이름을 그대로 쓴 버튼이 있으면 비밀이 새는 것입니다 */
+        const leaked = btnLabels.filter(([, lab]) => Pet.SPECIES.some(x => x.label === lab));
+        ok(leaked.length === 0, "껍데기 버튼이 종류 이름을 쓰지 않는다");
+      }
+
+      c2.window.petState = () => mk(5); host.innerHTML = ""; c2.window.renderPetPanel();
+      const h5 = host.innerHTML;
+      ok(!/data-pet-shell/.test(h5), "Lv.5 에는 껍데기 선택지가 없다");
+      ok((h5.match(/data-pet-color/g) || []).length === Pet.COLOR_IDS.length, "Lv.5 에도 색은 바꿀 수 있다");
+    }
+
+    /* ★ 시작 함수가 "입장한 뒤에" 불리는가
+
+       [왜] startPet 과 startTimelog 는 필명이 있어야 동작합니다.
+       그런데 페이지 로드(init) 에서만 불렀더니, 그 시점엔 필명이 없어
+       첫 줄에서 그냥 돌아갔습니다. 그래서 펫 정보가 비어 있었고,
+       화면에는 기본값으로 그려지니 "보이는데 안 눌린다" 가 됐습니다. */
+    {
+      const prof3 = fs.readFileSync(DIR+"script_profile.js","utf8");
+      const i = prof3.indexOf("const _join = window.join;");
+      const j = prof3.indexOf("window.join = wrapped;", i);
+      ok(i > 0 && j > i, "입장 감싸개가 있다");
+      const joinSeg = prof3.slice(i, j);
+      ok(/startPet/.test(joinSeg),     "입장한 뒤에 펫을 시작한다");
+      ok(/startTimelog/.test(joinSeg), "입장한 뒤에 시간 기록을 시작한다");
+      /* 여러 번 불려도 타이머가 겹치지 않아야 합니다 */
+      ok(/_petStarted/.test(tl) && /_tlStarted/.test(tl),
+         "두 번 불려도 안전하다 (타이머 중복 방지)");
+    }
+
+    /* 카드의 펫을 누르면 관리 창 */
+    ok(/data-open-pet="1"/.test(rt), "내 카드의 펫만 누를 수 있다");
+    const prof2 = fs.readFileSync(DIR+"script_profile.js","utf8");
+    ok(/function openPetPanel/.test(prof2) && /openTab\?\.\("pet"\)/.test(prof2),
+       "펫을 누르면 관리 창이 열린다");
+
+    /* 껍데기는 Lv.1 에서만 바꿉니다 */
+    ok(/window\.setPetShell/.test(tl), "껍데기 바꾸기가 있다");
+    {
+      const i = tl.indexOf("window.setPetShell");
+      const seg = tl.slice(i, i + 700);
+      ok(/st\.level !== 1\) return;/.test(seg), "태어난 뒤에는 껍데기를 못 바꾼다");
+    }
+    ok(/window\.setPetColor/.test(tl), "색만 바꾸기가 있다");
+    ok(!/setPetLook/.test(tl) && !/setPetLook/.test(pu), "종류를 직접 고르는 길이 없다 (비밀 유지)");
+    ok(/data-pet-shell/.test(pu), "관리 창에 껍데기 선택지가 있다");
+    ok(!/data-pet-species/.test(pu), "관리 창에 종류 선택지가 없다");
+    {
+      const i = pu.indexOf("const shellPick");
+      const seg = pu.slice(i, i + 200);
+      ok(/st\.level === 1/.test(seg), "껍데기 선택지는 Lv.1 에만 나온다");
+    }
+  }
+
+  /* 새 팝업에 CSS 를 빠뜨리면 화면 옆에 어색하게 붙습니다 */
+  ["#goals-modal"].forEach(id => {
+    /* 선택자 목록의 마지막이면 뒤에 { 가 옵니다 */
+    ok(CSS.includes(id + ",") || CSS.includes(id + "{"),
+       `${id} 이 팝업 규칙을 함께 받는다`);
+    ok(CSS.includes(id + " .modal-content"), `${id} 의 내용 폭이 정해져 있다`);
+  });
+
+  /* 남는 공간을 뽀모가 먹지 않아야 합니다 */
+  {
+    ok(/const GROW_RANK = \{/.test(lay), "남는 공간을 받을 창을 정해둔다");
+    const i = lay.indexOf("const GROW_RANK");
+    const seg = lay.slice(i, i + 160);
+    const rk = {};
+    (seg.match(/(\w+): (\d+)/g) || []).forEach(x => {
+      const [k, v] = x.split(": "); rk[k] = Number(v);
+    });
+    ok(rk.chat < rk.pomo, "채팅이 뽀모보다 먼저 늘어난다");
+    ok(rk.prof < rk.pomo, "접속자가 뽀모보다 먼저 늘어난다");
+    ok(/function pickGrowIndex/.test(lay), "가지마다 늘어날 쪽을 고른다");
+    ok(!/} else if \(last\) \{/.test(lay), "무조건 마지막 가지가 늘어나던 규칙을 없앴다");
+
+    /* 실제로 굴려봅니다 — [채팅][뽀모] 순서에서도 채팅이 늘어나야 합니다 */
+    const rank = { chat: 1, prof: 2, pomo: 9 };
+    const pick = (kids, map) => {
+      let best = Infinity, idx = kids.length - 1;
+      kids.forEach((k, n) => {
+        const r = rank[map[k]] ?? 5;
+        if (r < best) { best = r; idx = n; }
+      });
+      return idx;
+    };
+    ok(pick(["a","b"], { a: "chat", b: "pomo" }) === 0, "[채팅][뽀모] → 채팅이 늘어난다");
+    ok(pick(["a","b"], { a: "pomo", b: "chat" }) === 1, "[뽀모][채팅] → 채팅이 늘어난다");
+    ok(pick(["a","b"], { a: "pomo", b: "prof" }) === 1, "[뽀모][접속자] → 접속자가 늘어난다");
+  }
+
+  /* 크기는 창을 따라가야 합니다 (자리를 바꿔도 뽀모는 자기 높이) */
+  ok(/function sizeKeyFor/.test(lay) && /"panel\/" \+ map\[kid\]/.test(lay),
+     "칸 크기를 창 기준으로 기억한다");
+  ok(/"panel\/pomo": 150/.test(lay), "뽀모 기본 높이가 내용에 맞게 작다");
+
+  /* 자리 그림이 실제 모양과 같아야 합니다 */
+  {
+    const i = lay.indexOf("const MAP_SHAPE");
+    const seg = lay.slice(i, i + 600);
+    ok(/'s1 s2' 's1 s3'/.test(seg), "자리 그림이 ① 큰칸 + ②③ 모양이다");
+    ok(/'s2 s1' 's3 s1'/.test(lay), "뒤집으면 그림도 뒤집힌다");
+    /* 주석이 아니라 실제로 쓰인 곳만 봅니다 */
+    const code = lay.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    ok(!/direction\s*:\s*rtl/.test(code), "글자까지 뒤집는 방식을 쓰지 않는다");
+  }
+
+  ["status-pop","status-pop-item"].forEach(c =>
+    ok(new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS), `CSS 에 .${c} 가 있다`));
+}
+
+/* 보안 규칙이 앱이 쓰는 경로를 모두 덮는가
+
+   [왜] 규칙에 없는 경로는 파이어베이스가 조용히 거절합니다. 오류가
+   화면에 안 뜨고 그냥 저장이 안 되니, "기능이 안 먹는다"로 보입니다.
+   실제로 attendance 와 achievementOverrides 를 빠뜨려서 출석·업적이
+   전부 먹지 않았습니다. */
+{
+  const rules = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
+  const roots = new Set();
+  fs.readdirSync(DIR).filter(f => /^(script_|fortune)/.test(f)).forEach(f => {
+    const src = fs.readFileSync(DIR+f, "utf8");
+    (src.match(/db\.ref\(["`]([^"`/$]+)/g) || []).forEach(m => {
+      const r = m.replace(/^db\.ref\(["`]/, "");
+      if (r && !r.startsWith(".")) roots.add(r);
+    });
+  });
+  [...roots].sort().forEach(r =>
+    ok(Object.prototype.hasOwnProperty.call(rules, r),
+       `보안 규칙에 ${r} 가 있다`));
+  ok(roots.size >= 6, `앱이 쓰는 경로를 모두 찾았다 (${roots.size}개)`);
 }
 
 /* 방이 정말로 분리됐는가 —

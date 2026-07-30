@@ -156,39 +156,18 @@
   // =====================================================
   // ✅ 업적 오버라이드(테스트 모드): 실제 업적과 병합
   // =====================================================
-  function _effectiveAch(nick, base) {
-    const ov = (window._achOverrides || {})[nick];
-    const bStreak = Number(base.streak ?? base.streakDays ?? 0);
-    const bWeekly = !!base.weeklyFull;
-    if (ov && Number(ov.expiresAt || 0) > Date.now()) {
-      return {
-        streak: Math.max(bStreak, Number(ov.streakDays || 0)),
-        weeklyFull: bWeekly || !!ov.weeklyFull
-      };
-    }
-    return { streak: bStreak, weeklyFull: bWeekly };
-  }
+  /* =====================================================================
+     업적(🏆 연속 출석 · 👑 풀출석)은 없앴습니다.
+
+     대신 그 자리에 펫이 들어갑니다. 출석은 "왔다"만 재는 지표라 글을
+     썼는지와 무관했습니다. 펫은 실제로 쓴 시간으로만 자라니, 이 방이
+     재는 것과 보여주는 것이 같아집니다.
+     ===================================================================== */
 
   // =====================================================
   // status realtime
   // =====================================================
   function listenStatus() {
-    // 테스트 오버라이드 실시간 반영
-    if (!window._achOvRef) {
-      window._achOvRef = db.ref("achievementOverrides");
-      window._achOvRef.on("value", s => {
-        window._achOverrides = s.val() || {};
-        // 내 채팅 배지 문자열도 갱신
-        try {
-          if (myNick) {
-            const eff = _effectiveAch(myNick, window._myAch || {});
-            window._myBadgeStr =
-              (eff.streak >= 3 ? "🔥" : "") + (eff.weeklyFull ? "👑" : "");
-          }
-        } catch(e) {}
-      });
-    }
-
     _seenOnline = null;   // 다시 붙을 때는 씨앗부터 (옛 목록으로 오알림 방지)
     _statusRef = db.ref("status");
     _statusRef.on("value", snap => {
@@ -280,20 +259,11 @@
           const goalText = row.todayGoalText ? escapeHtml(row.todayGoalText) : "오늘의 한줄 목표 없음";
 
           // ✅ 업적 표시 (테스트 오버라이드 병합)
-          const effAch = _effectiveAch(u, row);
-          const streakN = effAch.streak;
-          const streakBanner = streakN >= 3
-            ? `<div class="streak-banner">🔥 연속 ${streakN}일 출석!</div>`
-            : "";
-          const weeklyBanner = effAch.weeklyFull
-            ? `<div class="streak-banner weekly-banner">👑 지난주 매일 출석!</div>`
-            : "";
-          const banners = (streakBanner || weeklyBanner)
-            ? `<div class="ach-banners">${streakBanner}${weeklyBanner}</div>`
-            : "";
-          const goldCls = effAch.weeklyFull ? " weekly-gold" : "";
-          const nameBadges =
-            (streakN >= 3 ? "🔥" : "") + (effAch.weeklyFull ? "👑" : "");
+          const streakBanner = "";
+          const weeklyBanner = "";
+          const banners = "";
+          const goldCls = "";
+          const nameBadges = "";
 
           // ✅ [프로필] users/{닉}/profile 값을 병합 (없으면 전부 기본값)
           const prof = (window._profileCache && window._profileCache[u]) || {};
@@ -322,16 +292,14 @@
           const connOk = !Number(row.disconnectedAt || 0);
 
           const isMine = (u === myNick);
-          const editBtn = isMine
-            ? `<button type="button" class="card-edit-btn" data-edit-profile="1"
-                       aria-label="내 프로필 편집" title="내 프로필 편집">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                   <path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3z"/>
-                   <path d="M13.5 6.5l4 4"/>
-                 </svg>
-               </button>`
-            : "";
+
+          /* TheMagam — 카드가 곧 조작판입니다. 세 곳이 각자 다른 문을 엽니다.
+               프사    → 프로필 설정 (사진·색·무늬)
+               상태표  → 상태 고르기 (WORK / 휴식 / 초집중 / 자리비움)
+               아래칸  → 오늘 목표와 나의 투두
+
+             그래서 예전의 ✏️ 버튼은 없앴습니다. 프사 자체가 그 버튼이에요. */
+          const editBtn = "";
 
           /* 카드 아래 지표 — 진척 바 + [n / m 완료] ····· [🍅 k]
              둘 다 없는 사람(투두도 없고 뽀모도 안 돈 사람)은 줄 자체를 만들지 않습니다. */
@@ -361,33 +329,60 @@
             : "";
 
           // 배지 줄 — 왼쪽 업적(트로피·왕관), 오른쪽 상태
-          const achChips =
-            (streakN >= 3 ? `<span class="card-ach" title="연속 ${streakN}일 출석">🏆</span>` : "") +
-            (effAch.weeklyFull ? `<span class="card-ach" title="지난주 매일 출석">👑</span>` : "");
+          /* 배지 줄은 비웠습니다. 상태표가 위로 올라오고, 그 아래 자리에
+             펫이 들어갑니다. */
+          const achChips = "";
+
+          /* 펫 — status 에 실려 온 요약으로 그립니다.
+             남의 누적 시간을 매번 계산하면 무거워지므로, 각자 자기 값을
+             status 에 적어 보냅니다. */
+          const petHtml = (() => {
+            if (!window.Pet) return "";
+            const sp = row.petSpecies, co = row.petColor;
+            if (!sp) return "";
+            const lv = Math.max(1, Math.min(10, Number(row.petLevel) || 1));
+            const mx = !!row.petMax;
+            const pct = Math.max(0, Math.min(100, Number(row.petPct) || 0));
+            return `
+              <div class="card-pet${isMine ? " is-clickable" : ""}"${
+                isMine ? ' data-open-pet="1" role="button" tabindex="0"' : ""
+              } title="${lv <= 1
+                  ? "아직 안 태어났어요"
+                  : escapeHtml(window.Pet.speciesLabel(sp)) + " Lv." + lv + (mx ? " 만렙" : "")}${isMine ? " · 눌러서 펫 관리" : ""}">
+                ${window.Pet.petSvg(sp, co, lv, 58, mx)}
+                <div class="card-pet-lv">${lv <= 1 ? "🥚" : `Lv.${lv}`}${mx ? " <b>만렙</b>" : ""}</div>
+                <div class="card-pet-bar"><i style="width:${pct}%"></i></div>
+              </div>`;
+          })();
 
           parts.push(`
             <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"${cardStyle}>
               <div class="card-body">
-                <div class="card-avatar-wrap">
+                <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
+                  isMine ? ' data-edit-profile="1" role="button" tabindex="0"'
+                         + ' title="프로필 설정 (사진·색·무늬)"' : ""}>
                   ${avatar}
                   ${editBtn}
                 </div>
 
                 <div class="card-side">
-                  <div class="card-chips">${achChips}</div>
                   <div class="card-state-row">
-                    <span class="card-state ${cls}">${escapeHtml(row.statusLabel || statusLabel(st))}</span>
+                    <span class="card-state ${cls}${isMine ? " is-clickable" : ""}"${
+                      isMine ? ' data-pick-status="1" role="button" tabindex="0" title="상태 바꾸기"' : ""
+                    }>${escapeHtml(row.statusLabel || statusLabel(st))}</span>
                     <!-- 폭 기준자 — 눈에는 안 보이지만 자리는 차지합니다.
-                         가장 긴 상태(🔥WORK🔥)를 모든 카드에 똑같이 심어 두면,
+                         가장 긴 상태(🔥초집중🔥)를 모든 카드에 똑같이 심어 두면,
                          상태가 짧은 사람의 카드도 오른쪽 칸 폭이 같아집니다.
                          덕분에 카드마다 프사 크기가 들쭉날쭉해지지 않아요. -->
-                    <span class="card-state-ghost" aria-hidden="true">🔥WORK🔥</span>
+                    <span class="card-state-ghost" aria-hidden="true">🔥초집중🔥</span>
                   </div>
+                  ${petHtml}
                 </div>
               </div>
 
               <div class="card-foot" data-record-of="${escapeHtml(u)}"
-                   role="button" tabindex="0" title="${escapeHtml(u)} 님의 기록 보기">
+                   role="button" tabindex="0"
+                   title="${isMine ? "오늘 목표와 나의 투두" : escapeHtml(u) + " 님의 기록 보기"}">
                 <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
                       title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}">
                   <i></i><i></i><i></i><i></i>
@@ -413,13 +408,13 @@
 
   /* 상태 이름. 저장되는 값(writing/focus/rest/away)은 그대로 두고
      화면에 보이는 이름만 바꿨습니다. 기존 데이터가 그대로 살아납니다.
-       writing → WORK      focus → 🔥WORK🔥
+       writing → WORK      focus → 🔥초집중🔥
        rest    → 휴식      away  → 자리비움 */
   function statusLabel(code) {
     return ({
       idle:    "휴식",
       writing: "WORK",
-      focus:   "🔥WORK🔥",
+      focus:   "🔥초집중🔥",
       rest:    "휴식",
       away:    "자리비움"
     })[code] || "휴식";
@@ -450,6 +445,7 @@
     const todoTotal = _todos.length;
     const todoDone = _todos.filter(t => t && t.done).length;
     const pomoCount = Number(window.getTodayFocusSessions?.() || 0);
+    const _pet = window.petState?.() || null;
 
     if (force) {
       window.saveDailyLog?.();
@@ -465,8 +461,12 @@
       todoDone,
       todoTotal,
       pomoCount,
-      streakDays: Number(window._myAch?.streak || 0),
-      weeklyFull: !!window._myAch?.weeklyFull,
+      /* 펫 요약 — 남들 카드에도 보이게 */
+      petSpecies: _pet?.species || null,
+      petColor:   _pet?.color   || null,
+      petLevel:   _pet?.level   || 1,
+      petMax:     !!_pet?.isMax,
+      petPct:     Math.round((_pet?.ratio || 0) * 100),
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,
       // 살아 있다는 뜻 — 끊김 표시를 지웁니다
@@ -1020,19 +1020,10 @@
 
       await uref.child("streak").set({ count: streak, lastDay: day });
 
-      // ---- 지난주(월~일) 풀출석 ----
-      const daysObj = (await uref.child("days").once("value")).val() || {};
-      const now = new Date();
-      const dow = (now.getDay() + 6) % 7; // 0=월
-      const thisMon = new Date(now); thisMon.setDate(now.getDate() - dow);
-      let weeklyFull = true;
-      for (let i = 7; i >= 1; i--) {
-        const dd = new Date(thisMon); dd.setDate(thisMon.getDate() - i);
-        if (!daysObj[ymd(dd.getTime())]) { weeklyFull = false; break; }
-      }
-
-      window._myAch = { streak, weeklyFull };
-      window._myBadgeStr = (streak >= 3 ? "🔥" : "") + (weeklyFull ? "👑" : "");
+      /* 풀출석 계산은 없앴습니다 (업적 제거).
+         연속일수는 남겨둡니다 — 나중에 다시 쓸 수도 있고, 저장 비용이
+         거의 없습니다. 화면에는 아무것도 안 나옵니다. */
+      window._myAch = { streak };
 
       try { updateStatus(true); } catch (e) {}
     } catch (e) { console.warn("[recordAttendance failed]", e); }
@@ -1101,38 +1092,7 @@
     }
   }
 
-  // =====================================================
-  // ✅ 업적 테스트 모드 (관리자)
-  // =====================================================
-  async function applyAchievementOverride() {
-    if (!requireAdminPin()) return;
-    const nick = document.getElementById("ach-test-nick")?.value?.trim();
-    if (!nick) { alert("필명을 입력해 주세요!"); return; }
-    const streak = Math.max(0, parseInt(document.getElementById("ach-test-streak")?.value, 10) || 0);
-    const weekly = !!document.getElementById("ach-test-weekly")?.checked;
-
-    await db.ref(`achievementOverrides/${nick}`).set({
-      streakDays: streak,
-      weeklyFull: weekly,
-      expiresAt: Date.now() + 24 * 3600 * 1000,
-      by: myNick || "admin",
-      at: Date.now()
-    });
-    alert(`🧪 ${nick} 님에게 테스트 업적을 적용했어요.\n연속 ${streak}일 / 지난주 풀출석 ${weekly ? "O" : "X"}\n(24시간 후 자동 만료 · 카드는 최대 15초 안에 갱신돼요)`);
-  }
-
-  async function clearAchievementOverride() {
-    if (!requireAdminPin()) return;
-    const nick = document.getElementById("ach-test-nick")?.value?.trim();
-    if (nick) {
-      await db.ref(`achievementOverrides/${nick}`).remove();
-      alert(`🧪 ${nick} 님의 테스트 업적을 해제했어요.`);
-    } else {
-      if (!confirm("필명이 비어 있어요. 모든 테스트 업적을 해제할까요?")) return;
-      await db.ref("achievementOverrides").remove();
-      alert("🧪 모든 테스트 업적을 해제했어요.");
-    }
-  }
+  /* 업적 테스트 모드는 없앴습니다 (업적 자체가 없어졌으므로). */
 
   async function clearAllChat() {
     if (!requireAdminPin()) return;
@@ -1159,6 +1119,4 @@
   window.loadHistoryNow = loadHistoryNow;
   window.recordAttendance = recordAttendance;
   window.showAttendanceLog = showAttendanceLog;
-  window.applyAchievementOverride = applyAchievementOverride;
-  window.clearAchievementOverride = clearAchievementOverride;
   window.updateChatHeader = updateChatHeader;

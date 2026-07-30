@@ -2157,8 +2157,20 @@ body.pomo-nonpart .pomo-status-line{
   display: flex;
   gap: var(--sp-2);
   max-width: 92%;
-  align-items: flex-end;
+  /* [FIX] 반응(❤️1)을 붙이면 프사가 아래로 밀려 내려가던 문제
+
+     align-items: flex-end 였습니다. 말풍선 한 줄일 때는 프사와 말풍선의
+     아래가 나란히 맞아 예쁜데, 아래에 반응 줄이 생기면 그만큼 프사도
+     같이 내려갔습니다. 이름 옆에 있어야 할 프사가 반응 옆으로 가버린
+     셈이죠.
+
+     프사는 말풍선 덩어리의 "위"에 맞추는 것이 맞습니다. 이름과 첫
+     말풍선 옆에 붙고, 아래에 무엇이 더 붙어도 움직이지 않습니다. */
+  align-items: flex-start;
 }
+/* 이름 줄만큼 프사를 내려서 첫 말풍선과 나란히 맞춥니다 */
+.chat-item.other:not(.grouped) .chat-avatar,
+.chat-item.other:not(.grouped) .profile-emoji{ margin-top: 1.15em; }
 .chat-item.me{ align-self: flex-end; flex-direction: row-reverse; }
 .chat-item.grouped .profile-emoji{ visibility: hidden; }
 .chat-item.grouped .user-name{ display: none; }
@@ -2198,7 +2210,8 @@ body.pomo-nonpart .pomo-status-line{
 .chat-item.other .msg-content{ align-items: flex-start; }
 
 .user-name{
-  font-size: 0.64em;
+  /* 0.64em → 0.73em. 기준 글자 18px 에서 약 1.5포인트 커집니다. */
+  font-size: 0.73em;
   color: var(--name-muted);
   margin-left: var(--sp-1);
   font-weight: var(--fw-medium);
@@ -2759,7 +2772,18 @@ body.pomo-nonpart .pomo-status-line{
 /* =====================================================================
    기록 팝업 (카드 아래쪽 상자를 누르면)
    ===================================================================== */
-#record-modal{
+/* [FIX] 새로 만든 두 팝업이 화면 옆에 어색하게 붙던 문제
+
+   #goals-modal 과 #panel-modal 을 만들면서 CSS 를 빠뜨렸습니다.
+   이 파일은 팝업을 id 로 하나하나 꾸미고 있어서, 규칙이 없는 팝업은
+   그냥 문서 흐름에 얹힌 평범한 상자로 나옵니다. 화면 가운데 뜨지도
+   않고 어둡게 덮이지도 않아요.
+
+   같은 규칙을 함께 받도록 선택자에 나란히 적습니다. 앞으로 팝업을
+   더 만들 때도 여기에 이름을 추가해야 합니다. */
+#record-modal,
+#goals-modal,
+#record-modal-legacy-unused{
   position: fixed; inset: 0;
   display: none;
   align-items: center;
@@ -2770,12 +2794,17 @@ body.pomo-nonpart .pomo-status-line{
   -webkit-backdrop-filter: blur(10px);
   padding: var(--sp-4);
 }
-#record-modal .modal-content{
+#record-modal .modal-content,
+#goals-modal .modal-content,
+#panel-modal .modal-content{
   width: min(460px, 100%);
   max-height: calc(100vh - 32px);
   max-height: calc(100dvh - 32px);
   overflow: auto;
 }
+
+/* 목표·투두는 입력칸 몇 개뿐이라 좁아도 됩니다 (520 → 416) */
+#goals-modal .modal-content{ width: min(416px, 100%); }
 
 /* 카드 아래쪽 상자 — 누를 수 있다는 걸 보이게 */
 .card-foot[data-record-of]{ cursor: pointer; transition: filter var(--anim-fast); }
@@ -3779,3 +3808,249 @@ body.narrow-chat-focus .narrow-tabs{
 }
 /* 팝업 안에서는 접기 버튼이 뜻이 없습니다 */
 .pane.in-profile .pane-collapse-btn{ display: none; }
+
+/* =====================================================================
+   TheMagam — 카드가 조작판입니다
+
+   프사 · 상태표 · 아래칸이 각자 다른 문을 엽니다. 눌러도 되는 곳이라는
+   신호를 줘야 하니, 손가락 커서와 살짝 들리는 반응을 답니다.
+   ===================================================================== */
+.card-avatar-wrap.is-clickable,
+.card-state.is-clickable{ cursor: pointer; }
+.card-avatar-wrap.is-clickable:hover .card-avatar{
+  filter: brightness(1.05);
+  box-shadow: 0 0 0 2px var(--accent-line);
+}
+.card-state.is-clickable:hover{ filter: brightness(1.08); }
+.card-avatar-wrap.is-clickable:focus-visible,
+.card-state.is-clickable:focus-visible{
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+
+/* 상태 고르기 판 */
+.status-pop{
+  position: fixed;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px;
+  min-width: 132px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(0,0,0,.22);
+}
+.status-pop-item{
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.status-pop-item:hover{ background: var(--fill-2); }
+/* 지금 고른 것 — 테두리로만 표시합니다. 배경까지 칠하면 상태색과 싸웁니다. */
+.status-pop-item.on{ border-color: var(--accent); font-weight: var(--fw-bold); }
+
+/* 창마다 오른쪽 위 ✕ */
+.panel-close{
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--anim-fast), background var(--anim-fast);
+}
+/* 늘 보이면 시끄럽습니다. 마우스를 올렸을 때만. */
+.cards-area:hover > .panel-close,
+.chat-sidebar:hover > .panel-close,
+.pane:hover > .panel-close{ opacity: .55; }
+.panel-close:hover{ opacity: 1 !important; background: rgba(255,59,48,.12); color: #C0392B; }
+.panel-close:focus-visible{ opacity: 1; outline: 2px solid var(--accent-ring); }
+/* 손가락 화면에는 아예 안 띄웁니다 — 실수로 누르기 쉽습니다 */
+@media (hover: none){ .panel-close{ display: none; } }
+
+/* 창을 자리에 붙이는 대신 팝업으로 띄웠을 때 */
+.panel-pop-host{ display: flex; min-height: 0; }
+.in-popup{
+  flex: 1 1 auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: 60vh;
+  min-width: 0 !important;
+  overflow: auto;
+}
+.in-popup .panel-close{ display: none; }
+
+
+/* =====================================================================
+   오른쪽 줄 접기
+
+   접힌 줄은 아예 문서에서 빠지므로(script_layout.js), 여기서는 남은
+   손잡이와 머리말 버튼만 꾸밉니다. 접히면 접속자 칸이 남은 폭을
+   전부 가져가므로 빈 공간이 생기지 않습니다.
+   ===================================================================== */
+body.side-collapsed .split-root > .split{ gap: 0; }
+#side-toggle-btn{ font-size: 15px; line-height: 1; }
+
+/* 접었을 때 남는 얇은 손잡이 */
+body.side-collapsed .side-rail{
+  display: flex;
+  flex: 0 0 auto;
+  margin-left: var(--sp-1);
+}
+.side-rail-btn{ font-size: 14px; }
+
+/* 창마다 있던 ✕ 와 접기 버튼은 없앴습니다 */
+.panel-close,
+.chat-collapse-btn,
+.hidden-panels{ display: none !important; }
+
+/* =====================================================================
+   펫 — 카드의 상태표 아래 자리
+
+   업적 배지를 없애면서 상태표가 위로 올라왔고, 그 아래로 프사 높이만큼
+   빈 자리가 생겼습니다. 펫이 그 자리에 삽니다.
+   ===================================================================== */
+.card-pet{
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+.card-pet .pet-svg{ display: block; }
+.card-pet-lv{
+  font-size: var(--fs-3xs, 10px);
+  color: var(--muted);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.card-pet-lv b{ color: var(--accent); }
+.card-pet-bar{
+  width: 100%;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: rgba(0,0,0,.12);
+  overflow: hidden;
+}
+.card-pet-bar i{
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: #2E8B6B;
+}
+
+/* 없어진 업적 흔적 정리 */
+.card-chips,
+.ach-banners,
+.streak-banner,
+.weekly-banner,
+.user-card.weekly-gold{ display: none !important; }
+
+/* =====================================================================
+   펫 관리 창 (설정 → 🐾 펫)
+   ===================================================================== */
+.pet-cur{
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-3);
+  border-radius: var(--radius2);
+  background: var(--glass2);
+  margin-bottom: var(--sp-3);
+}
+.pet-cur-info{ flex: 1; min-width: 0; }
+.pet-cur-name{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.pet-cur-sub{ font-size: var(--fs-2xs); color: var(--muted); margin-top: 1px; }
+.pet-bar{
+  height: 5px;
+  border-radius: var(--r-full);
+  background: rgba(0,0,0,.12);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.pet-bar i{ display: block; height: 100%; border-radius: var(--r-full); background: #2E8B6B; }
+
+.pet-pick{ display: flex; flex-wrap: wrap; gap: 6px; }
+.pet-sp{
+  width: 58px;
+  padding: 5px 0 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.pet-sp span{ font-size: 9.5px; color: var(--muted); }
+.pet-sp.on{ border: 2px solid var(--accent); }
+.pet-sw{
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,.16);
+  cursor: pointer;
+  padding: 0;
+}
+.pet-sw.on{ box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+
+/* 도감 */
+.pet-dex{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+}
+.pet-cell{
+  aspect-ratio: 1;
+  border-radius: var(--r-md);
+  background: var(--glass2);
+  display: flex; align-items: center; justify-content: center;
+}
+.pet-cell.empty{
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* 만렙 알림 */
+.pet-toast{
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 9500;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--accent-line);
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(0,0,0,.22);
+  font-size: var(--fs-sm);
+  animation: petToastIn .32s ease;
+}
+@keyframes petToastIn{ from{ opacity:0; transform: translate(-50%, 10px); } }
+
+/* 껍데기 고르기 칸은 이름이 길어서 조금 넓게 */
+.pet-sp.wide{ width: 72px; }
+/* 카드의 펫도 누를 수 있다는 신호 */
+.card-pet.is-clickable{ cursor: pointer; }
+.card-pet.is-clickable:hover .pet-svg{ filter: brightness(1.06); }
+.card-pet.is-clickable:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }

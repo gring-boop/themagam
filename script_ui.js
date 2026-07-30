@@ -34,52 +34,29 @@
   }
 
   /* ===================================================================
-     화면 방향 — 가로 모니터형 / 세로 모니터형
-     =================================================================== */
-  const ORIENT_KEY = "layoutOrient";      // "landscape" | "portrait"
-  const ORIENT_ASKED_KEY = "layoutOrientAsked";
+     화면 방향 — TheMagam 은 가로 배치만 씁니다.
 
-  function setOrientation(mode) {
-    const portrait = mode === "portrait";
-    document.body.classList.toggle("layout-portrait", portrait);
-    try { localStorage.setItem(ORIENT_KEY, portrait ? "portrait" : "landscape"); } catch (e) {}
-    /* 가로형과 세로형은 자리 배치를 따로 기억합니다 */
+     세로 모니터용 배치를 없앴습니다. 창이 세 개뿐이라 세로로 세워도
+     이득이 없고, 배치를 두 벌 기억해야 해서 설정만 복잡해졌습니다.
+     좌우 뒤집기는 그대로 남깁니다 — 이건 실제로 취향이 갈립니다.
+
+     아래 함수들은 다른 파일이 아직 부르고 있어서 이름만 남겨둡니다.
+     무엇을 넣어도 언제나 "가로"로 답합니다.
+     =================================================================== */
+  function setOrientation() {
+    document.body.classList.remove("layout-portrait");
     window.applyLayout?.();
     renderLayoutPick();
   }
   window.setOrientation = setOrientation;
 
-  function currentOrientation() {
-    try { return localStorage.getItem(ORIENT_KEY) === "portrait" ? "portrait" : "landscape"; }
-    catch (e) { return "landscape"; }
-  }
+  function currentOrientation() { return "landscape"; }
   window.currentOrientation = currentOrientation;
 
-  function applySavedOrientation() {
-    setOrientation(currentOrientation());
-  }
+  function applySavedOrientation() { setOrientation(); }
   window.applySavedOrientation = applySavedOrientation;
 
-  /* 세로로 긴 화면이면 처음 한 번만 물어봅니다.
-     거절하면 다시 묻지 않아요. */
-  function maybeSuggestPortrait() {
-    try {
-      if (localStorage.getItem(ORIENT_ASKED_KEY)) return;
-      if (localStorage.getItem(ORIENT_KEY)) return;
-
-      const w = window.innerWidth, h = window.innerHeight;
-      if (!(h > w * 1.15)) return;              // 세로로 충분히 길 때만
-
-      localStorage.setItem(ORIENT_ASKED_KEY, "1");
-      setTimeout(() => {
-        if (confirm("화면이 세로로 긴 것 같아요.\n세로 모니터용 배치로 바꿔드릴까요?\n\n(설정에서 언제든 다시 바꿀 수 있어요)")) {
-          setOrientation("portrait");
-        } else {
-          setOrientation("landscape");
-        }
-      }, 800);
-    } catch (e) {}
-  }
+  function maybeSuggestPortrait() { /* 물어볼 것이 없습니다 */ }
   window.maybeSuggestPortrait = maybeSuggestPortrait;
 
   /* ===================================================================
@@ -805,6 +782,8 @@
       };
     }
 
+    _renderParticipationButton();
+
     const nsel = document.getElementById("set-narrow-panel");
     if (nsel) {
       nsel.value = window.narrowDefault?.() || "chat";
@@ -842,7 +821,6 @@
     renderThemePalette();
     renderLayoutPick();
     window.bindLayoutUI?.();
-    window.renderSlotPicker?.();
     window.bindAdminEasterEgg?.();
     window.refreshAdminUiVisibility?.();
   }
@@ -856,7 +834,7 @@
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
     if (name === "theme") renderThemePalette();
-    if (name === "chat") { renderLayoutPick(); window.bindLayoutUI?.(); window.renderSlotPicker?.(); }
+    if (name === "chat") { renderLayoutPick(); window.bindLayoutUI?.(); window.renderSlotMap?.(); }
     if (name === "privacy") {
       window.bindAdminEasterEgg?.();
       window.refreshAdminUiVisibility?.();
@@ -1142,22 +1120,35 @@
   }
 
   function _renderParticipationButton() {
-    const btn = document.getElementById("pomo-opt-btn");
-    if (!btn) return;
-    if (_pomoParticipating) {
-      btn.dataset.state = "on";
-      btn.textContent = "🔔 참여 중 · 알림 ON";
-      btn.classList.remove("danger");
-      btn.classList.add("primary");
-    } else {
-      btn.dataset.state = "off";
-      btn.textContent = "🔕 미참여 · 알림 OFF";
-      btn.classList.remove("primary");
-      btn.classList.add("danger");
+    /* 같은 스위치가 두 곳에 있습니다 — 뽀모도로 창과 설정 → 🍅 뽀모도로.
+       둘이 다른 모습을 보이면 어느 쪽이 진짜인지 알 수 없으니
+       한 함수에서 같이 칠합니다. */
+    const btns = [
+      document.getElementById("pomo-opt-btn"),
+      document.getElementById("set-pomo-part")
+    ].filter(Boolean);
+
+    btns.forEach(btn => {
+      if (_pomoParticipating) {
+        btn.dataset.state = "on";
+        btn.textContent = "🔔 참여 중 · 알림 ON";
+        btn.classList.remove("danger");
+        btn.classList.add("primary");
+        btn.setAttribute("aria-pressed", "true");
+      } else {
+        btn.dataset.state = "off";
+        btn.textContent = "🔕 미참여 · 알림 OFF";
+        btn.classList.remove("primary");
+        btn.classList.add("danger");
+        btn.setAttribute("aria-pressed", "false");
+      }
+    });
+    {
     }
     // ✅ 미참가 시 뽀모 UI 전체를 은은한 회색으로
     document.body.classList.toggle("pomo-nonpart", !_pomoParticipating);
   }
+  window.syncPomoSettingBtn = _renderParticipationButton;
 
   async function togglePomodoroParticipation() {
     _pomoParticipating = !_pomoParticipating;

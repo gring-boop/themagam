@@ -616,15 +616,19 @@ window.afterJoinLoadProfile = afterJoinLoadProfile;
    [3] 설정 모달 — 프로필 탭
    ===================================================================== */
 
-/* TheMagam — 오늘 목표 / 상태 / 나의 투두를 프로필 편집 안으로 옮깁니다.
+/* TheMagam — 오늘 목표와 나의 투두는 창이 아니라 "옮겨 다니는 덩어리"입니다.
 
-   화면은 접속자·뽀모·채팅 세 칸만 두기로 해서, 이 셋은 창이 아니라
-   프로필 편집 팝업 안에 삽니다. 새로 만들지 않고 이미 있는 덩어리를
-   그대로 옮겨 넣습니다 — 안에 걸린 이벤트와 저장 로직이 전부 살아 있어야
-   하니까요. 다시 만들면 조용히 저장이 끊깁니다. */
-function mountPersonalBlocksIntoProfile(host) {
-  /* 목표·상태를 맨 위에 둡니다. 매일 손대는 것이 위에 있어야 하니까요.
-     (역순으로 prepend 하면 status → todo 순서가 됩니다) */
+   이 둘을 보여줄 곳이 두 군데예요.
+     · 카드 아래칸을 눌렀을 때 뜨는 팝업 (#goals-body)
+     · 설정 → 🎯 목표 · 투두 탭        (#panel-goals)
+
+   같은 것을 두 벌 만들면 한쪽에 적은 게 다른 쪽에 안 보이고, 저장도
+   엉킵니다. 그래서 실제 덩어리는 하나만 두고 필요한 곳으로 옮깁니다.
+   안에 걸린 이벤트와 저장 로직이 그대로 따라오니까요.
+   (다시 그리면 조용히 저장이 끊깁니다 — 예전에 겪은 적이 있습니다.) */
+function mountGoalBlocks(host) {
+  if (!host) return;
+  /* 목표를 위, 투두를 아래로. 역순으로 넣습니다. */
   ["todo-block", "status-block"].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -632,6 +636,22 @@ function mountPersonalBlocksIntoProfile(host) {
     host.insertBefore(el, host.firstChild);
   });
 }
+window.mountGoalBlocks = mountGoalBlocks;
+
+/** 카드 아래칸 → 목표·투두 팝업 */
+function openGoals() {
+  if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
+  const modal = document.getElementById("goals-modal");
+  if (!modal) return;
+  mountGoalBlocks(document.getElementById("goals-body"));
+  modal.style.display = "flex";
+}
+function closeGoals() {
+  const modal = document.getElementById("goals-modal");
+  if (modal) modal.style.display = "none";
+}
+window.openGoals = openGoals;
+window.closeGoals = closeGoals;
 
 function renderProfilePanel() {
   const host = document.getElementById("panel-profile");
@@ -924,9 +944,6 @@ function bindProfilePanel() {
     };
   }
 
-
-  mountPersonalBlocksIntoProfile(host);
-
 }
 
 window.renderProfilePanel = renderProfilePanel;
@@ -945,6 +962,14 @@ function openProfileEditor() {
 }
 window.openProfileEditor = openProfileEditor;
 
+/** 카드의 펫을 누르면 설정 → 🐾 펫 으로 바로 갑니다 */
+function openPetPanel() {
+  if (!myNick) { alert("입장 후에 볼 수 있어요."); return; }
+  window.openSettings?.();
+  window.openTab?.("pet");
+}
+window.openPetPanel = openPetPanel;
+
 /**
  * 카드는 status가 바뀔 때마다 통째로 다시 그려지므로
  * 버튼마다 리스너를 다는 대신 컨테이너에 위임합니다.
@@ -955,11 +980,33 @@ function bindCardEditDelegate() {
   host._editDelegateBound = true;
 
   host.addEventListener("click", (e) => {
-    const btn = e.target?.closest?.("[data-edit-profile]");
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    openProfileEditor();
+    /* 프사 → 프로필 설정 */
+    if (e.target?.closest?.("[data-edit-profile]")) {
+      e.preventDefault(); e.stopPropagation();
+      openProfileEditor();
+      return;
+    }
+    /* 펫 → 펫 관리 창 */
+    if (e.target?.closest?.("[data-open-pet]")) {
+      e.preventDefault(); e.stopPropagation();
+      window.openPetPanel?.();
+      return;
+    }
+    /* 상태표 → 상태 고르기 */
+    if (e.target?.closest?.("[data-pick-status]")) {
+      e.preventDefault(); e.stopPropagation();
+      window.openStatusPicker?.(e.target.closest("[data-pick-status]"));
+      return;
+    }
+  });
+
+  /* 키보드로도 열 수 있게 (Enter · Space) */
+  host.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const t = e.target;
+    if (t?.closest?.("[data-open-pet]")) { e.preventDefault(); window.openPetPanel?.(); }
+    else if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
+    else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.openStatusPicker?.(t); }
   });
 }
 window.bindCardEditDelegate = bindCardEditDelegate;
@@ -979,18 +1026,36 @@ window.bindCardEditDelegate = bindCardEditDelegate;
     const wrapped = function (name) {
       _openTab.apply(this, arguments);
       if (name === "profile") renderProfilePanel();
+      if (name === "goals")   mountGoalBlocks(document.getElementById("panel-goals"));
+      if (name === "pet")     window.renderPetPanel?.();
     };
     wrapped.__profilePatched = true;
     window.openTab = wrapped;
   }
 
-  // 입장 완료 후 프로필 로드
+  /* 입장 완료 후 프로필 로드 + 시간 기록·펫 시작
+
+     [FIX] 펫 관리 창에서 아무것도 안 눌리던 문제
+
+     startTimelog 와 startPet 을 init(페이지 로드) 에서만 불렀습니다.
+     그 시점에는 필명이 아직 없어서 두 함수가 첫 줄에서 그냥 돌아갑니다.
+     그래서 펫 정보가 비어 있었고, 껍데기·색을 눌러도 저장할 대상이
+     없어 조용히 아무 일도 일어나지 않았습니다.
+
+     화면에는 펫이 보였습니다. 값이 없을 때 기본값으로 그리게 해둔
+     탓입니다 — "보이는데 안 먹는다" 가 그래서 나왔습니다.
+
+     입장한 뒤에 다시 불러줍니다. 두 함수 모두 여러 번 불려도
+     안전하도록 만들어져 있습니다. */
   const _join = window.join;
   if (typeof _join === "function" && !_join.__profilePatched) {
     const wrapped = async function () {
       await _join.apply(this, arguments);
       if (myNick) {
         try { await afterJoinLoadProfile(); } catch (e) { console.warn("[afterJoinLoadProfile]", e); }
+        try { window.startTimelog?.(); }      catch (e) { console.warn("[startTimelog]", e); }
+        try { await window.startPet?.(); }    catch (e) { console.warn("[startPet]", e); }
+        try { window.renderPetPanel?.(); }    catch (e) {}
       }
     };
     wrapped.__profilePatched = true;
@@ -1012,6 +1077,7 @@ window.bindCardEditDelegate = bindCardEditDelegate;
       try { window.bindRecordOpen?.(); }    catch (e) { console.warn("[bindRecordOpen]", e); }
       try { window.hookTimelogStatus?.(); } catch (e) { console.warn("[hookTimelogStatus]", e); }
       try { window.startTimelog?.(); }      catch (e) { console.warn("[startTimelog]", e); }
+      try { window.startPet?.(); }          catch (e) { console.warn("[startPet]", e); }
     };
     wrapped.__profilePatched = true;
     window.init = wrapped;
@@ -1056,3 +1122,89 @@ window.rerenderUserCards = function () {
     if (window._statusCache) window.renderUserCards?.(window._statusCache);
   } catch (e) {}
 };
+
+/* =====================================================================
+   TheMagam — 상태표를 누르면 뜨는 작은 고르기 판
+
+   왜 돌려막기(누를 때마다 다음 상태)가 아니라 목록인가.
+     네 가지를 돌리면 자리비움까지 가는 데 세 번을 눌러야 합니다.
+     그리고 지금 무엇을 고르는 중인지가 안 보입니다.
+     목록은 한 번에 원하는 것을 짚을 수 있습니다.
+
+   실제 저장은 기존 <select id="db-status"> 를 대신 조작해서 합니다.
+   그러면 이미 있는 저장·집계 흐름을 그대로 타므로, 시간 기록도
+   따로 손댈 필요가 없습니다.
+   ===================================================================== */
+(function () {
+  const CHOICES = [
+    { v: "writing", label: "WORK",      cls: "status-writing" },
+    { v: "focus",   label: "🔥초집중🔥", cls: "status-focus"   },
+    { v: "rest",    label: "휴식",       cls: "status-rest"    },
+    { v: "away",    label: "자리비움",   cls: "status-away"    }
+  ];
+
+  let _pop = null;
+
+  function close() {
+    if (!_pop) return;
+    _pop.remove();
+    _pop = null;
+    document.removeEventListener("click", onDocClick, true);
+    document.removeEventListener("keydown", onKey, true);
+    window.removeEventListener("resize", close);
+    window.removeEventListener("scroll", close, true);
+  }
+  function onDocClick(e) { if (_pop && !_pop.contains(e.target)) close(); }
+  function onKey(e) { if (e.key === "Escape") close(); }
+
+  function pick(v) {
+    const sel = document.getElementById("db-status");
+    if (sel) {
+      sel.value = v;
+      /* 원래 화면에서 고르는 것과 똑같이 취급되도록 알림을 냅니다.
+         (이 select 에는 oninput 이 걸려 있습니다) */
+      sel.dispatchEvent(new Event("input", { bubbles: true }));
+      window.renderQuickStatusBtn?.();
+    }
+    close();
+  }
+
+  window.openStatusPicker = function (anchor) {
+    close();
+    if (!anchor) return;
+
+    const cur = document.getElementById("db-status")?.value || "";
+    const pop = document.createElement("div");
+    pop.className = "status-pop";
+    pop.setAttribute("role", "menu");
+    pop.innerHTML = CHOICES.map(c => `
+      <button type="button" class="status-pop-item ${c.cls}${c.v === cur ? " on" : ""}"
+              role="menuitem" data-status-val="${c.v}">${c.label}</button>`).join("");
+
+    document.body.appendChild(pop);
+
+    /* 카드 위에 겹치지 않게 상태표 바로 아래에 붙입니다.
+       화면 오른쪽·아래로 넘치면 안쪽으로 밀어 넣습니다. */
+    const r = anchor.getBoundingClientRect();
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    let left = r.left;
+    let top  = r.bottom + 6;
+    if (left + w > innerWidth - 8)  left = innerWidth - w - 8;
+    if (top  + h > innerHeight - 8) top  = r.top - h - 6;
+    pop.style.left = Math.max(8, left) + "px";
+    pop.style.top  = Math.max(8, top)  + "px";
+
+    pop.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-status-val]");
+      if (b) pick(b.dataset.statusVal);
+    });
+
+    _pop = pop;
+    setTimeout(() => {
+      document.addEventListener("click", onDocClick, true);
+      document.addEventListener("keydown", onKey, true);
+      window.addEventListener("resize", close);
+      window.addEventListener("scroll", close, true);
+    }, 0);
+  };
+})();
