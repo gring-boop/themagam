@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+
+  <!--
+    [변경] maximum-scale=1, user-scalable=0 제거
+    → 확대 차단은 WCAG 1.4.4(Resize Text) 위반이며, 저시력 사용자가
+      본문을 키울 수 없습니다. iOS의 "입력창 포커스 시 자동 확대" 문제는
+      CSS에서 #message의 font-size를 16px 이상으로 잡아 해결했습니다.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <meta name="description" content="TheMagam — 작가들의 실시간 공동 집필 공간" />
+  <meta name="theme-color" content="#E9EDF3" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
+
+  <!-- 아이콘 -->
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
+       설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="작업실">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <title>TheMagam ✍️</title>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+  <link rel="stylesheet" href="styles.css?v=202607301709" />
+</head>
+
+<body>
+
+<!-- =====================================================================
+     입장 모달
+     ===================================================================== -->
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
+  <div class="modal-content">
+    <h1 class="modal-title" id="join-title">TheMagam ✍️</h1>
+    <p class="modal-sub">필명만 입력하면 바로 시작해요. 프사는 나중에 설정에서 바꿀 수 있어요.</p>
+
+    <label class="sr-only" for="nick-input">필명</label>
+    <input
+      type="text"
+      id="nick-input"
+      class="w-full"
+      placeholder="필명을 입력해 주세요"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="go"
+    >
+    <div class="spacer-sm"></div>
+    <button id="join-btn" class="ghost-btn primary w-full" onclick="join()">입장하기</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     퇴장 화면
+     ===================================================================== -->
+<div id="exit-screen" class="hidden" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+  <div class="modal-content" style="text-align:center;">
+    <h2 class="modal-title" id="exit-title">✅ 퇴장 완료</h2>
+    <p class="modal-sub">
+      이제 창을 닫아도 됩니다. ☕<br>
+      오늘도 집필 고생하셨습니다… 최고로 멋져요 🧡
+    </p>
+    <div class="spacer-md"></div>
+    <button class="ghost-btn primary w-full" onclick="window.close()">창 닫기</button>
+    <p class="hint">
+      ※ 브라우저 정책 때문에 버튼으로 창이 안 닫힐 수 있어요.<br>
+      그땐 그냥 탭/창을 닫아주면 됩니다 🙂
+    </p>
+  </div>
+</div>
+
+<!-- =====================================================================
+     이용 설명서 모달 (내용은 script_manual.js가 채웁니다)
+     ===================================================================== -->
+<div id="manual-modal" onclick="closeManual()" role="dialog" aria-modal="true" aria-labelledby="manual-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 class="modal-title" id="manual-title">📖 TheMagam 설명서</h2>
+    <p class="modal-sub">처음이신가요? 위 탭을 눌러 필요한 것만 골라 보셔도 좋아요.</p>
+
+    <div class="tabs" id="manual-tabs" role="tablist" aria-label="설명서 탭"></div>
+    <div class="tab-panels" id="manual-panels"></div>
+
+    <button class="ghost-btn w-full" id="manual-close-btn" type="button" onclick="closeManual()">닫기</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     기록 팝업 — 카드 아래쪽 상자를 누르면 열립니다
+     ===================================================================== -->
+<div id="record-modal" onclick="closeRecord()" role="dialog" aria-modal="true" aria-labelledby="record-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 class="modal-title" id="record-title">📊 기록</h2>
+    <div id="record-body"></div>
+    <button class="ghost-btn w-full" type="button" onclick="closeRecord()" style="margin-top:14px;">닫기</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     설정 모달
+     ===================================================================== -->
+<div id="settings-modal" onclick="closeSettings()" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 class="modal-title" id="settings-title">⚙️ 대시보드 설정</h2>
+    <p class="modal-sub">채팅 · 테마 · 타이머 · 개인정보 설정을 한 곳에서 정돈해요.</p>
+
+    <div class="tabs" role="tablist" aria-label="설정 탭">
+      <button class="tab active" data-tab="chat"    role="tab" aria-selected="true"  aria-controls="panel-chat"    onclick="openTab('chat')">💬 채팅</button>
+      <button class="tab"        data-tab="profile" role="tab" aria-selected="false" aria-controls="panel-profile" onclick="openTab('profile')">👤 프로필</button>
+      <button class="tab"        data-tab="theme"   role="tab" aria-selected="false" aria-controls="panel-theme"   onclick="openTab('theme')">🎨 테마</button>
+      <button class="tab"        data-tab="timer"   role="tab" aria-selected="false" aria-controls="panel-timer"   onclick="openTab('timer')">⏰ 타이머</button>
+      <button class="tab"        data-tab="privacy" role="tab" aria-selected="false" aria-controls="panel-privacy" onclick="openTab('privacy')">🔒 개인정보</button>
+    </div>
+
+    <div class="tab-panels">
+
+      <!-- ── 채팅 ── -->
+      <div class="panel active" id="panel-chat" role="tabpanel" aria-labelledby="panel-chat">
+        <div class="set-block">
+          <div class="set-title">보기 고르기</div>
+          <div class="layout-pick" id="layout-pick">
+            <div class="pick-row" role="radiogroup" aria-label="보기">
+              <button type="button" class="layout-opt" data-orient="landscape" role="radio" aria-checked="true" onclick="setOrientation('landscape')">
+                <span class="lay lay-land"><i class="a-chat"></i><i class="a-prof"></i><i class="a-work"></i></span>
+                <span class="layout-label">가로 보기</span>
+              </button>
+              <button type="button" class="layout-opt" data-orient="portrait" role="radio" aria-checked="false" onclick="setOrientation('portrait')">
+                <span class="lay lay-port"><i class="a-prof"></i><i class="a-chat"></i><i class="a-todo"></i><i class="a-work"></i><i class="a-stat"></i></span>
+                <span class="layout-label">세로 보기</span>
+              </button>
+            </div>
+
+            <div class="pick-row" role="radiogroup" aria-label="좌우 뒤집기" style="margin-top:8px;">
+              <button type="button" class="layout-opt slim" data-side="-1" role="radio" aria-checked="true" onclick="setLayout(-1); renderLayoutPick();">
+                <span class="layout-label">그대로</span>
+              </button>
+              <button type="button" class="layout-opt slim" data-side="1" role="radio" aria-checked="false" onclick="setLayout(1); renderLayoutPick();">
+                <span class="layout-label">좌우 뒤집기</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="set-block">
+          <div class="set-title">창이 좁아지면 보여줄 창</div>
+          <select id="set-narrow-panel" class="w-full">
+            <option value="prof">👥 접속자</option>
+            <option value="pomo">🍅 뽀모도로</option>
+            <option value="chat">💬 채팅</option>
+          </select>
+          <p class="hint">
+            창 폭이 좁아지거나 폰으로 들어오면 칸을 나누지 않고 <b>한 창만</b> 띄워요.
+            그때 처음 열릴 창입니다. 화면 위쪽 <b>탭</b>으로 언제든 다른 창으로 넘어갈 수 있어요.
+          </p>
+        </div>
+
+        <div class="set-block">
+          <div class="set-title" id="slot-title">자리마다 놓을 창</div>
+          <!-- 고른 보기에 맞는 자리 그림이 여기에 그려집니다 -->
+          <div class="slot-map" id="slot-map"></div>
+          <div class="slot-picker" id="slot-picker"></div>
+          <p class="hint">
+            이미 다른 자리에 있는 창을 고르면 <b>둘이 서로 자리를 맞바꿔요.</b><br>
+            <b>— 비우기 —</b> 를 고르면 그 칸이 접히고 옆 칸이 공간을 가져갑니다.
+            치운 창은 화면 <b>왼쪽 위</b>에 아이콘으로 남아서 언제든 되돌릴 수 있어요.<br>
+            칸 크기는 <b>칸 사이 회색 손잡이를 끌어서</b> 조절하고, 더블클릭하면 기본값입니다.
+          </p>
+          <div class="mini-row" style="margin-top:8px;">
+            <button type="button" class="ghost-btn compact" id="slot-reset">기본 배치로 되돌리기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 프로필 (script_profile.js가 렌더) ── -->
+      <div class="panel" id="panel-profile" role="tabpanel"></div>
+
+      <!-- ── 테마 ── -->
+      <div class="panel" id="panel-theme" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">테마 선택</div>
+          <p class="hint">동그라미는 “배경(왼쪽) + 내 말풍선(오른쪽)” 반반 미리보기예요.</p>
+          <div class="spacer-md"></div>
+          <div class="theme-grid" id="theme-palette" role="group" aria-label="테마 목록"></div>
+        </div>
+      </div>
+
+      <!-- ── 타이머 ── -->
+      <div class="panel" id="panel-timer" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">타이머 표시</div>
+          <label class="set-check">
+            <input id="set-timer-hide" type="checkbox">
+            타이머 기본 숨김
+          </label>
+          <p class="hint">타이머는 잔잔한 그라데이션 + “임박” 때만 살짝 강조돼요.</p>
+        </div>
+
+        <div class="set-block">
+          <div class="set-title">입장 알림</div>
+          <label class="set-check">
+            <input id="set-join-noti" type="checkbox">
+            누군가 들어오면 알림 띄우기
+          </label>
+          <p class="hint">
+            다른 창을 보고 있을 때만 떠요. 화면을 보고 있으면 카드가 바로 생기니 알림은 생략합니다.<br>
+            브라우저가 <b>알림 허용</b>을 물어보면 허용해 주세요. 켜자마자 한 번 물어봅니다.
+          </p>
+        </div>
+
+        <div class="set-block">
+          <label class="set-title" for="set-warn-min">임박 강조 기준</label>
+          <input id="set-warn-min" type="range" min="1" max="30" step="1">
+          <p class="hint">마감 <span id="warn-min-label"></span>분 이하면 강조가 들어가요.</p>
+        </div>
+      </div>
+
+      <!-- ── 개인정보 ── -->
+      <div class="panel" id="panel-privacy" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">내 데이터</div>
+          <p class="hint">
+            개인 작업 영역(투두/메모/목표/오늘 누적)은 <b>Firebase</b>에 <b>필명 기준</b>으로 저장돼요.<br>
+            필명이 같으면 덮어써질 수 있으니, 중복되지 않는 필명을 권장해요.
+          </p>
+        </div>
+
+        <div class="set-block">
+          <!-- 이스터에그: 7번 클릭하면 관리자 모드 진입 -->
+          <div class="set-title" id="reset-title">로컬 설정 초기화</div>
+          <button class="ghost-btn" onclick="resetLocalSettings()">이 기기에서 설정 초기화</button>
+          <p class="hint">테마/채팅 너비/레이아웃/타이머 표시 설정만 초기화돼요.</p>
+
+          <div id="admin-easter" class="hidden" style="margin-top:12px;">
+            <p class="hint">🕵️‍♀️ 관리자 모드가 발견됐어요. 로그인 후에만 버튼이 나타나요.</p>
+            <div class="spacer-sm"></div>
+            <button id="admin-login-btn" class="ghost-btn w-full" type="button">🛡️ 관리자 모드 로그인</button>
+
+            <!-- 관리자 전용 (로그인 후 표시) -->
+            <div id="admin-tools" class="hidden stack" style="margin-top:12px; gap:16px;">
+
+              <!-- 핀 메시지 -->
+              <div class="stack">
+                <label class="set-title" for="admin-pin-input">📌 채팅 상단 핀 메시지</label>
+                <input type="text" id="admin-pin-input" class="w-full" placeholder="고정할 메시지를 입력해요">
+                <div class="set-row">
+                  <button class="ghost-btn primary" type="button"
+                    onclick="(async () => {
+                      const v = document.getElementById('admin-pin-input')?.value?.trim();
+                      if (!v) return alert('메시지를 입력해주세요!');
+                      await setPinnedMessage(v, myNick);
+                      document.getElementById('admin-pin-input').value = '';
+                      alert('핀 메시지가 설정됐어요 📌');
+                    })()">
+                    📌 핀 설정
+                  </button>
+                  <button class="ghost-btn danger" type="button" onclick="removePinnedMessage()">
+                    🗑 핀 제거
+                  </button>
+                </div>
+                <p class="hint">채팅 상단에 공지처럼 고정돼요. 모든 접속자에게 보여요.</p>
+              </div>
+
+              <!-- 이전 채팅 불러오기 -->
+              <div>
+                <div class="set-title">🕘 이전 채팅 불러오기</div>
+                <button class="ghost-btn primary w-full" type="button" onclick="loadHistoryNow()">
+                  🕘 이전 채팅 불러오기
+                </button>
+                <p class="hint">내 화면에만 과거 대화를 불러와요. 다른 작가님들 화면에는 영향이 없어요.</p>
+              </div>
+
+              <!-- 히스토리 노출 설정 -->
+              <fieldset style="border:none; padding:0; margin:0;">
+                <legend class="set-title">📡 입장 히스토리 노출 설정</legend>
+                <div class="stack">
+                  <label class="set-check">
+                    <input type="radio" name="hist-mode" value="on">
+                    🕘 전체 공개 <span class="opt-desc">— 모든 입장자에게 표시</span>
+                  </label>
+                  <label class="set-check">
+                    <input type="radio" name="hist-mode" value="admin">
+                    🛡️ 관리자만 <span class="opt-desc">— 관리자 로그인 시에만</span>
+                  </label>
+                  <label class="set-check">
+                    <input type="radio" name="hist-mode" value="off">
+                    🙈 숨김 <span class="opt-desc">— 아무에게도 표시 안 함</span>
+                  </label>
+
+                  <label class="set-check" for="hist-count-input">
+                    표시 개수
+                    <input id="hist-count-input" class="set-num" type="number"
+                           min="10" max="300" step="10" value="100" inputmode="numeric">
+                    개
+                  </label>
+
+                  <button class="ghost-btn primary w-full" type="button" onclick="applyHistoryConfig()">
+                    ✅ 설정 적용
+                  </button>
+                  <p class="hint" id="hist-current-label">현재 적용 중: 불러오는 중…</p>
+                </div>
+              </fieldset>
+
+              <!-- TheMagam — 접속 통계(접속 기록 보기)는 뺐습니다. -->
+
+              <!-- 업적 테스트 -->
+              <div>
+                <label class="set-title" for="ach-test-nick">🧪 업적 테스트 모드</label>
+                <input id="ach-test-nick" class="w-full" type="text" placeholder="대상 필명">
+                <div class="spacer-sm"></div>
+                <div class="mini-row">
+                  <label class="set-check" for="ach-test-streak">
+                    연속
+                    <input id="ach-test-streak" class="set-num" type="number"
+                           min="0" max="999" value="3" inputmode="numeric">
+                    일
+                  </label>
+                  <label class="set-check">
+                    <input id="ach-test-weekly" type="checkbox"> 👑 지난주 풀출석
+                  </label>
+                </div>
+                <div class="spacer-sm"></div>
+                <div class="set-row">
+                  <button class="ghost-btn primary" type="button" onclick="applyAchievementOverride()">🧪 적용</button>
+                  <button class="ghost-btn danger"  type="button" onclick="clearAchievementOverride()">해제</button>
+                </div>
+                <p class="hint">
+                  해당 필명이 모든 화면에서 업적 달성 상태로 보여요. 실제 출석 데이터는 바뀌지 않고,
+                  24시간 후 자동 만료돼요. 필명을 비우고 해제하면 전체 해제.
+                </p>
+              </div>
+
+              <!-- 채팅 전체 삭제 -->
+              <div>
+                <button id="admin-clear-btn" class="ghost-btn danger w-full" type="button">🧹 채팅 전체 삭제</button>
+                <p class="hint">주의: 되돌릴 수 없어요.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <button class="ghost-btn w-full" onclick="closeSettings()">닫기</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     메인
+     ===================================================================== -->
+<div class="container">
+
+  <!-- 화면 맨 위 · 도구 띠 -->
+  <header class="app-head" aria-label="도구">
+    <div class="mini-row work-head-row">
+
+      <!-- 폰트 · 가이드 · 설정 · 나가기는 한 덩어리로 붙여서 오른쪽 끝에 -->
+      <!-- 치워둔 창 되돌리기 — 비어 있으면 통째로 숨습니다 -->
+      <div id="hidden-panels" class="hidden-panels hidden" aria-label="치워둔 창"></div>
+
+      <div class="head-tools">
+        <button class="icon-btn guide" type="button" onclick="openManual()" aria-label="가이드" title="가이드">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.6.2-.8.7-.8 1.3v.4"/><path d="M12 17.2h.01"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn" type="button" onclick="openSettings()" aria-label="설정" title="설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.2H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 8.9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>
+          </svg>
+        </button>
+
+        <div class="font-ctl">
+          <button class="font-btn" type="button" onclick="decreaseFont()" aria-label="글씨 작게">−</button>
+          <span id="font-size-pill" class="font-pill" aria-live="polite" aria-label="현재 글씨 크기">18px</span>
+          <button class="font-btn" type="button" onclick="increaseFont()" aria-label="글씨 크게">+</button>
+        </div>
+
+        <button class="icon-btn danger" type="button" onclick="leaveRoom()" aria-label="나가기" title="나가기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+  </header>
+
+  <!-- 쪼갬 뿌리 — script_layout.js 가 이 안에 칸과 손잡이를 만듭니다 -->
+  <div id="split-root" class="split-root">
+
+
+  <!-- 채팅 -->
+  <aside class="chat-sidebar" aria-label="채팅">
+      <div class="header">
+        <span id="my-info">Chat</span>
+        <div class="mini-row">
+          <div id="admin-area" class="hidden">
+            <button class="admin-btn" onclick="clearAllChat()">전체 삭제 🔥</button>
+          </div>
+          <button id="chat-collapse-btn" class="chat-collapse-btn" type="button"
+                  aria-expanded="true" aria-label="채팅 접기" title="채팅 접기">›</button>
+        </div>
+      </div>
+
+      <!-- 핀 배너 전용 고정 슬롯 -->
+      <div id="pin-banner-slot"></div>
+
+      <div id="chat-box" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <button id="new-msg-float" class="new-msg-float hidden" type="button">
+        새 메시지 <span id="new-msg-count">0</span>개 ↓
+      </button>
+
+      <!-- 멘션 자동완성 -->
+      <div id="mention-dropdown" role="listbox" aria-label="멘션 대상 선택"></div>
+
+      <!-- 답장 미리보기 -->
+      <div id="reply-preview-bar" class="reply-preview-bar hidden">
+        <div class="reply-preview-body">
+          <div class="reply-preview-label" id="reply-preview-label"></div>
+          <div class="reply-preview-excerpt" id="reply-preview-excerpt"></div>
+        </div>
+        <button type="button" id="reply-preview-close" class="reply-preview-close" aria-label="답장 취소">✕</button>
+      </div>
+
+      <div class="input-area">
+        <label class="sr-only" for="message">메시지 입력</label>
+        <textarea id="message" rows="1" placeholder="메시지를 입력하세요"></textarea>
+        <button class="send-btn" onclick="send()" aria-label="메시지 보내기">▲</button>
+      </div>
+    </aside>
+
+  <!-- 채팅을 접었을 때 남는 레일 -->
+  <div id="chat-rail" class="side-rail chat-rail hidden">
+    <button id="chat-rail-btn" class="side-rail-btn" type="button" aria-label="채팅 펼치기" title="채팅 펼치기">💬</button>
+    <span id="chat-rail-badge" class="side-rail-badge hidden" aria-live="polite">0</span>
+    <span class="side-rail-label" aria-hidden="true">채팅</span>
+  </div>
+
+
+  <!-- 접속자 프로필 -->
+  <main class="cards-area" aria-label="공동 집필 현황">
+    <h2 class="sr-only">공동 집필 현황</h2>
+    <div class="user-cards-grid" id="user-cards" aria-live="polite"></div>
+  </main>
+
+
+
+
+
+  <!-- 뽀모도로 -->
+  <section class="pane pane-pomo" id="pomo-block" aria-label="뽀모도로">
+    <div id="timer-wrap">
+      <!-- [1줄] 상태 문구 -->
+      <div class="pomo-row pomo-row-1">
+        <div id="timer-pill" role="status" aria-live="polite">
+          <span id="timer-text" class="pill-muted">🍅 뽀모도로 대기 중… 🍅</span>
+        </div>
+      </div>
+
+      <!-- [2줄] 진행 바 -->
+      <div class="pomo-row pomo-row-3">
+        <div class="pomo-progress" role="progressbar" aria-label="현재 세션 진행률"
+             aria-valuemin="0" aria-valuemax="100">
+          <div id="pomo-bar"></div>
+        </div>
+      </div>
+
+      <!-- [4줄] 시간 설정 · 시작 · 정지 · 알림음 -->
+      <div class="pomo-row pomo-row-4 timer-controls">
+        <div id="pomo-setup" class="pomo-setup">
+          <label class="pomo-setup-field" for="pomo-work-min">
+            <span class="pomo-setup-label" aria-hidden="true">🍅</span>
+            <input id="pomo-work-min" type="number" min="1" max="180" step="1" value="25" inputmode="numeric" aria-label="집중 시간(분)">
+            <span class="pomo-setup-unit">분</span>
+          </label>
+          <span class="pomo-setup-sep" aria-hidden="true">/</span>
+          <label class="pomo-setup-field" for="pomo-rest-min">
+            <span class="pomo-setup-label" aria-hidden="true">☕</span>
+            <input id="pomo-rest-min" type="number" min="1" max="60" step="1" value="5" inputmode="numeric" aria-label="휴식 시간(분)">
+            <span class="pomo-setup-unit">분</span>
+          </label>
+        </div>
+
+        <button class="pomo-run-btn start" onclick="startPomodoro()"
+                aria-label="뽀모도로 시작" title="정한 시간으로 시작해요">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        </button>
+
+        <button class="pomo-run-btn stop" onclick="stopPomodoro()"
+                aria-label="뽀모도로 정지" title="모두의 타이머가 멈춰요">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>
+        </button>
+
+        <button id="pomo-detail-toggle" class="ghost-btn compact"
+                onclick="togglePomoDetail()"
+                aria-expanded="false" aria-controls="pomo-detail"
+                aria-label="알림음 설정">🎵</button>
+      </div>
+
+      <!-- [4줄] 참여/알림 토글 — 가장 아랫줄 -->
+      <div class="pomo-row pomo-row-2">
+        <button id="pomo-opt-btn" class="ghost-btn compact" data-state="on"
+                onclick="togglePomodoroParticipation()" aria-pressed="true"
+                title="내 알림음을 끄고/켜요">🔔 참여 중 · 알림 ON</button>
+      </div>
+
+      <div id="pomo-detail" class="pomo-detail collapsed">
+              <div class="pomo-detail-inner">
+                <div class="pomo-detail-head">
+                  <div class="title">⚙️ 뽀모 상세 설정</div>
+                  <div class="sub">자주 안 바꾸는 건 여기로 넣었어요</div>
+                </div>
+                <div id="pomo-sound-mini"></div>
+                <div class="pomo-advanced">
+                  <div class="adv-title">⏱️ (추후 확장) 작업/휴식 시간, 자동 시작 등</div>
+                  <div class="adv-sub">지금은 UI 자리만 잡아둘게요</div>
+                </div>
+              </div>
+            </div>
+          </div>
+  </section>
+
+  <!-- 오늘 목표 / 상태 -->
+  <section class="pane pane-status" id="status-block" aria-label="오늘 목표와 상태">
+    <div class="goal-wrap">
+    <h4 class="personal-title">🎯 오늘 목표 / 상태</h4>
+    <div class="stack" style="gap:10px;">
+      <label class="sr-only" for="db-today-goal-text">오늘의 한줄 목표</label>
+    <input
+      type="text"
+      id="db-today-goal-text"
+      class="w-full"
+      maxlength="52"
+      oninput="savePersonalDataDebounced()"
+      placeholder="오늘의 한줄 목표(공유됨)"
+    >
+
+    <label class="sr-only" for="db-status">내 스테이터스</label>
+    <select id="db-status" class="w-full"
+            oninput="savePersonalDataDebounced(); window.renderQuickStatusBtn?.()">
+      <option value="" disabled selected>내 스테이터스(공유됨)</option>
+      <option value="writing">WORK</option>
+      <option value="focus">🔥WORK🔥 · 집중 중</option>
+      <option value="rest">휴식</option>
+      <option value="away">자리비움</option>
+    </select>
+
+    <!-- 저장 버튼은 없앴습니다. 목표와 상태는 입력하는 즉시 저장돼요. -->
+    <div class="mini-row end">
+      <button id="status-quick-btn" class="ghost-btn primary compact" onclick="toggleWritingStatus()">✍️ WORK 시작!</button>
+    </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- 나의 할일 -->
+  <section class="pane pane-todo" id="todo-block" aria-label="나의 할일">
+    <div class="todo-wrap">
+      <h4 class="personal-title">📌 나의 투두</h4>
+      <div class="todo-add">
+        <label class="sr-only" for="todo-input">할 일 입력</label>
+        <input id="todo-input" class="todo-input" type="text" placeholder="할 일 추가…" enterkeyhint="done" />
+        <button class="todo-plus" type="button" onclick="addTodoFromUI()" aria-label="할 일 추가">＋</button>
+      </div>
+      <ul id="todo-list" class="todo-list"></ul>
+      <div class="mini-row todo-foot" style="margin-top:8px;">
+        <button class="ghost-btn compact" type="button" onclick="clearCompletedTodos()">🧹 완료 일괄 삭제</button>
+      </div>
+    </div>
+    
+  </section>
+
+  </div><!-- /split-root -->
+
+  <!-- 치워둔 창을 잠시 넣어두는 곳 (화면에는 안 보입니다) -->
+  <div id="panel-attic" hidden></div>
+</div>
+
+<!-- 멘션 토스트 -->
+<div id="mention-toast" role="alert" aria-live="polite">
+  <span class="toast-dot" aria-hidden="true"></span>
+  <span id="mention-toast-text">누군가 나를 멘션했어요!</span>
+</div>
+
+<!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
+<!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
+<script src="fortune_data.js?v=202607301709"></script>
+<script src="script_core.js?v=202607301709"></script>
+<script src="script_ui.js?v=202607301709"></script>
+<script src="script_chat.js?v=202607301709"></script>
+<script src="script_data.js?v=202607301709"></script>
+<script src="script_realtime.js?v=202607301709"></script>
+<script src="script_layout.js?v=202607301709"></script>
+<script src="script_timelog.js?v=202607301709"></script>
+<script src="script_profile.js?v=202607301709"></script>
+<script src="script_reactions.js?v=202607301709"></script>
+<script src="script_manual.js?v=202607301709"></script>
+
+<script>
+  window.addEventListener("load", () => {
+    try {
+      if (typeof window.init === "function") window.init();
+    } catch (e) {
+      console.error("[init error]", e);
+      alert("초기화 중 오류가 발생했어요. 콘솔(F12) 로그를 확인해 주세요.");
+    }
+
+    // ── 로드 자가진단 ──────────────────────────────────────────────
+    // 스크립트 파일이 하나라도 빠지면 그 기능만 조용히 사라져서
+    // "버튼은 있는데 눌러도 아무 일이 없는" 상태가 됩니다.
+    // 그럴 때 원인을 화면과 콘솔에 분명히 남깁니다.
+    const required = {
+      "script_core.js":     "join",
+      "script_ui.js":       "openTab",
+      "script_chat.js":     "renderChatMessage",
+      "script_data.js":     "loadPersonalData",
+      "script_realtime.js": "listenStatus",
+      "script_profile.js":  "renderProfilePanel",
+      "script_reactions.js":"toggleReaction",
+      "script_manual.js":   "openManual",
+      "script_layout.js":   "applyLayout",
+      "script_timelog.js":  "openRecord"
+    };
+    const missing = Object.entries(required)
+      .filter(([, fn]) => typeof window[fn] !== "function")
+      .map(([file]) => file);
+
+    if (missing.length) {
+      console.error(
+        "[벨사탕] 다음 스크립트가 로드되지 않았어요:", missing,
+        "\n→ index.html과 같은 폴더에 파일이 모두 있는지 확인해 주세요.",
+        "\n→ 개발자도구 Network 탭에서 404가 뜨는 파일을 볼 수 있어요."
+      );
+
+      const panel = document.getElementById("panel-profile");
+      if (panel && missing.includes("script_profile.js")) {
+        panel.innerHTML =
+          '<div class="set-block">' +
+          '<div class="set-title">⚠️ 프로필 기능을 불러오지 못했어요</div>' +
+          '<p class="hint"><b>script_profile.js</b> 파일이 index.html과 같은 폴더에 없어요.<br>' +
+          '압축을 풀 때 파일이 누락됐을 수 있어요. 폴더 안에 아래 9개가 모두 있어야 합니다.<br><br>' +
+          'index.html · styles.css · fortune_data.js · script_core.js ·<br>' +
+          'script_ui.js · script_chat.js · script_data.js ·<br>' +
+          'script_realtime.js · <b>script_profile.js</b></p></div>';
+      }
+    }
+  });
+</script>
+
+<!-- =====================================================================
+     서비스 워커 등록 — 독립 창으로 설치할 수 있게 하는 용도뿐입니다.
+     캐시를 하지 않으므로 배포한 파일이 곧바로 반영됩니다.
+     실패해도 작업방은 그대로 돌아갑니다.
+     ===================================================================== -->
+<script>
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(err => {
+        console.warn("[서비스 워커 등록 실패 — 설치 기능만 빠지고 나머지는 정상]", err);
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
