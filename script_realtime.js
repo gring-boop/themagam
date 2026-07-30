@@ -629,7 +629,7 @@
         const label = phaseNow === "work" ? "🍅 작업" : "☁️ 휴식";
         text.textContent = `${label} · ${mm}분 ${ss}초`;
 
-        const warnMin = parseInt(localStorage.getItem("warnMinutes") || "10", 10);
+        const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
         if (remainMs <= warnMin * 60000) pill.classList.add("timer-warn");
         else pill.classList.remove("timer-warn");
       }, 1000);
@@ -750,7 +750,7 @@
       const hs = await db.ref("chatMeta/showHistory").once("value");
       const conf = hs.val() || {};
       const mode = conf.mode || (conf.enabled === false ? "off" : "on");
-      const isAdminNow = sessionStorage.getItem("adminPinOk") === "true";
+      const isAdminNow = AppSession.getItem("adminPinOk") === "true";
       showHist = (mode === "on") || (mode === "admin" && isAdminNow);
       // ✅ 관리자가 '이전 채팅 불러오기'를 누른 경우: 모드와 무관하게 1회 표시
       if (window._forceHistOnce) {
@@ -858,7 +858,7 @@
      ※ 이것이 진짜 잠금장치가 아니라는 점을 분명히 해둡니다.
        - 코드가 공개돼 있어서 누구나 이 숫자를 읽을 수 있습니다.
        - 브라우저 개발자도구에서 아래 한 줄이면 검사를 건너뜁니다.
-             sessionStorage.setItem("adminPinOk", "true")
+             AppSession.setItem("adminPinOk", "true")
 
        즉 이 PIN 은 "실수로 관리자 기능을 누르는 것"을 막아줄 뿐,
        마음먹은 사람을 막지는 못합니다.
@@ -869,10 +869,10 @@
   const ADMIN_PIN = "1009";     // ← 여기를 원하는 숫자로 바꾸세요
 
   function requireAdminPin() {
-    if (sessionStorage.getItem("adminPinOk") === "true") return true;
+    if (AppSession.getItem("adminPinOk") === "true") return true;
     const p = prompt("관리자 PIN을 입력해 주세요");
     if (p === ADMIN_PIN) {
-      sessionStorage.setItem("adminPinOk", "true");
+      AppSession.setItem("adminPinOk", "true");
       window.refreshAdminUiVisibility?.();
       return true;
     }

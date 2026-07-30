@@ -18,7 +18,7 @@
         const snap = await db.ref(`users/${myNick}/prefs/themeName`).once("value");
         const themeName = snap.val();
         if (themeName) {
-          localStorage.setItem(_themeLocalKey(), String(themeName));
+          AppStore.setItem(_themeLocalKey(), String(themeName));
           window.applyTheme?.(String(themeName));
           return;
         }
@@ -26,7 +26,7 @@
     }
 
     // 2) localStorage fallback
-    const local = localStorage.getItem(_themeLocalKey()) || localStorage.getItem("writerTheme");
+    const local = AppStore.getItem(_themeLocalKey()) || AppStore.getItem("writerTheme");
     if (local) window.applyTheme?.(local);
   }
 
@@ -34,7 +34,7 @@
     const name = String(themeName || "").trim();
     if (!name) return;
 
-    localStorage.setItem(_themeLocalKey(), name);
+    AppStore.setItem(_themeLocalKey(), name);
 
     if (myNick) {
       try {
@@ -379,14 +379,14 @@
       todayGoalText: document.getElementById("db-today-goal-text")?.value || "",
       todayDone: document.getElementById("db-today-done")?.value || "",
       status: document.getElementById("db-status")?.value || "writing",
-      themeName: localStorage.getItem(_themeLocalKey()) || ""
+      themeName: AppStore.getItem(_themeLocalKey()) || ""
     };
-    localStorage.setItem(`backup_${myNick}`, JSON.stringify(payload));
+    AppStore.setItem(`backup_${myNick}`, JSON.stringify(payload));
   }
 
   function restoreLocal() {
     if (!myNick) return;
-    const raw = localStorage.getItem(`backup_${myNick}`);
+    const raw = AppStore.getItem(`backup_${myNick}`);
     if (!raw) return;
 
     try {
@@ -404,7 +404,7 @@
 
       // ✅ 로컬 테마도 복구
       if (payload.themeName) {
-        localStorage.setItem(_themeLocalKey(), payload.themeName);
+        AppStore.setItem(_themeLocalKey(), payload.themeName);
         window.applyTheme?.(payload.themeName);
       }
 

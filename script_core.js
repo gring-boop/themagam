@@ -1,4 +1,67 @@
 
+/* =====================================================================
+     방마다 따로 기억하기 (AppStore)
+
+     [문제] 두 방이 같은 주소(도메인)를 씁니다.
+
+         gring-boop.github.io/BL-...      ← 벨사탕
+         gring-boop.github.io/themagam/   ← TheMagam
+
+     브라우저의 localStorage 는 **주소 단위**로 나뉩니다. 뒤의 폴더
+     이름은 보지 않아요. 그래서 두 방이 같은 저장 공간을 함께 쓰고
+     있었습니다. 한쪽에서 뽀모가 끝나 집중 횟수가 올라가면, 다른
+     방의 카드에도 그 숫자가 그대로 나타났습니다. 테마·글씨 크기·
+     칸 배치도 마찬가지로 서로 덮어썼습니다.
+
+     [해결] 모든 열쇠 앞에 방 이름표를 붙입니다.
+
+         pomoSessions_2026-07-31   →   tm:pomoSessions_2026-07-31
+
+     이름표가 다르니 두 방이 서로를 건드릴 수 없습니다.
+
+     [옮겨주기] 예전에 저장된 값은 이름표가 없습니다. 그대로 두면
+     테마와 배치가 초기화된 것처럼 보이므로, 처음 한 번 옮겨옵니다.
+     ===================================================================== */
+const STORE_ROOM = "tm";          // 이 방의 이름표
+
+function _mkStore(raw) {
+    const P = STORE_ROOM + ":";
+    return {
+      getItem(k) { try { return raw.getItem(P + k); } catch (e) { return null; } },
+      setItem(k, v) { try { raw.setItem(P + k, v); } catch (e) {} },
+      removeItem(k) { try { raw.removeItem(P + k); } catch (e) {} },
+      /* 이 방의 열쇠만 셉니다 (다른 방 것은 안 보입니다) */
+      get length() {
+        try { return Object.keys(raw).filter(k => k.startsWith(P)).length; }
+        catch (e) { return 0; }
+      },
+      key(i) {
+        try { return (Object.keys(raw).filter(k => k.startsWith(P))[i] || "").slice(P.length) || null; }
+        catch (e) { return null; }
+      }
+    };
+  }
+
+const AppStore   = _mkStore(window.localStorage);
+const AppSession = _mkStore(window.sessionStorage);
+window.AppStore = AppStore;
+window.AppSession = AppSession;
+
+/* 이름표 없던 예전 값을 한 번만 옮겨옵니다 */
+(function migrateOnce() {
+    const FLAG = "_migrated_v1";
+    try {
+      if (AppStore.getItem(FLAG)) return;
+      const P = STORE_ROOM + ":";
+      Object.keys(window.localStorage).forEach(k => {
+        if (k.startsWith(P) || k.includes(":")) return;   // 이미 이름표가 있으면 건너뜀
+        try { window.localStorage.setItem(P + k, window.localStorage.getItem(k)); } catch (e) {}
+      });
+      AppStore.setItem(FLAG, "1");
+    } catch (e) {}
+  })();
+
+
   // =====================================================
   // ✅ Utils
   // =====================================================
@@ -96,17 +159,17 @@
 
   function _ensureSessionId() {
     const k = "writerRoomSessionId";
-    let sid = sessionStorage.getItem(k);
+    let sid = AppSession.getItem(k);
     if (!sid) {
       sid = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-      sessionStorage.setItem(k, sid);
+      AppSession.setItem(k, sid);
     }
     _sessionId = sid;
     return sid;
   }
 
   function _clearSessionId() {
-    try { sessionStorage.removeItem("writerRoomSessionId"); } catch (e) {}
+    try { AppSession.removeItem("writerRoomSessionId"); } catch (e) {}
     _sessionId = "";
   }
 
@@ -305,7 +368,7 @@
     // Firebase(users/{닉}/profile)가 정본이지만 join()은 동기 호출이라
     // 테마와 동일하게 localStorage 캐시를 먼저 읽는다. (script_profile.js가 동기화)
     try {
-      const locked = localStorage.getItem(`writerEmojiLock_${nick}`);
+      const locked = AppStore.getItem(`writerEmojiLock_${nick}`);
       if (locked) return locked;
     } catch (e) {}
 
@@ -330,7 +393,7 @@
     try {
       // ✅ [FIX] 관리자 인증은 필명이 아닌 탭에 남아 있었음 →
       // 입장할 때마다 초기화해서, 재입장한 사람이 자동으로 관리자 취급되는 것을 방지
-      try { sessionStorage.removeItem("adminPinOk"); } catch(e) {}
+      try { AppSession.removeItem("adminPinOk"); } catch(e) {}
       try { window.refreshAdminUiVisibility?.(); } catch(e) {}
 
       detachListeners();
@@ -340,7 +403,7 @@
       _ensureSessionId();
 
       // ✅ 다음 접속 때 입력창에 채워두기 위해 필명을 기억합니다 (이 기기에만)
-      try { localStorage.setItem(LAST_NICK_KEY, myNick); } catch (e) {}
+      try { AppStore.setItem(LAST_NICK_KEY, myNick); } catch (e) {}
 
       // joinTs: 입장 직전 1.2초만 허용 (이전 로그 거의 안 보이게)
       _myJoinTs = Date.now() - 1200;
@@ -415,7 +478,7 @@
     _myJoinTs = 0;
     _clearSessionId();
 
-    try { sessionStorage.removeItem("adminPinOk"); } catch(e) {}
+    try { AppSession.removeItem("adminPinOk"); } catch(e) {}
     try { window.refreshAdminUiVisibility?.(); } catch(e) {}
 
     document.getElementById("my-info").innerText = "Chat";
@@ -526,7 +589,7 @@
     // ✅ init은 "로그인 전 프리뷰"만: 기본테마 + 폰트 + 타이머 표시
     // (닉 귀속 로딩은 join() 이후 afterJoinLoadNickTheme에서 처리)
     try {
-      const previewTheme = localStorage.getItem("writerTheme") || "Light (iOS)";
+      const previewTheme = AppStore.getItem("writerTheme") || "Light (iOS)";
       callIfFn("applyTheme", previewTheme);
     } catch(e) {}
 
@@ -541,7 +604,7 @@
     // ✅ 지난번에 쓴 필명을 채워두고 전체 선택 상태로 둡니다.
     // 그대로 쓰려면 Enter, 바꾸려면 바로 타이핑하면 돼요.
     try {
-      const last = localStorage.getItem(LAST_NICK_KEY);
+      const last = AppStore.getItem(LAST_NICK_KEY);
       if (nickInput && last && !nickInput.value) {
         nickInput.value = last;
         setTimeout(() => { nickInput.focus(); nickInput.select(); }, 60);

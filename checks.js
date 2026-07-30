@@ -790,6 +790,77 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      "databaseURL 과 projectId 가 같은 프로젝트를 가리킨다");
 }
 
+/* 채팅 반응을 붙였을 때 프사가 안 내려가는가
+
+   [왜] .chat-item 이 align-items: flex-end 였습니다. 말풍선 아래에
+   반응 줄이 생기면 그만큼 프사도 같이 내려가, 이름 옆이 아니라 반응
+   옆에 붙었습니다. 위쪽 정렬로 바꾸고, 이름 줄만큼만 내려서 첫
+   말풍선과 맞춥니다. */
+{
+  /* 주석에 옛 값을 설명으로 적어두었으므로, 주석을 걷어내고 봅니다.
+     (예전에 이 함정에 한 번 걸렸습니다) */
+  const bare = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+  const i = bare.indexOf(".chat-item{");
+  const seg = bare.slice(i, bare.indexOf("}", i));
+  ok(/align-items:\s*flex-start/.test(seg), "채팅 줄은 위쪽 정렬이다");
+  ok(!/align-items:\s*flex-end/.test(seg), "아래쪽 정렬이 남아 있지 않다");
+  ok(/\.chat-item\.other:not\(\.grouped\) \.chat-avatar/.test(CSS),
+     "이름 줄만큼 프사를 내려 맞춘다");
+}
+
+/* 방마다 저장 공간이 나뉘어 있는가
+
+   [왜] 두 방이 같은 주소(도메인)를 씁니다. localStorage 는 주소
+   단위로 나뉘고 뒤의 폴더 이름은 보지 않으므로, 이름표를 안 붙이면
+   두 방이 같은 칸을 함께 씁니다. 실제로 한쪽에서 뽀모가 끝나자
+   다른 방 카드의 🍅 가 같이 올라갔습니다. */
+{
+  const core = fs.readFileSync(DIR + "script_core.js", "utf8");
+  const m = core.match(/const STORE_ROOM = "(\w+)"/);
+  ok(!!m && m[1].length > 0, "이 방의 이름표가 정해져 있다" + (m ? ` (${m[1]})` : ""));
+  ok(m && m[1] === "tm", "이름표가 이 방의 것이다");
+  ok(/window\.AppStore = AppStore/.test(core), "AppStore 를 내보낸다");
+  ok(/_migrated_v1/.test(core), "예전 값을 한 번 옮겨준다");
+
+  /* 어느 파일에서도 원본 저장소를 직접 쓰면 안 됩니다 (껍데기 안은 예외) */
+  const files = fs.readdirSync(DIR).filter(f => /^script_.*\.js$/.test(f));
+  const leaks = [];
+  files.forEach(f => {
+    let src = fs.readFileSync(DIR + f, "utf8");
+    if (f === "script_core.js") {
+      /* 껍데기가 원본을 감싸는 부분만 잘라냅니다 */
+      const end = src.indexOf("// ✅ Utils");
+      src = end > 0 ? src.slice(end) : src;
+    }
+    src = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    if (/(?<![.\w])(localStorage|sessionStorage)\./.test(src)) leaks.push(f);
+  });
+  ok(leaks.length === 0, "원본 저장소를 직접 쓰는 곳이 없다" + (leaks.length ? " — " + leaks.join(", ") : ""));
+
+  /* 실제로 굴려봅니다 — 두 방이 서로를 못 건드려야 합니다 */
+  {
+    const raw = {};
+    const mk = room => {
+      const P = room + ":";
+      return {
+        getItem: k => (P + k in raw ? raw[P + k] : null),
+        setItem: (k, v) => { raw[P + k] = String(v); },
+        get length() { return Object.keys(raw).filter(x => x.startsWith(P)).length; },
+        key: i => (Object.keys(raw).filter(x => x.startsWith(P))[i] || "").slice(P.length) || null
+      };
+    };
+    const a = mk("bl"), b = mk("tm");
+    a.setItem("pomoSessions_x", "1");
+    b.setItem("pomoSessions_x", "9");
+    ok(a.getItem("pomoSessions_x") === "1" && b.getItem("pomoSessions_x") === "9",
+       "같은 이름이라도 방마다 값이 따로다");
+    a.setItem("writerTheme", "A"); b.setItem("writerTheme", "B");
+    ok(a.getItem("writerTheme") === "A", "테마가 서로 안 덮인다");
+    ok(a.length === 2 && b.length === 2, "각 방은 자기 열쇠만 센다");
+    ok(a.key(0) === "pomoSessions_x", "열쇠 이름에서 이름표가 벗겨진다");
+  }
+}
+
 /* PWA — 독립 창 설치 */
 {
   const mf = JSON.parse(fs.readFileSync(DIR+"manifest.json","utf8"));
@@ -882,7 +953,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   const ui=fs.readFileSync(DIR+"script_ui.js","utf8");
   ok(/function notifyJoin/.test(ui), "입장 알림 함수가 있다");
   ok(/_joinNoti/.test(ui) && /joinNoti/.test(ui), "입장 알림은 설정으로 켜고 끈다");
-  ok(/localStorage\.getItem\("joinNoti"\) === "true"/.test(ui), "입장 알림은 기본 꺼짐이다");
+  ok(/AppStore\.getItem\("joinNoti"\) === "true"/.test(ui), "입장 알림은 기본 꺼짐이다");
   {
     const i=ui.indexOf("function notifyJoin");
     const seg=ui.slice(i, i+500);
@@ -956,7 +1027,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   ok(/if \(!_pomoParticipating\) return;/.test(u.slice(i,i+400)), "미참여면 알림을 보내지 않는다");
   ok(/visibilityState === "visible"\) return/.test(u.slice(i,i+600)), "보고 있을 때는 알림을 띄우지 않는다");
   ok(/askNotifyPermissionOnce/.test(r), "시작 버튼에서 권한을 물어본다");
-  ok(/localStorage\.getItem\(NOTI_ASKED_KEY\)/.test(u), "한 번 물어본 뒤엔 다시 묻지 않는다");
+  ok(/AppStore\.getItem\(NOTI_ASKED_KEY\)/.test(u), "한 번 물어본 뒤엔 다시 묻지 않는다");
 }
 
 function finish(){

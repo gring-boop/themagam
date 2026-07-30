@@ -74,11 +74,11 @@
      [1] 살아 있음 표시 — 절전/방치 감지에만 씁니다
      --------------------------------------------------------------- */
   function markAlive() {
-    try { localStorage.setItem(KEY_ALIVE, String(nowMs())); } catch (e) {}
+    try { AppStore.setItem(KEY_ALIVE, String(nowMs())); } catch (e) {}
   }
   function lastAlive() {
     try {
-      const n = parseInt(localStorage.getItem(KEY_ALIVE) || "0", 10);
+      const n = parseInt(AppStore.getItem(KEY_ALIVE) || "0", 10);
       return Number.isFinite(n) ? n : 0;
     } catch (e) { return 0; }
   }

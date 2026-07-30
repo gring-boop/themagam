@@ -482,7 +482,7 @@
       return;
     }
 
-    const isAdmin = sessionStorage.getItem("adminPinOk") === "true";
+    const isAdmin = AppSession.getItem("adminPinOk") === "true";
     slot.innerHTML = `
       <div id="pin-banner" class="pin-banner">
         <span class="pin-icon">📌</span>
@@ -499,7 +499,7 @@
   }
 
   async function removePinnedMessage() {
-    if (sessionStorage.getItem("adminPinOk") !== "true") {
+    if (AppSession.getItem("adminPinOk") !== "true") {
       if (!window.requireAdminPin?.()) return;
     }
     await db.ref("chatMeta/pinned").remove();

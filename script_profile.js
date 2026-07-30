@@ -53,7 +53,7 @@ function applyChatCollapsed(collapsed, opts = {}) {
   }
 
   if (!opts.silent) {
-    try { localStorage.setItem(COLLAPSE_KEY, on ? "1" : "0"); } catch (e) {}
+    try { AppStore.setItem(COLLAPSE_KEY, on ? "1" : "0"); } catch (e) {}
   }
 }
 
@@ -64,7 +64,7 @@ function toggleChatCollapsed() {
 
 function applySavedChatCollapsed() {
   let saved = false;
-  try { saved = localStorage.getItem(COLLAPSE_KEY) === "1"; } catch (e) {}
+  try { saved = AppStore.getItem(COLLAPSE_KEY) === "1"; } catch (e) {}
   applyChatCollapsed(saved, { silent: true });
 }
 
@@ -115,11 +115,11 @@ function resetLocalSettings() {
   )) return;
 
   try {
-    keys.forEach(k => localStorage.removeItem(k));
+    keys.forEach(k => AppStore.removeItem(k));
     // 필명별로 저장된 테마 캐시도 함께 정리
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith("writerTheme_")) localStorage.removeItem(k);
+    for (let i = AppStore.length - 1; i >= 0; i--) {
+      const k = AppStore.key(i);
+      if (k && k.startsWith("writerTheme_")) AppStore.removeItem(k);
     }
   } catch (e) {
     console.warn("[resetLocalSettings]", e);
@@ -196,7 +196,7 @@ function applyPanelCollapsed(panel, collapsed, opts = {}) {
   }
 
   if (!opts.silent) {
-    try { localStorage.setItem(panel.key, on ? "1" : "0"); } catch (e) {}
+    try { AppStore.setItem(panel.key, on ? "1" : "0"); } catch (e) {}
   }
 }
 
@@ -217,7 +217,7 @@ function bindPanelCollapse() {
     }
 
     let saved = false;
-    try { saved = localStorage.getItem(panel.key) === "1"; } catch (e) {}
+    try { saved = AppStore.getItem(panel.key) === "1"; } catch (e) {}
     applyPanelCollapsed(panel, saved, { silent: true });
   });
 }
