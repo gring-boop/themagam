@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202607310020">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202607310020">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202607310229">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202607310229">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202607310020">
+  <link rel="manifest" href="manifest.json?v=202607310229">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -31,8 +31,9 @@
   <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
 
-  <link rel="stylesheet" href="styles.css?v=202607310020" />
+  <link rel="stylesheet" href="styles.css?v=202607310229" />
 </head>
 
 <body>
@@ -43,7 +44,7 @@
 <div id="modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
   <div class="modal-content">
     <h1 class="modal-title" id="join-title">TheMagam ✍️</h1>
-    <p class="modal-sub">필명만 입력하면 바로 시작해요. 프사는 나중에 설정에서 바꿀 수 있어요.</p>
+    <p class="modal-sub">필명과 비밀번호로 들어와요. 처음 쓰는 필명이면 그 비밀번호로 자리가 잡힙니다.</p>
 
     <label class="sr-only" for="nick-input">필명</label>
     <input
@@ -57,7 +58,26 @@
       enterkeyhint="go"
     >
     <div class="spacer-sm"></div>
+
+    <label class="sr-only" for="pw-input">비밀번호</label>
+    <input
+      type="password"
+      id="pw-input"
+      class="w-full"
+      placeholder="비밀번호 (4자 이상)"
+      autocomplete="current-password"
+      enterkeyhint="go"
+    >
+
+    <div id="join-msg" class="join-msg" role="status" style="display:none"></div>
+
+    <div class="spacer-sm"></div>
     <button id="join-btn" class="ghost-btn primary w-full" onclick="join()">입장하기</button>
+    <p class="hint">
+      비밀번호는 <b>내 필명을 남이 쓰지 못하게</b> 하는 자물쇠예요.
+      다른 곳에서 쓰는 비밀번호는 쓰지 마세요.<br>
+      잊어버리면 스스로 되돌릴 수 없어서, 방장에게 말해야 합니다.
+    </p>
   </div>
 </div>
 
@@ -524,6 +544,14 @@
         <button id="pomo-opt-btn" class="ghost-btn compact" data-state="on"
                 onclick="togglePomodoroParticipation()" aria-pressed="true"
                 title="내 알림음을 끄고/켜요">🔔 참여 중 · 알림 ON</button>
+
+        <!-- 공용 뽀모 — 마끝마 뽀모방을 새 창으로 엽니다.
+             이 방 안에 끼워 넣지 않은 이유: 남의 사이트를 창 안에 넣으면
+             (iframe) 소리·알림이 막히고, 그쪽이 설정을 바꾸면 조용히
+             깨집니다. 새 창으로 여는 편이 튼튼합니다. -->
+        <button id="pomo-shared-btn" class="ghost-btn compact"
+                onclick="openSharedPomo()"
+                title="마끝마 공용 뽀모방을 새 창으로 열어요">🪟 공용 뽀모</button>
       </div>
 
       <div id="pomo-detail" class="pomo-detail collapsed">
@@ -614,19 +642,20 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202607310020"></script>
-<script src="script_core.js?v=202607310020"></script>
-<script src="script_ui.js?v=202607310020"></script>
-<script src="script_chat.js?v=202607310020"></script>
-<script src="script_data.js?v=202607310020"></script>
-<script src="script_realtime.js?v=202607310020"></script>
-<script src="script_layout.js?v=202607310020"></script>
-<script src="script_pet.js?v=202607310020"></script>
-<script src="script_pet_ui.js?v=202607310020"></script>
-<script src="script_timelog.js?v=202607310020"></script>
-<script src="script_profile.js?v=202607310020"></script>
-<script src="script_reactions.js?v=202607310020"></script>
-<script src="script_manual.js?v=202607310020"></script>
+<script src="fortune_data.js?v=202607310229"></script>
+<script src="script_core.js?v=202607310229"></script>
+<script src="script_auth.js?v=202607310229"></script>
+<script src="script_ui.js?v=202607310229"></script>
+<script src="script_chat.js?v=202607310229"></script>
+<script src="script_data.js?v=202607310229"></script>
+<script src="script_realtime.js?v=202607310229"></script>
+<script src="script_layout.js?v=202607310229"></script>
+<script src="script_pet.js?v=202607310229"></script>
+<script src="script_pet_ui.js?v=202607310229"></script>
+<script src="script_timelog.js?v=202607310229"></script>
+<script src="script_profile.js?v=202607310229"></script>
+<script src="script_reactions.js?v=202607310229"></script>
+<script src="script_manual.js?v=202607310229"></script>
 
 <script>
   window.addEventListener("load", () => {

@@ -494,46 +494,49 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(pp.body === "#F2F0EA" && pp.mark === Pet.colorHex("panda"),
          "판다는 몸이 흰빛이고 정해진 색이 무늬로 들어간다");
     }
-    ok(Pet.HOURS_PER_LEVEL === 4 && Pet.MAX_LEVEL === 10, "4시간 1레벨 · Lv.10 만렙");
+    ok(Pet.HOURS_PER_LEVEL === 5 && Pet.MAX_LEVEL === 20, "5시간 1레벨 · Lv.20 만렙");
+    ok(Pet.PET_MS === 100 * 3600e3, "만렙까지 100시간이다");
+    ok(Pet.AT_TAIL === 5 && Pet.AT_MARK === 10 && Pet.AT_WING === 15,
+       "부품이 Lv.5 / 10 / 15 에 붙는다");
 
     /* ★ 8종 × 10레벨 × 12색 전수 — 좌표에 NaN 이 새면 그림이 통째로 깨집니다 */
     let bad = [];
     for (const sp of Pet.SPECIES_IDS) {
-      for (let lv = 1; lv <= 10; lv++) {
-        const svg = Pet.petSvg(sp, lv, 56, lv === 10);
+      for (let lv = 1; lv <= Pet.MAX_LEVEL; lv++) {
+        const svg = Pet.petSvg(sp, lv, 56, lv === Pet.MAX_LEVEL);
         if (/NaN|undefined|Infinity/.test(svg)) bad.push(`${sp}/Lv${lv}`);
         if (!/<svg/.test(svg) || !/<\/svg>/.test(svg)) bad.push(`${sp}/Lv${lv} 열림닫힘`);
       }
     }
-    ok(bad.length === 0, `펫 그림 ${Pet.SPECIES_IDS.length * 10}가지가 온전하다${bad.length ? " — " + bad.slice(0,3).join(", ") : ""}`);
+    ok(bad.length === 0, `펫 그림 ${Pet.SPECIES_IDS.length * Pet.MAX_LEVEL}가지가 온전하다${bad.length ? " — " + bad.slice(0,3).join(", ") : ""}`);
 
     /* 용의 뿔은 몸 색과 무관하게 금색 */
     ok(Pet.petSvg("dragon", 10, 56, true).includes(Pet.HORN_GOLD), "용 뿔은 금색이다");
     /* 뿔 가지는 레벨에 따라 늘어납니다 */
     const horn = lv => (Pet.petSvg("dragon", lv, 56, false).match(/<path d="M/g) || []).length;
-    ok(horn(1) < horn(5) && horn(5) < horn(8), "용 뿔이 레벨에 따라 뻗는다");
+    ok(horn(2) < horn(10) && horn(10) < horn(15), "용 뿔이 레벨에 따라 뻗는다");
     /* 날개는 Lv.8 에 */
-    ok(!/q10 -17/.test(Pet.petSvg("dragon",7,56,false)) &&
-        /q10 -17/.test(Pet.petSvg("dragon",8,56,false)), "용 날개는 Lv.8 에 돋는다");
+    ok(!/q10 -17/.test(Pet.petSvg("dragon",14,56,false)) &&
+        /q10 -17/.test(Pet.petSvg("dragon",15,56,false)), "용 날개는 Lv.15 에 돋는다");
     /* 반짝이는 정말 다 채운 뒤에만 */
-    ok(!/EF9F27/.test(Pet.petSvg("cat",10,56,false)), "Lv.10 도달만으로는 반짝이지 않는다");
-    ok(/EF9F27/.test(Pet.petSvg("cat",10,56,true)), "만렙이면 반짝인다");
+    ok(!/EF9F27/.test(Pet.petSvg("cat",Pet.MAX_LEVEL,56,false)), "Lv.20 도달만으로는 반짝이지 않는다");
+    ok(/EF9F27/.test(Pet.petSvg("cat",Pet.MAX_LEVEL,56,true)), "만렙이면 반짝인다");
 
     /* 레벨 계산 */
     const H = 3600e3;
     ok(Pet.petProgress(0, 0).level === 1, "0시간은 Lv.1");
-    ok(Pet.petProgress(3.9 * H, 0).level === 1, "3시간 54분은 아직 Lv.1");
-    ok(Pet.petProgress(4 * H, 0).level === 2, "4시간에 Lv.2");
-    ok(Pet.petProgress(36 * H, 0).level === 10, "36시간에 Lv.10 도달");
-    ok(Pet.petProgress(36 * H, 0).isMax === false, "36시간은 아직 만렙이 아니다");
-    ok(Pet.petProgress(40 * H, 0).isMax === true, "40시간에 만렙");
-    ok(Pet.petProgress(100 * H, 0).level === 10, "넘겨도 Lv.10 에서 멈춘다");
+    ok(Pet.petProgress(4.9 * H, 0).level === 1, "4시간 54분은 아직 Lv.1");
+    ok(Pet.petProgress(5 * H, 0).level === 2, "5시간에 Lv.2");
+    ok(Pet.petProgress(95 * H, 0).level === 20, "95시간에 Lv.20 도달");
+    ok(Pet.petProgress(95 * H, 0).isMax === false, "95시간은 아직 만렙이 아니다");
+    ok(Pet.petProgress(100 * H, 0).isMax === true, "100시간에 만렙");
+    ok(Pet.petProgress(300 * H, 0).level === 20, "넘겨도 Lv.20 에서 멈춘다");
     /* 만렙 펫이 있으면 그만큼 빼고 센다 */
-    ok(Pet.petProgress(41 * H, 1).level === 1, "만렙 1마리 뒤 41시간은 새 펫 Lv.1");
-    ok(Pet.petProgress(84 * H, 2).level === 2, "만렙 2마리 뒤 84시간은 Lv.2");
+    ok(Pet.petProgress(101 * H, 1).level === 1, "만렙 1마리 뒤 101시간은 새 펫 Lv.1");
+    ok(Pet.petProgress(206 * H, 2).level === 2, "만렙 2마리 뒤 206시간은 Lv.2");
     /* 다음 레벨까지 남은 시간 */
-    ok(Pet.petProgress(5 * H, 0).toNextMs === 3 * H, "Lv.2 에서 다음까지 3시간");
-    ok(Pet.petProgress(40 * H, 0).toNextMs === 0, "만렙이면 남은 시간 0");
+    ok(Pet.petProgress(6 * H, 0).toNextMs === 4 * H, "Lv.2 에서 다음까지 4시간");
+    ok(Pet.petProgress(100 * H, 0).toNextMs === 0, "만렙이면 남은 시간 0");
 
     /* ★ 승계 — 같은 종류가 또 나오지 않아야 합니다 */
     let dex = {}, seen = [];
@@ -1028,6 +1031,113 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   ok(/visibilityState === "visible"\) return/.test(u.slice(i,i+600)), "보고 있을 때는 알림을 띄우지 않는다");
   ok(/askNotifyPermissionOnce/.test(r), "시작 버튼에서 권한을 물어본다");
   ok(/AppStore\.getItem\(NOTI_ASKED_KEY\)/.test(u), "한 번 물어본 뒤엔 다시 묻지 않는다");
+}
+
+/* ---- 12. 로그인 B안 (필명 + 비밀번호) ---- */
+{
+  const a = fs.readFileSync(DIR+"script_auth.js","utf8");
+  const h = fs.readFileSync(DIR+"index.html","utf8");
+  const rules = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
+
+  ok(/firebase-auth-compat\.js/.test(h), "index.html 이 firebase-auth 를 읽어온다");
+  // 주석에도 파일 이름이 나오므로, <script> 태그만 뽑아서 순서를 봅니다
+  const tags = (h.match(/<script src="(script_[\w.-]+)/g) || []).map(t => t.split('"')[1]);
+  ok(tags.indexOf("script_auth.js") === tags.indexOf("script_core.js") + 1,
+     "script_auth.js 가 script_core.js 바로 뒤다 (join 을 감싸야 하므로)");
+  ok(tags.indexOf("script_auth.js") < tags.indexOf("script_profile.js"),
+     "script_auth.js 가 script_profile.js 앞이다 (로그인 → 입장 → 프로필 순서)");
+  ok(/id="pw-input"/.test(h) && /type="password"/.test(h), "비밀번호 칸이 있다");
+  ok(/id="join-msg"/.test(h), "오류를 보여줄 자리가 있다");
+
+  // 실제로 실행해서 확인합니다 — 문자열만 봐서는 '있는데 안 도는' 버그를 못 잡습니다.
+  const calls = [];
+  const inputs = { "nick-input":{value:"콩"}, "pw-input":{value:"1234",
+                   addEventListener(){}, focus(){}, select(){}},
+                   "join-btn":{}, "join-msg":{classList:{toggle(){}},style:{}} };
+  let signedIn = null, created = null, txn = null;
+  const authApi = {
+    async signInWithEmailAndPassword(e,p){ signedIn={e,p}; const err=new Error("x");
+      err.code = fake.userExists ? (p===fake.pw?null:"auth/wrong-password") : "auth/user-not-found";
+      if (err.code) throw err; return {user:{uid:fake.uid}}; },
+    async createUserWithEmailAndPassword(e,p){ created={e,p}; return {user:{uid:"NEW"}}; },
+    async signOut(){ calls.push("signOut"); }
+  };
+  const fake = { userExists:false, pw:"1234", uid:"OLD", owner:null };
+  const ctx = {
+    window:{}, document:{ getElementById:id=>inputs[id]||null, addEventListener(){} },
+    TextEncoder, console,
+    firebase:{ auth:()=>authApi,
+      database:()=>({ ref:(path)=>({ async transaction(fn){
+        txn = path;
+        const next = fn(fake.owner);
+        if (next !== undefined) fake.owner = next;
+        return { snapshot:{ val:()=>fake.owner } };
+      }})})}
+  };
+  ctx.window = ctx;
+  ctx.join = function(){ calls.push("join"); };
+  vm.createContext(ctx);
+  vm.runInContext(a, ctx);
+
+  ok(typeof ctx.join === "function" && ctx.join.__authPatched, "join 이 로그인으로 감싸졌다");
+
+  // 가짜 이메일이 한글을 견디는가
+  const mail = ctx.Auth.nickToEmail("콩");
+  ok(/^n[0-9a-f]+@themagam\.local$/.test(mail), "한글 필명이 쓸 수 있는 주소로 바뀐다 ("+mail+")");
+  ok(ctx.Auth.nickToEmail("콩") === ctx.Auth.nickToEmail("콩"), "같은 필명은 늘 같은 주소");
+  ok(ctx.Auth.nickToEmail("콩") !== ctx.Auth.nickToEmail("콩2"), "다른 필명은 다른 주소");
+
+  return ctx.join().then(async () => {
+    ok(created && calls.includes("join"), "처음 쓰는 필명이면 계정을 만들고 입장한다");
+    ok(fake.owner === "NEW", "필명 도장이 찍힌다");
+
+    // 같은 필명, 틀린 비밀번호 → 입장 못 함
+    fake.userExists = true; fake.pw = "1234"; fake.uid = "NEW";
+    calls.length = 0; created = null;
+    inputs["pw-input"].value = "9999";
+    await ctx.join();
+    ok(!calls.includes("join"), "비밀번호가 틀리면 입장하지 못한다");
+    ok(!created, "비밀번호가 틀렸다고 새 계정을 만들지 않는다");
+
+    // 맞는 비밀번호 → 통과
+    calls.length = 0; inputs["pw-input"].value = "1234";
+    await ctx.join();
+    ok(calls.includes("join"), "비밀번호가 맞으면 입장한다");
+
+    // 남이 도장을 찍어둔 필명 → 막힌다
+    calls.length = 0; fake.owner = "SOMEONE_ELSE";
+    await ctx.join();
+    ok(!calls.includes("join") && calls.includes("signOut"),
+       "도장 주인이 다르면 로그아웃하고 막는다");
+
+    // 비밀번호가 짧으면 서버까지 가지도 않는다
+    calls.length = 0; signedIn = null; inputs["pw-input"].value = "12";
+    await ctx.join();
+    ok(!signedIn && !calls.includes("join"), "짧은 비밀번호는 서버에 물어보지도 않는다");
+
+    // ---- 보안 규칙 ----
+    ok(rules.nickOwner, "규칙에 nickOwner 가 있다");
+    const nw = rules.nickOwner.$nick[".write"];
+    ok(/!data\.exists\(\)/.test(nw), "도장은 비어 있을 때만 찍힌다 (덮어쓰기 불가)");
+    ok(/auth\.uid/.test(nw), "도장에는 자기 계정 번호만 넣을 수 있다");
+    ok(/nickOwner/.test(rules.users.$nick[".write"]), "users 는 도장 주인만 쓴다");
+    ok(/nickOwner/.test(rules.status.$nick[".write"]), "status 는 도장 주인만 쓴다");
+    Object.keys(rules).forEach(k => {
+      const w = rules[k][".write"];
+      if (w !== undefined) ok(w !== true, `${k} 는 아무나 쓸 수 없다`);
+    });
+
+    /* ---- 13. 공용 뽀모 버튼 ---- */
+    const core = fs.readFileSync(DIR+"script_core.js","utf8");
+    ok(/id="pomo-shared-btn"/.test(h), "공용 뽀모 버튼이 화면에 있다");
+    ok(/onclick="openSharedPomo\(\)"/.test(h), "버튼이 openSharedPomo 를 부른다");
+    ok(/function openSharedPomo/.test(core), "openSharedPomo 가 정의돼 있다");
+    ok(/magammm1009\.github\.io\/mmaapomopomo/.test(core), "주소가 마끝마 뽀모방이다");
+    ok(/noopener/.test(core), "새 창이 이 방을 건드리지 못하게 막았다");
+    ok(!/<iframe[^>]*mmaapomopomo/.test(h), "iframe 으로 끼워 넣지 않았다");
+
+    finish();
+  });
 }
 
 function finish(){

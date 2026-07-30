@@ -633,3 +633,40 @@ window.AppSession = AppSession;
   window.leaveRoom = leaveRoom;
   window.init = init;
   window.getDailyEmoji = getDailyEmoji;   // ✅ [프로필] 고정 해제 시 오늘의 랜덤값 재계산용
+
+
+/* =====================================================================
+   공용 뽀모 열기
+
+   여러 방이 함께 쓰는 뽀모방이 이미 따로 있습니다. 같은 것을 여기에
+   또 만들면 시계가 두 개가 되어 서로 어긋납니다. 그래서 만들지 않고
+   **있는 방을 새 창으로 열어주기만** 합니다.
+
+   창 크기를 정해서 여는 이유: 뽀모방은 옆에 띄워두고 보는 물건이라
+   전체 화면 탭보다 작은 창이 편합니다. 브라우저가 크기 지정을 무시하고
+   새 탭으로 열어도 문제는 없습니다.
+
+   noopener 는 열린 창이 이 방을 건드리지 못하게 막는 장치입니다.
+   ===================================================================== */
+const SHARED_POMO_URL = "https://magammm1009.github.io/mmaapomopomo/";
+let _sharedPomoWin = null;
+
+function openSharedPomo() {
+  try {
+    /* 이미 열어둔 창이 살아 있으면 그 창을 앞으로 가져옵니다 */
+    if (_sharedPomoWin && !_sharedPomoWin.closed) {
+      _sharedPomoWin.focus();
+      return;
+    }
+    _sharedPomoWin = window.open(
+      SHARED_POMO_URL, "sharedPomo",
+      "noopener,noreferrer,width=460,height=760"
+    );
+    if (!_sharedPomoWin) {
+      alert("팝업이 막혔어요. 주소창 오른쪽의 팝업 차단을 풀어주세요.");
+    }
+  } catch (e) {
+    window.open(SHARED_POMO_URL, "_blank", "noopener,noreferrer");
+  }
+}
+window.openSharedPomo = openSharedPomo;

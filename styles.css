@@ -4054,3 +4054,14 @@ body.side-collapsed .side-rail{
 .card-pet.is-clickable{ cursor: pointer; }
 .card-pet.is-clickable:hover .pet-svg{ filter: brightness(1.06); }
 .card-pet.is-clickable:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }
+
+/* ---------------------------------------------------------------
+   입장 모달의 안내/오류 한 줄
+   --------------------------------------------------------------- */
+.join-msg{
+  margin-top: var(--sp-2);
+  font-size: .88rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.join-msg.bad{ color: #D9534F; font-weight: 600; }

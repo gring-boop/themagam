@@ -5,7 +5,7 @@
    무엇을 하는가
 
      집필 시간(WORK + 🔥초집중)이 쌓이면 펫이 자랍니다.
-       · 4시간마다 1레벨, 40시간에 Lv.10 만렙
+       · 5시간마다 1레벨, 100시간에 Lv.20 만렙
        · 만렙을 찍으면 도감에 들어가고, 안 가진 종류가 자동으로 시작
        · 20종 · 색은 종류마다 고정
 
@@ -25,10 +25,10 @@
    ---------------------------------------------------------------------
    그림을 왜 계산으로 만드는가
 
-     20종 × 10레벨 = 200장을 손으로 그릴 수는 없습니다.
+     20종 × 20레벨 = 400장을 손으로 그릴 수는 없습니다.
 
      그래서 레벨을 0~1 값(t)으로 바꿔서 비율을 이어 움직이고, 특정
-     레벨에서 부품을 붙입니다 (Lv.4 꼬리 · Lv.8 날개/수염 · 만렙 반짝이).
+     레벨에서 부품을 붙입니다 (Lv.5 꼬리 · Lv.10 무늬 · Lv.15 날개 · 만렙 반짝이).
      색도 하나만 받아서 밝은 색·어두운 색을 계산해 씁니다.
 
      새 종류를 넣을 때는 DRAW 에 함수 하나만 추가하면 됩니다.
@@ -39,8 +39,19 @@
   /* ---------------------------------------------------------------
      [1] 규칙
      --------------------------------------------------------------- */
-  const HOURS_PER_LEVEL = 4;
-  const MAX_LEVEL       = 10;
+  /* [변경] 4시간 10레벨(40시간) → 5시간 20레벨(100시간)
+
+     너무 빨리 다 자란다는 이야기가 있어서 늦췄습니다. 하루 2시간 쓰는
+     분이 50일쯤 걸립니다. 부품이 붙는 자리도 Lv.5 / 10 / 15 / 20 으로
+     벌려서, 오래 볼 거리가 생기게 했습니다. */
+  const HOURS_PER_LEVEL = 5;
+  const MAX_LEVEL       = 20;
+
+  /* 부품이 붙는 레벨 — 한곳에 모아두면 다 같이 옮기기 쉽습니다 */
+  const AT_TAIL = 5;    // 꼬리·날갯짓 같은 첫 변화
+  const AT_MARK = 10;   // 무늬·잔가지
+  const AT_WING = 15;   // 날개·수염
+
   const MS_PER_HOUR     = 60 * 60 * 1000;
   const PET_MS          = HOURS_PER_LEVEL * MAX_LEVEL * MS_PER_HOUR;   // 40시간
 
@@ -352,13 +363,13 @@
       const { p, t, lv, body: b, head: h } = g;
       const earH = lerp(5, 8, t);
       return `
-        ${lv >= 4 ? `<path d="M${n1(b.cx + b.rx * 1.05)} ${n1(b.cy - 2)}q${n1(lerp(8, 12, t))} -1 ${n1(lerp(6, 9, t))} ${n1(lerp(9, 12, t))}" stroke="${p.body}" stroke-width="${n1(lerp(3, 4, t))}" fill="none" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(b.cx + b.rx * 1.05)} ${n1(b.cy - 2)}q${n1(lerp(8, 12, t))} -1 ${n1(lerp(6, 9, t))} ${n1(lerp(9, 12, t))}" stroke="${p.body}" stroke-width="${n1(lerp(3, 4, t))}" fill="none" stroke-linecap="round"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
         <path d="M${n1(h.cx - h.r * 0.85)} ${n1(h.cy - h.r * 0.75)}l${n1(h.r * 0.06)} -${n1(earH)} ${n1(h.r * 0.68)} ${n1(earH * 0.58)}z" fill="${p.body}"/>
         <path d="M${n1(h.cx + h.r * 0.85)} ${n1(h.cy - h.r * 0.75)}l-${n1(h.r * 0.06)} -${n1(earH)} -${n1(h.r * 0.68)} ${n1(earH * 0.58)}z" fill="${p.body}"/>
-        ${lv >= 8 ? `<path d="M${n1(h.cx - h.r - 5)} ${n1(h.cy + 2)}h6M${n1(h.cx + h.r - 1)} ${n1(h.cy + 2)}h6" stroke="${p.body}" stroke-width="1.1" stroke-linecap="round"/>` : ""}
-        ${face(h.cx, h.cy, h.r, p, lv >= 4)}`;
+        ${lv >= AT_WING ? `<path d="M${n1(h.cx - h.r - 5)} ${n1(h.cy + 2)}h6M${n1(h.cx + h.r - 1)} ${n1(h.cy + 2)}h6" stroke="${p.body}" stroke-width="1.1" stroke-linecap="round"/>` : ""}
+        ${face(h.cx, h.cy, h.r, p, lv >= AT_TAIL)}`;
     },
 
     dog(g) {
@@ -366,7 +377,7 @@
       const w = lerp(5.4, 7.2, t), len = lerp(8, 11.2, t);
       const ear = sx => `<path d="M${n1(h.cx + sx * (h.r + 1.4))} ${n1(h.cy - h.r * 0.62)}h${n1(-sx * w)}l${n1(sx * w / 2)} ${n1(len)}z" fill="${p.line}" stroke="${p.line}" stroke-width="4" stroke-linejoin="round"/>`;
       return `
-        ${lv >= 4 ? `<path d="M${n1(b.cx + b.rx)} ${n1(b.cy - 4)}q7 -6 9 2" stroke="${p.body}" stroke-width="4" fill="none" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(b.cx + b.rx)} ${n1(b.cy - 4)}q7 -6 9 2" stroke="${p.body}" stroke-width="4" fill="none" stroke-linecap="round"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
         ${ear(-1)}${ear(1)}
@@ -382,7 +393,7 @@
         <ellipse cx="${n1(h.cx + sx * h.r * 0.6)}" cy="${n1(h.cy - h.r - earH * 0.45)}" rx="${n1(lerp(2.8, 3.6, t))}" ry="${n1(earH)}" fill="${p.body}"/>
         <ellipse cx="${n1(h.cx + sx * h.r * 0.6)}" cy="${n1(h.cy - h.r - earH * 0.4)}" rx="${n1(lerp(1.1, 1.6, t))}" ry="${n1(earH * 0.68)}" fill="${p.light}"/>`;
       return `
-        ${lv >= 4 ? `<circle cx="${n1(b.cx + b.rx * 1.05)}" cy="${n1(b.cy + 3)}" r="${n1(lerp(3.4, 5, t))}" fill="${p.pale}"/>` : ""}
+        ${lv >= AT_TAIL ? `<circle cx="${n1(b.cx + b.rx * 1.05)}" cy="${n1(b.cy + 3)}" r="${n1(lerp(3.4, 5, t))}" fill="${p.pale}"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
         ${ear(-1)}${ear(1)}
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
@@ -394,10 +405,10 @@
       return `
         <path d="M${n1(b.cx - 3)} ${n1(b.cy + b.ry)}v3.5M${n1(b.cx + 3)} ${n1(b.cy + b.ry)}v3.5" stroke="${p.line}" stroke-width="2" stroke-linecap="round"/>
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
-        ${lv >= 4 ? `<ellipse cx="${n1(b.cx - b.rx * 0.92)}" cy="${n1(b.cy - 1)}" rx="${n1(lerp(3.4, 4.6, t))}" ry="${n1(lerp(5.4, 7, t))}" fill="${p.light}"/>
+        ${lv >= AT_TAIL ? `<ellipse cx="${n1(b.cx - b.rx * 0.92)}" cy="${n1(b.cy - 1)}" rx="${n1(lerp(3.4, 4.6, t))}" ry="${n1(lerp(5.4, 7, t))}" fill="${p.light}"/>
                      <ellipse cx="${n1(b.cx + b.rx * 0.92)}" cy="${n1(b.cy - 1)}" rx="${n1(lerp(3.4, 4.6, t))}" ry="${n1(lerp(5.4, 7, t))}" fill="${p.light}"/>` : ""}
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
-        ${lv >= 8 ? `<path d="M${n1(h.cx - 4)} ${n1(h.cy - h.r - 0.5)}q4 -6 8 0z" fill="${p.light}"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M${n1(h.cx - 4)} ${n1(h.cy - h.r - 0.5)}q4 -6 8 0z" fill="${p.light}"/>` : ""}
         ${face(h.cx, h.cy, h.r, p, false)}
         <path d="M${h.cx} ${n1(h.cy + h.r * 0.3)}l-2.4 3h4.8z" fill="#D85A30"/>`;
     },
@@ -405,10 +416,10 @@
     penguin(g) {
       const { p, lv, body: b, head: h } = g;
       return `
-        ${lv >= 8 ? `<path d="M${n1(b.cx - 8)} ${n1(b.cy + b.ry)}l-5 4h10zM${n1(b.cx + 8)} ${n1(b.cy + b.ry)}l5 4h-10z" fill="#EF9F27"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M${n1(b.cx - 8)} ${n1(b.cy + b.ry)}l-5 4h10zM${n1(b.cx + 8)} ${n1(b.cy + b.ry)}l5 4h-10z" fill="#EF9F27"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
         <ellipse cx="${b.cx}" cy="${n1(b.cy + 2)}" rx="${n1(b.rx * 0.6)}" ry="${n1(b.ry * 0.78)}" fill="${p.pale}"/>
-        ${lv >= 4 ? `<path d="M${n1(b.cx - b.rx)} ${n1(b.cy - 5)}q-6 4 -2 12" stroke="${p.body}" stroke-width="4" fill="none" stroke-linecap="round"/>
+        ${lv >= AT_TAIL ? `<path d="M${n1(b.cx - b.rx)} ${n1(b.cy - 5)}q-6 4 -2 12" stroke="${p.body}" stroke-width="4" fill="none" stroke-linecap="round"/>
                      <path d="M${n1(b.cx + b.rx)} ${n1(b.cy - 5)}q6 4 2 12" stroke="${p.body}" stroke-width="4" fill="none" stroke-linecap="round"/>` : ""}
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
         ${face(h.cx, h.cy, h.r, p, false)}
@@ -436,14 +447,14 @@
       const antler = sx => {
         const x0 = h.cx + sx * h.r * 0.38, y0 = h.cy - h.r * 0.86;
         let d = `<path d="M${n1(x0)} ${n1(y0)}C${n1(x0 + sx * 0.6)} ${n1(y0 - stem * 0.42)} ${n1(x0 + sx * 1.6)} ${n1(y0 - stem * 0.7)} ${n1(x0 + sx * 3.2)} ${n1(y0 - stem)}"/>`;
-        if (lv >= 5) d += `<path d="M${n1(x0 + sx * 1.0)} ${n1(y0 - stem * 0.48)}L${n1(x0 - sx * 1.4)} ${n1(y0 - stem * 0.72)}"/>`;
-        if (lv >= 8) d += `<path d="M${n1(x0 + sx * 2.1)} ${n1(y0 - stem * 0.78)}L${n1(x0 + sx * 4.6)} ${n1(y0 - stem * 0.62)}"/>`;
+        if (lv >= AT_MARK) d += `<path d="M${n1(x0 + sx * 1.0)} ${n1(y0 - stem * 0.48)}L${n1(x0 - sx * 1.4)} ${n1(y0 - stem * 0.72)}"/>`;
+        if (lv >= AT_WING) d += `<path d="M${n1(x0 + sx * 2.1)} ${n1(y0 - stem * 0.78)}L${n1(x0 + sx * 4.6)} ${n1(y0 - stem * 0.62)}"/>`;
         return d;
       };
       return `
-        ${lv >= 8 ? `<path d="M${n1(b.cx + b.rx * 0.95)} ${n1(b.cy - b.ry)}q10 -17 15 -5 -3 11 -15 5z" fill="${p.light}"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M${n1(b.cx + b.rx * 0.95)} ${n1(b.cy - b.ry)}q10 -17 15 -5 -3 11 -15 5z" fill="${p.light}"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
-        ${lv >= 4 ? `<path d="M${n1(b.cx - 7)} ${n1(b.cy - b.ry * 0.85)}l3 -3 3 3 3 -3 3 3" stroke="${p.line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(b.cx - 7)} ${n1(b.cy - b.ry * 0.85)}l3 -3 3 3 3 -3 3 3" stroke="${p.line}" stroke-width="1.6" fill="none" stroke-linecap="round"/>` : ""}
         <g stroke="${HORN_GOLD}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${antler(-1)}${antler(1)}</g>
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
         ${face(h.cx, h.cy, h.r, p, true)}`;
@@ -452,10 +463,10 @@
     squirrel(g) {
       const { p, t, lv, body: b, head: h } = g;
       return `
-        ${lv >= 4 ? `<path d="M${n1(b.cx + b.rx * 0.85)} ${n1(b.cy + 2)}q${n1(lerp(12, 16, t))} 2 ${n1(lerp(7, 10, t))} -${n1(lerp(11, 15, t))} -${n1(lerp(4, 6, t))} -3 -${n1(lerp(6, 9, t))} ${n1(lerp(5, 7, t))}" fill="${p.pale}"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(b.cx + b.rx * 0.85)} ${n1(b.cy + 2)}q${n1(lerp(12, 16, t))} 2 ${n1(lerp(7, 10, t))} -${n1(lerp(11, 15, t))} -${n1(lerp(4, 6, t))} -3 -${n1(lerp(6, 9, t))} ${n1(lerp(5, 7, t))}" fill="${p.pale}"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx)}" ry="${n1(b.ry)}" fill="${p.body}"/>
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r)}" fill="${p.body}"/>
-        ${lv >= 8 ? `<path d="M${n1(h.cx - h.r * 0.9)} ${n1(h.cy - h.r * 0.7)}q-3 -8 5 -5z" fill="${p.line}"/>
+        ${lv >= AT_WING ? `<path d="M${n1(h.cx - h.r * 0.9)} ${n1(h.cy - h.r * 0.7)}q-3 -8 5 -5z" fill="${p.line}"/>
                      <path d="M${n1(h.cx + h.r * 0.9)} ${n1(h.cy - h.r * 0.7)}q3 -8 -5 -5z" fill="${p.line}"/>` : ""}
         ${face(h.cx, h.cy, h.r, p, false)}
         <path d="M${h.cx} ${n1(h.cy + h.r * 0.32)}l-2 2.4h4z" fill="${p.dark}"/>`;
@@ -472,7 +483,7 @@
                  s${n1(12 * spread)} -2 ${n1(16 * spread)} -${n1(9 * spread)}
                  c${n1(6 * spread)} ${n1(4 * spread)} ${n1(2 * spread)} ${n1(24 * spread)} -${n1(16 * spread)} ${n1(24 * spread)}z"
               fill="${p.pale}" opacity=".75"/>`;
-      const eyes = lv >= 4
+      const eyes = lv >= AT_TAIL
         ? [-14, -6, 6, 14].map((dx, i) =>
             `<circle cx="${n1(h.cx + dx * spread)}" cy="${n1(h.cy - (i === 0 || i === 3 ? 6 : 11) * spread)}" r="${n1(2.4 * spread)}" fill="${p.line}"/>`).join("")
         : "";
@@ -480,7 +491,7 @@
         ${fan}${eyes}
         <ellipse cx="${b.cx}" cy="${n1(b.cy + 2)}" rx="${n1(b.rx * 0.62)}" ry="${n1(b.ry)}" fill="${p.body}"/>
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r * 0.78)}" fill="${p.body}"/>
-        ${lv >= 8 ? `<path d="M${h.cx} ${n1(h.cy - h.r * 0.85)}v-3M${n1(h.cx - 2.4)} ${n1(h.cy - h.r * 0.7)}l-1 -2.4M${n1(h.cx + 2.4)} ${n1(h.cy - h.r * 0.7)}l1 -2.4" stroke="${HORN_GOLD}" stroke-width="1.4" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M${h.cx} ${n1(h.cy - h.r * 0.85)}v-3M${n1(h.cx - 2.4)} ${n1(h.cy - h.r * 0.7)}l-1 -2.4M${n1(h.cx + 2.4)} ${n1(h.cy - h.r * 0.7)}l1 -2.4" stroke="${HORN_GOLD}" stroke-width="1.4" stroke-linecap="round"/>` : ""}
         ${face(h.cx, h.cy, h.r * 0.78, p, false)}
         <path d="M${h.cx} ${n1(h.cy + h.r * 0.3)}l-2 2.4h4z" fill="${HORN_GOLD}"/>`;
     },
@@ -488,14 +499,14 @@
     seal(g) {
       const { p, t, lv, body: b, head: h } = g;
       return `
-        ${lv >= 4 ? `<path d="M${n1(b.cx + b.rx * 0.95)} ${n1(b.cy + 2)}q11 2 9 -6 -5 -3 -8 2" fill="${p.pale}"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(b.cx + b.rx * 0.95)} ${n1(b.cy + 2)}q11 2 9 -6 -5 -3 -8 2" fill="${p.pale}"/>` : ""}
         <ellipse cx="${b.cx}" cy="${n1(b.cy)}" rx="${n1(b.rx * 1.15)}" ry="${n1(b.ry * 0.82)}" fill="${p.body}"/>
         <ellipse cx="${b.cx}" cy="${n1(b.cy + 2)}" rx="${n1(b.rx * 0.66)}" ry="${n1(b.ry * 0.45)}" fill="${p.pale}"/>
         <path d="M${n1(b.cx - b.rx)} ${n1(b.cy - 4)}q-7 3 -3 8" stroke="${p.body}" stroke-width="4" fill="none" stroke-linecap="round"/>
         <circle cx="${h.cx}" cy="${n1(h.cy)}" r="${n1(h.r * 0.92)}" fill="${p.body}"/>
         ${face(h.cx, h.cy, h.r * 0.92, p, false)}
         <ellipse cx="${h.cx}" cy="${n1(h.cy + h.r * 0.45)}" rx="${n1(h.r * 0.26)}" ry="${n1(h.r * 0.19)}" fill="${p.dark}"/>
-        ${lv >= 8 ? `<path d="M${n1(h.cx - h.r - 4)} ${n1(h.cy + 2)}h6M${n1(h.cx + h.r - 2)} ${n1(h.cy + 2)}h6" stroke="${p.pale}" stroke-width="1" stroke-linecap="round"/>` : ""}`;
+        ${lv >= AT_WING ? `<path d="M${n1(h.cx - h.r - 4)} ${n1(h.cy + 2)}h6M${n1(h.cx + h.r - 2)} ${n1(h.cy + 2)}h6" stroke="${p.pale}" stroke-width="1" stroke-linecap="round"/>` : ""}`;
     },
 
     whale(g) {
@@ -503,8 +514,8 @@
       const cx = b.cx - 2, cy = b.cy - 2;
       const rx = b.rx * 1.25, ry = b.ry * 0.9;
       return `
-        ${lv >= 8 ? `<path d="M${n1(cx - rx * 0.72)} ${n1(cy - ry - 4)}q2 -8 -3 -9 1 5 -2 7z" fill="${p.pale}"/>` : ""}
-        ${lv >= 4 ? `<path d="M${n1(cx + rx * 0.95)} ${n1(cy)}q10 -3 11 6 -6 4 -12 -2" fill="${p.body}"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M${n1(cx - rx * 0.72)} ${n1(cy - ry - 4)}q2 -8 -3 -9 1 5 -2 7z" fill="${p.pale}"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(cx + rx * 0.95)} ${n1(cy)}q10 -3 11 6 -6 4 -12 -2" fill="${p.body}"/>` : ""}
         <ellipse cx="${n1(cx)}" cy="${n1(cy)}" rx="${n1(rx)}" ry="${n1(ry)}" fill="${p.body}"/>
         <path d="M${n1(cx - rx * 0.9)} ${n1(cy + ry * 0.2)}q${n1(rx * 0.8)} ${n1(ry * 0.75)} ${n1(rx * 1.7)} ${n1(ry * 0.1)}
                  q-${n1(rx * 0.7)} ${n1(ry * 0.85)} -${n1(rx * 1.7)} -${n1(ry * 0.1)}z" fill="${p.pale}"/>
@@ -549,9 +560,9 @@
         <path d="M${n1(b.cx - b.rx)} ${n1(baseY)}q0 -${n1(b.ry * 1.9)} ${n1(b.rx)} -${n1(b.ry * 1.9)}
                  q${n1(b.rx)} 0 ${n1(b.rx)} ${n1(b.ry * 1.9)}z" fill="${p.body}"/>
         <ellipse cx="${b.cx}" cy="${n1(baseY - b.ry * 1.15)}" rx="${n1(b.rx * 0.52)}" ry="${n1(b.ry * 0.42)}" fill="${p.light}" opacity=".55"/>
-        ${lv >= 8 ? `<circle cx="${n1(b.cx - b.rx * 0.45)}" cy="${n1(baseY - b.ry * 0.35)}" r="1.6" fill="${p.pale}"/>
+        ${lv >= AT_WING ? `<circle cx="${n1(b.cx - b.rx * 0.45)}" cy="${n1(baseY - b.ry * 0.35)}" r="1.6" fill="${p.pale}"/>
                      <circle cx="${n1(b.cx + b.rx * 0.45)}" cy="${n1(baseY - b.ry * 0.35)}" r="1.6" fill="${p.pale}"/>` : ""}
-        ${face(b.cx, baseY - b.ry * 1.0, h.r * 0.78, p, lv >= 4)}`;
+        ${face(b.cx, baseY - b.ry * 1.0, h.r * 0.78, p, lv >= AT_TAIL)}`;
     },
 
     flower(g) {
@@ -561,8 +572,8 @@
         `<ellipse cx="${n1(28 + dx)}" cy="${n1(cy + dy)}" rx="${n1(rx)}" ry="${n1(ry)}" fill="${p.body}"/>`;
       return `
         <path d="M28 48V${n1(cy + 8)}" stroke="#639922" stroke-width="2.4" stroke-linecap="round"/>
-        ${lv >= 4 ? `<path d="M28 ${n1(cy + 18)}q-8 -1 -9 -7 7 -1 9 4z" fill="#97C459"/>` : ""}
-        ${lv >= 8 ? `<path d="M28 ${n1(cy + 23)}q8 -1 9 -7 -7 -1 -9 4z" fill="#B4D686"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M28 ${n1(cy + 18)}q-8 -1 -9 -7 7 -1 9 4z" fill="#97C459"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M28 ${n1(cy + 23)}q8 -1 9 -7 -7 -1 -9 4z" fill="#B4D686"/>` : ""}
         ${petal(0, -7, pr, pr * 1.4)}${petal(0, 7, pr, pr * 1.4)}
         ${petal(-7, 0, pr * 1.4, pr)}${petal(7, 0, pr * 1.4, pr)}
         <circle cx="28" cy="${n1(cy)}" r="${n1(pr * 1.08)}" fill="${p.pale}"/>
@@ -574,10 +585,10 @@
       const r = lerp(9, 13, t), cy = lerp(24, 20, t);
       return `
         <path d="M28 50V${n1(cy + r * 0.6)}" stroke="#8D6434" stroke-width="${n1(lerp(3, 4.2, t))}" stroke-linecap="round"/>
-        ${lv >= 4 ? `<path d="M28 ${n1(cy + r * 0.9)}l-6 -5" stroke="#8D6434" stroke-width="2.2" stroke-linecap="round"/>` : ""}
-        ${lv >= 8 ? `<path d="M28 ${n1(cy + r * 0.55)}l6 -5" stroke="#8D6434" stroke-width="2.2" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M28 ${n1(cy + r * 0.9)}l-6 -5" stroke="#8D6434" stroke-width="2.2" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M28 ${n1(cy + r * 0.55)}l6 -5" stroke="#8D6434" stroke-width="2.2" stroke-linecap="round"/>` : ""}
         <circle cx="28" cy="${n1(cy)}" r="${n1(r)}" fill="${p.body}"/>
-        ${lv >= 4 ? `<circle cx="${n1(28 - r * 0.78)}" cy="${n1(cy + r * 0.5)}" r="${n1(r * 0.58)}" fill="${p.light}"/>
+        ${lv >= AT_TAIL ? `<circle cx="${n1(28 - r * 0.78)}" cy="${n1(cy + r * 0.5)}" r="${n1(r * 0.58)}" fill="${p.light}"/>
                      <circle cx="${n1(28 + r * 0.78)}" cy="${n1(cy + r * 0.5)}" r="${n1(r * 0.58)}" fill="${p.light}"/>` : ""}
         ${face(28, cy, r * 0.82, p, true)}`;
     },
@@ -588,8 +599,8 @@
       const blade = (sx, h2, fill) =>
         `<path d="M28 46q${n1(sx * 2)} -${n1(h2 * 0.6)} ${n1(sx * 9)} -${n1(h2)} -${n1(sx * 8)} 1 -${n1(sx * 9)} ${n1(h2 - 1)}z" fill="${fill}"/>`;
       return `
-        ${lv >= 4 ? blade(-1, lerp(14, 20, t), p.light) : ""}
-        ${lv >= 8 ? blade(1, lerp(14, 20, t), p.pale) : ""}
+        ${lv >= AT_TAIL ? blade(-1, lerp(14, 20, t), p.light) : ""}
+        ${lv >= AT_WING ? blade(1, lerp(14, 20, t), p.pale) : ""}
         <path d="M28 47V${n1(top + 4)}" stroke="${p.line}" stroke-width="3.2" stroke-linecap="round"/>
         <path d="M28 ${n1(top + 6)}q-7 -8 -3 -14 5 4 3 14z" fill="${p.body}"/>
         <path d="M28 ${n1(top + 6)}q7 -8 3 -14 -5 4 -3 14z" fill="${p.light}"/>
@@ -604,8 +615,8 @@
         ${face(28, 26, 6.6, p, true)}
         <circle cx="${n1(28 - 5.5)}" cy="30.5" r="2.3" fill="#F4C0D1" opacity=".65"/>
         <circle cx="${n1(28 + 5.5)}" cy="30.5" r="2.3" fill="#F4C0D1" opacity=".65"/>
-        ${lv >= 4 ? `<path d="M22 39v5M34 39v5" stroke="${p.body}" stroke-width="2" stroke-linecap="round"/>` : ""}
-        ${lv >= 8 ? `<path d="M28 40v6" stroke="${p.body}" stroke-width="2" stroke-linecap="round"/>` : ""}`;
+        ${lv >= AT_TAIL ? `<path d="M22 39v5M34 39v5" stroke="${p.body}" stroke-width="2" stroke-linecap="round"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M28 40v6" stroke="${p.body}" stroke-width="2" stroke-linecap="round"/>` : ""}`;
     },
 
     stone(g) {
@@ -616,15 +627,15 @@
                  ${n1(12 * s)} -${n1(6 * s)} ${n1(18 * s)} ${n1(4 * s)}
                  ${n1(5 * s)} ${n1(8 * s)} -${n1(3 * s)} ${n1(13 * s)}z" fill="${p.body}"/>
         <path d="M${n1(28 - 13 * s)} ${n1(40)}q${n1(6 * s)} -${n1(14 * s)} ${n1(22 * s)} -${n1(12 * s)}" stroke="${p.light}" stroke-width="2" fill="none" opacity=".6"/>
-        ${lv >= 4 ? `<path d="M${n1(28 - 8)} ${n1(25)}q-4 -6 2 -7 3 3 1 7z" fill="#97C459"/>` : ""}
-        ${lv >= 8 ? `<path d="M${n1(28 + 6)} ${n1(22)}q5 -5 7 1 -3 3 -7 -1z" fill="#B4D686"/>` : ""}
+        ${lv >= AT_TAIL ? `<path d="M${n1(28 - 8)} ${n1(25)}q-4 -6 2 -7 3 3 1 7z" fill="#97C459"/>` : ""}
+        ${lv >= AT_WING ? `<path d="M${n1(28 + 6)} ${n1(22)}q5 -5 7 1 -3 3 -7 -1z" fill="#B4D686"/>` : ""}
         ${face(28, 34, 6.4, p, true)}`;
     },
 
     sun(g) {
       const { p, t, lv } = g;
       const r = lerp(9.5, 13, t);
-      const count = lv >= 8 ? 8 : (lv >= 4 ? 6 : 4);
+      const count = lv >= AT_WING ? 8 : (lv >= AT_TAIL ? 6 : 4);
       let rays = "";
       for (let i = 0; i < count; i++) {
         const a = (Math.PI * 2 * i) / count - Math.PI / 2;
@@ -651,9 +662,9 @@
         d += (i ? "L" : "M") + n1(28 + Math.cos(a) * rr) + " " + n1(26 + Math.sin(a) * rr);
       }
       d += "Z";
-      const minis = lv >= 8
+      const minis = lv >= AT_WING
         ? `<circle cx="48" cy="14" r="1.6" fill="${p.light}"/><circle cx="10" cy="42" r="1.3" fill="${p.light}"/><circle cx="46" cy="40" r="1.1" fill="${p.light}"/>`
-        : (lv >= 4 ? `<circle cx="48" cy="14" r="1.5" fill="${p.light}"/>` : "");
+        : (lv >= AT_TAIL ? `<circle cx="48" cy="14" r="1.5" fill="${p.light}"/>` : "");
       return `
         ${minis}
         <path d="${d}" fill="${p.light}"/>
@@ -722,7 +733,7 @@
   }
 
   const api = {
-    HOURS_PER_LEVEL, MAX_LEVEL, PET_MS, MS_PER_HOUR,
+    HOURS_PER_LEVEL, MAX_LEVEL, PET_MS, MS_PER_HOUR, AT_TAIL, AT_MARK, AT_WING,
     SPECIES, SPECIES_IDS, SHELLS, SHELL_COLOR, INK, HORN_GOLD, RIBBON,
     speciesLabel, speciesGroup, shellLabel, colorHex, palette, shellPalette, shade,
     levelFromMs, petProgress, pickNextPet, pickInGroup, dexKey, petSvg, fmtHM
