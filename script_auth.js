@@ -52,6 +52,24 @@
 
   function el(id) { return document.getElementById(id); }
 
+  /* 도장을 놓을 자리 이름.
+
+     ★ 반드시 **필명 그대로** 써야 합니다.
+
+     방의 나머지 코드는 전부 `users/호랑🐯`, `status/호랑🐯` 처럼
+     필명을 있는 그대로 씁니다. 보안 규칙은 그 이름으로 도장을 찾아요.
+     여기서만 주소용으로 변환(`%ED%98%B8...`)하면 이름이 어긋나서
+     도장을 못 찾고, **로그인은 됐는데 아무것도 저장이 안 되는**
+     상태가 됩니다. 실제로 그런 일이 있었습니다.
+
+     파이어베이스가 키에 못 쓰는 글자만 미리 걸러냅니다. 이 글자들은
+     어차피 방의 다른 곳에서도 터지므로 입장 자체를 막는 게 맞습니다. */
+  const BAD_KEY_CHARS = /[.$#\[\]\/]/;
+
+  function ownerRef(nick) {
+    return firebase.database().ref("nickOwner/" + nick);
+  }
+
   function setMsg(text, bad) {
     const box = el("join-msg");
     if (!box) return;
@@ -83,8 +101,7 @@
      읽을 수 있게 열어둔 값이라 로그인 전에도 확인할 수 있어요.
      도장이 없으면 처음 온 필명, 있으면 이미 주인이 있는 필명입니다. */
   async function ownerOf(nick) {
-    const snap = await firebase.database()
-      .ref("nickOwner/" + encodeURIComponent(nick)).once("value");
+    const snap = await ownerRef(nick).once("value");
     return snap.val();
   }
 
@@ -96,8 +113,7 @@
      서버가 한 명씩 차례로 처리하게 만들어 이걸 막아줍니다.
      --------------------------------------------------------------- */
   async function claimNick(nick, uid) {
-    const ref = firebase.database().ref("nickOwner/" + encodeURIComponent(nick));
-    const res = await ref.transaction(cur => (cur === null ? uid : undefined));
+    const res = await ownerRef(nick).transaction(cur => (cur === null ? uid : undefined));
     const owner = res.snapshot.val();
     return owner === uid;
   }
@@ -129,6 +145,11 @@
     const pw   = (el("pw-input")?.value || "");
 
     if (!nick) { setMsg("필명을 입력해주세요.", true); el("nick-input")?.focus(); return false; }
+    if (BAD_KEY_CHARS.test(nick)) {
+      setMsg("필명에 . $ # [ ] / 는 쓸 수 없어요. 빼고 다시 해주세요.", true);
+      el("nick-input")?.focus();
+      return false;
+    }
     if (pw.length < MIN_PW) {
       setMsg(`비밀번호는 ${MIN_PW}자 이상으로 정해주세요.`, true);
       el("pw-input")?.focus();

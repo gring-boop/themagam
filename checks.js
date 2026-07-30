@@ -1081,7 +1081,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       TextEncoder, console,
       document:{ getElementById:id=>inputs[id]||null, addEventListener(){} },
       firebase:{ auth:()=>authApi, database:()=>({ ref:(path)=>({
-        async once(){ log.push("readOwner"); return { val:()=>world.owner ?? null }; },
+        async once(){ log.push("readOwner"); log.push("path:"+path); return { val:()=>world.owner ?? null }; },
         async transaction(fn){
           const next = fn(world.owner ?? null);
           if (next !== undefined) world.owner = next;
@@ -1105,6 +1105,10 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     // ① 처음 오는 필명 — 도장이 없으니 계정을 만들고 들어간다
     let r = await run({ nick:"호랑", pw:"tiger12", accounts:{}, owner:null });
     ok(r.log.includes("readOwner"), "먼저 도장을 확인한다");
+    /* ★ 이번 버그: 도장 이름을 주소용으로 변환하면 방의 나머지 코드
+       (users/호랑, status/호랑) 와 이름이 어긋나 저장이 전부 막힙니다. */
+    ok(r.log.includes("path:nickOwner/호랑"),
+       "도장 이름에 필명을 그대로 쓴다 (주소용 변환 금지)");
     ok(r.log.includes("create"), "처음 오는 필명이면 계정을 만든다");
     ok(r.log.includes("join"), "그리고 입장한다");
     ok(r.world.owner === "uid-"+EMAIL_HORANG, "도장이 찍힌다");
@@ -1145,6 +1149,19 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(/^n[0-9a-f]+@themagam\.local$/.test(A.nickToEmail("콩")), "한글 필명이 쓸 수 있는 주소로 바뀐다");
     ok(A.nickToEmail("콩") === A.nickToEmail("콩"), "같은 필명은 늘 같은 주소");
     ok(A.nickToEmail("콩") !== A.nickToEmail("콩2"), "다른 필명은 다른 주소");
+
+    /* 방의 다른 파일들이 필명을 어떻게 쓰는지와 맞는지 확인합니다 */
+    ok(!/encodeURIComponent/.test(a),
+       "script_auth.js 어디에도 필명 변환이 남아 있지 않다");
+    const others = ["script_core.js","script_data.js","script_realtime.js","script_ui.js"]
+      .map(f => fs.readFileSync(DIR+f,"utf8")).join("\n");
+    ok(/users\/\$\{myNick\}|users\/" \+ myNick/.test(others),
+       "다른 파일은 필명을 그대로 쓴다 (같은 방식이어야 도장이 맞는다)");
+
+    // 파이어베이스가 키로 못 받는 글자는 입장 전에 막는다
+    r = await run({ nick:"호.랑", pw:"tiger12", accounts:{}, owner:null });
+    ok(!r.log.includes("join") && !r.log.includes("readOwner"),
+       "필명에 못 쓰는 글자가 있으면 서버까지 가지 않는다");
 
     // ---- 보안 규칙 ----
     ok(rules.nickOwner, "규칙에 nickOwner 가 있다");
