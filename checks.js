@@ -797,12 +797,28 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   ok(sizes.includes("192x192") && sizes.includes("512x512"),
      "설치에 필요한 192·512 아이콘이 있다");
   ok(mf.icons.some(i => i.purpose === "maskable"), "마스커블 아이콘이 있다");
+  /* manifest 안의 경로에는 ?v= 가 붙습니다 (설치된 앱 아이콘 갱신용) */
   mf.icons.forEach(i =>
-    ok(fs.existsSync(DIR+i.src), `아이콘 파일이 실제로 있다 (${i.src})`));
+    ok(fs.existsSync(DIR + i.src.split("?")[0]), `아이콘 파일이 실제로 있다 (${i.src})`));
+
+  /* 파비콘·아이콘·manifest 에 버전이 찍혀야 브라우저가 새로 받아갑니다.
+     [왜] 아이콘을 갈았는데 옛 그림이 계속 보였습니다. 파비콘은 캐시가
+     특히 끈질겨서 강제 새로고침으로도 안 바뀝니다. */
+  ok(/href="icons\/favicon\.png\?v=\d+"/.test(HTML), "파비콘에 버전이 찍혀 있다");
+  ok(/href="icons\/apple-touch-icon\.png\?v=\d+"/.test(HTML), "애플 아이콘에 버전이 찍혀 있다");
+  ok(/href="manifest\.json\?v=\d+"/.test(HTML), "manifest 에 버전이 찍혀 있다");
+  ok(mf.icons.every(i => /\?v=\d+$/.test(i.src)), "manifest 안 아이콘에도 버전이 찍혀 있다");
+  {
+    /* build-single.py 가 앞으로도 자동으로 찍어주는지 */
+    const bs = fs.readFileSync(DIR+"build-single.py","utf8");
+    ok(/icons\/\[\\w\.-\]\+\\\.png/.test(bs), "빌드가 아이콘 버전을 자동으로 찍는다");
+    ok(/manifest\\\.json/.test(bs), "빌드가 manifest 버전도 찍는다");
+  }
   ["icons/favicon.png","icons/apple-touch-icon.png"].forEach(f =>
     ok(fs.existsSync(DIR+f), `${f} 가 있다`));
 
-  ok(/<link rel="manifest" href="manifest\.json">/.test(HTML), "index.html 이 manifest 를 연결한다");
+  ok(/<link rel="manifest" href="manifest\.json(\?v=\d+)?">/.test(HTML),
+     "index.html 이 manifest 를 연결한다");
   ok(/serviceWorker.*register\("sw\.js"\)/s.test(HTML), "서비스 워커를 등록한다");
   ok(/rel="apple-touch-icon"/.test(HTML), "사파리·아이폰 아이콘을 연결한다");
 

@@ -40,8 +40,15 @@ def stamp_versions():
     def bump(m):
         return '%s="%s?v=%s"' % (m.group(1), m.group(2), ver)
 
+    # 아이콘과 manifest 에도 버전을 찍습니다.
+    #
+    # 파비콘은 브라우저가 가장 끈질기게 캐시하는 파일입니다. 강제
+    # 새로고침으로도 잘 안 바뀌어서, 그림을 갈아도 옛 아이콘이 계속
+    # 보입니다. 주소 뒤에 버전을 붙이면 "다른 파일"로 보고 새로 받아
+    # 갑니다. manifest 도 같은 이유로 함께 찍습니다.
     new = re.sub(
-        r'(href|src)="(styles\.css|fortune_data\.js|script_[\w]+\.js)(?:\?v=[\w]+)?"',
+        r'(href|src)="(styles\.css|fortune_data\.js|script_[\w]+\.js'
+        r'|manifest\.json|icons/[\w.-]+\.png)(?:\?v=[\w]+)?"',
         bump, html
     )
     if new != html:
