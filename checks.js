@@ -1183,6 +1183,10 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(/function openSharedPomo/.test(core), "openSharedPomo 가 정의돼 있다");
     ok(/magammm1009\.github\.io\/mmaapomopomo/.test(core), "주소가 마끝마 뽀모방이다");
     ok(/noopener/.test(core), "새 창이 이 방을 건드리지 못하게 막았다");
+    /* 크기를 지정하면 닫기 버튼 없는 팝업 창으로 열려서, 설치해 쓰는
+       분들이 창을 못 닫습니다. 실제로 그런 일이 있었습니다. */
+    ok(!/width=\d|height=\d/.test(core.slice(core.indexOf("function openSharedPomo"))),
+       "창 크기를 지정하지 않는다 (팝업이 아니라 평범한 탭으로 열려야 닫을 수 있다)");
     ok(!/<iframe[^>]*mmaapomopomo/.test(h), "iframe 으로 끼워 넣지 않았다");
 
     finish();
