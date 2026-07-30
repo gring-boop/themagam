@@ -456,8 +456,8 @@
     if (!window.Pet) return null;
     const done = Object.keys(_dexCache).length;
     const prog = window.Pet.petProgress(workTotalLive(), done);
-    const cur = _petCache || { species: "cat", color: "gray" };
-    return { ...prog, species: cur.species, color: cur.color };
+    const cur = _petCache || { species: "cat" };
+    return { ...prog, species: cur.species };
   }
   window.petState = petState;
 
@@ -467,7 +467,7 @@
     const st = petState();
     if (!st || !st.isMax) return false;
 
-    const key = window.Pet.dexKey(_petCache.species, _petCache.color);
+    const key = window.Pet.dexKey(_petCache.species);
     _dexCache[key] = Date.now();
     try { await dexRef().child(key).set(Date.now()); } catch (e) {}
 
@@ -538,16 +538,6 @@
   }
   window.startPet = startPet;
 
-  /** 색만 바꿉니다 (레벨과 종류는 그대로) */
-  window.setPetColor = async function (color) {
-    if (!myNick || !window.Pet || !_petCache) return;
-    if (!window.Pet.COLOR_IDS.includes(color)) return;
-    _petCache = { species: _petCache.species, color };
-    try { await petRef().set(_petCache); } catch (e) {}
-    try { window.renderPetPanel?.(); window.rerenderUserCards?.(); } catch (e) {}
-    window.pushPetToStatus();
-  };
-
   /** 껍데기를 바꿉니다 — 아직 안 태어난 Lv.1 에서만.
 
       안에 든 것은 그룹 안에서 다시 무작위로 뽑습니다. 고르는 것은
@@ -559,7 +549,7 @@
 
     const sp = window.Pet.pickInGroup(group, _dexCache);
     if (!sp) return;
-    _petCache = { species: sp, color: _petCache.color };
+    _petCache = { species: sp };
     try { await petRef().set(_petCache); } catch (e) {}
     try { window.renderPetPanel?.(); window.rerenderUserCards?.(); } catch (e) {}
     window.pushPetToStatus();

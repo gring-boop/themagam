@@ -338,7 +338,7 @@
              status 에 적어 보냅니다. */
           const petHtml = (() => {
             if (!window.Pet) return "";
-            const sp = row.petSpecies, co = row.petColor;
+            const sp = row.petSpecies;
             if (!sp) return "";
             const lv = Math.max(1, Math.min(10, Number(row.petLevel) || 1));
             const mx = !!row.petMax;
@@ -349,7 +349,7 @@
               } title="${lv <= 1
                   ? "아직 안 태어났어요"
                   : escapeHtml(window.Pet.speciesLabel(sp)) + " Lv." + lv + (mx ? " 만렙" : "")}${isMine ? " · 눌러서 펫 관리" : ""}">
-                ${window.Pet.petSvg(sp, co, lv, 58, mx)}
+                ${window.Pet.petSvg(sp, lv, 58, mx)}
                 <div class="card-pet-lv">${lv <= 1 ? "🥚" : `Lv.${lv}`}${mx ? " <b>만렙</b>" : ""}</div>
                 <div class="card-pet-bar"><i style="width:${pct}%"></i></div>
               </div>`;
@@ -463,7 +463,6 @@
       pomoCount,
       /* 펫 요약 — 남들 카드에도 보이게 */
       petSpecies: _pet?.species || null,
-      petColor:   _pet?.color   || null,
       petLevel:   _pet?.level   || 1,
       petMax:     !!_pet?.isMax,
       petPct:     Math.round((_pet?.ratio || 0) * 100),

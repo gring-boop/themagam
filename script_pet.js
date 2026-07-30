@@ -7,7 +7,7 @@
      집필 시간(WORK + 🔥초집중)이 쌓이면 펫이 자랍니다.
        · 4시간마다 1레벨, 40시간에 Lv.10 만렙
        · 만렙을 찍으면 도감에 들어가고, 안 가진 종류가 자동으로 시작
-       · 19종 × 12색 = 228칸
+       · 20종 · 색은 종류마다 고정
 
    ---------------------------------------------------------------------
    Lv.1 은 "껍데기" 입니다
@@ -25,7 +25,7 @@
    ---------------------------------------------------------------------
    그림을 왜 계산으로 만드는가
 
-     19종 × 10레벨 × 12색 = 2,280장을 손으로 그릴 수는 없습니다.
+     20종 × 10레벨 = 200장을 손으로 그릴 수는 없습니다.
 
      그래서 레벨을 0~1 값(t)으로 바꿔서 비율을 이어 움직이고, 특정
      레벨에서 부품을 붙입니다 (Lv.4 꼬리 · Lv.8 날개/수염 · 만렙 반짝이).
@@ -48,31 +48,36 @@
   const HORN_GOLD  = "#E9B44C";   // 용의 뿔
   const RIBBON     = "#FFD028";   // 선물 상자 리본
 
-  /* 종류 — group 이 Lv.1 껍데기를 정합니다 */
+  /* 종류 — group 이 Lv.1 껍데기를, hex 가 몸 색을 정합니다.
+
+     [변경] 색은 이제 고를 수 없습니다. 종류마다 하나로 못박았어요.
+     그래야 "무엇이 나왔나" 가 색으로도 읽히고, 도감이 20칸으로
+     단순해집니다. 20색이 서로 겹치지 않게 골랐습니다. */
   const SPECIES = [
-    { id: "dragon",   label: "용",      group: "egg"   },
-    { id: "peacock",  label: "공작",    group: "egg"   },
-    { id: "chick",    label: "병아리",  group: "egg"   },
-    { id: "penguin",  label: "펭귄",    group: "egg"   },
+    { id: "dragon",   label: "용",      group: "egg",   hex: "#17A67F" },
+    { id: "peacock",  label: "공작",    group: "egg",   hex: "#0E7C86" },
+    { id: "chick",    label: "병아리",  group: "egg",   hex: "#FFD447" },
+    { id: "penguin",  label: "펭귄",    group: "egg",   hex: "#2C4E8A" },
 
-    { id: "cat",      label: "고양이",  group: "cloth" },
-    { id: "dog",      label: "강아지",  group: "cloth" },
-    { id: "rabbit",   label: "토끼",    group: "cloth" },
-    { id: "squirrel", label: "다람쥐",  group: "cloth" },
+    { id: "cat",      label: "고양이",  group: "cloth", hex: "#9C988E" },
+    { id: "dog",      label: "강아지",  group: "cloth", hex: "#C08A3E" },
+    { id: "rabbit",   label: "토끼",    group: "cloth", hex: "#F4A9C0" },
+    { id: "squirrel", label: "다람쥐",  group: "cloth", hex: "#D9744A" },
 
-    { id: "bear",     label: "곰",      group: "crate" },
-    { id: "seal",     label: "물개",    group: "crate" },
-    { id: "whale",    label: "고래",    group: "crate" },
-    { id: "panda",    label: "판다",    group: "crate" },
+    { id: "bear",     label: "곰",      group: "crate", hex: "#7E5233" },
+    { id: "seal",     label: "물개",    group: "crate", hex: "#8095A8" },
+    { id: "whale",    label: "고래",    group: "crate", hex: "#52A8E0" },
+    { id: "panda",    label: "판다",    group: "crate", hex: "#3A3A38" },
+    { id: "octopus",  label: "문어",    group: "crate", hex: "#B54A8C" },
 
-    { id: "flower",   label: "꽃",      group: "seed"  },
-    { id: "tree",     label: "나무",    group: "seed"  },
-    { id: "grass",    label: "풀",      group: "seed"  },
+    { id: "flower",   label: "꽃",      group: "seed",  hex: "#E8574C" },
+    { id: "tree",     label: "나무",    group: "seed",  hex: "#45822A" },
+    { id: "grass",    label: "풀",      group: "seed",  hex: "#9DC94F" },
 
-    { id: "cloud",    label: "구름",    group: "gift"  },
-    { id: "stone",    label: "돌멩이",  group: "gift"  },
-    { id: "sun",      label: "해",      group: "gift"  },
-    { id: "star",     label: "별",      group: "gift"  }
+    { id: "cloud",    label: "구름",    group: "gift",  hex: "#B7CFE4" },
+    { id: "stone",    label: "돌멩이",  group: "gift",  hex: "#6B6760" },
+    { id: "sun",      label: "해",      group: "gift",  hex: "#F7A62B" },
+    { id: "star",     label: "별",      group: "gift",  hex: "#A78BE0" }
   ];
 
   const SHELLS = {
@@ -83,30 +88,26 @@
     gift:  "선물 상자"
   };
 
-  const COLORS = [
-    { id: "gray",   hex: "#888780", label: "회색" },
-    { id: "brown",  hex: "#BA7517", label: "갈색" },
-    { id: "orange", hex: "#EF9F27", label: "주황" },
-    { id: "cream",  hex: "#E9C46A", label: "크림" },
-    { id: "lime",   hex: "#97C459", label: "연두" },
-    { id: "green",  hex: "#1D9E75", label: "초록" },
-    { id: "mint",   hex: "#5DCAA5", label: "민트" },
-    { id: "blue",   hex: "#378ADD", label: "파랑" },
-    { id: "purple", hex: "#7F77DD", label: "보라" },
-    { id: "pink",   hex: "#D4537E", label: "분홍" },
-    { id: "coral",  hex: "#F0997B", label: "살구" },
-    { id: "white",  hex: "#E8E4DA", label: "흰색" }
-  ];
+  /* 껍데기 색은 종류와 무관하게 고정입니다.
+
+     [중요] 몸 색이 종류마다 다르니, 껍데기에 그 색을 쓰면 색만 보고
+     무엇이 들었는지 알 수 있습니다. 껍데기의 뜻이 사라지므로 껍데기
+     종류마다 정해진 색을 씁니다. */
+  const SHELL_COLOR = {
+    egg:   "#EFC7D8",
+    cloth: "#A9A0E8",
+    crate: "#B98A52",
+    seed:  "#C69A5E",
+    gift:  "#F4A9C0"
+  };
 
   const SPECIES_IDS = SPECIES.map(s => s.id);
-  const COLOR_IDS   = COLORS.map(c => c.id);
 
   function spec(id) { return SPECIES.find(s => s.id === id) || SPECIES[0]; }
   function speciesLabel(id) { return spec(id).label; }
   function speciesGroup(id) { return spec(id).group; }
   function shellLabel(id) { return SHELLS[speciesGroup(id)] || "알"; }
-  function colorHex(id) { return (COLORS.find(c => c.id === id) || COLORS[0]).hex; }
-  function colorLabel(id) { return (COLORS.find(c => c.id === id) || COLORS[0]).label; }
+  function colorHex(id) { return spec(id).hex; }
 
   /* ---------------------------------------------------------------
      [2] 색 계산 — 몸통색 하나에서 나머지를 만듭니다
@@ -127,8 +128,9 @@
     return rgbToHex(r * k, g * k, b * k);
   }
 
-  function palette(colorId, species) {
-    const base = colorHex(colorId);
+  /** 색표는 종류 하나로 만듭니다 (색은 고를 수 없습니다) */
+  function palette(species) {
+    const base = spec(species).hex;
     const p = {
       body:  base,
       light: shade(base, 0.42),
@@ -179,30 +181,16 @@
   function pickNextPet(dex, rnd) {
     const rand = typeof rnd === "function" ? rnd : Math.random;
     const owned = new Set(Object.keys(dex || {}));
-    const ownedSpecies = new Set([...owned].map(k => k.split("/")[0]));
 
-    const fresh = SPECIES_IDS.filter(sp => !ownedSpecies.has(sp));
-    if (fresh.length) {
-      const sp = fresh[Math.floor(rand() * fresh.length)];
-      const usedColors = new Set([...owned].map(k => k.split("/")[1]));
-      const pool = COLOR_IDS.filter(c => !usedColors.has(c));
-      const cols = pool.length ? pool : COLOR_IDS;
-      return { species: sp, color: cols[Math.floor(rand() * cols.length)] };
-    }
-
-    const free = [];
-    for (const sp of SPECIES_IDS) {
-      for (const c of COLOR_IDS) if (!owned.has(sp + "/" + c)) free.push({ species: sp, color: c });
-    }
-    if (free.length) return free[Math.floor(rand() * free.length)];
-
-    return {
-      species: SPECIES_IDS[Math.floor(rand() * SPECIES_IDS.length)],
-      color:   COLOR_IDS[Math.floor(rand() * COLOR_IDS.length)]
-    };
+    /* 색이 종류에 묶였으니 도감은 20칸입니다.
+       아직 못 모은 종류가 있으면 그중에서, 다 모았으면 아무거나. */
+    const fresh = SPECIES_IDS.filter(sp => !owned.has(sp));
+    const pool = fresh.length ? fresh : SPECIES_IDS;
+    return { species: pool[Math.floor(rand() * pool.length)] };
   }
 
-  function dexKey(species, color) { return species + "/" + color; }
+  /* 도감 열쇠는 종류뿐입니다 (색을 못 고르므로 조합이 없습니다) */
+  function dexKey(species) { return species; }
 
   /* 껍데기를 고르면 그 그룹 안에서 무작위로 하나를 뽑습니다.
 
@@ -212,7 +200,7 @@
      아직 못 모은 종류를 먼저 씁니다. */
   function pickInGroup(group, dex, rnd) {
     const rand = typeof rnd === "function" ? rnd : Math.random;
-    const owned = new Set(Object.keys(dex || {}).map(k => k.split("/")[0]));
+    const owned = new Set(Object.keys(dex || {}));
     const inGroup = SPECIES_IDS.filter(id => speciesGroup(id) === group);
     if (!inGroup.length) return null;
     const fresh = inGroup.filter(id => !owned.has(id));
@@ -249,6 +237,19 @@
      (도감처럼) 서로의 잘라내기 틀을 물어와 줄무늬가 사라집니다.
      그래서 그릴 때마다 새 id 를 붙입니다. */
   let _clipSeq = 0;
+
+  /** 껍데기용 색표 — 껍데기 종류의 고정색에서 만듭니다 */
+  function shellPalette(group) {
+    const base = SHELL_COLOR[group] || SHELL_COLOR.egg;
+    return {
+      body:  base,
+      light: shade(base, 0.30),
+      pale:  shade(base, 0.58),
+      soft:  shade(base, 0.78),
+      dark:  shade(base, -0.55),
+      line:  shade(base, -0.30)
+    };
+  }
 
   const SHELL_DRAW = {
 
@@ -528,6 +529,31 @@
         <ellipse cx="${h.cx}" cy="${n1(h.cy + h.r * 0.52)}" rx="${n1(h.r * 0.22)}" ry="${n1(h.r * 0.16)}" fill="${p.markDark}"/>`;
     },
 
+    /* 문어 — 다리가 레벨에 따라 늘어납니다 (Lv.1 둘 → Lv.10 여섯).
+       머리는 둥근 종 모양이고, 몸통 자리를 다리가 대신합니다. */
+    octopus(g) {
+      const { p, t, lv, body: b, head: h } = g;
+      const legs = Math.max(2, Math.min(6, 2 + Math.floor(t * 4.2)));
+      const baseY = b.cy + b.ry * 0.35;
+      let arms = "";
+      for (let i = 0; i < legs; i++) {
+        const span = b.rx * 1.25;
+        const x = b.cx - span + (span * 2 * i) / Math.max(1, legs - 1);
+        const dir = x < b.cx ? -1 : 1;
+        const len = lerp(7, 11, t);
+        arms += `<path d="M${n1(x)} ${n1(baseY - 2)}q${n1(dir * 2)} ${n1(len * 0.6)} ${n1(dir * 3.4)} ${n1(len)}"
+                       stroke="${p.body}" stroke-width="${n1(lerp(3, 4, t))}" fill="none" stroke-linecap="round"/>`;
+      }
+      return `
+        ${arms}
+        <path d="M${n1(b.cx - b.rx)} ${n1(baseY)}q0 -${n1(b.ry * 1.9)} ${n1(b.rx)} -${n1(b.ry * 1.9)}
+                 q${n1(b.rx)} 0 ${n1(b.rx)} ${n1(b.ry * 1.9)}z" fill="${p.body}"/>
+        <ellipse cx="${b.cx}" cy="${n1(baseY - b.ry * 1.15)}" rx="${n1(b.rx * 0.52)}" ry="${n1(b.ry * 0.42)}" fill="${p.light}" opacity=".55"/>
+        ${lv >= 8 ? `<circle cx="${n1(b.cx - b.rx * 0.45)}" cy="${n1(baseY - b.ry * 0.35)}" r="1.6" fill="${p.pale}"/>
+                     <circle cx="${n1(b.cx + b.rx * 0.45)}" cy="${n1(baseY - b.ry * 0.35)}" r="1.6" fill="${p.pale}"/>` : ""}
+        ${face(b.cx, baseY - b.ry * 1.0, h.r * 0.78, p, lv >= 4)}`;
+    },
+
     flower(g) {
       const { p, t, lv } = g;
       const cy = lerp(26, 21, t), pr = lerp(4, 5.2, t);
@@ -642,11 +668,11 @@
   /**
    * @param maxed 정말로 40시간을 다 채웠는가 (Lv.10 도달과 4시간 차이가 납니다)
    */
-  function petSvg(species, color, level, size, maxed) {
+  function petSvg(species, level, size, maxed) {
     const sp = SPECIES_IDS.includes(species) ? species : SPECIES_IDS[0];
     const lv = Math.max(1, Math.min(MAX_LEVEL, Number(level) || 1));
     const t = (lv - 1) / (MAX_LEVEL - 1);
-    const p = palette(color, sp);
+    const p = palette(sp);
     const px = Number(size) || 56;
     const group = speciesGroup(sp);
     const showSpark = (maxed === undefined) ? (lv >= MAX_LEVEL) : !!maxed;
@@ -655,11 +681,9 @@
     if (lv === 1) {
       /* 아직 껍데기 — 무엇이 나올지 모릅니다.
 
-         [주의] 여기서는 종류를 뺀 기본 색표를 씁니다. 판다는 색 규칙이
-         뒤집혀 있어서(몸이 흰빛), 종류가 섞인 색표를 그대로 쓰면
-         나무 상자의 끈 색만 보고 "판다구나" 를 알 수 있게 됩니다.
-         껍데기의 뜻이 사라지므로 색만 반영합니다. */
-      inner = (SHELL_DRAW[group] || SHELL_DRAW.egg)(palette(color));
+         껍데기 색은 껍데기 종류로만 정합니다. 몸 색을 쓰면 색만 보고
+         무엇이 들었는지 알 수 있어서, 껍데기의 뜻이 사라집니다. */
+      inner = (SHELL_DRAW[group] || SHELL_DRAW.egg)(shellPalette(group));
     } else {
       /* 아기일 때는 머리가 크고 몸이 작습니다. 자라면서 반대가 됩니다.
          이 비율 하나가 "자랐다"는 느낌의 대부분을 만듭니다. */
@@ -699,8 +723,8 @@
 
   const api = {
     HOURS_PER_LEVEL, MAX_LEVEL, PET_MS, MS_PER_HOUR,
-    SPECIES, COLORS, SPECIES_IDS, COLOR_IDS, SHELLS, INK, HORN_GOLD, RIBBON,
-    speciesLabel, speciesGroup, shellLabel, colorLabel, colorHex, palette, shade,
+    SPECIES, SPECIES_IDS, SHELLS, SHELL_COLOR, INK, HORN_GOLD, RIBBON,
+    speciesLabel, speciesGroup, shellLabel, colorHex, palette, shellPalette, shade,
     levelFromMs, petProgress, pickNextPet, pickInGroup, dexKey, petSvg, fmtHM
   };
 

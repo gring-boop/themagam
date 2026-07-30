@@ -416,7 +416,16 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   /* 펫 — 그림 */
   {
     const Pet = require(DIR + "script_pet.js");
-    ok(Pet.SPECIES_IDS.length === 19, `19종이다 (${Pet.SPECIES_IDS.length})`);
+    ok(Pet.SPECIES_IDS.length === 20, `20종이다 (${Pet.SPECIES_IDS.length})`);
+    ok(Pet.SPECIES_IDS.includes("octopus"), "문어가 있다");
+    /* ★ 색은 종류마다 고정 — 서로 겹치면 두 종류가 같은 색이 됩니다 */
+    {
+      const hexes = Pet.SPECIES.map(x => x.hex);
+      ok(hexes.every(h => /^#[0-9A-Fa-f]{6}$/.test(h)), "모든 종류에 색이 정해져 있다");
+      const dup = hexes.filter((h, i) => hexes.indexOf(h) !== i);
+      ok(dup.length === 0, "색이 겹치지 않는다" + (dup.length ? " — " + dup.join(", ") : ""));
+      ok(!Pet.COLOR_IDS, "색 고르기 목록이 없다 (고를 수 없음)");
+    }
     /* 종류마다 그리는 함수가 실제로 있어야 합니다 —
        없으면 조용히 고양이로 대체되어 "다 고양이"가 됩니다. */
     {
@@ -437,18 +446,25 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       Pet.SPECIES.forEach(sp => { (byGroup[sp.group] = byGroup[sp.group] || []).push(sp.id); });
       let leak = [];
       Object.entries(byGroup).forEach(([gp, ids]) => {
-        const first = strip(Pet.petSvg(ids[0], "blue", 1, 56, false));
+        const first = strip(Pet.petSvg(ids[0], 1, 56, false));
         ids.slice(1).forEach(id => {
-          if (strip(Pet.petSvg(id, "blue", 1, 56, false)) !== first) leak.push(gp + "/" + id);
+          if (strip(Pet.petSvg(id, 1, 56, false)) !== first) leak.push(gp + "/" + id);
         });
       });
       ok(leak.length === 0, "Lv.1 껍데기가 종류를 드러내지 않는다" + (leak.length ? " — " + leak.join(", ") : ""));
       /* Lv.2 는 껍데기를 걸치고, Lv.3 부터는 벗어야 합니다 */
-      ok(Pet.petSvg("cat", "blue", 2, 56, false).length > Pet.petSvg("cat", "blue", 3, 56, false).length - 400,
+      ok(Pet.petSvg("cat", 2, 56, false).length > Pet.petSvg("cat", 3, 56, false).length - 400,
          "Lv.2 는 껍데기 조각을 걸친다");
+      /* ★ 껍데기 색이 몸 색을 쓰면 색만 보고 종류를 알 수 있습니다 */
+      Pet.SPECIES.forEach(x => {
+        const sv = Pet.petSvg(x.id, 1, 56, false);
+        if (x.hex !== Pet.SHELL_COLOR[x.group]) {
+          ok(!sv.includes(x.hex), `${x.label} 껍데기에 몸 색이 새지 않는다`);
+        }
+      });
       /* 보자기의 clipPath id 가 매번 달라야 합니다 (도감에서 여러 마리를 그림) */
-      const a1 = Pet.petSvg("cat", "blue", 1, 56, false).match(/petclip(\d+)/)[1];
-      const a2 = Pet.petSvg("dog", "pink", 1, 56, false).match(/petclip(\d+)/)[1];
+      const a1 = Pet.petSvg("cat", 1, 56, false).match(/petclip(\d+)/)[1];
+      const a2 = Pet.petSvg("dog", 1, 56, false).match(/petclip(\d+)/)[1];
       ok(a1 !== a2, "보자기 잘라내기 틀 id 가 겹치지 않는다");
     }
     /* 껍데기 고르기 — 고르는 것은 껍데기까지, 안은 비밀 */
@@ -465,7 +481,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       ok(seen2.size > 1, `같은 껍데기에서 여러 종류가 나온다 (${seen2.size}가지)`);
       /* 이미 모은 종류보다 못 모은 종류를 먼저 */
       const dexAll = {}; Pet.SPECIES.filter(x => x.group === "egg").slice(0, 3)
-        .forEach(x => { dexAll[Pet.dexKey(x.id, "blue")] = 1; });
+        .forEach(x => { dexAll[Pet.dexKey(x.id)] = 1; });
       const rest = Pet.SPECIES.filter(x => x.group === "egg").slice(3).map(x => x.id);
       let ok2 = true;
       for (let i = 0; i < 20; i++) if (!rest.includes(Pet.pickInGroup("egg", dexAll, Math.random))) ok2 = false;
@@ -474,38 +490,34 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
 
     /* 판다는 색 규칙이 뒤집혀 있습니다 */
     {
-      const pp = Pet.palette("blue", "panda");
-      ok(pp.body === "#F2F0EA" && pp.mark === Pet.colorHex("blue"),
-         "판다는 몸이 흰빛이고 고른 색이 무늬로 들어간다");
+      const pp = Pet.palette("panda");
+      ok(pp.body === "#F2F0EA" && pp.mark === Pet.colorHex("panda"),
+         "판다는 몸이 흰빛이고 정해진 색이 무늬로 들어간다");
     }
-      ok(Pet.COLOR_IDS.length === 12, `12색이다 (${Pet.COLOR_IDS.length})`);
     ok(Pet.HOURS_PER_LEVEL === 4 && Pet.MAX_LEVEL === 10, "4시간 1레벨 · Lv.10 만렙");
 
     /* ★ 8종 × 10레벨 × 12색 전수 — 좌표에 NaN 이 새면 그림이 통째로 깨집니다 */
     let bad = [];
     for (const sp of Pet.SPECIES_IDS) {
-      for (const c of Pet.COLOR_IDS) {
-        for (let lv = 1; lv <= 10; lv++) {
-          const svg = Pet.petSvg(sp, c, lv, 56, lv === 10);
-          if (/NaN|undefined|Infinity/.test(svg)) bad.push(`${sp}/${c}/Lv${lv}`);
-          if (!/<svg/.test(svg) || !/<\/svg>/.test(svg)) bad.push(`${sp}/${c}/Lv${lv} 열림닫힘`);
-        }
+      for (let lv = 1; lv <= 10; lv++) {
+        const svg = Pet.petSvg(sp, lv, 56, lv === 10);
+        if (/NaN|undefined|Infinity/.test(svg)) bad.push(`${sp}/Lv${lv}`);
+        if (!/<svg/.test(svg) || !/<\/svg>/.test(svg)) bad.push(`${sp}/Lv${lv} 열림닫힘`);
       }
     }
-    ok(bad.length === 0, `펫 그림 ${Pet.SPECIES_IDS.length * Pet.COLOR_IDS.length * 10}조합이 온전하다${bad.length ? " — " + bad.slice(0,3).join(", ") : ""}`);
+    ok(bad.length === 0, `펫 그림 ${Pet.SPECIES_IDS.length * 10}가지가 온전하다${bad.length ? " — " + bad.slice(0,3).join(", ") : ""}`);
 
     /* 용의 뿔은 몸 색과 무관하게 금색 */
-    ok(Pet.COLOR_IDS.every(c => Pet.petSvg("dragon", c, 10, 56, true).includes(Pet.HORN_GOLD)),
-       "용 뿔은 어떤 몸 색에서도 금색이다");
+    ok(Pet.petSvg("dragon", 10, 56, true).includes(Pet.HORN_GOLD), "용 뿔은 금색이다");
     /* 뿔 가지는 레벨에 따라 늘어납니다 */
-    const horn = lv => (Pet.petSvg("dragon", "green", lv, 56, false).match(/<path d="M/g) || []).length;
+    const horn = lv => (Pet.petSvg("dragon", lv, 56, false).match(/<path d="M/g) || []).length;
     ok(horn(1) < horn(5) && horn(5) < horn(8), "용 뿔이 레벨에 따라 뻗는다");
     /* 날개는 Lv.8 에 */
-    ok(!/q10 -17/.test(Pet.petSvg("dragon","green",7,56,false)) &&
-        /q10 -17/.test(Pet.petSvg("dragon","green",8,56,false)), "용 날개는 Lv.8 에 돋는다");
+    ok(!/q10 -17/.test(Pet.petSvg("dragon",7,56,false)) &&
+        /q10 -17/.test(Pet.petSvg("dragon",8,56,false)), "용 날개는 Lv.8 에 돋는다");
     /* 반짝이는 정말 다 채운 뒤에만 */
-    ok(!/EF9F27/.test(Pet.petSvg("cat","blue",10,56,false)), "Lv.10 도달만으로는 반짝이지 않는다");
-    ok(/EF9F27/.test(Pet.petSvg("cat","blue",10,56,true)), "만렙이면 반짝인다");
+    ok(!/EF9F27/.test(Pet.petSvg("cat",10,56,false)), "Lv.10 도달만으로는 반짝이지 않는다");
+    ok(/EF9F27/.test(Pet.petSvg("cat",10,56,true)), "만렙이면 반짝인다");
 
     /* 레벨 계산 */
     const H = 3600e3;
@@ -523,29 +535,21 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(Pet.petProgress(5 * H, 0).toNextMs === 3 * H, "Lv.2 에서 다음까지 3시간");
     ok(Pet.petProgress(40 * H, 0).toNextMs === 0, "만렙이면 남은 시간 0");
 
-    /* ★ 승계 — 같은 펫이 또 나오지 않아야 합니다 */
+    /* ★ 승계 — 같은 종류가 또 나오지 않아야 합니다 */
     let dex = {}, seen = [];
     const rnd = (() => { let i = 0; return () => ((i = (i * 9301 + 49297) % 233280) / 233280); })();
-    for (let n = 0; n < 8; n++) {
+    for (let n = 0; n < Pet.SPECIES_IDS.length; n++) {
       const p2 = Pet.pickNextPet(dex, rnd);
       seen.push(p2.species);
-      dex[Pet.dexKey(p2.species, p2.color)] = 1;
+      dex[Pet.dexKey(p2.species)] = 1;
     }
-    ok(new Set(seen).size === 8, `연속 8마리가 모두 다른 종류다 (${new Set(seen).size})`);
-    /* 8종을 다 모은 뒤에도 이미 가진 조합은 안 나옵니다 */
-    let dupe = 0;
-    for (let n = 0; n < 40; n++) {
-      const p3 = Pet.pickNextPet(dex, rnd);
-      const k = Pet.dexKey(p3.species, p3.color);
-      if (dex[k]) dupe++;
-      dex[k] = 1;
-    }
-    ok(dupe === 0, `이미 모은 조합은 다시 안 나온다 (겹침 ${dupe})`);
-    /* 96칸을 다 채워도 죽지 않습니다 */
-    const full = {};
-    Pet.SPECIES_IDS.forEach(sp => Pet.COLOR_IDS.forEach(c => { full[Pet.dexKey(sp, c)] = 1; }));
-    const last = Pet.pickNextPet(full, rnd);
+    ok(new Set(seen).size === Pet.SPECIES_IDS.length,
+       `${Pet.SPECIES_IDS.length}마리가 모두 다른 종류다 (${new Set(seen).size})`);
+    ok(!seen.some(x => x === undefined), "빈 값이 나오지 않는다");
+    /* 도감을 다 채운 뒤에도 죽지 않습니다 */
+    const last = Pet.pickNextPet(dex, rnd);
     ok(!!last && Pet.SPECIES_IDS.includes(last.species), "도감을 다 채운 뒤에도 펫이 나온다");
+    ok(last.color === undefined, "색은 더 이상 뽑지 않는다");
 
     /* 색 계산 */
     ok(/^#[0-9a-f]{6}$/i.test(Pet.shade("#378ADD", 0.4)), "밝게 만든 색이 올바른 형식");
@@ -595,10 +599,10 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       const mk = (level) => ({
         level, isMax: level >= 10, curMs: level * 4 * 3600e3,
         totalNeed: Pet.PET_MS, ratio: level / 10,
-        toNextMs: 2 * 3600e3, species: "cat", color: "blue"
+        toNextMs: 2 * 3600e3, species: "cat"
       });
       const c2 = {
-        window: { Pet, petDex: () => ({ "dog/pink": 1 }) },
+        window: { Pet, petDex: () => ({ dog: 1 }) },
         document: { getElementById: id => (id === "panel-pet" ? host : null),
                     createElement: stub, body: { appendChild() {} } },
         console
@@ -622,14 +626,14 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       c2.window.petState = () => mk(1); host.innerHTML = ""; c2.window.renderPetPanel();
       const h1 = host.innerHTML;
       ok((h1.match(/data-pet-shell/g) || []).length === 5, "Lv.1 에 껍데기 5개가 나온다");
-      ok((h1.match(/data-pet-color/g) || []).length === Pet.COLOR_IDS.length, "색 12개가 나온다");
+      ok(!/data-pet-color/.test(h1), "색 고르는 칸이 없다");
       /* 종류가 새는지는 "글자가 어디 나오나" 로 보면 안 됩니다.
          나무 상자에는 "나무" 가 들어 있고, "정해집니다" 에는 "해" 가
          들어 있어서 애먼 곳이 걸립니다. 이름이 실제로 쓰이는 두 자리만
          정확히 꺼내서 봅니다. */
       {
         const nameLine = (h1.match(/class="pet-cur-name">([\s\S]*?)<\/div>/) || [])[1] || "";
-        ok(/아직 안 태어났어요/.test(nameLine), "Lv.1 은 아직 안 태어났다고 알린다");
+        ok(/아직 안 깨어났어요/.test(nameLine), "Lv.1 은 아직 안 깨어났다고 알린다");
         ok(Object.values(Pet.SHELLS).some(l => nameLine.includes(l)),
            "이름 줄에 껍데기 이름이 나온다");
 
@@ -647,7 +651,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       c2.window.petState = () => mk(5); host.innerHTML = ""; c2.window.renderPetPanel();
       const h5 = host.innerHTML;
       ok(!/data-pet-shell/.test(h5), "Lv.5 에는 껍데기 선택지가 없다");
-      ok((h5.match(/data-pet-color/g) || []).length === Pet.COLOR_IDS.length, "Lv.5 에도 색은 바꿀 수 있다");
+      ok(!/data-pet-color/.test(h5), "Lv.5 에도 색 고르는 칸이 없다");
     }
 
     /* ★ 시작 함수가 "입장한 뒤에" 불리는가
@@ -682,8 +686,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       const seg = tl.slice(i, i + 700);
       ok(/st\.level !== 1\) return;/.test(seg), "태어난 뒤에는 껍데기를 못 바꾼다");
     }
-    ok(/window\.setPetColor/.test(tl), "색만 바꾸기가 있다");
-    ok(!/setPetLook/.test(tl) && !/setPetLook/.test(pu), "종류를 직접 고르는 길이 없다 (비밀 유지)");
+    ok(!/setPetColor/.test(tl), "색 바꾸기가 없다 (종류마다 고정)");
+      ok(!/setPetLook/.test(tl) && !/setPetLook/.test(pu), "종류를 직접 고르는 길이 없다 (비밀 유지)");
     ok(/data-pet-shell/.test(pu), "관리 창에 껍데기 선택지가 있다");
     ok(!/data-pet-species/.test(pu), "관리 창에 종류 선택지가 없다");
     {

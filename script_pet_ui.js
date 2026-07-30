@@ -4,8 +4,9 @@
    보여주는 것
      · 지금 키우는 펫 · 레벨 · 다음 레벨까지 남은 시간
      · Lv.1 이면 껍데기 고르기 (안에 든 것은 비밀)
-     · 태어난 뒤에는 색만 바꾸기
-     · 만렙 도감
+     · 만렙 도감 (20칸)
+
+   색은 종류마다 고정이라 고르는 칸이 없습니다.
 
    그림은 script_pet.js 가, 값 읽기·쓰기는 script_timelog.js 가 합니다.
    이 파일은 화면만 만듭니다.
@@ -23,13 +24,13 @@
     if (!P()) return;
     document.getElementById("pet-toast")?.remove();
 
-    const [sp, co] = String(doneKey).split("/");
+    const sp = String(doneKey);
     const el = document.createElement("div");
     el.id = "pet-toast";
     el.className = "pet-toast";
     el.setAttribute("role", "status");
     el.innerHTML = `
-      ${P().petSvg(sp, co, P().MAX_LEVEL, 34, true)}
+      ${P().petSvg(sp, P().MAX_LEVEL, 34, true)}
       <span><b>${P().speciesLabel(sp)}</b> 만렙! 도감에 들어갔어요.
       다음은 <b>${P().speciesLabel(next.species)}</b> 예요 🥚</span>`;
     document.body.appendChild(el);
@@ -53,18 +54,18 @@
 
     const dex = window.petDex?.() || {};
     const doneCount = Object.keys(dex).length;
-    const total = P().SPECIES_IDS.length * P().COLOR_IDS.length;
+    const total = P().SPECIES_IDS.length;
 
     /* 지금 펫 */
     const cur = `
       <div class="set-block">
         <div class="set-title">지금 키우는 펫</div>
         <div class="pet-cur">
-          ${P().petSvg(st.species, st.color, st.level, 68, st.isMax)}
+          ${P().petSvg(st.species, st.level, 68, st.isMax)}
           <div class="pet-cur-info">
             <div class="pet-cur-name">
               ${st.level === 1
-                ? `${P().shellLabel(st.species)} · 아직 안 태어났어요`
+                ? `${P().shellLabel(st.species)} · 아직 안 깨어났어요`
                 : `${P().speciesLabel(st.species)} · Lv.${st.level}${st.isMax ? " 만렙" : ""}`}
             </div>
             <div class="pet-cur-sub">
@@ -75,7 +76,7 @@
               ${st.isMax
                 ? "다 자랐어요! 잠시 뒤 도감에 들어가고 새 펫이 시작돼요."
                 : st.level === 1
-                  ? `${P().fmtHM(st.toNextMs)} 뒤에 태어나요`
+                  ? `${P().fmtHM(st.toNextMs)} 뒤에 깨어나요`
                   : `다음 레벨까지 ${P().fmtHM(st.toNextMs)}`}
             </div>
           </div>
@@ -100,7 +101,7 @@
             return `
               <button type="button" class="pet-sp wide${on ? " on" : ""}"
                       data-pet-shell="${gp}" title="${P().SHELLS[gp]}">
-                ${P().petSvg(rep.id, st.color, 1, 40, false)}
+                ${P().petSvg(rep.id, 1, 40, false)}
                 <span>${P().SHELLS[gp]}</span>
               </button>`;
           }).join("")}
@@ -108,28 +109,16 @@
         <p class="hint">
           <b>안에 무엇이 들었는지는 비밀이에요.</b> 껍데기만 고를 수 있고,
           담긴 것은 태어날 때 정해집니다. 바꿔도 <b>쌓인 시간은 그대로</b>예요.<br>
-          태어난 뒤에는 껍데기를 바꿀 수 없고 <b>색만</b> 바꿀 수 있어요.
+          <b>깨어난 뒤에는 바꿀 수 없어요.</b> 색은 종류마다 정해져 있습니다.
         </p>
       </div>` : "";
-
-    /* 색 고르기 — 언제나 나옵니다 (알일 때도 껍데기 색이 바뀝니다) */
-    const co = `
-      <div class="set-block">
-        <div class="set-title">색 바꾸기</div>
-        <div class="pet-pick">
-          ${P().COLORS.map(c => `
-            <button type="button" class="pet-sw${c.id === st.color ? " on" : ""}"
-                    data-pet-color="${c.id}" style="background:${c.hex}"
-                    title="${c.label}" aria-label="${c.label}"></button>`).join("")}
-        </div>
-      </div>`;
 
     /* 도감 — 모은 것만 앞에, 남은 칸은 물음표로 */
     const keys = Object.keys(dex).sort((a, b) => Number(dex[b]) - Number(dex[a]));
     const cells = keys.map(k => {
-      const [s2, c2] = k.split("/");
-      return `<div class="pet-cell" title="${P().speciesLabel(s2)} · ${P().colorLabel(c2)}">
-                ${P().petSvg(s2, c2, P().MAX_LEVEL, 40, true)}
+      const s2 = k;
+      return `<div class="pet-cell" title="${P().speciesLabel(s2)}">
+                ${P().petSvg(s2, P().MAX_LEVEL, 40, true)}
               </div>`;
     });
     /* 빈 칸을 96개까지 다 그리면 화면이 너무 길어집니다.
@@ -147,13 +136,13 @@
         <p class="hint">
           만렙을 찍으면 도감에 들어가고 <b>다음 펫이 저절로 시작</b>돼요.
           그때도 <b>Lv.1 동안은 껍데기를 골라 바꿀 수 있어요.</b><br>
-          아직 못 모은 종류 중에서 뽑으니, <b>처음 ${P().SPECIES_IDS.length}마리는 전부 다른 종류</b>입니다.<br>
+          아직 못 모은 종류 중에서 뽑으니, <b>${P().SPECIES_IDS.length}마리가 전부 다른 종류</b>예요.<br>
           Lv.1 에는 <b>${Object.values(P().SHELLS).join(" · ")}</b> 중 하나로 시작해요.
           담긴 것에 따라 껍데기가 다릅니다.
         </p>
       </div>`;
 
-    host.innerHTML = cur + shellPick + co + dexHtml;
+    host.innerHTML = cur + shellPick + dexHtml;
 
     /* 한 번만 걸어둡니다 (host 는 다시 그려도 그대로 남습니다) */
     if (!host._petBound) {
@@ -162,8 +151,7 @@
         const sh = e.target.closest("[data-pet-shell]");
         if (sh) { window.setPetShell?.(sh.dataset.petShell); return; }
 
-        const c2 = e.target.closest("[data-pet-color]");
-        if (c2) window.setPetColor?.(c2.dataset.petColor);
+        /* 색은 종류마다 고정입니다 — 고르는 칸이 없습니다. */
       });
     }
   }
