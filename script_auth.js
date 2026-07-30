@@ -37,7 +37,9 @@
   "use strict";
 
   const MAIL_DOMAIN = "themagam.local";
-  const MIN_PW = 4;
+  /* 파이어베이스가 6자 미만을 아예 거부합니다. 4자로 안내하면
+     "정했는데 안 된다"는 일이 생기므로 처음부터 6자로 받습니다. */
+  const MIN_PW = 6;
 
   /* 필명 → 가짜 이메일.
      앞에 n 을 붙이는 건 숫자로 시작하는 주소를 싫어하는 곳이 있어서입니다. */
@@ -65,6 +67,27 @@
     b.textContent = on ? "확인 중…" : "입장하기";
   }
 
+  /* 이 필명에 이미 주인이 있는지 먼저 봅니다.
+
+     [왜 굳이 먼저 보는가]
+     예전 파이어베이스는 로그인 실패 이유를 "그런 계정 없음"과
+     "비밀번호 틀림"으로 나눠서 알려줬습니다. 그래서 "계정 없음"이
+     오면 그 자리에서 새로 만들면 됐어요.
+
+     그런데 요즘은 둘을 뭉쳐서 `invalid-login-credentials` 하나로만
+     답합니다. 남의 필명을 넣어보며 "이 사람 가입했나?"를 캐내는 것을
+     막으려는 조치예요. 좋은 변화지만, 덕분에 "처음 온 사람"을 구분할
+     수 없게 됐습니다.
+
+     그래서 파이어베이스 대신 **우리 도장**을 봅니다. 도장은 누구나
+     읽을 수 있게 열어둔 값이라 로그인 전에도 확인할 수 있어요.
+     도장이 없으면 처음 온 필명, 있으면 이미 주인이 있는 필명입니다. */
+  async function ownerOf(nick) {
+    const snap = await firebase.database()
+      .ref("nickOwner/" + encodeURIComponent(nick)).once("value");
+    return snap.val();
+  }
+
   /* ---------------------------------------------------------------
      도장 찍기 — 이미 주인이 있으면 그대로 두고, 없으면 내가 찍습니다.
 
@@ -77,6 +100,25 @@
     const res = await ref.transaction(cur => (cur === null ? uid : undefined));
     const owner = res.snapshot.val();
     return owner === uid;
+  }
+
+  /* 어느 쪽에서 나든 뜻이 같은 오류들.
+     처리했으면 true 를 돌려줍니다. */
+  function handleCommon(e) {
+    const c = e && e.code;
+    if (c === "auth/too-many-requests") {
+      setMsg("시도가 너무 많았어요. 잠시 뒤에 다시 해주세요.", true); return true;
+    }
+    if (c === "auth/operation-not-allowed") {
+      setMsg("파이어베이스에서 이메일/비밀번호 로그인을 켜야 해요. (설치안내 ②-B)", true); return true;
+    }
+    if (c === "auth/network-request-failed") {
+      setMsg("인터넷 연결을 확인해주세요.", true); return true;
+    }
+    if (c === "auth/weak-password") {
+      setMsg("비밀번호가 너무 짧아요. 6자 이상으로 해주세요.", true); return true;
+    }
+    return false;
   }
 
   /* ---------------------------------------------------------------
@@ -99,29 +141,42 @@
     busy(true);
     setMsg("");
     try {
+      const owner = await ownerOf(nick);
       let cred;
-      try {
-        /* 있는 계정이면 로그인 */
-        cred = await auth.signInWithEmailAndPassword(email, pw);
-      } catch (e) {
-        if (e.code === "auth/user-not-found") {
-          /* 처음 쓰는 필명이면 그 자리에서 계정을 만듭니다 */
+
+      if (owner === null) {
+        /* 처음 쓰는 필명 — 계정을 만듭니다 */
+        try {
           cred = await auth.createUserWithEmailAndPassword(email, pw);
-        } else if (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") {
-          setMsg("이미 쓰이고 있는 필명이에요. 비밀번호가 다릅니다.", true);
-          el("pw-input")?.select();
-          return false;
-        } else if (e.code === "auth/too-many-requests") {
-          setMsg("시도가 너무 많았어요. 잠시 뒤에 다시 해주세요.", true);
-          return false;
-        } else if (e.code === "auth/operation-not-allowed") {
-          setMsg("파이어베이스에서 이메일/비밀번호 로그인을 켜야 해요. (설치안내 참고)", true);
-          return false;
-        } else if (e.code === "auth/network-request-failed") {
-          setMsg("인터넷 연결을 확인해주세요.", true);
-          return false;
-        } else {
-          setMsg("로그인에 실패했어요. " + (e.code || e.message || ""), true);
+        } catch (e) {
+          if (e.code === "auth/email-already-in-use") {
+            /* 계정은 있는데 도장이 없는 경우입니다. 방장이 도장만 지웠거나,
+               예전에 만들다 만 계정이에요. 있는 비밀번호로 들어가 봅니다. */
+            try {
+              cred = await auth.signInWithEmailAndPassword(email, pw);
+            } catch (e2) {
+              setMsg("예전에 쓰던 필명이에요. 그때 비밀번호를 넣어주세요. 기억이 안 나면 방장에게 말해주세요.", true);
+              el("pw-input")?.select();
+              return false;
+            }
+          } else if (!handleCommon(e)) {
+            setMsg("계정을 만들지 못했어요. " + (e.code || e.message || ""), true);
+            return false;
+          } else {
+            return false;
+          }
+        }
+      } else {
+        /* 이미 주인이 있는 필명 — 로그인만 시도합니다 */
+        try {
+          cred = await auth.signInWithEmailAndPassword(email, pw);
+        } catch (e) {
+          if (!handleCommon(e)) {
+            /* 요즘 파이어베이스는 실패 이유를 알려주지 않습니다.
+               도장이 있는 건 확인했으니, 비밀번호가 틀린 것입니다. */
+            setMsg("비밀번호가 달라요. 이 필명은 이미 쓰이고 있습니다.", true);
+            el("pw-input")?.select();
+          }
           return false;
         }
       }

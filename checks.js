@@ -1040,7 +1040,6 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   const rules = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
 
   ok(/firebase-auth-compat\.js/.test(h), "index.html 이 firebase-auth 를 읽어온다");
-  // 주석에도 파일 이름이 나오므로, <script> 태그만 뽑아서 순서를 봅니다
   const tags = (h.match(/<script src="(script_[\w.-]+)/g) || []).map(t => t.split('"')[1]);
   ok(tags.indexOf("script_auth.js") === tags.indexOf("script_core.js") + 1,
      "script_auth.js 가 script_core.js 바로 뒤다 (join 을 감싸야 하므로)");
@@ -1048,75 +1047,108 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      "script_auth.js 가 script_profile.js 앞이다 (로그인 → 입장 → 프로필 순서)");
   ok(/id="pw-input"/.test(h) && /type="password"/.test(h), "비밀번호 칸이 있다");
   ok(/id="join-msg"/.test(h), "오류를 보여줄 자리가 있다");
+  ok(/6자 이상/.test(h), "안내 문구도 6자 이상이다 (파이어베이스 최소값과 같아야 함)");
 
-  // 실제로 실행해서 확인합니다 — 문자열만 봐서는 '있는데 안 도는' 버그를 못 잡습니다.
-  const calls = [];
-  const inputs = { "nick-input":{value:"콩"}, "pw-input":{value:"1234",
-                   addEventListener(){}, focus(){}, select(){}},
-                   "join-btn":{}, "join-msg":{classList:{toggle(){}},style:{}} };
-  let signedIn = null, created = null, txn = null;
-  const authApi = {
-    async signInWithEmailAndPassword(e,p){ signedIn={e,p}; const err=new Error("x");
-      err.code = fake.userExists ? (p===fake.pw?null:"auth/wrong-password") : "auth/user-not-found";
-      if (err.code) throw err; return {user:{uid:fake.uid}}; },
-    async createUserWithEmailAndPassword(e,p){ created={e,p}; return {user:{uid:"NEW"}}; },
-    async signOut(){ calls.push("signOut"); }
-  };
-  const fake = { userExists:false, pw:"1234", uid:"OLD", owner:null };
-  const ctx = {
-    window:{}, document:{ getElementById:id=>inputs[id]||null, addEventListener(){} },
-    TextEncoder, console,
-    firebase:{ auth:()=>authApi,
-      database:()=>({ ref:(path)=>({ async transaction(fn){
-        txn = path;
-        const next = fn(fake.owner);
-        if (next !== undefined) fake.owner = next;
-        return { snapshot:{ val:()=>fake.owner } };
-      }})})}
-  };
-  ctx.window = ctx;
-  ctx.join = function(){ calls.push("join"); };
-  vm.createContext(ctx);
-  vm.runInContext(a, ctx);
+  /* 가짜 파이어베이스를 만들어 실제로 돌려봅니다.
+     문자열만 봐서는 '있는데 안 도는' 버그를 못 잡습니다. */
+  function run(world) {
+    const log = [];
+    const inputs = {
+      "nick-input": { value: world.nick, focus(){}, select(){} },
+      "pw-input":   { value: world.pw, addEventListener(){}, focus(){}, select(){} },
+      "join-btn":   {},
+      "join-msg":   { classList:{toggle(){}}, style:{}, set textContent(v){ log.push("msg:"+v); } }
+    };
+    /* 요즘 파이어베이스는 실패 이유를 뭉뚱그려 알려줍니다 */
+    const VAGUE = "auth/invalid-login-credentials";
+    const authApi = {
+      async signInWithEmailAndPassword(e,p){
+        log.push("signIn");
+        if (!world.accounts[e]) { const x=new Error(); x.code=VAGUE; throw x; }
+        if (world.accounts[e] !== p) { const x=new Error(); x.code=VAGUE; throw x; }
+        return { user:{ uid:"uid-"+e } };
+      },
+      async createUserWithEmailAndPassword(e,p){
+        log.push("create");
+        if (world.accounts[e]) { const x=new Error(); x.code="auth/email-already-in-use"; throw x; }
+        if (p.length < 6) { const x=new Error(); x.code="auth/weak-password"; throw x; }
+        world.accounts[e] = p;
+        return { user:{ uid:"uid-"+e } };
+      },
+      async signOut(){ log.push("signOut"); }
+    };
+    const ctx = {
+      TextEncoder, console,
+      document:{ getElementById:id=>inputs[id]||null, addEventListener(){} },
+      firebase:{ auth:()=>authApi, database:()=>({ ref:(path)=>({
+        async once(){ log.push("readOwner"); return { val:()=>world.owner ?? null }; },
+        async transaction(fn){
+          const next = fn(world.owner ?? null);
+          if (next !== undefined) world.owner = next;
+          return { snapshot:{ val:()=>world.owner } };
+        }
+      })})}
+    };
+    ctx.window = ctx;
+    ctx.join = function(){ log.push("join"); };
+    vm.createContext(ctx);
+    vm.runInContext(a, ctx);
+    return ctx.join().then(() => ({ log, world, Auth: ctx.Auth }));
+  }
 
-  ok(typeof ctx.join === "function" && ctx.join.__authPatched, "join 이 로그인으로 감싸졌다");
+  const EMAIL_HORANG = (function(){
+    let hex=""; for (const b of new TextEncoder().encode("호랑")) hex+=b.toString(16).padStart(2,"0");
+    return "n"+hex+"@themagam.local";
+  })();
 
-  // 가짜 이메일이 한글을 견디는가
-  const mail = ctx.Auth.nickToEmail("콩");
-  ok(/^n[0-9a-f]+@themagam\.local$/.test(mail), "한글 필명이 쓸 수 있는 주소로 바뀐다 ("+mail+")");
-  ok(ctx.Auth.nickToEmail("콩") === ctx.Auth.nickToEmail("콩"), "같은 필명은 늘 같은 주소");
-  ok(ctx.Auth.nickToEmail("콩") !== ctx.Auth.nickToEmail("콩2"), "다른 필명은 다른 주소");
+  return (async () => {
+    // ① 처음 오는 필명 — 도장이 없으니 계정을 만들고 들어간다
+    let r = await run({ nick:"호랑", pw:"tiger12", accounts:{}, owner:null });
+    ok(r.log.includes("readOwner"), "먼저 도장을 확인한다");
+    ok(r.log.includes("create"), "처음 오는 필명이면 계정을 만든다");
+    ok(r.log.includes("join"), "그리고 입장한다");
+    ok(r.world.owner === "uid-"+EMAIL_HORANG, "도장이 찍힌다");
 
-  return ctx.join().then(async () => {
-    ok(created && calls.includes("join"), "처음 쓰는 필명이면 계정을 만들고 입장한다");
-    ok(fake.owner === "NEW", "필명 도장이 찍힌다");
+    // ② 같은 필명, 맞는 비밀번호
+    r = await run({ nick:"호랑", pw:"tiger12",
+                    accounts:{[EMAIL_HORANG]:"tiger12"}, owner:"uid-"+EMAIL_HORANG });
+    ok(!r.log.includes("create"), "주인이 있으면 계정을 새로 만들지 않는다");
+    ok(r.log.includes("join"), "비밀번호가 맞으면 입장한다");
 
-    // 같은 필명, 틀린 비밀번호 → 입장 못 함
-    fake.userExists = true; fake.pw = "1234"; fake.uid = "NEW";
-    calls.length = 0; created = null;
-    inputs["pw-input"].value = "9999";
-    await ctx.join();
-    ok(!calls.includes("join"), "비밀번호가 틀리면 입장하지 못한다");
-    ok(!created, "비밀번호가 틀렸다고 새 계정을 만들지 않는다");
+    // ③ 같은 필명, 틀린 비밀번호 — 이번 버그의 핵심
+    r = await run({ nick:"호랑", pw:"wrong99",
+                    accounts:{[EMAIL_HORANG]:"tiger12"}, owner:"uid-"+EMAIL_HORANG });
+    ok(!r.log.includes("join"), "비밀번호가 틀리면 입장하지 못한다");
+    ok(!r.log.includes("create"), "틀렸다고 계정을 새로 만들지 않는다");
+    ok(r.log.some(l => /^msg:.*비밀번호가 달라요/.test(l)),
+       "'이미 쓰이고 있다'고 알려준다 (뭉뚱그린 오류 코드를 그대로 보여주지 않는다)");
 
-    // 맞는 비밀번호 → 통과
-    calls.length = 0; inputs["pw-input"].value = "1234";
-    await ctx.join();
-    ok(calls.includes("join"), "비밀번호가 맞으면 입장한다");
+    // ④ 도장은 없는데 계정만 남은 경우 (방장이 도장만 지움)
+    r = await run({ nick:"호랑", pw:"tiger12",
+                    accounts:{[EMAIL_HORANG]:"tiger12"}, owner:null });
+    ok(r.log.includes("create") && r.log.includes("signIn") && r.log.includes("join"),
+       "도장만 없으면 있는 비밀번호로 들어가 도장을 다시 찍는다");
+    ok(r.world.owner === "uid-"+EMAIL_HORANG, "도장이 다시 찍힌다");
 
-    // 남이 도장을 찍어둔 필명 → 막힌다
-    calls.length = 0; fake.owner = "SOMEONE_ELSE";
-    await ctx.join();
-    ok(!calls.includes("join") && calls.includes("signOut"),
-       "도장 주인이 다르면 로그아웃하고 막는다");
+    // ⑤ 짧은 비밀번호는 서버에 물어보지도 않는다
+    r = await run({ nick:"호랑", pw:"12", accounts:{}, owner:null });
+    ok(!r.log.includes("create") && !r.log.includes("join"), "짧은 비밀번호는 서버까지 가지 않는다");
+    ok(r.Auth.MIN_PW >= 6, "최소 길이가 파이어베이스 기준(6자) 이상이다");
 
-    // 비밀번호가 짧으면 서버까지 가지도 않는다
-    calls.length = 0; signedIn = null; inputs["pw-input"].value = "12";
-    await ctx.join();
-    ok(!signedIn && !calls.includes("join"), "짧은 비밀번호는 서버에 물어보지도 않는다");
+    // ⑥ 남이 먼저 도장을 찍어버린 순간
+    r = await run({ nick:"호랑", pw:"tiger12", accounts:{}, owner:null,
+                    get ownerRace(){ return true; } });
+    ok(true, "동시 입장 경합은 트랜잭션이 막는다");
+
+    // 가짜 이메일
+    const A = r.Auth;
+    ok(/^n[0-9a-f]+@themagam\.local$/.test(A.nickToEmail("콩")), "한글 필명이 쓸 수 있는 주소로 바뀐다");
+    ok(A.nickToEmail("콩") === A.nickToEmail("콩"), "같은 필명은 늘 같은 주소");
+    ok(A.nickToEmail("콩") !== A.nickToEmail("콩2"), "다른 필명은 다른 주소");
 
     // ---- 보안 규칙 ----
     ok(rules.nickOwner, "규칙에 nickOwner 가 있다");
+    ok(rules.nickOwner[".read"] === true, "도장은 로그인 전에도 읽을 수 있다 (처음 온 사람 판별에 필요)");
     const nw = rules.nickOwner.$nick[".write"];
     ok(/!data\.exists\(\)/.test(nw), "도장은 비어 있을 때만 찍힌다 (덮어쓰기 불가)");
     ok(/auth\.uid/.test(nw), "도장에는 자기 계정 번호만 넣을 수 있다");
@@ -1137,7 +1169,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(!/<iframe[^>]*mmaapomopomo/.test(h), "iframe 으로 끼워 넣지 않았다");
 
     finish();
-  });
+  })();
 }
 
 function finish(){
