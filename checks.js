@@ -1248,6 +1248,11 @@ function checkWordcount(){
     Date, Number, Math, JSON, String, Object
   };
   ctx.window = ctx;
+  /* ★ 이 방은 script_core.js 에서 `let myNick` 을 파일 맨 바깥에 둡니다.
+     let 은 window 에 붙지 않으므로, 다른 파일에서는 **이름 그대로**만
+     보입니다. window.myNick 으로 읽으면 늘 빈 값이에요 — 실제로 그
+     실수를 해서 "입장한 뒤에 쓸 수 있어요"가 계속 떴습니다.
+     그래서 여기서도 window 가 아니라 이름으로만 줘 봅니다. */
   ctx.myNick = "호랑";
   ctx.db = { ref:(path)=>({
     async update(v){ saved.push({path,v}); store[path] = {...(store[path]||{}), ...v}; },
@@ -1258,6 +1263,9 @@ function checkWordcount(){
 
   const W = ctx.Wordcount;
   ok(typeof ctx.startWordcount === "function", "startWordcount 를 밖에서 부를 수 있다");
+  ok(!/window\.myNick \|\| ""\s*;?\s*\n\s*\}\s*\n\s*function myRow/.test(w) ||
+     /typeof myNick/.test(w), "닉네임을 window 가 아니라 이름 그대로 읽는다");
+  ok(/typeof myNick === "string"/.test(w), "let 로 선언된 myNick 을 이름으로 찾는다");
   ok(/^\d{4}-\d{2}-\d{2}$/.test(W.dayKey()), "날짜 키가 YYYY-MM-DD 다");
   ok(W.weekDays().length >= 1 && W.weekDays().length <= 7, "이번 주는 1~7일이다");
   ok(W.weekDays()[W.weekDays().length-1] === W.dayKey(), "이번 주의 마지막 날은 오늘이다");

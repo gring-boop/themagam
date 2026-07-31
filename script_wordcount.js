@@ -70,7 +70,22 @@
 
   function fmt(n) { return Number(n || 0).toLocaleString(); }
 
-  function me() { return window.myNick || ""; }
+  /* 내 필명 읽기.
+
+     ★ `window.myNick` 이 아닙니다.
+
+     script_core.js 는 `let myNick` 을 파일 맨 바깥에 둡니다. 이렇게
+     선언한 값은 다른 script 파일에서 **이름 그대로** 보이지만,
+     `window.myNick` 에는 올라가지 않습니다. (let/const 는 window 에
+     붙지 않는다는 규칙이에요. var 였다면 붙었습니다.)
+
+     그걸 몰라서 늘 빈 값이 나왔고, 입장해 있는데도 "입장한 뒤에 쓸 수
+     있어요"가 떴습니다. 이름 그대로 읽되, 혹시 없을 때를 대비해
+     window 쪽도 함께 봅니다. */
+  function me() {
+    try { if (typeof myNick === "string" && myNick) return myNick; } catch (e) {}
+    return window.myNick || "";
+  }
 
   function myRow() { return _today[me()] || { total: 0, base: null }; }
 
@@ -99,19 +114,25 @@
       unit.textContent = "자 · 이번 주 내 합계";
       rows.innerHTML = drawRows(vals, vals.length - 1);
     } else {
+      /* 오늘·주간 탭은 **방 전체**를 보여줍니다.
+         큰 숫자도 방 합계예요 — 다 같이 얼마나 썼는지가 이 칸의 재미라서,
+         내 숫자만 크게 띄우면 볼 이유가 줄어듭니다. 내 기록은 아래
+         한 줄과 '내 기록' 탭에서 봅니다. */
       const src = _tab === "today"
         ? Object.entries(_today).map(([n, v]) => [n, Number(v?.total || 0)])
         : Object.entries(sumWeek()).map(([n, v]) => [n, v]);
       const list = src.filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+      const roomSum = list.reduce((a, b) => a + b[1], 0);
       const mineVal = _tab === "today"
         ? Number(mine.total || 0)
         : Number(sumWeek()[me()] || 0);
 
-      big.textContent  = fmt(mineVal);
-      unit.textContent = "자 · " + (_tab === "today" ? "오늘" : "이번 주") + " 내 기록";
+      big.textContent  = fmt(roomSum);
+      unit.textContent = "자 · " + (_tab === "today" ? "오늘" : "이번 주")
+                       + " 방 전체 · 나 " + fmt(mineVal) + "자";
       rows.innerHTML = list.length
         ? drawRows(list, list.findIndex(x => x[0] === me()))
-        : `<div class="wc-empty">아직 기록이 없어요</div>`;
+        : `<div class="wc-empty">아직 아무도 안 적었어요</div>`;
     }
 
     if (hint) {
@@ -184,7 +205,7 @@
   async function send() {
     const v = inputVal();
     if (v === null) { say("숫자를 적어주세요."); return; }
-    if (!me()) { say("입장한 뒤에 쓸 수 있어요."); return; }
+    if (!me()) { say("잠시만요, 아직 준비 중이에요."); return; }
 
     const mine = myRow();
     const base = mine.base;
