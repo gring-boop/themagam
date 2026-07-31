@@ -1364,14 +1364,29 @@ function checkWordcount(){
 
     /* 오늘 화면에 사람별 순위나 막대가 나오면 안 됩니다 */
     const feedHtml = W.drawFeed([{nick:"달빛", add:300, snap:800, at:Date.now()}]);
-    ok(/달빛<\/b> : 800자/.test(feedHtml), "윗줄에 올린 숫자가 그대로 보인다");
-    ok(/\+300자/.test(feedHtml) && /전체 글자수 800자/.test(feedHtml),
+    ok(/wc-said-n">800자/.test(feedHtml), "윗줄에 올린 숫자가 그대로 보인다");
+    ok(/\+300자/.test(feedHtml) && /전체 800자/.test(feedHtml),
        "아랫줄에 늘어난 만큼과 전체가 함께 보인다");
+    /* 채팅처럼 — 남의 것은 왼쪽, 내 것은 오른쪽 */
+    ok(/wc-said-nm">달빛/.test(feedHtml), "남이 올린 것에는 이름이 붙는다");
+    const mineHtml = W.drawFeed([{nick:"호랑", add:300, snap:800, at:Date.now()}]);
+    ok(/class="wc-feed me"/.test(mineHtml), "내 것에는 me 표시가 붙는다 (오른쪽 정렬용)");
+    ok(!/wc-said-nm/.test(mineHtml), "내 말풍선에는 내 이름을 또 쓰지 않는다");
+    const css = fs.readFileSync(DIR+"styles.css","utf8");
+    ok(/\.wc-feed\.me \.wc-said-line\{[^}]*flex-end/.test(css.replace(/\s+/g," ")),
+       "내 말풍선이 오른쪽으로 간다");
+    ok(/\.wc-said-line\{[^}]*flex-start/.test(css.replace(/\s+/g," ")),
+       "남의 말풍선은 왼쪽에 있다");
+    ok(/\.wc-feed-sys\{[^}]*text-align: center/.test(css.replace(/\s+/g," ")),
+       "계산 결과는 가운데 정렬이다");
+    /* 시간은 넣지 않습니다 — 좁은 칸이 지저분해집니다 */
+    ok(!/오전|오후/.test(feedHtml), "계산 결과 줄에 시각을 넣지 않는다");
+    ok(!/wc-feed-at/.test(feedHtml), "시각 자리 자체가 없다");
     ok(!/wc-bar/.test(feedHtml), "오늘 탭에는 막대를 그리지 않는다");
     /* snap 이 없던 옛 기록도 깨지지 않아야 합니다 */
     const oldHtml = W.drawFeed([{nick:"달빛", add:300, at:Date.now()}]);
     ok(!/undefined|NaN/.test(oldHtml), "snap 이 없던 옛 기록도 깨지지 않는다");
-    ok(!/wc-feed-said/.test(oldHtml), "옛 기록은 윗줄 없이 아랫줄만 나온다");
+    ok(!/wc-said-line/.test(oldHtml), "옛 기록은 말풍선 없이 계산 결과만 나온다");
     ok(/&lt;b&gt;/.test(W.drawFeed([{nick:"<b>",add:1,snap:2,at:1}])),
        "흐르는 기록에서도 필명 속 태그를 글자로 처리한다");
 
@@ -1394,7 +1409,7 @@ function finish(){
      앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
-  const MIN = 460;
+  const MIN = 465;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");

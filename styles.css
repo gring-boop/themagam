@@ -4130,21 +4130,47 @@ body.side-collapsed .side-rail{
 #pomo-block{ display:flex; flex-direction:column; min-height:0; }
 #pomo-block #timer-wrap{ flex:none; }
 
-/* 흐르는 글자수 기록 — 순위 없이 대화처럼 쌓입니다.
-   하나당 두 줄: 올린 숫자 / 계산 결과 */
-.wc-feed{ padding: 5px 0; font-size: var(--fs-xs); line-height: 1.45; }
-.wc-feed + .wc-feed{ border-top: 1px solid var(--border); }
+/* =====================================================================
+   흐르는 글자수 기록 — 채팅처럼 보이게
 
-.wc-feed-said{ color: var(--text); word-break: break-all; }
-.wc-feed-said b{ font-weight: var(--fw-medium); }
+   · 올린 숫자   : 내 것은 오른쪽, 남의 것은 왼쪽 (말풍선)
+   · 계산 결과   : 방이 알려주는 말이라 가운데
+   · 시간        : 넣지 않습니다 (좁은 칸이 지저분해져서)
 
+   순위표처럼 보이지 않게 하려는 배치입니다. 나란히 줄 세우면
+   그날 적게 쓴 사람이 위축되니까요.
+   ===================================================================== */
+.wc-feed{ padding: 6px 0; font-size: var(--fs-xs); line-height: 1.4; }
+
+/* ── 올린 숫자 (말풍선) ── */
+.wc-said-line{ display:flex; justify-content:flex-start; }
+.wc-feed.me .wc-said-line{ justify-content:flex-end; }
+
+.wc-said{
+  display:inline-flex; align-items:baseline; gap:5px;
+  max-width: 85%;
+  padding: 5px 10px;
+  border-radius: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  word-break: break-all;
+}
+.wc-feed.me .wc-said{
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.wc-said-nm{ font-size: var(--fs-2xs); color: var(--text-dim);
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wc-said-n{ font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; }
+
+/* ── 계산 결과 (가운데) ── */
 .wc-feed-sys{
-  display:flex; align-items:baseline; gap:6px;
-  margin-top: 2px; color: var(--text-dim); word-break: break-all;
+  margin-top: 4px;
+  text-align: center;          /* 방이 알려주는 말이라 가운데 */
+  color: var(--text-dim);
+  font-size: var(--fs-2xs);
+  word-break: break-all;
 }
 .wc-feed-sys b{ color: var(--text); font-weight: var(--fw-medium); }
-.wc-feed-at{ flex:0 0 auto; margin-left:auto; font-size: var(--fs-2xs);
-             color: var(--text-dim); white-space:nowrap; }
-
-.wc-feed.me .wc-feed-said b,
 .wc-feed.me .wc-feed-sys b{ color: var(--accent); }

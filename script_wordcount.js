@@ -40,7 +40,12 @@
        [호랑님 +300자 / 전체 글자수 800자]
 
    윗줄은 그 사람이 적어 올린 숫자, 아랫줄은 계산 결과입니다.
-   말풍선처럼 보이니 "올렸다"는 느낌이 나고, 순위표 같지 않습니다.
+   윗줄은 채팅처럼 **내 것은 오른쪽, 남의 것은 왼쪽**에 붙이고,
+   아랫줄(계산 결과)은 방이 알려주는 말이라 **가운데**에 둡니다.
+   순위표가 아니라 대화 기록으로 읽히게 하려는 배치예요.
+
+   시간은 넣지 않습니다. 줄마다 시각이 붙으면 좁은 칸이 금세
+   지저분해지고, 몇 시에 올렸는지는 사실 아무도 안 봅니다.
 
    남과 견주는 화면은 '내 기록' 탭 하나뿐이고, 거기서 견주는 상대는
    지난 요일의 나입니다.
@@ -168,21 +173,22 @@
               지금 전체 글자수를 적으면 여기에 올라옵니다.</div>`;
     }
     return list.slice(-FEED_MAX).map(f => {
-      const t = new Date(Number(f.at) || Date.now());
-      const hh = t.getHours(), mm = String(t.getMinutes()).padStart(2, "0");
-      const ampm = hh < 12 ? "오전" : "오후";
-      const h12  = hh % 12 === 0 ? 12 : hh % 12;
       const isMe = f.nick === me();
       const nick = esc(f.nick);
       /* 옛 기록에는 snap 이 없습니다. 그럴 땐 윗줄을 생략합니다. */
       const snap = (f.snap === undefined || f.snap === null) ? null : Number(f.snap);
 
       return `<div class="wc-feed${isMe ? " me" : ""}">
-        ${snap === null ? "" :
-          `<div class="wc-feed-said"><b>${nick}</b> : ${fmt(snap)}자</div>`}
+        ${snap === null ? "" : `
+        <div class="wc-said-line">
+          <div class="wc-said">
+            ${isMe ? "" : `<span class="wc-said-nm">${nick}</span>`}
+            <span class="wc-said-n">${fmt(snap)}자</span>
+          </div>
+        </div>`}
         <div class="wc-feed-sys">
-          [<b>${nick}</b>님 <b>+${fmt(f.add)}자</b>${snap === null ? "" : ` / 전체 글자수 ${fmt(snap)}자`}]
-          <span class="wc-feed-at">${ampm} ${h12}:${mm}</span>
+          [<b>${nick}</b>님 <b>+${fmt(f.add)}자</b>${
+            snap === null ? "" : ` / 전체 ${fmt(snap)}자`}]
         </div>
       </div>`;
     }).join("");
