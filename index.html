@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202607310313">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202607310313">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202607312319">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202607312319">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202607310313">
+  <link rel="manifest" href="manifest.json?v=202607312319">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -33,7 +33,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
 
-  <link rel="stylesheet" href="styles.css?v=202607310313" />
+  <link rel="stylesheet" href="styles.css?v=202607312319" />
 </head>
 
 <body>
@@ -545,13 +545,6 @@
                 onclick="togglePomodoroParticipation()" aria-pressed="true"
                 title="내 알림음을 끄고/켜요">🔔 참여 중 · 알림 ON</button>
 
-        <!-- 공용 뽀모 — 마끝마 뽀모방을 새 창으로 엽니다.
-             이 방 안에 끼워 넣지 않은 이유: 남의 사이트를 창 안에 넣으면
-             (iframe) 소리·알림이 막히고, 그쪽이 설정을 바꾸면 조용히
-             깨집니다. 새 창으로 여는 편이 튼튼합니다. -->
-        <button id="pomo-shared-btn" class="ghost-btn compact"
-                onclick="openSharedPomo()"
-                title="마끝마 공용 뽀모방을 새 창으로 열어요">🪟 공용 뽀모</button>
       </div>
 
       <div id="pomo-detail" class="pomo-detail collapsed">
@@ -568,6 +561,47 @@
               </div>
             </div>
           </div>
+
+    <!-- =================================================================
+         글자수 기록 — 뽀모 아래 칸
+
+         뽀모와 한 줄에 세로로 붙어 있습니다. 자리를 따로 만들지 않은
+         이유는, 칸이 넷이 되면 배치 고르기가 복잡해지기 때문이에요.
+         "뽀모 줄" 하나에 시계와 글자수가 같이 사는 편이 단순합니다.
+         ================================================================= */ -->
+    <div id="wordcount-block" class="wc-block">
+      <div class="wc-head">
+        <span class="wc-title">✍️ 글자수</span>
+        <div class="wc-tabs" role="tablist" aria-label="글자수 보기">
+          <button class="wc-tab on" type="button" data-wc-tab="today" role="tab" aria-selected="true">오늘</button>
+          <button class="wc-tab" type="button" data-wc-tab="week"  role="tab" aria-selected="false">주간</button>
+          <button class="wc-tab" type="button" data-wc-tab="me"    role="tab" aria-selected="false">내 기록</button>
+        </div>
+      </div>
+
+      <div class="wc-mine">
+        <span class="wc-big" id="wc-big">0</span>
+        <span class="wc-unit" id="wc-unit">자</span>
+      </div>
+
+      <div class="wc-rows" id="wc-rows"></div>
+
+      <p class="wc-log" id="wc-log" role="status" aria-live="polite"></p>
+
+      <div class="wc-inputline">
+        <label class="sr-only" for="wc-input">지금 원고의 전체 글자수</label>
+        <input type="number" id="wc-input" placeholder="지금 전체 글자수" inputmode="numeric" min="0" step="1">
+        <button class="ghost-btn compact primary" type="button" id="wc-send">기록</button>
+      </div>
+
+      <div class="wc-minirow">
+        <button class="ghost-btn compact" type="button" id="wc-base"  title="지금 글자수를 출발선으로 삼아요">▶ 기준</button>
+        <button class="ghost-btn compact" type="button" id="wc-reset" title="오늘 누적을 0으로 되돌려요">🧹 초기화</button>
+        <button class="ghost-btn compact" type="button" id="wc-fresh" title="빈 문서에서 새로 시작해요">🆕 새 편</button>
+      </div>
+
+      <p class="hint" id="wc-hint"></p>
+    </div>
   </section>
 
   <!-- 오늘 목표 / 상태 -->
@@ -642,20 +676,21 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202607310313"></script>
-<script src="script_core.js?v=202607310313"></script>
-<script src="script_auth.js?v=202607310313"></script>
-<script src="script_ui.js?v=202607310313"></script>
-<script src="script_chat.js?v=202607310313"></script>
-<script src="script_data.js?v=202607310313"></script>
-<script src="script_realtime.js?v=202607310313"></script>
-<script src="script_layout.js?v=202607310313"></script>
-<script src="script_pet.js?v=202607310313"></script>
-<script src="script_pet_ui.js?v=202607310313"></script>
-<script src="script_timelog.js?v=202607310313"></script>
-<script src="script_profile.js?v=202607310313"></script>
-<script src="script_reactions.js?v=202607310313"></script>
-<script src="script_manual.js?v=202607310313"></script>
+<script src="fortune_data.js?v=202607312319"></script>
+<script src="script_core.js?v=202607312319"></script>
+<script src="script_auth.js?v=202607312319"></script>
+<script src="script_ui.js?v=202607312319"></script>
+<script src="script_chat.js?v=202607312319"></script>
+<script src="script_data.js?v=202607312319"></script>
+<script src="script_realtime.js?v=202607312319"></script>
+<script src="script_layout.js?v=202607312319"></script>
+<script src="script_pet.js?v=202607312319"></script>
+<script src="script_pet_ui.js?v=202607312319"></script>
+<script src="script_wordcount.js?v=202607312319"></script>
+<script src="script_timelog.js?v=202607312319"></script>
+<script src="script_profile.js?v=202607312319"></script>
+<script src="script_reactions.js?v=202607312319"></script>
+<script src="script_manual.js?v=202607312319"></script>
 
 <script>
   window.addEventListener("load", () => {

@@ -42,6 +42,14 @@
         ".write": "auth != null && !data.exists() && newData.val() === auth.uid",
         ".validate": "newData.isString()"
       }
+    },
+    "wordlog": {
+      ".read": true,
+      "$day": {
+        "$nick": {
+          ".write": "auth != null && root.child('nickOwner').child($nick).val() === auth.uid"
+        }
+      }
     }
   }
 }

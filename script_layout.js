@@ -40,13 +40,14 @@
   const SLOT_IDS  = ["s1", "s2", "s3"];
 
   const SLOT_LABELS = {
-    landscape: { s1: "왼쪽", s2: "오른쪽 위", s3: "오른쪽 아래" },
-    portrait:  { s1: "위",   s2: "가운데",    s3: "아래" }
+    landscape: { s1: "왼쪽", s2: "가운데", s3: "오른쪽" },
+    portrait:  { s1: "위",   s2: "가운데", s3: "아래"   }
   };
 
+  /* 접속자는 늘 가운데(s2)입니다. 양옆에 뽀모와 채팅이 붙어요. */
   const DEFAULT_MAP = {
-    landscape: { s1: "prof", s2: "pomo", s3: "chat" },
-    portrait:  { s1: "prof", s2: "pomo", s3: "chat" }
+    landscape: { s1: "pomo", s2: "prof", s3: "chat" },
+    portrait:  { s1: "pomo", s2: "prof", s3: "chat" }
   };
 
   const KEY  = { landscape: "tmSlotLand", portrait: "tmSlotPort" };
@@ -61,22 +62,30 @@
        h : 가로로 쪼갬(좌우)   v : 세로로 쪼갬(위아래)
        각 가지는 자리 이름이거나, 또 다른 쪼갬입니다.
      --------------------------------------------------------------- */
-  /* 왼쪽에 접속자, 오른쪽 줄을 위아래로 갈라 뽀모와 채팅.
-     세로 화면에서는 위아래로 뒤집습니다. */
+  /* [변경] 세 칸을 나란히 세웁니다.
+
+     예전에는 "왼쪽 접속자 · 오른쪽을 위아래로 갈라 뽀모와 채팅" 이었어요.
+     오른쪽 두 칸이 세로로 눌려서 뽀모도 채팅도 답답했습니다.
+
+     지금은 셋을 나란히 놓고, **접속자를 늘 가운데**에 둡니다.
+     좌우 뒤집기는 줄 방향만 뒤집는 것(row-reverse)이라, 가운데는
+     가운데에 그대로 있고 양옆만 자리를 바꿉니다. 딱 원하던 동작이에요.
+
+     세로 화면(세로 모니터)에서는 위아래로 쌓습니다. */
   const TREES = {
-    landscape: { dir: "h", kids: ["s1", { dir: "v", kids: ["s2", "s3"] }] },
-    portrait:  { dir: "v", kids: ["s1", { dir: "v", kids: ["s2", "s3"] }] }
+    landscape: { dir: "h", kids: ["s1", "s2", "s3"] },
+    portrait:  { dir: "v", kids: ["s1", "s2", "s3"] }
   };
 
   /* 처음 열었을 때의 크기 (px). 마지막 가지는 남는 만큼 차지합니다. */
   const DEFAULT_SIZE = {
     /* 창을 따라가는 기본 크기 */
-    "panel/prof": 760,      // 접속자 칸 폭
-    "panel/pomo": 150,      // 뽀모 높이 — 내용에 딱 맞는 정도
-    "panel/chat": 420,
-    /* 위치를 따라가는 값 (창이 여러 개 든 가지) */
-    "landscape/0": 760,
-    "landscape/1/0": 150
+    "panel/pomo": 320,      // 뽀모 + 글자수 — 왼쪽 줄 폭
+    "panel/prof": 760,      // 접속자 — 가운데, 남는 만큼 넓게
+    "panel/chat": 340,      // 채팅 — 오른쪽 줄 폭
+    /* 위치를 따라가는 값 (첫 칸과 둘째 칸만 정하면 셋째는 남는 만큼) */
+    "landscape/0": 320,
+    "landscape/1": 760
   };
 
   const MIN_PX = 120;        // 어떤 칸도 이보다 작아지지 않습니다
@@ -97,10 +106,12 @@
      무엇이 저장돼 있어도 이 모양으로 맞춰서 돌려줍니다.
      ================================================================= */
   function normalizeSlotMap(raw, orient) {
-    const chatFirst = !!(raw && raw.s2 === "chat");
+    /* 접속자는 가운데 고정. 뽀모와 채팅이 양옆 어디에 서는지만 다릅니다.
+       (좌우 뒤집기 버튼으로도 같은 효과를 낼 수 있어서, 사실상 취향 문제) */
+    const chatFirst = !!(raw && raw.s1 === "chat");
     return {
-      s1: "prof",
-      s2: chatFirst ? "chat" : "pomo",
+      s1: chatFirst ? "chat" : "pomo",
+      s2: "prof",
       s3: chatFirst ? "pomo" : "chat"
     };
   }
@@ -691,16 +702,16 @@
      세로 보기는 세로로 길쭉하게 세워야 "세로 모니터"라는 게 눈에 들어옵니다. */
   /* 실제 화면과 같은 모양으로 그립니다.
 
-     ① 왼쪽 큰 칸 · ② 오른쪽 위 · ③ 오른쪽 아래.
+     ① 왼쪽 · ② 가운데(접속자) · ③ 오른쪽.
      좌우 뒤집기를 켜면 그림도 같이 뒤집혀야 합니다 — 안 그러면
      그림을 보고 고른 자리와 실제 자리가 서로 반대가 됩니다. */
   const MAP_SHAPE = {
-    landscape: "height:170px; max-width:100%;" +
-               "grid-template-columns: 1.7fr 1fr; grid-template-rows: 1fr 1.4fr;" +
-               "grid-template-areas:'s1 s2' 's1 s3';",
-    portrait:  "height:170px; max-width:100%;" +
-               "grid-template-columns: 1.7fr 1fr; grid-template-rows: 1fr 1.4fr;" +
-               "grid-template-areas:'s1 s2' 's1 s3';"
+    landscape: "height:150px; max-width:100%;" +
+               "grid-template-columns: 1fr 1.9fr 1fr; grid-template-rows: 1fr;" +
+               "grid-template-areas:'s1 s2 s3';",
+    portrait:  "height:190px; max-width:100%;" +
+               "grid-template-columns: 1fr; grid-template-rows: 1fr 1.6fr 1fr;" +
+               "grid-template-areas:'s1' 's2' 's3';"
   };
 
   function renderSlotMap() {
@@ -713,9 +724,10 @@
 
     /* 뒤집기는 열 순서를 바꾸는 것으로 표현합니다.
        direction:rtl 은 글자 방향까지 뒤집어서 이름이 이상하게 보였습니다. */
+    /* 가운데는 가운데 그대로, 양끝만 맞바꿉니다 */
     const shape = flip
-      ? MAP_SHAPE[orient].replace("'s1 s2' 's1 s3'", "'s2 s1' 's3 s1'")
-                         .replace("1.7fr 1fr", "1fr 1.7fr")
+      ? MAP_SHAPE[orient].replace("'s1 s2 s3'", "'s3 s2 s1'")
+                         .replace("'s1' 's2' 's3'", "'s3' 's2' 's1'")
       : MAP_SHAPE[orient];
     host.setAttribute("style", shape);
     host.innerHTML = SLOT_IDS.map((slot, i) => {

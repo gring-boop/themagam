@@ -386,13 +386,17 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   {
     const n = ctx.window.LayoutSlots.normalizeSlotMap;
     const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-    const std = { s1: "prof", s2: "pomo", s3: "chat" };
-    const flip = { s1: "prof", s2: "chat", s3: "pomo" };
+    const std  = { s1: "pomo", s2: "prof", s3: "chat" };
+    const swap = { s1: "chat", s2: "prof", s3: "pomo" };
     ok(eq(n(null, "landscape"), std), "저장값이 없으면 기본 배치");
     ok(eq(n({ s1: null, s2: null, s3: null }, "landscape"), std), "비어 있던 저장값도 되살린다");
-    ok(eq(n({ s1: "prof", s2: "chat", s3: "pomo" }, "landscape"), flip), "채팅을 위로 둔 것은 지킨다");
+    ok(eq(n({ s1: "chat", s2: "prof", s3: "pomo" }, "landscape"), swap), "채팅을 왼쪽에 둔 것은 지킨다");
     ok(eq(n({ s1: "todo", s2: "stat" }, "landscape"), std), "옛 창 이름이 남아 있어도 되살린다");
     ok(Object.values(n({}, "landscape")).every(Boolean), "빈 칸이 생기지 않는다");
+    /* ★ 접속자는 어떤 저장값이 와도 늘 가운데여야 합니다 */
+    [null, {}, {s1:"chat"}, {s1:"prof",s2:"chat",s3:"pomo"}, {s2:"pomo"}].forEach(v => {
+      ok(n(v, "landscape").s2 === "prof", "접속자는 늘 가운데다 " + JSON.stringify(v));
+    });
   }
 
   /* 설정 — 뽀모도로 탭 */
@@ -740,14 +744,25 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   /* 크기는 창을 따라가야 합니다 (자리를 바꿔도 뽀모는 자기 높이) */
   ok(/function sizeKeyFor/.test(lay) && /"panel\/" \+ map\[kid\]/.test(lay),
      "칸 크기를 창 기준으로 기억한다");
-  ok(/"panel\/pomo": 150/.test(lay), "뽀모 기본 높이가 내용에 맞게 작다");
+  ok(/"panel\/pomo": 320/.test(lay), "뽀모 줄 기본 폭이 잡혀 있다");
+  ok(/"panel\/chat": 340/.test(lay), "채팅 줄 기본 폭이 잡혀 있다");
+  /* 세 칸이 나란히 서야 합니다 (예전엔 오른쪽을 위아래로 또 갈랐어요) */
+  {
+    const i = lay.indexOf("const TREES");
+    const seg = lay.slice(i, i + 300);
+    ok(/landscape:\s*\{ dir: "h", kids: \["s1", "s2", "s3"\] \}/.test(seg),
+       "가로 화면에서 세 칸이 나란히 선다");
+    ok(!/dir: "v", kids: \["s2", "s3"\]/.test(seg), "오른쪽을 다시 위아래로 가르지 않는다");
+  }
 
   /* 자리 그림이 실제 모양과 같아야 합니다 */
   {
     const i = lay.indexOf("const MAP_SHAPE");
     const seg = lay.slice(i, i + 600);
-    ok(/'s1 s2' 's1 s3'/.test(seg), "자리 그림이 ① 큰칸 + ②③ 모양이다");
-    ok(/'s2 s1' 's3 s1'/.test(lay), "뒤집으면 그림도 뒤집힌다");
+    ok(/'s1 s2 s3'/.test(seg), "자리 그림이 3단 모양이다");
+    ok(/'s3 s2 s1'/.test(lay), "뒤집으면 그림도 뒤집힌다");
+    ok(/'s3 s2 s1'/.test(lay) && !/'s2 s1 s3'/.test(lay),
+       "뒤집어도 가운데(접속자)는 가운데에 남는다");
     /* 주석이 아니라 실제로 쓰인 곳만 봅니다 */
     const code = lay.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
     ok(!/direction\s*:\s*rtl/.test(code), "글자까지 뒤집는 방식을 쓰지 않는다");
@@ -1176,31 +1191,184 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
       if (w !== undefined) ok(w !== true, `${k} 는 아무나 쓸 수 없다`);
     });
 
-    /* ---- 13. 공용 뽀모 버튼 ---- */
+    /* ---- 13. 링크 버튼이 남아 있지 않은가 ----
+       방 자체 뽀모가 이미 공용(db.ref("pomodoro") 한 곳을 모두가 봄)이라,
+       남의 사이트를 여는 버튼은 걷어냈습니다. 되살아나지 않게 지켜봅니다. */
     const core = fs.readFileSync(DIR+"script_core.js","utf8");
-    ok(/id="pomo-shared-btn"/.test(h), "공용 뽀모 버튼이 화면에 있다");
-    ok(/onclick="openSharedPomo\(\)"/.test(h), "버튼이 openSharedPomo 를 부른다");
-    ok(/function openSharedPomo/.test(core), "openSharedPomo 가 정의돼 있다");
-    ok(/magammm1009\.github\.io\/mmaapomopomo/.test(core), "주소가 마끝마 뽀모방이다");
-    ok(/noopener/.test(core), "새 창이 이 방을 건드리지 못하게 막았다");
-    /* 크기를 지정하면 닫기 버튼 없는 팝업 창으로 열려서, 설치해 쓰는
-       분들이 창을 못 닫습니다. 실제로 그런 일이 있었습니다. */
-    ok(!/width=\d|height=\d/.test(core.slice(core.indexOf("function openSharedPomo"))),
-       "창 크기를 지정하지 않는다 (팝업이 아니라 평범한 탭으로 열려야 닫을 수 있다)");
-    ok(!/<iframe[^>]*mmaapomopomo/.test(h), "iframe 으로 끼워 넣지 않았다");
+    ok(!/pomo-shared-btn|openSharedPomo/.test(h), "화면에 외부 뽀모 링크 버튼이 없다");
+    ok(!/openSharedPomo|mmaapomopomo/.test(core), "코드에도 외부 뽀모 링크가 없다");
+    ok(/db\.ref\("pomodoro"\)/.test(fs.readFileSync(DIR+"script_realtime.js","utf8")),
+       "방 뽀모는 한 곳에 저장돼 모두가 함께 본다 (이미 공용이다)");
 
-    finish();
+    return checkWordcount();
+  })();
+}
+
+/* ---- 14. 글자수 기록 (스냅샷 차이) ----
+   앞 블록이 return 으로 끝나므로, 함수로 감싸 마지막에 부릅니다. */
+function checkWordcount(){
+  const w = fs.readFileSync(DIR+"script_wordcount.js","utf8");
+  const h = fs.readFileSync(DIR+"index.html","utf8");
+  const rules = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
+
+  ok(/id="wordcount-block"/.test(h), "글자수 칸이 화면에 있다");
+  ok(h.indexOf('id="wordcount-block"') > h.indexOf('id="pomo-block"') &&
+     h.indexOf('id="wordcount-block"') < h.indexOf('id="status-block"'),
+     "글자수 칸이 뽀모 줄 안에 들어 있다");
+  const tags = (h.match(/<script src="(script_[\w.-]+)/g) || []).map(t => t.split('"')[1]);
+  ok(tags.includes("script_wordcount.js"), "index.html 이 script_wordcount.js 를 읽어온다");
+  const order = fs.readFileSync(DIR+"build-single.py","utf8");
+  ok(/script_wordcount\.js/.test(order), "단일파일 빌드 순서에도 들어 있다");
+  ok(/startWordcount/.test(fs.readFileSync(DIR+"script_profile.js","utf8")),
+     "입장한 뒤에 글자수를 시작한다 (닉네임이 생긴 다음이라야 한다)");
+
+  /* 보안 규칙 */
+  ok(rules.wordlog, "규칙에 wordlog 가 있다");
+  ok(/nickOwner/.test(rules.wordlog.$day.$nick[".write"]), "내 글자수는 나만 쓸 수 있다");
+
+  /* ---- 실제로 돌려봅니다 ---- */
+  const saved = [];
+  const inputs = {};
+  function mkEl(id){
+    return inputs[id] = { id, value:"", textContent:"", innerHTML:"", style:{},
+      classList:{ _s:new Set(), toggle(c,v){ v?this._s.add(c):this._s.delete(c); },
+                  contains(c){ return this._s.has(c); } },
+      dataset:{}, addEventListener(t,f){ this["on_"+t]=f; },
+      setAttribute(){}, querySelectorAll(){ return []; },
+      focus(){}, select(){} };
+  }
+  ["wc-big","wc-unit","wc-rows","wc-hint","wc-log","wc-input",
+   "wc-send","wc-base","wc-reset","wc-fresh","wordcount-block"].forEach(mkEl);
+
+  let store = {};   // wordlog/{day}/{nick}
+  const ctx = {
+    console,
+    document:{ readyState:"complete", addEventListener(){},
+               getElementById:id=>inputs[id]||null },
+    Date, Number, Math, JSON, String, Object
+  };
+  ctx.window = ctx;
+  ctx.myNick = "호랑";
+  ctx.db = { ref:(path)=>({
+    async update(v){ saved.push({path,v}); store[path] = {...(store[path]||{}), ...v}; },
+    on(){}, off(){}
+  })};
+  vm.createContext(ctx);
+  vm.runInContext(w, ctx);
+
+  const W = ctx.Wordcount;
+  ok(typeof ctx.startWordcount === "function", "startWordcount 를 밖에서 부를 수 있다");
+  ok(/^\d{4}-\d{2}-\d{2}$/.test(W.dayKey()), "날짜 키가 YYYY-MM-DD 다");
+  ok(W.weekDays().length >= 1 && W.weekDays().length <= 7, "이번 주는 1~7일이다");
+  ok(W.weekDays()[W.weekDays().length-1] === W.dayKey(), "이번 주의 마지막 날은 오늘이다");
+
+  /* 버튼을 직접 눌러봅니다.
+     화면 상태(_today)는 서버 구독으로 채워지므로, 여기서는 저장된 값을
+     되먹여서 다음 눌림에 반영합니다 — 실제 동작과 같은 흐름입니다. */
+  const day = W.dayKey();
+  function feed(){ ctx.Wordcount._state().today["호랑"] = store[`wordlog/${day}/호랑`]; }
+  const press = async (btn, val) => {
+    if (val !== undefined) inputs["wc-input"].value = String(val);
+    await inputs[btn].on_click();
+    feed();
+  };
+
+  return (async () => {
+    // ① 처음 — 출발선만 잡히고 누적은 0
+    await press("wc-send", 1000);
+    let cur = store[`wordlog/${day}/호랑`];
+    ok(cur.base === 1000 && cur.total === 0, "첫 기록은 출발선만 잡고 누적은 0이다");
+    ok(inputs["wc-input"].value === "", "적고 나면 입력칸이 비워진다");
+
+    // ② 늘어난 만큼만 쌓인다
+    await press("wc-send", 2500);
+    cur = store[`wordlog/${day}/호랑`];
+    ok(cur.total === 1500, "차이(1,500자)만 쌓인다");
+    ok(cur.base === 2500, "기준이 지금 값으로 옮겨간다");
+
+    await press("wc-send", 2900);
+    cur = store[`wordlog/${day}/호랑`];
+    ok(cur.total === 1900, "이어서 적어도 차이만 더해진다");
+
+    // ③ 줄었을 때 — 누적을 깎지 않는다 (퇴고로 덜어낸 것도 작업이다)
+    const before = cur.total;
+    await press("wc-send", 2000);
+    cur = store[`wordlog/${day}/호랑`];
+    ok(cur.total === before, "글자수가 줄어도 누적을 깎지 않는다");
+    ok(cur.base === 2000, "줄었을 때는 기준만 옮긴다");
+    ok(cur.total >= 0, "누적이 음수가 되지 않는다");
+
+    // ④ 같은 값을 또 적어도 두 번 세지 않는다
+    const t2 = cur.total;
+    await press("wc-send", 2000);
+    ok(store[`wordlog/${day}/호랑`].total === t2, "같은 값을 또 적어도 두 번 세지 않는다");
+
+    // ⑤ 버튼 셋
+    await press("wc-base", 5000);
+    cur = store[`wordlog/${day}/호랑`];
+    ok(cur.base === 5000 && cur.total === t2, "▶기준은 누적을 건드리지 않는다");
+
+    await press("wc-reset");
+    ok(store[`wordlog/${day}/호랑`].total === 0, "🧹초기화는 누적을 0으로");
+    ok(store[`wordlog/${day}/호랑`].base === 5000, "🧹초기화는 기준을 건드리지 않는다");
+
+    await press("wc-fresh");
+    ok(store[`wordlog/${day}/호랑`].base === 0, "🆕새 편은 기준을 0으로");
+
+    // 새 편 뒤엔 적은 숫자가 곧 쓴 양
+    await press("wc-send", 700);
+    ok(store[`wordlog/${day}/호랑`].total === 700, "새 편 뒤에는 적은 숫자가 곧 쓴 양이다");
+
+    // ⑥ 숫자가 아니면 아무것도 저장하지 않는다
+    const n = saved.length;
+    await press("wc-send", "");
+    ok(saved.length === n, "빈 칸으로 누르면 저장하지 않는다");
+    inputs["wc-input"].value = "-5";
+    await inputs["wc-send"].on_click();
+    ok(saved.length === n, "음수는 저장하지 않는다");
+
+    // ⑦ set 이 아니라 update 여야 한다 (total 만 바꾸다 base 를 날리면 안 됨)
+    ok(!/\.set\(/.test(w) || /\.update\(/.test(w), "update 로 저장한다");
+    ok(saved.every(s => /^wordlog\/\d{4}-\d{2}-\d{2}\/호랑$/.test(s.path)),
+       "내 자리에만 쓴다");
+
+    // ⑧ 이름에 태그가 들어와도 화면에 그대로 심지 않는다
+    ok(/<span class="wc-nm">&lt;b&gt;/.test(W.drawRows([["<b>",1]], -1)),
+       "필명 속 태그를 글자로 처리한다");
+
+    // ⑨ 주간 합계
+    ctx.Wordcount._state().week[W.dayKey()] = { "호랑":{total:100}, "달빛":{total:50} };
+    const sw = W.sumWeek();
+    ok(sw["호랑"] === 100 && sw["달빛"] === 50, "주간 합계가 사람별로 더해진다");
+
+    return checkTimelog();
   })();
 }
 
 function finish(){
+  /* ★ 블록이 통째로 안 돌던 사고가 있었습니다.
+     앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
+     화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
+     그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
+  const MIN = 440;
+  if (pass + fail < MIN) {
+    console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
+    console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");
+    process.exit(1);
+  }
   console.log(`\n통과 ${pass} / 전체 ${pass+fail}`);
   if(fail){ console.log("\n실패:"); fails.forEach(f=>console.log("  ✗ "+f)); process.exit(1); }
   else console.log("전부 통과했습니다.");
 }
 
-/* ---- 11. 시간 기록 ---- */
-{
+/* ---- 11. 시간 기록 ----
+   ★ 이 블록은 반드시 함수여야 합니다.
+
+   예전에 여기가 그냥 `{ ... }` 였을 때, 앞 블록이 `return` 으로
+   끝나면서 이 블록이 통째로 실행되지 않았습니다. 검사는 "전부 통과"라고
+   말했지만 사실은 돌지도 않았어요. 비동기 블록은 앞에서 뒤로 이어
+   부르는 방식으로만 씁니다. */
+function checkTimelog(){
   const src=fs.readFileSync(DIR+"script_timelog.js","utf8");
   const c2={window:{addEventListener(){}},document:{readyState:"complete",addEventListener(){},
     getElementById(){return null},querySelectorAll(){return []},visibilityState:"visible"},

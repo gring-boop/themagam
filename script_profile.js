@@ -1054,6 +1054,7 @@ window.bindCardEditDelegate = bindCardEditDelegate;
       if (myNick) {
         try { await afterJoinLoadProfile(); } catch (e) { console.warn("[afterJoinLoadProfile]", e); }
         try { window.startTimelog?.(); }      catch (e) { console.warn("[startTimelog]", e); }
+        try { window.startWordcount?.(); }    catch (e) {}
         try { await window.startPet?.(); }    catch (e) { console.warn("[startPet]", e); }
         try { window.renderPetPanel?.(); }    catch (e) {}
       }
