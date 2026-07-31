@@ -457,6 +457,40 @@
 
   window.startWordcount = startWordcount;
   window.renderWordcount = render;
-  window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek,
+  window.wordcountMyWeekHtml = myWeekHtml;
+  /* ---------------------------------------------------------------
+     설정 → 📊 나의 기록 에 넣을 글자수 요약.
+
+     '내 기록' 탭과 같은 값을 쓰되, 설정에서는 오늘 숫자도 같이
+     보여줍니다. 설정을 여는 사람은 "오늘 얼마나 썼지"를 먼저
+     궁금해하니까요.
+     --------------------------------------------------------------- */
+  function myWeekHtml() {
+    const days = weekDays();
+    const vals = days.map((k, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (days.length - 1 - i));
+      return [DOW_LABEL[(d.getDay() + 6) % 7], Number(_week[k]?.[me()]?.total || 0)];
+    });
+    const week = vals.reduce((a, b) => a + b[1], 0);
+    const today = Number(myRow().total || 0);
+    const base = myRow().base;
+
+    return `
+      <div class="rec-today">
+        <div class="rec-big">${fmt(today)}자</div>
+        <div class="rec-sub">오늘 쓴 글자수</div>
+      </div>
+      <div class="rec-h2">이번 주 · 요일별</div>
+      <div class="wc-rows" style="max-height:none">${drawRows(vals, vals.length - 1)}</div>
+      <div class="rec-foot">이번 주 <b>${fmt(week)}자</b></div>
+      <p class="hint">
+        ${base === null || base === undefined
+          ? "아직 출발선을 안 잡았어요. 글자수 칸에서 지금 원고의 전체 글자수를 적어주세요."
+          : `지금 기준은 <b>${fmt(base)}자</b>예요. 다음에도 그때의 전체 글자수를 적으면 차이만 쌓입니다.`}
+      </p>`;
+  }
+
+  window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek, myWeekHtml,
                        _state: () => ({ today: _today, week: _week, feed: _feed, tab: _tab }) };
 })();

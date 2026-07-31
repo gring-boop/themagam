@@ -331,27 +331,37 @@
     body.innerHTML = `<p class="hint">불러오는 중…</p>`;
     modal.style.display = "flex";
 
-    const rows = await loadSummary(nick, 7);
-    const today = rows[rows.length - 1];
+    body.innerHTML = recordHtml(await loadSummary(nick, 7));
+  }
+  window.openRecord = openRecord;
 
+  /* ---------------------------------------------------------------
+     기록 화면 만들기 — 팝업과 설정 탭이 **같은 것**을 씁니다.
+
+     예전에는 openRecord 안에 HTML 이 통째로 박혀 있었습니다. 설정에도
+     같은 걸 띄우려면 복사해야 했는데, 그러면 한쪽만 고치는 사고가
+     반드시 납니다. 함수로 떼어내 한 곳에서만 만듭니다.
+     --------------------------------------------------------------- */
+  function recordHtml(rows) {
+    const today = rows[rows.length - 1];
     const sumWork = today.totals.writing + today.totals.focus;
     const maxDay = Math.max(1, ...rows.map(r => r.totals.writing + r.totals.focus));
     const weekWork = rows.reduce((a, r) => a + r.totals.writing + r.totals.focus, 0);
     const weekPomo = rows.reduce((a, r) => a + r.pomo, 0);
 
-    body.innerHTML = `
+    return `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 집필 시간 (WORK + 집중)</div>
+        <div class="rec-sub">오늘 집필 시간 (WORK + 초집중)</div>
       </div>
 
       <div class="rec-bars">
-        ${STATUSES.map(s => {
-          const v = today.totals[s.id];
-          const all = Math.max(1, STATUS_IDS.reduce((a,k)=>a+today.totals[k],0));
+        ${STATUSES.map(s2 => {
+          const v = today.totals[s2.id];
+          const all = Math.max(1, STATUS_IDS.reduce((a, k) => a + today.totals[k], 0));
           return `<div class="rec-row">
-                    <span class="rec-name">${s.label}</span>
-                    <span class="rec-track"><i style="width:${(v/all*100).toFixed(1)}%;background:${s.color}"></i></span>
+                    <span class="rec-name">${s2.label}</span>
+                    <span class="rec-track"><i style="width:${(v / all * 100).toFixed(1)}%;background:${s2.color}"></i></span>
                     <span class="rec-val">${fmtDur(v)}</span>
                   </div>`;
         }).join("")}
@@ -381,7 +391,40 @@
         (자리비움으로 찍지는 않습니다)
       </p>`;
   }
-  window.openRecord = openRecord;
+
+  /* ---------------------------------------------------------------
+     설정 → 📊 나의 기록
+
+     팝업과 다른 점은 **글자수까지 함께 본다**는 것뿐입니다.
+     집필 시간과 글자수는 같은 하루를 다른 각도에서 본 값이라,
+     나란히 두면 "오래 앉아 있었는데 덜 썼네" 같은 게 보입니다.
+     --------------------------------------------------------------- */
+  async function renderMyRecordPanel() {
+    const host = document.getElementById("panel-record");
+    if (!host) return;
+
+    if (!myNick) {
+      host.innerHTML = `<div class="set-block"><p class="hint">입장 후에 볼 수 있어요.</p></div>`;
+      return;
+    }
+
+    host.innerHTML = `<div class="set-block"><p class="hint">불러오는 중…</p></div>`;
+
+    let timeHtml = "";
+    try { timeHtml = recordHtml(await loadSummary(myNick, 7)); }
+    catch (e) { timeHtml = `<p class="hint">기록을 불러오지 못했어요.</p>`; }
+
+    host.innerHTML = `
+      <div class="set-block">
+        <div class="set-title">⏱️ 집필 시간</div>
+        ${timeHtml}
+      </div>
+      <div class="set-block">
+        <div class="set-title">✍️ 글자수</div>
+        ${window.Wordcount?.myWeekHtml?.() || `<p class="hint">글자수 기록을 불러오지 못했어요.</p>`}
+      </div>`;
+  }
+  window.renderMyRecordPanel = renderMyRecordPanel;
 
   function closeRecord() {
     const m = document.getElementById("record-modal");

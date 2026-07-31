@@ -340,7 +340,9 @@
             if (!window.Pet) return "";
             const sp = row.petSpecies;
             if (!sp) return "";
-            const lv = Math.max(1, Math.min(10, Number(row.petLevel) || 1));
+            /* 만렙 값을 여기에 또 적지 않습니다. 예전에 10 을 박아뒀다가
+               20레벨로 올린 뒤에도 카드가 10에서 잘렸습니다. */
+            const lv = Math.max(1, Math.min(window.Pet.MAX_LEVEL, Number(row.petLevel) || 1));
             const mx = !!row.petMax;
             const pct = Math.max(0, Math.min(100, Number(row.petPct) || 0));
             return `

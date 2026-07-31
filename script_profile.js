@@ -1028,6 +1028,7 @@ window.bindCardEditDelegate = bindCardEditDelegate;
       if (name === "profile") renderProfilePanel();
       if (name === "goals")   mountGoalBlocks(document.getElementById("panel-goals"));
       if (name === "pet")     window.renderPetPanel?.();
+      if (name === "record")  window.renderMyRecordPanel?.();
     };
     wrapped.__profilePatched = true;
     window.openTab = wrapped;

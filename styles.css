@@ -4181,3 +4181,9 @@ body.side-collapsed .side-rail{
 
 /* 뽀모 — 시작·정지·알림음 버튼도 가운데로 (시간 설정 줄과 맞춥니다) */
 .pomo-row-4.timer-controls{ justify-content: center; }
+
+/* 설정 → 📊 나의 기록 — 팝업에서 쓰던 조각을 그대로 씁니다.
+   팝업보다 폭이 좁으니 위아래 여백만 조금 줄입니다. */
+#panel-record .rec-today{ margin-top: 2px; }
+#panel-record .rec-week{ margin-bottom: 4px; }
+#panel-record .set-block + .set-block{ margin-top: var(--sp-3); }

@@ -420,7 +420,17 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   /* 펫 — 그림 */
   {
     const Pet = require(DIR + "script_pet.js");
-    ok(Pet.SPECIES_IDS.length === 20, `20종이다 (${Pet.SPECIES_IDS.length})`);
+    ok(Pet.SPECIES_IDS.length === 42, `42종이다 (${Pet.SPECIES_IDS.length})`);
+    /* 그룹마다 몇 마리인지 — 한쪽으로 쏠리면 껍데기 고르기가 시시해집니다 */
+    {
+      const cnt = {};
+      Pet.SPECIES.forEach(x => { cnt[x.group] = (cnt[x.group] || 0) + 1; });
+      Object.keys(Pet.SHELLS).forEach(gk =>
+        ok((cnt[gk] || 0) >= 5, `${Pet.SHELLS[gk]} 무리가 5종 이상이다 (${cnt[gk] || 0})`));
+    }
+    /* 이름이 겹치면 도감에서 헷갈립니다 */
+    ok(new Set(Pet.SPECIES.map(x => x.label)).size === Pet.SPECIES.length, "이름이 겹치지 않는다");
+    ok(new Set(Pet.SPECIES_IDS).size === Pet.SPECIES_IDS.length, "종류 이름표가 겹치지 않는다");
     ok(Pet.SPECIES_IDS.includes("octopus"), "문어가 있다");
     /* ★ 색은 종류마다 고정 — 서로 겹치면 두 종류가 같은 색이 됩니다 */
     {
@@ -434,7 +444,12 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        없으면 조용히 고양이로 대체되어 "다 고양이"가 됩니다. */
     {
       const src = fs.readFileSync(DIR+"script_pet.js","utf8");
-      const drawn = (src.match(/^    (\w+)\(g\) \{/gm) || []).map(x => x.trim().replace("(g) {", ""));
+      /* 두 가지 방식이 있습니다.
+           bear(g) { … }              ← 직접 그리는 것
+           rose: makeFlower(…)        ← 공통 뼈대를 쓰는 꽃들
+         둘 다 세어야 합니다. 한쪽만 보면 꽃이 통째로 빠져 보입니다. */
+      const drawn = (src.match(/^    (\w+)\(g\) \{/gm) || []).map(x => x.trim().replace("(g) {", ""))
+        .concat((src.match(/^    (\w+): makeFlower\(/gm) || []).map(x => x.trim().replace(/: makeFlower\($/, "")));
       const missing = Pet.SPECIES_IDS.filter(id => !drawn.includes(id));
       ok(missing.length === 0, "모든 종류에 그리는 함수가 있다" + (missing.length ? " — 없음: " + missing.join(", ") : ""));
     }
@@ -494,9 +509,11 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
 
     /* 판다는 색 규칙이 뒤집혀 있습니다 */
     {
+      /* [변경] 몸이 검고 배·얼굴이 흽니다. 반대로 두니 흰 덩어리가
+         너무 커서 곰인지 판다인지 애매했어요. */
       const pp = Pet.palette("panda");
-      ok(pp.body === "#F2F0EA" && pp.mark === Pet.colorHex("panda"),
-         "판다는 몸이 흰빛이고 정해진 색이 무늬로 들어간다");
+      ok(pp.body === Pet.colorHex("panda"), "판다 몸이 정해진 색(검정)이다");
+      ok(/^#F4F2EC$/i.test(pp.mark), "판다 배·얼굴이 흰빛이다");
     }
     ok(Pet.HOURS_PER_LEVEL === 5 && Pet.MAX_LEVEL === 20, "5시간 1레벨 · Lv.20 만렙");
     ok(Pet.PET_MS === 100 * 3600e3, "만렙까지 100시간이다");
@@ -1482,12 +1499,60 @@ function checkWordcount(){
   })();
 }
 
+/* ---- 15. 설정 → 나의 기록 ---- */
+{
+  const H  = fs.readFileSync(DIR+"index.html","utf8");
+  const tl = fs.readFileSync(DIR+"script_timelog.js","utf8");
+  const wc = fs.readFileSync(DIR+"script_wordcount.js","utf8");
+  const pr = fs.readFileSync(DIR+"script_profile.js","utf8");
+
+  ok(/id="panel-record"/.test(H), "설정에 나의 기록 자리가 있다");
+  ok(/data-tab="record"/.test(H), "탭 버튼이 있다");
+  ok(/name === "record"/.test(pr), "그 탭을 열면 내용을 그린다");
+  ok(/window\.renderMyRecordPanel/.test(tl), "그리는 함수가 밖에서 불린다");
+
+  /* ★ 팝업과 설정이 같은 코드를 써야 합니다.
+     예전처럼 openRecord 안에 HTML 이 박혀 있으면, 설정용으로 복사하게
+     되고 한쪽만 고치는 사고가 반드시 납니다. */
+  ok(/function recordHtml\(rows\)/.test(tl), "기록 화면을 만드는 함수가 하나로 떼어져 있다");
+  ok((tl.match(/rec-today/g) || []).length === 1, "기록 화면 뼈대가 한 곳에만 있다 (복사본 없음)");
+  ok(/body\.innerHTML = recordHtml\(/.test(tl), "팝업이 그 함수를 쓴다");
+  ok(/recordHtml\(await loadSummary\(myNick, 7\)\)/.test(tl), "설정도 그 함수를 쓴다");
+
+  /* 글자수도 함께 보여야 합니다 */
+  ok(/myWeekHtml/.test(wc), "글자수 요약을 만드는 함수가 있다");
+  ok(/Wordcount\?\.myWeekHtml/.test(tl), "설정이 글자수 요약을 가져다 쓴다");
+  ok(/글자수 기록을 불러오지 못했어요/.test(tl), "글자수를 못 가져와도 화면이 깨지지 않는다");
+  ok(/입장 후에 볼 수 있어요/.test(tl), "입장 전에는 그렇다고 알려준다");
+
+  /* 실제로 그려봅니다 */
+  {
+    const inputs = {};
+    const mk = id => (inputs[id] = { id, innerHTML: "", textContent: "",
+      style:{}, classList:{toggle(){},add(){},remove(){},contains(){return false}},
+      addEventListener(){}, querySelectorAll(){return []}, focus(){}, select(){} });
+    ["wc-big","wc-unit","wc-rows","wc-hint","wc-log","wc-input",
+     "wc-send","wc-base","wc-reset","wc-fresh","wordcount-block"].forEach(mk);
+    const ctx = { console, Date, Number, Math, JSON, String, Object,
+      document:{ readyState:"complete", addEventListener(){}, getElementById:id=>inputs[id]||null } };
+    ctx.window = ctx; ctx.myNick = "호랑";
+    ctx.db = { ref:()=>({ update(){}, push(){}, limitToLast(){return this}, on(){}, off(){} }) };
+    vm.createContext(ctx);
+    vm.runInContext(wc, ctx);
+    const html = ctx.Wordcount.myWeekHtml();
+    ok(/rec-big/.test(html), "글자수 요약에 오늘 숫자가 들어간다");
+    ok(/이번 주/.test(html), "이번 주 합계도 들어간다");
+    ok(!/NaN|undefined/.test(html), "기록이 하나도 없어도 깨지지 않는다");
+    ok(/출발선/.test(html), "출발선을 안 잡았으면 그렇다고 알려준다");
+  }
+}
+
 function finish(){
   /* ★ 블록이 통째로 안 돌던 사고가 있었습니다.
      앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
-  const MIN = 482;
+  const MIN = 510;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");
