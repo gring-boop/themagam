@@ -4174,3 +4174,7 @@ body.side-collapsed .side-rail{
 }
 .wc-feed-sys b{ color: var(--text); font-weight: var(--fw-medium); }
 .wc-feed.me .wc-feed-sys b{ color: var(--accent); }
+
+/* 뽀모 — 시간 설정을 버튼과 다른 줄에 둡니다 (좁은 칸에서 서로 밀려서) */
+.pomo-row-setup{ display:flex; justify-content:center; }
+.pomo-row-setup .pomo-setup{ margin:0; }

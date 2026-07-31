@@ -1062,6 +1062,16 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
      "script_auth.js 가 script_profile.js 앞이다 (로그인 → 입장 → 프로필 순서)");
   ok(/id="pw-input"/.test(h) && /type="password"/.test(h), "비밀번호 칸이 있다");
   ok(/id="join-msg"/.test(h), "오류를 보여줄 자리가 있다");
+
+  /* ★ 로그인은 탭 단위여야 합니다.
+
+     브라우저 단위(기본값)면 창 두 개로 서로 다른 필명을 쓸 때 나중에
+     들어간 쪽이 앞의 로그인을 덮어버립니다. 앞 창은 겉보기엔 멀쩡한데
+     저장이 전부 조용히 거절돼요. 실제로 그 일이 있었습니다. */
+  ok(/Persistence\.SESSION/.test(a), "로그인을 탭 단위(SESSION)로 둔다");
+  ok(a.indexOf("Persistence.SESSION") < a.indexOf("signInWithEmailAndPassword"),
+     "로그인하기 전에 탭 단위로 바꾼다");
+  ok(!/Persistence\.LOCAL/.test(a), "브라우저 단위로 되돌리지 않는다");
   ok(/6자 이상/.test(h), "안내 문구도 6자 이상이다 (파이어베이스 최소값과 같아야 함)");
 
   /* 가짜 파이어베이스를 만들어 실제로 돌려봅니다.
@@ -1278,11 +1288,15 @@ function checkWordcount(){
      화면 상태(_today)는 서버 구독으로 채워지므로, 여기서는 저장된 값을
      되먹여서 다음 눌림에 반영합니다 — 실제 동작과 같은 흐름입니다. */
   const day = W.dayKey();
-  function feed(){ ctx.Wordcount._state().today["호랑"] = store[`wordlog/${day}/호랑`]; }
+  /* ★ 일부러 서버 답을 흉내내지 않습니다.
+
+     예전 검사는 매 눌림 뒤에 저장된 값을 손으로 되먹였습니다. 그래서
+     "서버 답이 오기 전에 다음 버튼을 누르면 옛 값으로 계산한다"는
+     버그를 못 잡았어요. 실제로 새 편 → 기록 이 어긋났습니다.
+     이제 되먹이지 않고, 코드가 스스로 손안의 값을 챙기는지 봅니다. */
   const press = async (btn, val) => {
     if (val !== undefined) inputs["wc-input"].value = String(val);
     await inputs[btn].on_click();
-    feed();
   };
 
   return (async () => {
@@ -1315,10 +1329,47 @@ function checkWordcount(){
     await press("wc-send", 2000);
     ok(store[`wordlog/${day}/호랑`].total === t2, "같은 값을 또 적어도 두 번 세지 않는다");
 
-    // ⑤ 버튼 셋
+    /* 여기까지 늘어난 것은 두 번(1,500 / 400)뿐입니다 */
+    {
+      const f = ctx._feedSpy.filter(x => /^wordfeed\//.test(x.path));
+      ok(f.length === 2, `늘어난 횟수만큼만 올라간다 (${f.length}번)`);
+    }
+
+    /* ⑤ 서버 답을 기다리지 않고 연달아 눌러도 어긋나지 않아야 합니다.
+       실제로 여기서 어긋났습니다 — 새 편을 누른 직후 기록하면
+       옛 기준으로 빼서 "글자수가 줄었네요"가 뜨고 채팅에도 안 올라갔어요. */
+    {
+      const n0 = ctx._feedSpy.length;
+      await press("wc-fresh");                 // 기준 0
+      await press("wc-send", 300);             // 곧바로 기록
+      const c = store[`wordlog/${day}/호랑`];
+      ok(c.base === 300, "새 편 직후에 기록해도 기준이 제대로 옮겨간다");
+      ok(ctx._feedSpy.length === n0 + 1, "새 편 직후의 기록도 채팅에 올라간다");
+      ok(ctx._feedSpy[ctx._feedSpy.length-1].v.add === 300,
+         "새 편 뒤에는 적은 숫자가 그대로 늘어난 양이다");
+
+      // 초기화 직후에 이어 적어도 마찬가지
+      await press("wc-reset");
+      await press("wc-send", 500);
+      const c2 = store[`wordlog/${day}/호랑`];
+      ok(c2.total === 200, `초기화 직후 기록도 차이만 쌓인다 (${c2.total})`);
+      ok(c2.base === 500, "초기화는 기준을 건드리지 않는다");
+
+      // 연달아 세 번
+      const n1 = ctx._feedSpy.length;
+      await press("wc-send", 600);
+      await press("wc-send", 700);
+      await press("wc-send", 800);
+      const c3 = store[`wordlog/${day}/호랑`];
+      ok(c3.total === 500, `쉬지 않고 눌러도 정확히 쌓인다 (${c3.total})`);
+      ok(ctx._feedSpy.length === n1 + 3, "누른 만큼 채팅에도 올라간다");
+    }
+
+    // ⑥ 버튼 셋
+    const tBefore = store[`wordlog/${day}/호랑`].total;
     await press("wc-base", 5000);
     cur = store[`wordlog/${day}/호랑`];
-    ok(cur.base === 5000 && cur.total === t2, "▶기준은 누적을 건드리지 않는다");
+    ok(cur.base === 5000 && cur.total === tBefore, "▶기준은 누적을 건드리지 않는다");
 
     await press("wc-reset");
     ok(store[`wordlog/${day}/호랑`].total === 0, "🧹초기화는 누적을 0으로");
@@ -1331,7 +1382,7 @@ function checkWordcount(){
     await press("wc-send", 700);
     ok(store[`wordlog/${day}/호랑`].total === 700, "새 편 뒤에는 적은 숫자가 곧 쓴 양이다");
 
-    // ⑥ 숫자가 아니면 아무것도 저장하지 않는다
+    // ⑦ 숫자가 아니면 아무것도 저장하지 않는다
     const n = saved.length;
     await press("wc-send", "");
     ok(saved.length === n, "빈 칸으로 누르면 저장하지 않는다");
@@ -1339,12 +1390,12 @@ function checkWordcount(){
     await inputs["wc-send"].on_click();
     ok(saved.length === n, "음수는 저장하지 않는다");
 
-    // ⑦ set 이 아니라 update 여야 한다 (total 만 바꾸다 base 를 날리면 안 됨)
+    // ⑧ set 이 아니라 update 여야 한다 (total 만 바꾸다 base 를 날리면 안 됨)
     ok(!/\.set\(/.test(w) || /\.update\(/.test(w), "update 로 저장한다");
     ok(saved.every(s => /^wordlog\/\d{4}-\d{2}-\d{2}\/호랑$/.test(s.path)),
        "내 자리에만 쓴다");
 
-    // ⑧ 이름에 태그가 들어와도 화면에 그대로 심지 않는다
+    // ⑨ 이름에 태그가 들어와도 화면에 그대로 심지 않는다
     ok(/<span class="wc-nm">&lt;b&gt;/.test(W.drawRows([["<b>",1]], -1)),
        "필명 속 태그를 글자로 처리한다");
 
@@ -1360,7 +1411,6 @@ function checkWordcount(){
     ok(fed.every(f => f.v.add > 0), "늘어난 만큼만 올라간다 (0이나 음수는 안 올린다)");
     ok(fed.every(f => f.v.nick === "호랑" && f.v.at), "누가 언제 올렸는지 함께 남는다");
     ok(fed.every(f => typeof f.v.snap === "number"), "올린 숫자(전체 글자수)도 함께 남는다");
-    ok(fed.length === 3, `늘어난 횟수만큼만 올라간다 (${fed.length}번)`);
 
     /* 오늘 화면에 사람별 순위나 막대가 나오면 안 됩니다 */
     const feedHtml = W.drawFeed([{nick:"달빛", add:300, snap:800, at:Date.now()}]);
@@ -1400,6 +1450,34 @@ function checkWordcount(){
     const sw = W.sumWeek();
     ok(sw["호랑"] === 100 && sw["달빛"] === 50, "주간 합계가 사람별로 더해진다");
 
+    /* 저장이 거절되면 채팅에도 올리지 않아야 합니다 */
+    {
+      const nick = "호랑";
+      ctx.Wordcount._state().today[nick] = { total: 0, base: 100, at: Date.now() };
+      const n = ctx._feedSpy.length;
+      const realRef = ctx.db.ref;
+      ctx.db.ref = (path) => /^wordlog\//.test(path)
+        ? { async update(){ throw new Error("일부러 낸 거절"); } }
+        : realRef(path);
+      const warn = console.warn; console.warn = () => {};   // 일부러 낸 오류라 조용히
+      await press("wc-send", 500);
+      console.warn = warn;
+      ok(ctx._feedSpy.length === n, "저장이 거절되면 채팅에도 안 올라간다");
+    ok(/permission/i.test(w) && /로그인이 풀립니다/.test(w),
+       "거절 이유가 로그인 문제일 때 그렇다고 알려준다");
+      ctx.db.ref = realRef;
+    }
+
+    /* 뽀모 줄 나누기 */
+    ok(/pomo-row-setup/.test(h), "뽀모 시간 설정이 제 줄을 가진다");
+    const wrap = h.slice(h.indexOf('id="timer-wrap"'), h.indexOf('id="pomo-detail"'));
+    ok((wrap.match(/class="pomo-row/g) || []).length === 5, "뽀모가 다섯 줄이다");
+    const setupAt = wrap.indexOf("pomo-row-setup");
+    const btnAt   = wrap.indexOf("pomo-run-btn start");
+    ok(setupAt > 0 && btnAt > setupAt, "시간 설정 줄이 버튼 줄보다 위에 있다");
+    ok(!/pomo-row-setup[\s\S]{0,400}pomo-run-btn/.test(wrap),
+       "시간 설정과 버튼이 같은 줄에 있지 않다");
+
     return checkTimelog();
   })();
 }
@@ -1409,7 +1487,7 @@ function finish(){
      앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
-  const MIN = 465;
+  const MIN = 482;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");

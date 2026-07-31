@@ -233,16 +233,47 @@
 
      update 를 쓰는 이유: set 은 그 자리를 통째로 갈아치웁니다.
      total 만 바꾸려다 base 를 날려버릴 수 있어요.
+
+     ★ 손안의 값을 **먼저** 고칩니다.
+
+     [무엇이 잘못됐었나]
+     예전에는 서버에만 쓰고, 화면은 서버가 되돌려주는 값을 기다렸습니다.
+     그런데 그 왕복은 눈 깜짝할 사이가 아니에요. 그 틈에 다음 버튼을
+     누르면 **아직 옛 기준**을 보고 계산합니다.
+
+     실제로 이렇게 됐습니다.
+       🆕 새 편 (기준 0으로) → 곧바로 300 기록
+       → 손안에는 아직 기준이 5,000 → 300 - 5,000 = 음수
+       → "글자수가 줄었네요" 가 뜨고, 채팅에도 안 올라감
+
+     초기화 뒤 계산이 이상했던 것, 남이 올린 직후 내 차례에 엉킨 것도
+     모두 같은 원인입니다.
+
+     그래서 서버에 보내기 전에 손안의 값부터 고칩니다. 서버 답이
+     오면 그 값으로 덮이는데, 둘은 같은 값이라 깜빡이지 않습니다.
      --------------------------------------------------------------- */
   async function save(patch) {
-    if (!me() || !window.db) return;
+    const nick = me();
+    if (!nick || !window.db) return false;
+
+    const stamp = Date.now();
+    const before = _today[nick];
+    _today[nick] = { ...(before || { total: 0, base: null }), ...patch, at: stamp };
+    render();
+
     try {
-      await window.db.ref(`wordlog/${dayKey()}/${me()}`)
-        .update({ ...patch, at: Date.now() });
+      await window.db.ref(`wordlog/${dayKey()}/${nick}`)
+        .update({ ...patch, at: stamp });
     } catch (e) {
-      say("저장하지 못했어요. 잠시 뒤 다시 해주세요.");
+      /* 서버가 거절하면 손안의 값도 되돌립니다.
+         안 그러면 화면만 맞고 실제로는 저장이 안 된 상태가 됩니다. */
+      if (before === undefined) delete _today[nick]; else _today[nick] = before;
+      render();
+      say(denyMsg(e));
       console.warn("[wordcount save failed]", e);
+      return false;
     }
+    return true;
   }
 
   /* 흐르는 기록에 한 줄 올리기.
@@ -256,8 +287,21 @@
       await window.db.ref(`wordfeed/${dayKey()}`)
         .push({ nick: me(), add: Number(add), snap: Number(snap), at: Date.now() });
     } catch (e) {
+      say(denyMsg(e));
       console.warn("[wordfeed push failed]", e);
     }
+  }
+
+  /* 서버가 거절했을 때 무슨 일인지 알려줍니다.
+
+     예전에는 "저장하지 못했어요" 한 줄뿐이라, 왜 안 되는지 알 길이
+     없었습니다. 가장 흔한 원인이 **로그인이 풀린 것**이라 따로 짚어줍니다. */
+  function denyMsg(e) {
+    const c = String(e && (e.code || e.message) || "");
+    if (/permission|PERMISSION_DENIED/i.test(c)) {
+      return "저장이 거부됐어요. 다른 창에서 다른 필명으로 들어가면 이 창의 로그인이 풀립니다. 새로고침 후 다시 입장해 주세요.";
+    }
+    return "저장하지 못했어요. 잠시 뒤 다시 해주세요.";
   }
 
   function inputVal() {
@@ -287,7 +331,10 @@
     const diff = v - Number(base);
     if (diff > 0) {
       const next = Number(mine.total || 0) + diff;
-      await save({ base: v, total: next });
+      /* 저장이 안 됐으면 채팅에도 올리지 않습니다.
+         한쪽만 남으면 숫자와 기록이 어긋나 보입니다. */
+      const okSave = await save({ base: v, total: next });
+      if (okSave === false) { clearInput(); return; }
       await pushFeed(diff, v);
       say(`+${fmt(diff)}자 · 오늘 누적 ${fmt(next)}자`);
     } else if (diff === 0) {
@@ -329,7 +376,18 @@
     detach();
 
     _ref = window.db.ref(`wordlog/${dayKey()}`);
-    _ref.on("value", snap => { _today = snap.val() || {}; render(); });
+    _ref.on("value", snap => {
+      const server = snap.val() || {};
+      /* 내 줄은 손안의 값이 더 새것일 수 있습니다 (방금 눌렀는데
+         서버 답이 아직 안 온 경우). at 이 더 큰 쪽을 남깁니다. */
+      const nick = me();
+      const local = _today[nick];
+      _today = server;
+      if (nick && local && (!server[nick] || Number(local.at || 0) > Number(server[nick].at || 0))) {
+        _today[nick] = local;
+      }
+      render();
+    });
 
     /* 흐르는 기록 — 최근 것만 받아옵니다 */
     _feedRef = window.db.ref(`wordfeed/${dayKey()}`).limitToLast(FEED_MAX);
