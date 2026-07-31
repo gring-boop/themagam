@@ -4130,14 +4130,21 @@ body.side-collapsed .side-rail{
 #pomo-block{ display:flex; flex-direction:column; min-height:0; }
 #pomo-block #timer-wrap{ flex:none; }
 
-/* 흐르는 글자수 기록 — 순위 없이 한 줄씩 쌓입니다 */
-.wc-feed{
+/* 흐르는 글자수 기록 — 순위 없이 대화처럼 쌓입니다.
+   하나당 두 줄: 올린 숫자 / 계산 결과 */
+.wc-feed{ padding: 5px 0; font-size: var(--fs-xs); line-height: 1.45; }
+.wc-feed + .wc-feed{ border-top: 1px solid var(--border); }
+
+.wc-feed-said{ color: var(--text); word-break: break-all; }
+.wc-feed-said b{ font-weight: var(--fw-medium); }
+
+.wc-feed-sys{
   display:flex; align-items:baseline; gap:6px;
-  font-size: var(--fs-xs); padding: 3px 0;
+  margin-top: 2px; color: var(--text-dim); word-break: break-all;
 }
-.wc-feed-nm{ flex:0 1 auto; min-width:0; overflow:hidden;
-             text-overflow:ellipsis; white-space:nowrap; color: var(--text-dim); }
-.wc-feed-add{ flex:0 0 auto; font-weight: var(--fw-bold);
-              font-variant-numeric: tabular-nums; }
-.wc-feed-at{ flex:0 0 auto; margin-left:auto; font-size: var(--fs-2xs); color: var(--text-dim); }
-.wc-feed.me .wc-feed-nm{ color: var(--accent); font-weight: var(--fw-medium); }
+.wc-feed-sys b{ color: var(--text); font-weight: var(--fw-medium); }
+.wc-feed-at{ flex:0 0 auto; margin-left:auto; font-size: var(--fs-2xs);
+             color: var(--text-dim); white-space:nowrap; }
+
+.wc-feed.me .wc-feed-said b,
+.wc-feed.me .wc-feed-sys b{ color: var(--accent); }

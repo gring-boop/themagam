@@ -1359,14 +1359,20 @@ function checkWordcount(){
     ok(fed.length > 0, "글자수가 늘면 흐르는 기록에 한 줄 올라간다");
     ok(fed.every(f => f.v.add > 0), "늘어난 만큼만 올라간다 (0이나 음수는 안 올린다)");
     ok(fed.every(f => f.v.nick === "호랑" && f.v.at), "누가 언제 올렸는지 함께 남는다");
+    ok(fed.every(f => typeof f.v.snap === "number"), "올린 숫자(전체 글자수)도 함께 남는다");
     ok(fed.length === 3, `늘어난 횟수만큼만 올라간다 (${fed.length}번)`);
 
     /* 오늘 화면에 사람별 순위나 막대가 나오면 안 됩니다 */
-    const feedHtml = W.drawFeed([{nick:"달빛", add:500, at:Date.now()}]);
-    ok(/\+500자/.test(feedHtml), "올라온 줄에 늘어난 글자수가 보인다");
+    const feedHtml = W.drawFeed([{nick:"달빛", add:300, snap:800, at:Date.now()}]);
+    ok(/달빛<\/b> : 800자/.test(feedHtml), "윗줄에 올린 숫자가 그대로 보인다");
+    ok(/\+300자/.test(feedHtml) && /전체 글자수 800자/.test(feedHtml),
+       "아랫줄에 늘어난 만큼과 전체가 함께 보인다");
     ok(!/wc-bar/.test(feedHtml), "오늘 탭에는 막대를 그리지 않는다");
-    ok(/wc-feed-nm/.test(feedHtml), "누가 올렸는지는 보인다");
-    ok(/<span class="wc-feed-nm">&lt;b&gt;/.test(W.drawFeed([{nick:"<b>",add:1,at:1}])),
+    /* snap 이 없던 옛 기록도 깨지지 않아야 합니다 */
+    const oldHtml = W.drawFeed([{nick:"달빛", add:300, at:Date.now()}]);
+    ok(!/undefined|NaN/.test(oldHtml), "snap 이 없던 옛 기록도 깨지지 않는다");
+    ok(!/wc-feed-said/.test(oldHtml), "옛 기록은 윗줄 없이 아랫줄만 나온다");
+    ok(/&lt;b&gt;/.test(W.drawFeed([{nick:"<b>",add:1,snap:2,at:1}])),
        "흐르는 기록에서도 필명 속 태그를 글자로 처리한다");
 
     const rulesFeed = rules.wordfeed;
@@ -1388,7 +1394,7 @@ function finish(){
      앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
-  const MIN = 455;
+  const MIN = 460;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");
