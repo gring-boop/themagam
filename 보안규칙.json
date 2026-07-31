@@ -50,6 +50,14 @@
           ".write": "auth != null && root.child('nickOwner').child($nick).val() === auth.uid"
         }
       }
+    },
+    "wordfeed": {
+      ".read": true,
+      "$day": {
+        "$id": {
+          ".write": "auth != null && !data.exists() && root.child('nickOwner').child(newData.child('nick').val()).val() === auth.uid"
+        }
+      }
     }
   }
 }

@@ -20,11 +20,22 @@
      🆕 새 편  — 기준을 0으로. 빈 문서에서 시작할 때.
 
    [저장하는 곳]
-       wordlog/{날짜}/{필명} = { total, base, at }
+       wordlog/{날짜}/{필명}   = { total, base, at }   ← 합계와 기준
+       wordfeed/{날짜}/{자동}  = { nick, add, at }     ← 올라온 한 줄씩
 
    날짜별로 나눠 담으면 "오늘"과 "이번 주"를 따로 세기 쉽고, 오래된
    것을 지우기도 편합니다. base(기준)까지 서버에 두는 이유는, 다른
    기기에서 이어 적어도 기준이 따라오게 하기 위해서입니다.
+
+   [순위를 보여주지 않는 이유]
+   처음에는 오늘 탭에 사람별 합계를 막대로 줄 세웠습니다. 그런데
+   그날 많이 쓴 사람에게는 뿌듯한 화면이, 그렇지 못한 사람에게는
+   위축되는 화면이 됩니다. 작가들에게는 특히요.
+
+   그래서 오늘 탭은 **채팅처럼 흐르는 기록**으로 바꿨습니다.
+   "○○ +500자" 한 줄씩 시간순으로 쌓일 뿐, 누가 위인지 아래인지는
+   어디에도 나오지 않습니다. 남과 견주는 화면은 '내 기록' 탭 하나뿐이고,
+   거기서 견주는 상대는 지난 요일의 나입니다.
    ===================================================================== */
 (function () {
   "use strict";
@@ -34,9 +45,13 @@
   let _tab   = "today";
   let _today = {};        // { 필명: {total, base} }
   let _week  = {};        // { 날짜: { 필명: {total} } }
+  let _feed  = [];        // [{ nick, add, at }] — 오늘 올라온 것들
   let _ref   = null;
+  let _feedRef = null;
   let _weekRefs = [];
   let _started = false;
+
+  const FEED_MAX = 60;    // 너무 길어지지 않게 최근 것만 봅니다
 
   /* ---------------------------------------------------------------
      날짜 — 기기 시간 기준입니다.
@@ -102,7 +117,8 @@
     const mine = myRow();
 
     if (_tab === "me") {
-      /* 내 요일별 기록 */
+      /* 내 요일별 기록 — 여기서만 그래프를 씁니다.
+         견주는 상대가 남이 아니라 지난 요일의 나라서 괜찮습니다. */
       const days = weekDays();
       const vals = days.map((k, i) => {
         const d = new Date();
@@ -114,25 +130,14 @@
       unit.textContent = "자 · 이번 주 내 합계";
       rows.innerHTML = drawRows(vals, vals.length - 1);
     } else {
-      /* 오늘·주간 탭은 **방 전체**를 보여줍니다.
-         큰 숫자도 방 합계예요 — 다 같이 얼마나 썼는지가 이 칸의 재미라서,
-         내 숫자만 크게 띄우면 볼 이유가 줄어듭니다. 내 기록은 아래
-         한 줄과 '내 기록' 탭에서 봅니다. */
-      const src = _tab === "today"
-        ? Object.entries(_today).map(([n, v]) => [n, Number(v?.total || 0)])
-        : Object.entries(sumWeek()).map(([n, v]) => [n, v]);
-      const list = src.filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
-      const roomSum = list.reduce((a, b) => a + b[1], 0);
-      const mineVal = _tab === "today"
-        ? Number(mine.total || 0)
-        : Number(sumWeek()[me()] || 0);
-
+      /* 오늘 탭 — 흐르는 기록. 순위도 막대도 없습니다. */
+      const roomSum = Object.values(_today)
+        .reduce((a, v) => a + Number(v?.total || 0), 0);
       big.textContent  = fmt(roomSum);
-      unit.textContent = "자 · " + (_tab === "today" ? "오늘" : "이번 주")
-                       + " 방 전체 · 나 " + fmt(mineVal) + "자";
-      rows.innerHTML = list.length
-        ? drawRows(list, list.findIndex(x => x[0] === me()))
-        : `<div class="wc-empty">아직 아무도 안 적었어요</div>`;
+      unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
+      rows.innerHTML = drawFeed(_feed);
+      /* 새 줄이 아래에 붙으므로 맨 아래를 보여줍니다 */
+      rows.scrollTop = rows.scrollHeight;
     }
 
     if (hint) {
@@ -140,6 +145,26 @@
         ? "지금 원고의 전체 글자수를 적고 기록을 누르세요. 그 숫자가 출발선이 됩니다."
         : `기준 ${fmt(mine.base)}자 · 다음에도 그때의 전체 글자수를 적으면 차이만 쌓여요.`;
     }
+  }
+
+  /* 흐르는 기록 한 줄씩 */
+  function drawFeed(list) {
+    if (!list.length) {
+      return `<div class="wc-empty">아직 올라온 기록이 없어요.<br>
+              지금 전체 글자수를 적으면 늘어난 만큼이 여기 올라옵니다.</div>`;
+    }
+    return list.slice(-FEED_MAX).map(f => {
+      const t = new Date(Number(f.at) || Date.now());
+      const hh = t.getHours(), mm = String(t.getMinutes()).padStart(2, "0");
+      const ampm = hh < 12 ? "오전" : "오후";
+      const h12  = hh % 12 === 0 ? 12 : hh % 12;
+      const isMe = f.nick === me();
+      return `<div class="wc-feed${isMe ? " me" : ""}">
+                <span class="wc-feed-nm">${esc(f.nick)}</span>
+                <span class="wc-feed-add">+${fmt(f.add)}자</span>
+                <span class="wc-feed-at">${ampm} ${h12}:${mm}</span>
+              </div>`;
+    }).join("");
   }
 
   function sumWeek() {
@@ -193,6 +218,21 @@
     }
   }
 
+  /* 흐르는 기록에 한 줄 올리기.
+
+     합계와 따로 두는 이유: 합계는 덮어쓰는 값이라 "언제 얼마나
+     올렸는지"가 남지 않습니다. 채팅처럼 보여주려면 순간마다 한 줄이
+     따로 있어야 해요. */
+  async function pushFeed(add) {
+    if (!me() || !window.db || !(add > 0)) return;
+    try {
+      await window.db.ref(`wordfeed/${dayKey()}`)
+        .push({ nick: me(), add: Number(add), at: Date.now() });
+    } catch (e) {
+      console.warn("[wordfeed push failed]", e);
+    }
+  }
+
   function inputVal() {
     const v = parseInt(el("wc-input")?.value, 10);
     return Number.isFinite(v) && v >= 0 ? v : null;
@@ -221,6 +261,7 @@
     if (diff > 0) {
       const next = Number(mine.total || 0) + diff;
       await save({ base: v, total: next });
+      await pushFeed(diff);
       say(`+${fmt(diff)}자 · 오늘 누적 ${fmt(next)}자`);
     } else if (diff === 0) {
       say("그대로예요");
@@ -263,6 +304,14 @@
     _ref = window.db.ref(`wordlog/${dayKey()}`);
     _ref.on("value", snap => { _today = snap.val() || {}; render(); });
 
+    /* 흐르는 기록 — 최근 것만 받아옵니다 */
+    _feedRef = window.db.ref(`wordfeed/${dayKey()}`).limitToLast(FEED_MAX);
+    _feedRef.on("value", snap => {
+      const v = snap.val() || {};
+      _feed = Object.values(v).sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+      render();
+    });
+
     /* 주간은 날짜마다 따로 붙습니다. 하루치씩이라 양이 적어요. */
     weekDays().forEach(k => {
       const r = window.db.ref(`wordlog/${k}`);
@@ -275,6 +324,8 @@
 
   function detach() {
     try { _ref?.off(); } catch (e) {}
+    try { _feedRef?.off(); } catch (e) {}
+    _feedRef = null;
     _weekRefs.forEach(r => { try { r.off(); } catch (e) {} });
     _ref = null; _weekRefs = [];
   }
@@ -321,6 +372,6 @@
 
   window.startWordcount = startWordcount;
   window.renderWordcount = render;
-  window.Wordcount = { dayKey, weekDays, drawRows, sumWeek,
-                       _state: () => ({ today: _today, week: _week, tab: _tab }) };
+  window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek,
+                       _state: () => ({ today: _today, week: _week, feed: _feed, tab: _tab }) };
 })();

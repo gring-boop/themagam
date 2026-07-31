@@ -4129,3 +4129,15 @@ body.side-collapsed .side-rail{
 /* 뽀모 줄이 세로로 늘어날 수 있게 */
 #pomo-block{ display:flex; flex-direction:column; min-height:0; }
 #pomo-block #timer-wrap{ flex:none; }
+
+/* 흐르는 글자수 기록 — 순위 없이 한 줄씩 쌓입니다 */
+.wc-feed{
+  display:flex; align-items:baseline; gap:6px;
+  font-size: var(--fs-xs); padding: 3px 0;
+}
+.wc-feed-nm{ flex:0 1 auto; min-width:0; overflow:hidden;
+             text-overflow:ellipsis; white-space:nowrap; color: var(--text-dim); }
+.wc-feed-add{ flex:0 0 auto; font-weight: var(--fw-bold);
+              font-variant-numeric: tabular-nums; }
+.wc-feed-at{ flex:0 0 auto; margin-left:auto; font-size: var(--fs-2xs); color: var(--text-dim); }
+.wc-feed.me .wc-feed-nm{ color: var(--accent); font-weight: var(--fw-medium); }

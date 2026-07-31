@@ -1254,10 +1254,14 @@ function checkWordcount(){
      실수를 해서 "입장한 뒤에 쓸 수 있어요"가 계속 떴습니다.
      그래서 여기서도 window 가 아니라 이름으로만 줘 봅니다. */
   ctx.myNick = "호랑";
+  const feedSpy = [];
   ctx.db = { ref:(path)=>({
     async update(v){ saved.push({path,v}); store[path] = {...(store[path]||{}), ...v}; },
+    async push(v){ feedSpy.push({path,v}); return {}; },
+    limitToLast(){ return this; },
     on(){}, off(){}
   })};
+  ctx._feedSpy = feedSpy;
   vm.createContext(ctx);
   vm.runInContext(w, ctx);
 
@@ -1344,7 +1348,33 @@ function checkWordcount(){
     ok(/<span class="wc-nm">&lt;b&gt;/.test(W.drawRows([["<b>",1]], -1)),
        "필명 속 태그를 글자로 처리한다");
 
-    // ⑨ 주간 합계
+    /* ⑨ 흐르는 기록 — 순위 막대가 아니라 한 줄씩 쌓여야 합니다.
+       그날 적게 쓴 사람이 위축되지 않게 한 결정이라, 되돌아가지 않도록 지킵니다. */
+    ok(!/주간/.test(h.slice(h.indexOf('id="wordcount-block"'), h.indexOf('id="wordcount-block"')+900)),
+       "주간 탭이 없다");
+    ok(/data-wc-tab="today"/.test(h) && /data-wc-tab="me"/.test(h),
+       "탭은 오늘과 내 기록 둘뿐이다");
+
+    const fed = ctx._feedSpy.filter(f => /^wordfeed\//.test(f.path));
+    ok(fed.length > 0, "글자수가 늘면 흐르는 기록에 한 줄 올라간다");
+    ok(fed.every(f => f.v.add > 0), "늘어난 만큼만 올라간다 (0이나 음수는 안 올린다)");
+    ok(fed.every(f => f.v.nick === "호랑" && f.v.at), "누가 언제 올렸는지 함께 남는다");
+    ok(fed.length === 3, `늘어난 횟수만큼만 올라간다 (${fed.length}번)`);
+
+    /* 오늘 화면에 사람별 순위나 막대가 나오면 안 됩니다 */
+    const feedHtml = W.drawFeed([{nick:"달빛", add:500, at:Date.now()}]);
+    ok(/\+500자/.test(feedHtml), "올라온 줄에 늘어난 글자수가 보인다");
+    ok(!/wc-bar/.test(feedHtml), "오늘 탭에는 막대를 그리지 않는다");
+    ok(/wc-feed-nm/.test(feedHtml), "누가 올렸는지는 보인다");
+    ok(/<span class="wc-feed-nm">&lt;b&gt;/.test(W.drawFeed([{nick:"<b>",add:1,at:1}])),
+       "흐르는 기록에서도 필명 속 태그를 글자로 처리한다");
+
+    const rulesFeed = rules.wordfeed;
+    ok(rulesFeed, "규칙에 wordfeed 가 있다");
+    ok(/nickOwner/.test(rulesFeed.$day.$id[".write"]), "남의 이름으로는 올릴 수 없다");
+    ok(/!data\.exists\(\)/.test(rulesFeed.$day.$id[".write"]), "올라간 줄은 고칠 수 없다");
+
+    // ⑩ 주간 합계
     ctx.Wordcount._state().week[W.dayKey()] = { "호랑":{total:100}, "달빛":{total:50} };
     const sw = W.sumWeek();
     ok(sw["호랑"] === 100 && sw["달빛"] === 50, "주간 합계가 사람별로 더해진다");
@@ -1358,7 +1388,7 @@ function finish(){
      앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
-  const MIN = 440;
+  const MIN = 455;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");
