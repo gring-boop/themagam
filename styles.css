@@ -4178,3 +4178,6 @@ body.side-collapsed .side-rail{
 /* 뽀모 — 시간 설정을 버튼과 다른 줄에 둡니다 (좁은 칸에서 서로 밀려서) */
 .pomo-row-setup{ display:flex; justify-content:center; }
 .pomo-row-setup .pomo-setup{ margin:0; }
+
+/* 뽀모 — 시작·정지·알림음 버튼도 가운데로 (시간 설정 줄과 맞춥니다) */
+.pomo-row-4.timer-controls{ justify-content: center; }
