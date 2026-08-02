@@ -218,8 +218,12 @@
       btn.title = on ? "오른쪽 줄 펼치기 (뽀모·채팅)" : "오른쪽 줄 접기 (뽀모·채팅)";
       btn.setAttribute("aria-label", btn.title);
     }
+    /* [고침 2026-08-03] 레일은 "채팅 접힘"의 손잡이입니다.
+       예전엔 옛 오른쪽줄 접기(on)를 따라가서, 배치를 다시 짤 때마다
+       (좌우 뒤집기 포함) 레일이 사라져 채팅을 되펼 수 없었습니다. */
     const rail = document.getElementById("chat-rail");
-    if (rail) rail.classList.toggle("hidden", !on);
+    if (rail) rail.classList.toggle("hidden",
+      !document.body.classList.contains("chat-collapsed"));
   }
   window.toggleSideCollapsed = function () {
     try { AppStore.setItem(SIDE_KEY, isSideCollapsed() ? "0" : "1"); } catch (e) {}
@@ -306,7 +310,10 @@
 
       const last = (i === kids.length - 1);
       if (isCollapsedChat) {
-        child.style.flex = "0 0 46px";
+        /* [고침 2026-08-03] 채팅 본체는 display:none 이므로 칸을 0으로.
+           46px 를 남겨두면 빈 여백 기둥이 생겼습니다. 레일(#chat-rail)이
+           바로 옆에 끼워져 손잡이 노릇을 합니다. */
+        child.style.flex = "0 0 0px";
         child.style.minWidth = "0";
         child.style.minHeight = "0";
       } else if (i === growIdx) {

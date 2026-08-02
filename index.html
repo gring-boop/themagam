@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608030432">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608030432">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608030452">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608030452">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608030432">
+  <link rel="manifest" href="manifest.json?v=202608030452">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608030432" />
+  <link rel="stylesheet" href="styles.css?v=202608030452" />
 </head>
 
 <body>
@@ -172,11 +172,6 @@
           <div class="set-title" id="slot-title">칸 배치</div>
           <!-- 실제 화면 모양 그림 -->
           <div class="slot-map" id="slot-map"></div>
-          <div class="mini-row" style="margin-top:8px;">
-            <button type="button" class="ghost-btn compact w-full" onclick="swapSideSlots()">
-              ② ③ 서로 바꾸기
-            </button>
-          </div>
           <div class="layout-pick" id="layout-pick">
             <!-- TheMagam — 세로 보기는 없앴습니다. 좌우 뒤집기만 남깁니다. -->
             <div class="pick-row" role="radiogroup" aria-label="좌우 뒤집기" style="margin-top:8px;">
@@ -189,7 +184,6 @@
             </div>
           </div>
           <p class="hint">
-            ① <b>접속자</b> 칸은 고정이에요. 오른쪽 줄의 <b>뽀모도로</b>와 <b>채팅</b> 순서만 바꿉니다.<br>
             칸 크기는 <b>칸 사이 회색 손잡이를 끌어서</b> 조절하고, 더블클릭하면 기본값입니다.
           </p>
           <div class="mini-row" style="margin-top:8px;">
@@ -399,6 +393,9 @@
           <div id="admin-area" class="hidden">
             <button class="admin-btn" onclick="clearAllChat()">전체 삭제 🔥</button>
           </div>
+          <!-- [2026-08-03] 채팅 접기 — 접으면 왼쪽에 얇은 손잡이(레일)가 남습니다 -->
+          <button id="chat-collapse-btn" class="icon-btn" type="button"
+                  aria-expanded="true" aria-label="채팅 접기" title="채팅 접기">❮</button>
           <!-- 채팅만 접는 버튼은 없앴습니다. 오른쪽 줄을 통째로 접습니다
                (머리말의 ❯ 버튼). 창마다 접기를 두면 무엇이 접힌 상태인지
                알기 어렵고, 접힌 자리에 빈 공간이 남았습니다. -->
@@ -435,8 +432,8 @@
 
   <!-- 오른쪽 줄을 접었을 때 남는 얇은 손잡이 -->
   <div id="chat-rail" class="side-rail chat-rail hidden">
-    <button id="side-rail-btn" class="side-rail-btn" type="button"
-            onclick="toggleSideCollapsed()" aria-label="오른쪽 줄 펼치기" title="펼치기">❮</button>
+    <button id="chat-rail-btn" class="side-rail-btn" type="button"
+            aria-label="채팅 펼치기" title="채팅 펼치기">❯</button>
     <span id="chat-rail-badge" class="side-rail-badge hidden" aria-live="polite">0</span>
     <span class="side-rail-label" aria-hidden="true">펼치기</span>
   </div>
@@ -644,19 +641,19 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608030432"></script>
-<script src="script_core.js?v=202608030432"></script>
-<script src="script_auth.js?v=202608030432"></script>
-<script src="script_ui.js?v=202608030432"></script>
-<script src="script_chat.js?v=202608030432"></script>
-<script src="script_data.js?v=202608030432"></script>
-<script src="script_realtime.js?v=202608030432"></script>
-<script src="script_layout.js?v=202608030432"></script>
-<script src="script_wordcount.js?v=202608030432"></script>
-<script src="script_timelog.js?v=202608030432"></script>
-<script src="script_profile.js?v=202608030432"></script>
-<script src="script_reactions.js?v=202608030432"></script>
-<script src="script_manual.js?v=202608030432"></script>
+<script src="fortune_data.js?v=202608030452"></script>
+<script src="script_core.js?v=202608030452"></script>
+<script src="script_auth.js?v=202608030452"></script>
+<script src="script_ui.js?v=202608030452"></script>
+<script src="script_chat.js?v=202608030452"></script>
+<script src="script_data.js?v=202608030452"></script>
+<script src="script_realtime.js?v=202608030452"></script>
+<script src="script_layout.js?v=202608030452"></script>
+<script src="script_wordcount.js?v=202608030452"></script>
+<script src="script_timelog.js?v=202608030452"></script>
+<script src="script_profile.js?v=202608030452"></script>
+<script src="script_reactions.js?v=202608030452"></script>
+<script src="script_manual.js?v=202608030452"></script>
 
 <script>
   window.addEventListener("load", () => {

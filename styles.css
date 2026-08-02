@@ -4578,3 +4578,28 @@ html[data-theme-style="ink"] .card-state{ border-radius: var(--r-full); }
 }
 /* 🍅 오늘 집중 횟수: 다크에서 밝은 라벤더로 */
 :root[data-is-dark="true"]{ --card-pomo: #CFC5F0; }
+
+/* =====================================================================
+   [2026-08-03·7차] 프로필 카드 고정 폭 · 채팅 접기 버튼
+   ===================================================================== */
+/* 카드가 칸 폭을 따라 늘어나지 않고 --card-w(214px) 그대로 고정됩니다.
+   칸이 넓으면 남는 자리는 가운데 여백으로 흡수돼요. */
+.user-cards-grid{
+  grid-template-columns: repeat(auto-fill, var(--card-w));
+  justify-content: center;
+}
+
+/* 채팅 헤더의 접기 버튼 — 머리말 아이콘과 같은 크기감 */
+#chat-collapse-btn{
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
+/* =====================================================================
+   [2026-08-03·8차] 채팅 접힘 마무리 — 빈 기둥 · 손잡이 정리
+   ===================================================================== */
+/* 접힌 채팅 본체는 확실히 숨깁니다 (칸 자체도 0px 로 줄어듭니다) */
+body.chat-collapsed .chat-sidebar{ display: none !important; }
+/* 접힌 채팅 옆의 크기조절 손잡이는 의미가 없으니 감춥니다 */
+body.chat-collapsed .split-grip[data-key="panel/chat"]{ display: none; }
