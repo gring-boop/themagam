@@ -962,14 +962,6 @@ function openProfileEditor() {
 }
 window.openProfileEditor = openProfileEditor;
 
-/** 카드의 펫을 누르면 설정 → 🐾 펫 으로 바로 갑니다 */
-function openPetPanel() {
-  if (!myNick) { alert("입장 후에 볼 수 있어요."); return; }
-  window.openSettings?.();
-  window.openTab?.("pet");
-}
-window.openPetPanel = openPetPanel;
-
 /**
  * 카드는 status가 바뀔 때마다 통째로 다시 그려지므로
  * 버튼마다 리스너를 다는 대신 컨테이너에 위임합니다.
@@ -986,16 +978,10 @@ function bindCardEditDelegate() {
       openProfileEditor();
       return;
     }
-    /* 펫 → 펫 관리 창 */
-    if (e.target?.closest?.("[data-open-pet]")) {
-      e.preventDefault(); e.stopPropagation();
-      window.openPetPanel?.();
-      return;
-    }
-    /* 상태표 → 상태 고르기 */
+    /* 상태표 → Work ↔ Break 토글 (2026-08-03: 상태 2가지로 축소) */
     if (e.target?.closest?.("[data-pick-status]")) {
       e.preventDefault(); e.stopPropagation();
-      window.openStatusPicker?.(e.target.closest("[data-pick-status]"));
+      window.toggleWritingStatus?.();
       return;
     }
   });
@@ -1004,9 +990,8 @@ function bindCardEditDelegate() {
   host.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     const t = e.target;
-    if (t?.closest?.("[data-open-pet]")) { e.preventDefault(); window.openPetPanel?.(); }
-    else if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
-    else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.openStatusPicker?.(t); }
+    if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
+    else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.toggleWritingStatus?.(); }
   });
 }
 window.bindCardEditDelegate = bindCardEditDelegate;
@@ -1027,26 +1012,17 @@ window.bindCardEditDelegate = bindCardEditDelegate;
       _openTab.apply(this, arguments);
       if (name === "profile") renderProfilePanel();
       if (name === "goals")   mountGoalBlocks(document.getElementById("panel-goals"));
-      if (name === "pet")     window.renderPetPanel?.();
       if (name === "record")  window.renderMyRecordPanel?.();
     };
     wrapped.__profilePatched = true;
     window.openTab = wrapped;
   }
 
-  /* 입장 완료 후 프로필 로드 + 시간 기록·펫 시작
+  /* 입장 완료 후 프로필 로드 + 시간 기록 시작
 
-     [FIX] 펫 관리 창에서 아무것도 안 눌리던 문제
-
-     startTimelog 와 startPet 을 init(페이지 로드) 에서만 불렀습니다.
-     그 시점에는 필명이 아직 없어서 두 함수가 첫 줄에서 그냥 돌아갑니다.
-     그래서 펫 정보가 비어 있었고, 껍데기·색을 눌러도 저장할 대상이
-     없어 조용히 아무 일도 일어나지 않았습니다.
-
-     화면에는 펫이 보였습니다. 값이 없을 때 기본값으로 그리게 해둔
-     탓입니다 — "보이는데 안 먹는다" 가 그래서 나왔습니다.
-
-     입장한 뒤에 다시 불러줍니다. 두 함수 모두 여러 번 불려도
+     [왜 입장 뒤인가] startTimelog 는 필명이 있어야 동작합니다.
+     페이지 로드(init) 시점에는 필명이 아직 없어서 첫 줄에서 그냥
+     돌아가므로, 입장한 뒤에 다시 불러줍니다. 여러 번 불려도
      안전하도록 만들어져 있습니다. */
   const _join = window.join;
   if (typeof _join === "function" && !_join.__profilePatched) {
@@ -1056,8 +1032,6 @@ window.bindCardEditDelegate = bindCardEditDelegate;
         try { await afterJoinLoadProfile(); } catch (e) { console.warn("[afterJoinLoadProfile]", e); }
         try { window.startTimelog?.(); }      catch (e) { console.warn("[startTimelog]", e); }
         try { window.startWordcount?.(); }    catch (e) {}
-        try { await window.startPet?.(); }    catch (e) { console.warn("[startPet]", e); }
-        try { window.renderPetPanel?.(); }    catch (e) {}
       }
     };
     wrapped.__profilePatched = true;
@@ -1079,7 +1053,6 @@ window.bindCardEditDelegate = bindCardEditDelegate;
       try { window.bindRecordOpen?.(); }    catch (e) { console.warn("[bindRecordOpen]", e); }
       try { window.hookTimelogStatus?.(); } catch (e) { console.warn("[hookTimelogStatus]", e); }
       try { window.startTimelog?.(); }      catch (e) { console.warn("[startTimelog]", e); }
-      try { window.startPet?.(); }          catch (e) { console.warn("[startPet]", e); }
     };
     wrapped.__profilePatched = true;
     window.init = wrapped;

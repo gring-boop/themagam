@@ -184,7 +184,7 @@
   // =====================================================
   // [1] 전역 상태
   // =====================================================
-  let currentTheme = AppStore.getItem("writerTheme") || "Light (iOS)"; // 로그인 전 기본값
+  let currentTheme = AppStore.getItem("writerTheme") || "📜 원고와 잉크"; // 로그인 전 기본값
   let _soundPrefs = { enabled: true, volume: 60, workSound: "soft_bell", restSound: "calm_chime" };
   let _pomoParticipating = true;
 
@@ -247,350 +247,9 @@
   // 🎨 Themes
   // =====================================================
   const themes = {
-    "Light (iOS)": { isDark:false, bg:"#F6F7F9", text:"#141618", me:"#0A84FF", other:"#E9EBEF", header:"#EEF0F3", meText:"#FFFFFF", otherText:"#141618" },
-    "Dark (기본)": { isDark:true, bg:"#202225", text:"#D9DDE3", me:"#7A8A9A", other:"#2C2F34", header:"#26292E", meText:"#16181B", otherText:"#D9DDE3" },
-    "카카오톡":   { isDark:false, bg:"#BACEe0", text:"#0F1115", me:"#FEE500", other:"#FFFFFF", header:"#ABC1D1", meText:"#111111", otherText:"#111111" },
-
-  // =====================================================
-  // ✅ 감성 컬러 테마 10종 (카카오톡식 대비)
-  // =====================================================
-
-  "🌸 벚꽃 + 버터": {
-    isDark: false,
-    bg: "#FFF0F5",
-    text: "#3A1F2A",
-    me: "#FFD966",
-    other: "#FFDDE8",
-    header: "#FFE4EF",
-    meText: "#3A2800",
-    otherText: "#3A1F2A"
-  },
-
-  "🩵 하늘 + 로즈": {
-    isDark: false,
-    bg: "#EEF7FF",
-    text: "#1A2A3A",
-    me: "#F4A7B9",
-    other: "#D6EEFF",
-    header: "#DCF0FF",
-    meText: "#2A0A14",
-    otherText: "#1A2A3A"
-  },
-
-  "🍋 레몬 + 라벤더": {
-    isDark: false,
-    bg: "#FFFBEC",
-    text: "#2A2535",
-    me: "#C9B8E8",
-    other: "#FFF3BB",
-    header: "#FFF8D6",
-    meText: "#1A0E30",
-    otherText: "#2A2535"
-  },
-
-  "🌿 민트 + 피치": {
-    isDark: false,
-    bg: "#F0FBF7",
-    text: "#1A2E28",
-    me: "#FFB499",
-    other: "#C8F0E2",
-    header: "#D8F5EC",
-    meText: "#2A1000",
-    otherText: "#1A2E28"
-  },
-
-  "🌙 라일락 + 크림": {
-    isDark: false,
-    bg: "#F7F2FF",
-    text: "#28203A",
-    me: "#FFE5B4",
-    other: "#E8DEFF",
-    header: "#EDE4FF",
-    meText: "#2A1A00",
-    otherText: "#28203A"
-  },
-
-  "🍓 딸기 + 스카이": {
-    isDark: false,
-    bg: "#FFF5F7",
-    text: "#2A1A20",
-    me: "#87CEEB",
-    other: "#FFD6DC",
-    header: "#FFE0E6",
-    meText: "#0A2030",
-    otherText: "#2A1A20"
-  },
-
-  "🧁 코튼캔디": {
-    isDark: false,
-    bg: "#FFF0FA",
-    text: "#2E1A2E",
-    me: "#A8DAFF",
-    other: "#FFD6F5",
-    header: "#FFE4FB",
-    meText: "#0A1E30",
-    otherText: "#2E1A2E"
-  },
-
-  "🍊 오렌지 + 아쿠아": {
-    isDark: false,
-    bg: "#FFFAF0",
-    text: "#2A2010",
-    me: "#7FD8D4",
-    other: "#FFE0B8",
-    header: "#FFEECF",
-    meText: "#0A2020",
-    otherText: "#2A2010"
-  },
-
-  "🫐 블루베리 + 샴페인": {
-    isDark: false,
-    bg: "#F3F0FF",
-    text: "#1E1A30",
-    me: "#F5E6C8",
-    other: "#DDD6FF",
-    header: "#E8E2FF",
-    meText: "#2A1E00",
-    otherText: "#1E1A30"
-  },
-
-  "🌺 산호 + 민트크림": {
-    isDark: false,
-    bg: "#FFF6F4",
-    text: "#2A1A18",
-    me: "#B8F0E0",
-    other: "#FFD4CC",
-    header: "#FFE2DC",
-    meText: "#0A2418",
-    otherText: "#2A1A18"
-  },
-
-    "🍵 말차 + 레몬": {
-    isDark: false,
-    bg: "#F4FAF0",
-    text: "#1E2A1A",
-    me: "#F9F07A",
-    other: "#C8E6C0",
-    header: "#D8F0D0",
-    meText: "#2A2200",
-    otherText: "#1E2A1A"
-  },
-
-  "🌱 새싹 + 복숭아": {
-    isDark: false,
-    bg: "#F2F9F0",
-    text: "#1A2818",
-    me: "#FFCBA4",
-    other: "#C4E8BC",
-    header: "#D2EEC8",
-    meText: "#2A1400",
-    otherText: "#1A2818"
-  },
-
-  "🫚 올리브 + 바닐라": {
-    isDark: false,
-    bg: "#F6F8EE",
-    text: "#222818",
-    me: "#FFF5CC",
-    other: "#DDE8C0",
-    header: "#E6EED0",
-    meText: "#2A2200",
-    otherText: "#222818"
-  },
-
-  "🌊 아쿠아 + 선셋": {
-    isDark: false,
-    bg: "#EEF9F8",
-    text: "#182828",
-    me: "#FFCF99",
-    other: "#C0E8E4",
-    header: "#CCEEE8",
-    meText: "#2A1800",
-    otherText: "#182828"
-  },
-
-  "🍃 그린티 + 라이트핑크": {
-    isDark: false,
-    bg: "#EEF7EE",
-    text: "#1A281A",
-    me: "#FFD6E0",
-    other: "#C2DFC2",
-    header: "#D0ECD0",
-    meText: "#2A0A14",
-    otherText: "#1A281A"
-  },
-
-  "🌤️ 안개꽃 + 하늘": {
-    isDark: false,
-    bg: "#F2F6FF",
-    text: "#1A2030",
-    me: "#B8E4FF",
-    other: "#E2E8FF",
-    header: "#EAF0FF",
-    meText: "#0A1E2A",
-    otherText: "#1A2030"
-  },
-
-  "🍈 유자 + 세이지": {
-    isDark: false,
-    bg: "#F8FAF0",
-    text: "#20281A",
-    me: "#FFF0A0",
-    other: "#D4E8C8",
-    header: "#E0EED4",
-    meText: "#282000",
-    otherText: "#20281A"
-  },
-
-  "🌷 튤립 + 버터밀크": {
-    isDark: false,
-    bg: "#FFF8F8",
-    text: "#2E1A1A",
-    me: "#FFF2C0",
-    other: "#FFD8DC",
-    header: "#FFE4E8",
-    meText: "#2A2000",
-    otherText: "#2E1A1A"
-  },
-
-  "🫧 소다 + 라임": {
-    isDark: false,
-    bg: "#F0FEF8",
-    text: "#182820",
-    me: "#D4F5A0",
-    other: "#C0F0E8",
-    header: "#CCEEE4",
-    meText: "#182400",
-    otherText: "#182820"
-  },
-
-  "🌻 해바라기 + 스카이": {
-    isDark: false,
-    bg: "#FFFCEE",
-    text: "#28220A",
-    me: "#ADE8F4",
-    other: "#FFF0B0",
-    header: "#FFF6CC",
-    meText: "#082030",
-    otherText: "#28220A"
-  },
-
-  "🌿 세이지 + 크림": {
-    isDark: false,
-    bg: "#DDE8DC",
-    text: "#1E2A1E",
-    me: "#EEE8D5",
-    other: "#CBD8CA",
-    header: "#D4E2D3",
-    meText: "#2A2418",
-    otherText: "#1E2A1E"
-  },
-
-  "🩶 스모크 블루 + 아이보리": {
-    isDark: false,
-    bg: "#D8DDE8",
-    text: "#1A1E2A",
-    me: "#EEE8D5",
-    other: "#C8CDD8",
-    header: "#CDD3E2",
-    meText: "#1E1A10",
-    otherText: "#1A1E2A"
-  },
-
-  "🌸 로즈 애쉬 + 밀크": {
-    isDark: false,
-    bg: "#E8D8D8",
-    text: "#2A1E1E",
-    me: "#F0EBE0",
-    other: "#D8C8C8",
-    header: "#E2CDCD",
-    meText: "#2A2010",
-    otherText: "#2A1E1E"
-  },
-
-  "🌾 샌드 + 오트밀": {
-    isDark: false,
-    bg: "#E2DDD0",
-    text: "#28221A",
-    me: "#EDE8DA",
-    other: "#D4CFC2",
-    header: "#DAD5C6",
-    meText: "#28220E",
-    otherText: "#28221A"
-  },
-
-  "💜 라벤더 애쉬 + 크림": {
-    isDark: false,
-    bg: "#E0DAE8",
-    text: "#22182A",
-    me: "#EEE8DC",
-    other: "#D2CCDA",
-    header: "#D8D0E2",
-    meText: "#201A0E",
-    otherText: "#22182A"
-  },
-
-    "밤샘 · 무채 차콜": { isDark:true, bg:"#2A2C2F", text:"#D6D8DC", me:"#7C7F83", other:"#34373B", header:"#303338", meText:"#1F2124", otherText:"#D6D8DC" },
-
-    /* =====================================================================
-       신규 16종 — 포인트 컬러가 확실한 톤
-       ---------------------------------------------------------------------
-       위쪽 테마들과 달리 accent 를 함께 지정합니다. applyTheme()이 이 값을
-       버튼 · 강조선 · 포커스 테두리까지 밀어넣기 때문에, 배경만 바뀌던
-       기존 테마와 달리 화면 전체의 인상이 바뀝니다.
-       ===================================================================== */
-
-    /* -- 다크 2종 -- */
-    "딥 티얼":   { isDark:true, bg:"#0F1A1C", text:"#D3E3E1", me:"#2DD4BF", other:"#17262A", header:"#142124", meText:"#06231F", otherText:"#D3E3E1", accent:"#2DD4BF" },
-    "그래파이트": { isDark:true, bg:"#1B1D1F", text:"#D8DBDF", me:"#94A3B8", other:"#282B2E", header:"#232629", meText:"#16181B", otherText:"#D8DBDF", accent:"#94A3B8" },
-
-    /* -- 그레이 -- */
-
-    /* -- 웜 그레이 -- */
-    "웜 그레이 · 브릭":   { isDark:false, bg:"#F6F2EE", text:"#261C1A", me:"#A85751", other:"#EBE4DD", header:"#F0EAE4", meText:"#FFFFFF", otherText:"#261C1A", accent:"#A85751" },
-
-    /* -- 그린 -- */
-
-    /* -- 라벤더 -- */
-
-    /* -- 블루 -- */
-
-    /* -- 샌드 -- */
-
-    /* =====================================================================
-       반다크 10종 — 까맣지 않은 중간 톤
-       ---------------------------------------------------------------------
-       완전한 검정 대신 회색빛이 도는 중간 어둠으로 두고, 말풍선은 한 단계
-       밝게 띄웁니다. 배경만 짙게 하는 게 아니라 글자 · 말풍선 · 포인트까지
-       한 세트로 맞춰서, 오래 봐도 눈이 덜 피로하도록 대비를 낮췄습니다.
-       ===================================================================== */
-
-    /* =====================================================================
-       팔레트 20종 — 세이지 · 테라코타 · 크림 계열의 낮은 채도 조합
-       ---------------------------------------------------------------------
-       배경은 가장 옅은 색, 상대 말풍선은 그 다음 옅은 색,
-       내 말풍선과 포인트는 그 팔레트에서 가장 진한 색을 씁니다.
-       ===================================================================== */
-    "세이지 · 브라운":   { isDark:false, bg:"#EDF3EA", text:"#22301F", me:"#7BA37B", other:"#D8E7D3", header:"#E4EDE0", meText:"#FFFFFF", otherText:"#22301F", accent:"#6E9169" },
-    "브라운 · 세이지":   { isDark:false, bg:"#F1EDE9", text:"#2A241F", me:"#8D7B72", other:"#E1E9DC", header:"#EAE5DF", meText:"#FFFFFF", otherText:"#2A241F", accent:"#8D7B72" },
-    "딥틸 · 살몬":       { isDark:false, bg:"#EAF0EE", text:"#1D2B29", me:"#D98F7A", other:"#D6E4E0", header:"#E1EAE7", meText:"#FFFFFF", otherText:"#1D2B29", accent:"#3F6560" },
-    "민트 · 브릭":       { isDark:false, bg:"#EAF4EE", text:"#20302A", me:"#C2685C", other:"#D7EADF", header:"#E1EFE7", meText:"#FFFFFF", otherText:"#20302A", accent:"#C2685C" },
-    "레몬 · 네이비":     { isDark:false, bg:"#F5F5E2", text:"#232636", me:"#4A5470", other:"#E7EBD6", header:"#EEEFDA", meText:"#FFFFFF", otherText:"#232636", accent:"#4A5470" },
-    "그레이 · 퍼플":     { isDark:false, bg:"#F0F1F1", text:"#25222B", me:"#6E5A86", other:"#E1E7E2", header:"#E8EAE9", meText:"#FFFFFF", otherText:"#25222B", accent:"#6E5A86" },
-    "토마토 · 민트":     { isDark:false, bg:"#F2F5F3", text:"#26221F", me:"#E4574A", other:"#DFF0E7", header:"#E9F0EC", meText:"#FFFFFF", otherText:"#26221F", accent:"#D6483C" },
-    "틸 · 오렌지":       { isDark:false, bg:"#EAF7F3", text:"#16302B", me:"#F2A85C", other:"#D5EFE7", header:"#E1F2EC", meText:"#3A2205", otherText:"#16302B", accent:"#2FA88C" },
-    "크림 · 피치":       { isDark:false, bg:"#FBF2EA", text:"#2E241C", me:"#EFA98A", other:"#E9E2D8", header:"#F4EADF", meText:"#3A1D0C", otherText:"#2E241C", accent:"#C98263" },
-    "아쿠아 · 로즈":     { isDark:false, bg:"#E9F6F5", text:"#1E2E2D", me:"#EE7A96", other:"#DCF0E9", header:"#E0F0EE", meText:"#FFFFFF", otherText:"#1E2E2D", accent:"#DD5E7E" },
-    "아이보리 · 틸":     { isDark:false, bg:"#FAF4EC", text:"#26251F", me:"#3AA6A0", other:"#EFE4D4", header:"#F3EBDF", meText:"#FFFFFF", otherText:"#26251F", accent:"#2E938D" },
-    "아이보리 · 올리브": { isDark:false, bg:"#FAF3EA", text:"#282A20", me:"#8A9A6B", other:"#E4EBDB", header:"#F1EDE2", meText:"#FFFFFF", otherText:"#282A20", accent:"#75855A" },
-    "샌드 · 스틸":       { isDark:false, bg:"#F6EFDC", text:"#252B2E", me:"#8FA6B2", other:"#E9EFDD", header:"#EFE8D4", meText:"#16232A", otherText:"#252B2E", accent:"#6E8794" },
-    "블루 · 크림":       { isDark:false, bg:"#EEF3FA", text:"#1D2534", me:"#5B7BB8", other:"#DCE8F4", header:"#E5EDF7", meText:"#FFFFFF", otherText:"#1D2534", accent:"#5B7BB8" },
-    "퍼플 · 민트":       { isDark:false, bg:"#F1EFF7", text:"#262238", me:"#7E7BA8", other:"#E3E1F0", header:"#EAE7F3", meText:"#FFFFFF", otherText:"#262238", accent:"#6E6B99" },
-    "옐로 · 틸":         { isDark:false, bg:"#F7F7DC", text:"#232B27", me:"#4F9A8A", other:"#E4EFD5", header:"#EFF1D3", meText:"#FFFFFF", otherText:"#232B27", accent:"#3F8878" },
-    "베이지 · 슬레이트": { isDark:false, bg:"#F4EFE7", text:"#232A2C", me:"#4A5A5E", other:"#E7DFD2", header:"#EDE6DB", meText:"#FFFFFF", otherText:"#232A2C", accent:"#4A5A5E" },
-    "핑크 · 스틸":       { isDark:false, bg:"#FAEFF1", text:"#2A2126", me:"#7392B5", other:"#EFE4EE", header:"#F3E8EB", meText:"#FFFFFF", otherText:"#2A2126", accent:"#6182A6" },
-    "민트 · 옐로":       { isDark:false, bg:"#EAF7F1", text:"#1F2E28", me:"#E8A7C6", other:"#FDF6DC", header:"#E2F1EA", meText:"#3A1B2A", otherText:"#1F2E28", accent:"#57B99A" },
-    "딥그린 · 베이지":   { isDark:false, bg:"#EEEFE6", text:"#22271F", me:"#4C5A45", other:"#DFE3D5", header:"#E7E9DE", meText:"#FFFFFF", otherText:"#22271F", accent:"#4C5A45" },
+    "📜 원고와 잉크":     { isDark:false, style:"ink",    bg:"#FAF6EC", text:"#2B2620", me:"#2B2620", other:"#FFFDF6", header:"#F4EEDF", meText:"#F5EFDF", otherText:"#2B2620", accent:"#B3372B" },
+    "🌙 마감 전야":       { isDark:true,  style:"night",  bg:"#15171E", text:"#E6E4DC", me:"#FFB43C", other:"#232733", header:"#1B1E27", meText:"#231A05", otherText:"#E6E4DC", accent:"#FFB43C" },
+    "💠 조용한 스튜디오": { isDark:false, style:"studio", bg:"#F1F2F4", text:"#20242B", me:"#2F6BFF", other:"#FFFFFF", header:"#FFFFFF", meText:"#FFFFFF", otherText:"#20242B", accent:"#2F6BFF" },
   };
 
   function hexToRgba(hex, alpha) {
@@ -604,13 +263,18 @@
   }
 
   function applyTheme(name) {
-    const t = themes[name] || themes["Light (iOS)"];
+    /* 옛 테마(파스텔 30여 종) 저장값 마이그레이션 —
+       목록에 없는 이름이 오면 기본 테마로 흘려보냅니다. */
+    if (!themes[name]) name = "📜 원고와 잉크";
+    const t = themes[name];
     const r = document.documentElement.style;
     const root = document.documentElement;
     const isDark = !!t.isDark;
 
     root.setAttribute("data-theme-mode", "manual");
     root.setAttribute("data-is-dark", isDark ? "true" : "false");
+    /* 테마별 전용 스타일(원고지 괘선 · 명조 제목 · 모노 숫자 등)을 CSS가 읽는 표식 */
+    root.setAttribute("data-theme-style", t.style || "default");
 
     const bg = t.bg || "#E9EDF3";
     const panel  = t.panel  || (isDark ? "rgba(22,24,28,.96)" : hexToRgba(bg, 0.70));
@@ -692,6 +356,11 @@
         dot.className = "chip-dot";
         btn.appendChild(dot);
 
+        const label = document.createElement("span");
+        label.className = "chip-name";
+        label.textContent = name;
+        btn.appendChild(label);
+
         btn.addEventListener("click", async () => {
           applyTheme(name);
           await saveThemeForNick(name);
@@ -712,6 +381,7 @@
 
       btn.style.setProperty("--chip-bg", bg);
       btn.style.setProperty("--chip-me", me);
+      btn.style.setProperty("--chip-label", t.text || "#141618");
       btn.style.background = `linear-gradient(90deg, ${bg} 0 50%, ${me} 50% 100%)`;
       btn.style.borderColor = t.isDark ? "rgba(255,255,255,.18)" : "rgba(0,0,0,.10)";
       btn.classList.toggle("selected", name === currentTheme);
@@ -753,9 +423,9 @@
     }
 
     try {
-      return AppStore.getItem("writerTheme") || "Light (iOS)";
+      return AppStore.getItem("writerTheme") || "📜 원고와 잉크";
     } catch(e) {
-      return "Light (iOS)";
+      return "📜 원고와 잉크";
     }
   }
 
@@ -1119,6 +789,15 @@
     return _pomoParticipating;
   }
 
+  /* [이식 2026-08-03 · 벨사탕 0802] 지금 도는 뽀모를 시작한 사람 — 참여 버튼에 표시 */
+  let _pomoStarter = "";
+  window.setPomoStarter = function (nick) {
+    const n = String(nick || "");
+    if (n === _pomoStarter) return;
+    _pomoStarter = n;
+    _renderParticipationButton();
+  };
+
   function _renderParticipationButton() {
     /* 같은 스위치가 두 곳에 있습니다 — 뽀모도로 창과 설정 → 🍅 뽀모도로.
        둘이 다른 모습을 보이면 어느 쪽이 진짜인지 알 수 없으니
@@ -1131,13 +810,15 @@
     btns.forEach(btn => {
       if (_pomoParticipating) {
         btn.dataset.state = "on";
-        btn.textContent = "🔔 참여 중 · 알림 ON";
+        btn.innerHTML = "Join ‣ 알림 ON" + (_pomoStarter
+          ? ` // <span class="pomo-starter-lb">starter</span> <span class="pomo-starter-nm">${window.escapeHtml ? window.escapeHtml(_pomoStarter) : ""}</span>`
+          : "");
         btn.classList.remove("danger");
         btn.classList.add("primary");
         btn.setAttribute("aria-pressed", "true");
       } else {
         btn.dataset.state = "off";
-        btn.textContent = "🔕 미참여 · 알림 OFF";
+        btn.textContent = "Join ‣ 알림 OFF";
         btn.classList.remove("primary");
         btn.classList.add("danger");
         btn.setAttribute("aria-pressed", "false");
@@ -1388,7 +1069,8 @@
     line.classList.remove("hidden");
     line.dataset.mode = (mode === "rest") ? "rest" : "work";
 
-    if (tag) tag.textContent = (mode === "rest") ? "☕ 휴식 중" : "🍅 집중 세션 중";
+    /* [2026-08-03] "집중 세션 중" 문구는 뺐습니다 — 아이콘만 */
+    if (tag) tag.textContent = (mode === "rest") ? "☕" : "🍅";
     if (digits) digits.textContent = _fmtMMSS(remain);
 
     const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);

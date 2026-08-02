@@ -42,21 +42,32 @@
 (function () {
 
   const STATUSES = [
-    { id: "writing", label: "WORK",       color: "#C0392B" },
-    { id: "focus",   label: "🔥초집중",    color: "#C2701A" },
-    { id: "rest",    label: "휴식",        color: "#2E8B6B" },
-    { id: "away",    label: "자리비움",    color: "#8A8F98" }
+    { id: "writing", label: "Work",        color: "#C0392B" },
+    { id: "focus",   label: "Work(집중)",  color: "#C2701A" },   /* 옛 기록용 */
+    { id: "rest",    label: "Break",       color: "#2E8B6B" },
+    { id: "away",    label: "Break(이석)", color: "#8A8F98" }    /* 옛 기록용 */
   ];
   const STATUS_IDS = STATUSES.map(s => s.id);
 
   const OFFLINE_MIN_MS = 5 * 60 * 1000;   // 이보다 오래 끊겼으면 그 구간을 집계에서 뺍니다
   const SEG_CAP_MS     = 6 * 60 * 60 * 1000; // 한 구간의 상한 (상식 밖 값 방지)
   const ALIVE_TICK_MS  = 30 * 1000;
+  /* [추가 2026-08-02] 열린 구간이 이 길이를 넘으면 잘라서 저장하고 새로 엽니다.
+     같은 상태로 밤새 달리면 한 구간이 6시간 상한(SEG_CAP_MS)에 걸려
+     그 뒤가 통째로 잘렸습니다. 1시간마다 미리 닫아두면 상한에 걸릴 일이
+     없고, 자정을 넘길 때도 날짜별로 제때 나뉩니다. */
+  const CHECKPOINT_MS  = 60 * 60 * 1000;
 
   /* 예전 이름을 쓰는 곳이 있을 수 있어 남겨둡니다 */
   const GAP_LIMIT_MS = OFFLINE_MIN_MS;
 
   const KEY_ALIVE = "timelogAliveAt";
+
+  /* [추가 2026-08] 이 페이지(세션)의 표식.
+     timeCur 는 계정당 하나인데 기기는 여러 대일 수 있습니다. 누가 열어둔
+     구간인지 구분해야, 다른 기기가 이어받을 때 시간이 증발하거나 이중으로
+     잡히는 것을 막을 수 있습니다. */
+  const SID = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
   function ymd(ms) {
     const d = new Date(ms);
@@ -75,6 +86,13 @@
      --------------------------------------------------------------- */
   function markAlive() {
     try { AppStore.setItem(KEY_ALIVE, String(nowMs())); } catch (e) {}
+    /* [추가 2026-08] 서버의 열린 구간에도 도장을 찍습니다.
+       localStorage 도장은 기기별이라 다른 기기가 구간을 정리할 때 못 보고,
+       백그라운드 탭은 타이머가 얼어 도장 자체가 멈춥니다. 서버에 찍어두면
+       어느 기기가 정리하든 이 구간의 실제 마지막 활동 시각을 압니다. */
+    try {
+      if (_cur && myNick) curRef().child("alive").set(nowMs());
+    } catch (e) {}
   }
   function lastAlive() {
     try {
@@ -86,9 +104,30 @@
   /* ---------------------------------------------------------------
      [2] 구간 쓰기
      --------------------------------------------------------------- */
-  let _cur = null;      // { s, a }  지금 열려 있는 구간
+  let _cur = null;      // { s, a, sid }  지금 열려 있는 구간
 
   function curRef() { return db.ref(`users/${myNick}/timeCur`); }
+
+  /* [추가 2026-08] 연결이 끊기면 **서버가** 끊긴 시각을 적습니다.
+
+     탭이 얼거나(백그라운드), 브라우저가 죽거나, 컴퓨터가 잠들면 JS 는
+     아무것도 못 남깁니다. 하지만 파이어베이스 서버는 소켓이 끊긴 순간을
+     정확히 알고, onDisconnect 로 그 시각을 대신 적어줄 수 있습니다.
+     다음 입장 때 이 시각까지 전액 인정하므로, 백그라운드에서 쌓은
+     시간이 증발하지 않습니다 — "연결이 살아있는 동안은 전액 인정"이라는
+     이 파일의 원칙을 이걸로 실제로 지킵니다. */
+  function armDisc() {
+    try {
+      /* [고침 2026-08-02] 묵은 disc 를 먼저 지웁니다.
+
+         잠깐 끊겼다 붙으면(5분 미만) 구간을 새로 쓰지 않는데, 그 사이
+         서버가 onDisconnect 로 적어둔 disc 는 지워지지 않고 남았습니다.
+         loadSummary 가 이 묵은 disc 까지만 세는 바람에, 계속 접속해서
+         쓰고 있는데도 오늘 합계가 그 시각(예: 2분)에서 멈췄습니다. */
+      curRef().child("disc").remove();
+      curRef().child("disc").onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
+    } catch (e) {}
+  }
 
   /** 하루를 넘기는 구간은 날짜별로 쪼개서 저장합니다 */
   async function pushSegment(status, from, to) {
@@ -122,6 +161,58 @@
     }
   }
 
+  /* [추가 2026-08-02] 구간을 뺏겼으면 되찾습니다.
+
+     timeCur 는 계정당 하나라, 같은 계정으로 두 번째 탭·기기가 열리면
+     그쪽이 구간을 가져가고 이 탭은 _cur 를 놓습니다. 예전엔 상태를
+     바꾸기 전까지 다시 시작하지 않아서, 그 뒤로 몇 시간을 써도 서버에
+     아무것도 안 쌓였습니다 (펫 레벨이 되돌아가던 원인).
+
+     이제 화면에 보이는 탭이 30초 안에 구간을 되찾아 이어갑니다.
+     되찾기 전에 상대가 열어둔 구간을 alive/disc 시각까지 닫아 주므로
+     양쪽 다 시간이 새지 않고, 숨어 있는 탭은 되찾지 않으므로 두 탭이
+     서로 뺏고 빼앗는 일도 없습니다. */
+  let _remoteCur = null;
+  let _reclaimBusy = false;
+  async function reclaimIfDropped() {
+    if (_reclaimBusy || _cur || !myNick || !_tlStarted) return;
+    if (document.visibilityState !== "visible") return;
+    _reclaimBusy = true;
+    try {
+      const t = nowMs();
+      const v = _remoteCur;
+      if (v && v.sid && v.sid !== SID && Number(v.a) > 0) {
+        const cut = Math.min(t, Math.max(
+          Number(v.a), Number(v.alive) || 0, Number(v.disc) || 0));
+        await pushSegment(v.s, Number(v.a), cut);
+      }
+      _lastSeenStatus = currentUiStatus();
+      _cur = { s: _lastSeenStatus, a: t, sid: SID };
+      await curRef().set(_cur);
+      markAlive();
+      armDisc();
+    } catch (e) {}
+    _reclaimBusy = false;
+  }
+
+  /* [추가 2026-08-02] 열린 구간이 너무 길면 잘라서 저장하고 같은 상태로
+     다시 엽니다. 합계는 변하지 않고(닫힌 구간 + 새 열린 구간), 한 구간이
+     6시간 상한에 걸려 뒤가 잘리는 일만 막습니다. */
+  let _ckptBusy = false;
+  async function checkpointIfLong() {
+    if (_ckptBusy || !_cur || !myNick) return;
+    if (nowMs() - Number(_cur.a) < CHECKPOINT_MS) return;
+    _ckptBusy = true;
+    try {
+      const at = nowMs();
+      const prev = _cur;
+      _cur = { s: prev.s, a: at, sid: SID };
+      await pushSegment(prev.s, prev.a, at);
+      await curRef().set(_cur);
+    } catch (e) {}
+    _ckptBusy = false;
+  }
+
   /** 지금 열린 구간을 닫고 새 상태로 다시 엽니다 */
   async function switchTo(status, at) {
     const t = at || nowMs();
@@ -131,7 +222,7 @@
 
     if (_cur) await pushSegment(_cur.s, _cur.a, t);
 
-    _cur = { s: next, a: t };
+    _cur = { s: next, a: t, sid: SID };
     try { await curRef().set(_cur); } catch (e) {}
   }
 
@@ -165,10 +256,15 @@
       if (gone >= OFFLINE_MIN_MS && _cur) {
         // 끊긴 시각까지만 인정하고, 그 뒤부터 다시 시작 (그 사이는 안 셈)
         await pushSegment(_cur.s, _cur.a, _offlineSince);
-        _cur = { s: _cur.s, a: nowMs() };
+        _cur = { s: _cur.s, a: nowMs(), sid: SID };
         try { await curRef().set(_cur); } catch (e) {}
       }
       _offlineSince = 0;
+
+      /* [추가 2026-08] 다시 붙을 때마다 onDisconnect 를 재장전합니다.
+         (onDisconnect 예약은 연결 단위라, 끊겼다 붙으면 새로 걸어야 합니다.
+          set(_cur) 이 노드를 통째로 덮어써서 지난 disc 는 함께 지워집니다.) */
+      armDisc();
     });
   }
 
@@ -193,10 +289,20 @@
       const prev = snap.val();
       if (prev && Number(prev.a) > 0) {
         /* 지난번에 창을 닫으면서 못 닫은 구간이 남아 있습니다.
-           마지막으로 살아 있던 시각까지만 인정하고, 그 뒤(창이 닫혀 있던
-           시간)는 아예 세지 않습니다. 자리비움으로 찍지도 않습니다. */
-        const alive = lastAlive();
-        const cut = (alive && alive > Number(prev.a)) ? alive : Number(prev.a);
+           살아 있었다고 확인되는 가장 늦은 시각까지 인정하고, 그 뒤는
+           세지 않습니다. 자리비움으로 찍지도 않습니다.
+
+           [고침 2026-08] 예전엔 이 기기의 localStorage 도장만 봤습니다.
+           그래서 ① 다른 기기가 열어둔 구간을 정리하면 통째로 증발했고,
+           ② 백그라운드 탭은 도장 타이머가 얼어 그 사이가 잘렸습니다.
+           이제 서버가 적어준 끊긴 시각(disc)과 서버 도장(alive)을 함께
+           봐서, 가장 늦은 시각까지 전액 인정합니다. */
+        const cut = Math.min(nowMs(), Math.max(
+          Number(prev.a),
+          Number(prev.alive) || 0,
+          Number(prev.disc) || 0,
+          lastAlive() || 0
+        ));
         await pushSegment(prev.s, Number(prev.a), cut);
       }
     } catch (e) {}
@@ -205,12 +311,27 @@
     _lastSeenStatus = currentUiStatus();
     await switchTo(_lastSeenStatus, nowMs());
     markAlive();
+    armDisc();
+
+    /* [추가 2026-08] 다른 기기가 timeCur 를 이어받으면 이쪽은 조용히 놓습니다.
+       저쪽이 이 구간을 disc/alive 시각까지 정리했으니, 여기서 또 닫으면
+       같은 시간이 이중으로 잡힙니다. 놓기만 하고 아무것도 더하지 않습니다.
+       (놓은 뒤 이 기기에서 상태를 바꾸면 그때 새 구간으로 다시 시작합니다) */
+    try {
+      curRef().on("value", s3 => {
+        const v = s3.val();
+        _remoteCur = v || null;          // 되찾을 때 상대 구간을 닫는 데 씁니다
+        if (_cur && v && v.sid && v.sid !== SID) _cur = null;
+      });
+    } catch (e) {}
 
     setInterval(() => {
       if (!myNick) return;
       markAlive();
+      if (!_cur) { reclaimIfDropped(); return; }   // 다른 탭에 뺏긴 경우
       const s = currentUiStatus();
-      if (s !== _lastSeenStatus) { _lastSeenStatus = s; switchTo(s); }
+      if (s !== _lastSeenStatus) { _lastSeenStatus = s; switchTo(s); return; }
+      checkpointIfLong();
     }, ALIVE_TICK_MS);
 
     watchConnection();
@@ -218,21 +339,25 @@
     const wake = () => {
       if (!myNick || document.visibilityState === "hidden") return;
       markAlive();
+      if (!_cur) reclaimIfDropped();   // 뺏긴 채 돌아왔으면 바로 되찾기
     };
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("focus", wake);
     document.addEventListener("resume", wake);
 
-    window.addEventListener("pagehide", () => {
-      // 마지막 구간을 닫아둡니다 (실패해도 다음 입장 때 정리됩니다)
-      try {
-        if (_cur) {
-          const t = nowMs();
-          db.ref(`users/${myNick}/timeSegs/${ymd(_cur.a)}`).push({ s: _cur.s, a: _cur.a, b: t });
-          curRef().remove();
-        }
-      } catch (e) {}
-    });
+    /* [고침 2026-08] 창이 닫힐 때 여기서 직접 구간을 닫지 않습니다.
+
+       예전엔 pagehide 에서 timeSegs 에 한 줄 적고 timeCur 를 지웠는데,
+       두 가지 문제가 있었습니다.
+         ① 기록장에는 적으면서 펫 누적(workMsTotal)에는 안 더해서,
+            곱게 닫을 때마다 마지막 집필 구간이 펫에게만 누락됐습니다.
+         ② 닫히는 순간의 전송은 어디까지 도착할지 알 수 없어서, 절반만
+            성공하면 같은 구간이 안 잡히거나 두 번 잡힐 수 있었습니다.
+
+       이제는 아무것도 하지 않습니다. 소켓이 닫히면 서버가 onDisconnect 로
+       끊긴 시각(disc)을 적어주고, 다음 입장 때 그 시각까지 **한 번만**
+       정산합니다 (기록장과 펫 누적이 같은 경로로 함께 처리됩니다).
+       그동안의 오늘 합계는 loadSummary 가 disc 를 보고 계산합니다. */
   }
   window.startTimelog = startTimelog;
 
@@ -293,7 +418,13 @@
          상한을 넘긴 뒤로는 더 늘지 않고 6시간에서 멈춥니다. */
       if (cur && Number(cur.a) > 0) {
         const curStart = Number(cur.a);
-        const curEnd   = Math.min(t, curStart + SEG_CAP_MS);   // ← 상한
+        /* [고침 2026-08] 끊긴 사람의 열린 구간은 disc 까지만 셉니다.
+           [고침 2026-08-02] 단 alive 가 disc 보다 최신이면 disc 무시 —
+           잠깐 끊겼다 붙은 뒤 남은 묵은 disc 가 합계를 멈추던 버그. */
+        const disc     = Number(cur.disc) || 0;
+        const alive    = Number(cur.alive) || 0;
+        const hardEnd  = (disc > 0 && disc >= alive) ? Math.min(t, disc) : t;
+        const curEnd   = Math.min(hardEnd, curStart + SEG_CAP_MS);   // ← 상한
         const a = Math.max(curStart, dayMs);
         const b = Math.min(curEnd, dayMs + 24 * 60 * 60 * 1000);
         if (b > a) totals[normStatus(cur.s)] += (b - a);
@@ -352,7 +483,7 @@
     return `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 집필 시간 (WORK + 초집중)</div>
+        <div class="rec-sub">오늘 집필 시간 (WORK + 집중)</div>
       </div>
 
       <div class="rec-bars">
@@ -453,7 +584,10 @@
         window.openGoals?.();
         return;
       }
-      openRecord(who);
+      /* [2026-08-03] 남의 카드는 눌리지 않습니다 — 작업시간은 본인만
+         설정 → 📊 나의 기록에서 봅니다. (마크업에서도 남의 카드에는
+         data-record-of 를 붙이지 않으므로 여기는 이중 안전장치) */
+      return;
     });
 
     document.addEventListener("keydown", (e) => {
@@ -463,140 +597,6 @@
     });
   }
   window.bindRecordOpen = bindRecordOpen;
-
-  /* =================================================================
-     펫 — 누적 집필 시간으로 자랍니다
-
-     저장 자리
-       users/{닉}/workMsTotal        집필 누적 (ms)
-       users/{닉}/pet                { species, color }
-       users/{닉}/petDex/{종/색}      만렙 찍은 것들
-
-     레벨과 승계 계산은 script_pet.js 가 합니다. 여기서는 값을 읽고
-     쓰는 일만 합니다.
-     ================================================================= */
-  function petRef() { return db.ref(`users/${myNick}/pet`); }
-  function dexRef() { return db.ref(`users/${myNick}/petDex`); }
-
-  let _petCache = null;      // { species, color }
-  let _dexCache = {};
-  let _workTotal = 0;
-
-  /** 지금 열려 있는 구간까지 더한 집필 누적 */
-  function workTotalLive() {
-    let extra = 0;
-    if (_cur && (_cur.s === "writing" || _cur.s === "focus")) {
-      extra = Math.max(0, Math.min(nowMs() - Number(_cur.a), SEG_CAP_MS));
-    }
-    return _workTotal + extra;
-  }
-  window.petWorkTotal = workTotalLive;
-  window.petDex = () => ({ ..._dexCache });
-  window.petCurrent = () => (_petCache ? { ..._petCache } : null);
-
-  /** 지금 펫의 진행 상태 (없으면 null) */
-  function petState() {
-    if (!window.Pet) return null;
-    const done = Object.keys(_dexCache).length;
-    const prog = window.Pet.petProgress(workTotalLive(), done);
-    const cur = _petCache || { species: "cat" };
-    return { ...prog, species: cur.species };
-  }
-  window.petState = petState;
-
-  /** 만렙이면 도감에 넣고 다음 펫을 시작합니다 */
-  async function promoteIfMaxed() {
-    if (!myNick || !window.Pet || !_petCache) return false;
-    const st = petState();
-    if (!st || !st.isMax) return false;
-
-    const key = window.Pet.dexKey(_petCache.species);
-    _dexCache[key] = Date.now();
-    try { await dexRef().child(key).set(Date.now()); } catch (e) {}
-
-    const next = window.Pet.pickNextPet(_dexCache);
-    _petCache = next;
-    try { await petRef().set(next); } catch (e) {}
-
-    try {
-      window.showPetLevelUp?.(key, next);
-      window.rerenderUserCards?.();
-      window.renderPetPanel?.();
-      window.pushPetToStatus?.();
-    } catch (e) {}
-    return true;
-  }
-  window.promotePetIfMaxed = promoteIfMaxed;
-
-  /** 카드에 보이도록 status 에 요약을 실어 보냅니다 */
-  window.pushPetToStatus = function () {
-    try { window.updateStatus?.(false); } catch (e) {}
-  };
-
-  let _petStarted = false;
-  async function startPet() {
-    if (!myNick || !window.Pet) return;
-    if (_petStarted) return;          // 두 번 불려도 타이머가 겹치지 않게
-    _petStarted = true;
-
-    try {
-      const snap = await db.ref(`users/${myNick}`).once("value");
-      const v = snap.val() || {};
-      _workTotal = Number(v.workMsTotal || 0);
-      _dexCache = v.petDex || {};
-      _petCache = (v.pet && v.pet.species) ? v.pet : null;
-    } catch (e) {}
-
-    if (!_petCache) {
-      _petCache = window.Pet.pickNextPet(_dexCache);
-      try { await petRef().set(_petCache); } catch (e) {}
-    }
-
-    // 누적이 바뀌면 카드와 관리 창을 갱신합니다
-    try {
-      db.ref(`users/${myNick}/workMsTotal`).on("value", s2 => {
-        _workTotal = Number(s2.val() || 0);
-        promoteIfMaxed();
-        try { window.renderPetPanel?.(); } catch (e) {}
-      });
-    } catch (e) {}
-
-    await promoteIfMaxed();
-    window.pushPetToStatus();
-
-    /* 1분마다 한 번 — 열린 구간이 자라면서 레벨이 오를 수 있습니다.
-       레벨이 실제로 바뀔 때만 화면을 건드립니다. */
-    let lastLv = petState()?.level;
-    setInterval(() => {
-      if (!myNick) return;
-      const st = petState();
-      if (!st) return;
-      if (st.level !== lastLv || st.isMax) {
-        lastLv = st.level;
-        promoteIfMaxed();
-        try { window.renderPetPanel?.(); } catch (e) {}
-        window.pushPetToStatus();
-      }
-    }, 60 * 1000);
-  }
-  window.startPet = startPet;
-
-  /** 껍데기를 바꿉니다 — 아직 안 태어난 Lv.1 에서만.
-
-      안에 든 것은 그룹 안에서 다시 무작위로 뽑습니다. 고르는 것은
-      껍데기까지이고, 무엇이 들었는지는 태어나야 압니다. */
-  window.setPetShell = async function (group) {
-    if (!myNick || !window.Pet || !_petCache) return;
-    const st = petState();
-    if (!st || st.level !== 1) return;          // 태어난 뒤에는 못 바꿉니다
-
-    const sp = window.Pet.pickInGroup(group, _dexCache);
-    if (!sp) return;
-    _petCache = { species: sp };
-    try { await petRef().set(_petCache); } catch (e) {}
-    try { window.renderPetPanel?.(); window.rerenderUserCards?.(); } catch (e) {}
-    window.pushPetToStatus();
-  };
 
   window.TimeLog = { STATUSES, STATUS_IDS, GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };

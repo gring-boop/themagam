@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608010314">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608010314">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608030432">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608030432">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608010314">
+  <link rel="manifest" href="manifest.json?v=202608030432">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -33,7 +33,13 @@
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
 
-  <link rel="stylesheet" href="styles.css?v=202608010314" />
+  <!-- 테마 전용 서체 — 원고와 잉크(명조 제목) · 마감 전야(모노 숫자).
+       오프라인이면 시스템 serif/monospace 로 자연스럽게 대체됩니다. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css?v=202608030432" />
 </head>
 
 <body>
@@ -153,10 +159,8 @@
       <button class="tab active" data-tab="chat"    role="tab" aria-selected="true"  aria-controls="panel-chat"    onclick="openTab('chat')">💬 채팅</button>
       <button class="tab"        data-tab="profile" role="tab" aria-selected="false" aria-controls="panel-profile" onclick="openTab('profile')">👤 프로필</button>
       <button class="tab"        data-tab="goals"   role="tab" aria-selected="false" aria-controls="panel-goals"   onclick="openTab('goals')">🎯 목표 · 투두</button>
-      <button class="tab"        data-tab="pet"     role="tab" aria-selected="false" aria-controls="panel-pet"     onclick="openTab('pet')">🐾 펫</button>
       <button class="tab"        data-tab="record"  role="tab" aria-selected="false" aria-controls="panel-record"  onclick="openTab('record')">📊 나의 기록</button>
       <button class="tab"        data-tab="theme"   role="tab" aria-selected="false" aria-controls="panel-theme"   onclick="openTab('theme')">🎨 테마</button>
-      <button class="tab"        data-tab="timer"   role="tab" aria-selected="false" aria-controls="panel-timer"   onclick="openTab('timer')">🍅 뽀모도로</button>
       <button class="tab"        data-tab="privacy" role="tab" aria-selected="false" aria-controls="panel-privacy" onclick="openTab('privacy')">🔒 개인정보</button>
     </div>
 
@@ -165,7 +169,14 @@
       <!-- ── 채팅 ── -->
       <div class="panel active" id="panel-chat" role="tabpanel" aria-labelledby="panel-chat">
         <div class="set-block">
-          <div class="set-title">좌우 배치</div>
+          <div class="set-title" id="slot-title">칸 배치</div>
+          <!-- 실제 화면 모양 그림 -->
+          <div class="slot-map" id="slot-map"></div>
+          <div class="mini-row" style="margin-top:8px;">
+            <button type="button" class="ghost-btn compact w-full" onclick="swapSideSlots()">
+              ② ③ 서로 바꾸기
+            </button>
+          </div>
           <div class="layout-pick" id="layout-pick">
             <!-- TheMagam — 세로 보기는 없앴습니다. 좌우 뒤집기만 남깁니다. -->
             <div class="pick-row" role="radiogroup" aria-label="좌우 뒤집기" style="margin-top:8px;">
@@ -177,21 +188,9 @@
               </button>
             </div>
           </div>
-        </div>
-
-        <div class="set-block">
-          <div class="set-title" id="slot-title">칸 배치</div>
-          <!-- 실제 화면 모양 그림 -->
-          <div class="slot-map" id="slot-map"></div>
-          <div class="mini-row" style="margin-top:8px;">
-            <button type="button" class="ghost-btn compact w-full" onclick="swapSideSlots()">
-              ② ③ 서로 바꾸기
-            </button>
-          </div>
           <p class="hint">
             ① <b>접속자</b> 칸은 고정이에요. 오른쪽 줄의 <b>뽀모도로</b>와 <b>채팅</b> 순서만 바꿉니다.<br>
-            칸 크기는 <b>칸 사이 회색 손잡이를 끌어서</b> 조절하고, 더블클릭하면 기본값입니다.<br>
-            오른쪽 줄 전체는 머리말의 <b>❯</b> 로 접을 수 있어요.
+            칸 크기는 <b>칸 사이 회색 손잡이를 끌어서</b> 조절하고, 더블클릭하면 기본값입니다.
           </p>
           <div class="mini-row" style="margin-top:8px;">
             <button type="button" class="ghost-btn compact" onclick="resetSizes()">칸 크기 초기화</button>
@@ -218,8 +217,6 @@
       <!-- ── 목표 · 투두 (내용은 script_profile.js 가 옮겨 넣습니다) ── -->
       <div class="panel" id="panel-goals" role="tabpanel"></div>
 
-      <!-- ── 펫 (내용은 script_pet_ui.js 가 그립니다) ── -->
-      <div class="panel" id="panel-pet" role="tabpanel"></div>
 
       <!-- 나의 기록 (내용은 script_timelog.js 가 그립니다) -->
       <div class="panel" id="panel-record" role="tabpanel"></div>
@@ -235,47 +232,6 @@
       </div>
 
       <!-- ── 타이머 ── -->
-      <div class="panel" id="panel-timer" role="tabpanel">
-        <div class="set-block">
-          <div class="set-title">뽀모도로 참여</div>
-          <button id="set-pomo-part" class="ghost-btn w-full" type="button"
-                  onclick="togglePomodoroParticipation(); window.syncPomoSettingBtn?.();">
-            🔔 참여 중 · 알림 ON
-          </button>
-          <p class="hint">
-            끄면 <b>내 알림음이 꺼지고, 카드의 🍅 집중 횟수도 올라가지 않아요.</b>
-            타이머 자체는 계속 함께 돌아갑니다. 뽀모도로 창의 같은 버튼과 이어져 있어요.
-          </p>
-        </div>
-
-        <div class="set-block">
-          <div class="set-title">타이머 표시</div>
-          <label class="set-check">
-            <input id="set-timer-hide" type="checkbox">
-            타이머 기본 숨김
-          </label>
-          <p class="hint">타이머는 잔잔한 그라데이션 + “임박” 때만 살짝 강조돼요.</p>
-        </div>
-
-        <div class="set-block">
-          <div class="set-title">입장 알림</div>
-          <label class="set-check">
-            <input id="set-join-noti" type="checkbox">
-            누군가 들어오면 알림 띄우기
-          </label>
-          <p class="hint">
-            다른 창을 보고 있을 때만 떠요. 화면을 보고 있으면 카드가 바로 생기니 알림은 생략합니다.<br>
-            브라우저가 <b>알림 허용</b>을 물어보면 허용해 주세요. 켜자마자 한 번 물어봅니다.
-          </p>
-        </div>
-
-        <div class="set-block">
-          <label class="set-title" for="set-warn-min">임박 강조 기준</label>
-          <input id="set-warn-min" type="range" min="1" max="30" step="1">
-          <p class="hint">마감 <span id="warn-min-label"></span>분 이하면 강조가 들어가요.</p>
-        </div>
-      </div>
-
       <!-- ── 개인정보 ── -->
       <div class="panel" id="panel-privacy" role="tabpanel">
         <div class="set-block">
@@ -392,24 +348,27 @@
   <header class="app-head" aria-label="도구">
     <div class="mini-row work-head-row">
 
+      <!-- [2026-08-03] 방 이름 — 도장 배지와 함께 왼쪽 끝에 -->
+      <div class="brand-block">
+        <span class="brand-title">TheMagam</span><span class="brand-stamp" id="head-count">집필실</span>
+        <button class="head-notice empty" id="head-notice" type="button"
+                title="공지 — 눌러서 고정하거나 고칠 수 있어요">📌 <span id="head-notice-text">공지를 고정할 수 있어요</span></button>
+      </div>
+
       <!-- 폰트 · 가이드 · 설정 · 나가기는 한 덩어리로 붙여서 오른쪽 끝에 -->
       <!-- 창을 비우는 기능이 없어졌으므로 "치워둔 창" 자리도 없앴습니다. -->
 
       <div class="head-tools">
-        <button id="side-toggle-btn" class="icon-btn" type="button"
-                onclick="toggleSideCollapsed()" aria-pressed="false"
-                aria-label="오른쪽 줄 접기" title="오른쪽 줄 접기 (뽀모·채팅)">❯</button>
-
-        <button class="icon-btn guide" type="button" onclick="openManual()" aria-label="가이드" title="가이드">
+        <button class="icon-btn guide labeled" type="button" onclick="openManual()" aria-label="가이드" title="가이드">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.6.2-.8.7-.8 1.3v.4"/><path d="M12 17.2h.01"/>
-          </svg>
+          </svg><span class="icon-btn-label">가이드</span>
         </button>
 
-        <button class="icon-btn" type="button" onclick="openSettings()" aria-label="설정" title="설정">
+        <button class="icon-btn labeled" type="button" onclick="openSettings()" aria-label="설정" title="설정">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.2H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 8.9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>
-          </svg>
+          </svg><span class="icon-btn-label">설정</span>
         </button>
 
         <div class="font-ctl">
@@ -418,10 +377,10 @@
           <button class="font-btn" type="button" onclick="increaseFont()" aria-label="글씨 크게">+</button>
         </div>
 
-        <button class="icon-btn danger" type="button" onclick="leaveRoom()" aria-label="나가기" title="나가기">
+        <button class="icon-btn danger labeled" type="button" onclick="leaveRoom()" aria-label="나가기" title="나가기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>
-          </svg>
+          </svg><span class="icon-btn-label">나가기</span>
         </button>
       </div>
     </div>
@@ -470,7 +429,7 @@
       <div class="input-area">
         <label class="sr-only" for="message">메시지 입력</label>
         <textarea id="message" rows="1" placeholder="메시지를 입력하세요"></textarea>
-        <button class="send-btn" onclick="send()" aria-label="메시지 보내기">▲</button>
+        <button class="send-btn" onclick="send()" aria-label="메시지 보내기">↑</button>
       </div>
     </aside>
 
@@ -495,6 +454,7 @@
 
   <!-- 뽀모도로 -->
   <section class="pane pane-pomo" id="pomo-block" aria-label="뽀모도로">
+    <h4 class="personal-title pomo-pane-title">Pomodoro 🍅</h4>
     <div id="timer-wrap">
       <!-- [1줄] 상태 문구 -->
       <div class="pomo-row pomo-row-1">
@@ -522,7 +482,6 @@
             <input id="pomo-work-min" type="number" min="1" max="180" step="1" value="25" inputmode="numeric" aria-label="집중 시간(분)">
             <span class="pomo-setup-unit">분</span>
           </label>
-          <span class="pomo-setup-sep" aria-hidden="true">/</span>
           <label class="pomo-setup-field" for="pomo-rest-min">
             <span class="pomo-setup-label" aria-hidden="true">☕</span>
             <input id="pomo-rest-min" type="number" min="1" max="60" step="1" value="5" inputmode="numeric" aria-label="휴식 시간(분)">
@@ -581,7 +540,7 @@
          ================================================================= */ -->
     <div id="wordcount-block" class="wc-block">
       <div class="wc-head">
-        <span class="wc-title">✍️ 글자수</span>
+        <span class="wc-title">Letters ✍️</span>
         <div class="wc-tabs" role="tablist" aria-label="글자수 보기">
           <button class="wc-tab on" type="button" data-wc-tab="today" role="tab" aria-selected="true">오늘</button>
           <button class="wc-tab" type="button" data-wc-tab="me"    role="tab" aria-selected="false">내 기록</button>
@@ -685,21 +644,19 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608010314"></script>
-<script src="script_core.js?v=202608010314"></script>
-<script src="script_auth.js?v=202608010314"></script>
-<script src="script_ui.js?v=202608010314"></script>
-<script src="script_chat.js?v=202608010314"></script>
-<script src="script_data.js?v=202608010314"></script>
-<script src="script_realtime.js?v=202608010314"></script>
-<script src="script_layout.js?v=202608010314"></script>
-<script src="script_pet.js?v=202608010314"></script>
-<script src="script_pet_ui.js?v=202608010314"></script>
-<script src="script_wordcount.js?v=202608010314"></script>
-<script src="script_timelog.js?v=202608010314"></script>
-<script src="script_profile.js?v=202608010314"></script>
-<script src="script_reactions.js?v=202608010314"></script>
-<script src="script_manual.js?v=202608010314"></script>
+<script src="fortune_data.js?v=202608030432"></script>
+<script src="script_core.js?v=202608030432"></script>
+<script src="script_auth.js?v=202608030432"></script>
+<script src="script_ui.js?v=202608030432"></script>
+<script src="script_chat.js?v=202608030432"></script>
+<script src="script_data.js?v=202608030432"></script>
+<script src="script_realtime.js?v=202608030432"></script>
+<script src="script_layout.js?v=202608030432"></script>
+<script src="script_wordcount.js?v=202608030432"></script>
+<script src="script_timelog.js?v=202608030432"></script>
+<script src="script_profile.js?v=202608030432"></script>
+<script src="script_reactions.js?v=202608030432"></script>
+<script src="script_manual.js?v=202608030432"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -724,8 +681,6 @@
       "script_reactions.js":"toggleReaction",
       "script_manual.js":   "openManual",
       "script_layout.js":   "applyLayout",
-      "script_pet.js":      "Pet",
-      "script_pet_ui.js":   "renderPetPanel",
       "script_timelog.js":  "openRecord"
     };
     const missing = Object.entries(required)
@@ -734,7 +689,7 @@
 
     if (missing.length) {
       console.error(
-        "[벨사탕] 다음 스크립트가 로드되지 않았어요:", missing,
+        "[더마감] 다음 스크립트가 로드되지 않았어요:", missing,
         "\n→ index.html과 같은 폴더에 파일이 모두 있는지 확인해 주세요.",
         "\n→ 개발자도구 Network 탭에서 404가 뜨는 파일을 볼 수 있어요."
       );

@@ -467,10 +467,10 @@
     const sel = document.getElementById("db-status");
     if (!btn || !sel) return;
     if (sel.value === "writing") {
-      btn.textContent = "☕ 휴식으로";
+      btn.textContent = "☕ Break로";
       btn.classList.remove("primary");
     } else {
-      btn.textContent = "✍️ WORK 시작!";
+      btn.textContent = "✍️ Work 시작!";
       btn.classList.add("primary");
     }
   }

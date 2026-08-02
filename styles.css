@@ -3921,139 +3921,6 @@ body.side-collapsed .side-rail{
 .chat-collapse-btn,
 .hidden-panels{ display: none !important; }
 
-/* =====================================================================
-   펫 — 카드의 상태표 아래 자리
-
-   업적 배지를 없애면서 상태표가 위로 올라왔고, 그 아래로 프사 높이만큼
-   빈 자리가 생겼습니다. 펫이 그 자리에 삽니다.
-   ===================================================================== */
-.card-pet{
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-.card-pet .pet-svg{ display: block; }
-.card-pet-lv{
-  font-size: var(--fs-3xs, 10px);
-  color: var(--muted);
-  line-height: 1.1;
-  white-space: nowrap;
-}
-.card-pet-lv b{ color: var(--accent); }
-.card-pet-bar{
-  width: 100%;
-  height: 3px;
-  border-radius: var(--r-full);
-  background: rgba(0,0,0,.12);
-  overflow: hidden;
-}
-.card-pet-bar i{
-  display: block;
-  height: 100%;
-  border-radius: var(--r-full);
-  background: #2E8B6B;
-}
-
-/* 없어진 업적 흔적 정리 */
-.card-chips,
-.ach-banners,
-.streak-banner,
-.weekly-banner,
-.user-card.weekly-gold{ display: none !important; }
-
-/* =====================================================================
-   펫 관리 창 (설정 → 🐾 펫)
-   ===================================================================== */
-.pet-cur{
-  display: flex;
-  gap: var(--sp-3);
-  align-items: center;
-  padding: var(--sp-3);
-  border-radius: var(--radius2);
-  background: var(--glass2);
-  margin-bottom: var(--sp-3);
-}
-.pet-cur-info{ flex: 1; min-width: 0; }
-.pet-cur-name{ font-size: var(--fs-sm); font-weight: var(--fw-bold); }
-.pet-cur-sub{ font-size: var(--fs-2xs); color: var(--muted); margin-top: 1px; }
-.pet-bar{
-  height: 5px;
-  border-radius: var(--r-full);
-  background: rgba(0,0,0,.12);
-  overflow: hidden;
-  margin-top: 6px;
-}
-.pet-bar i{ display: block; height: 100%; border-radius: var(--r-full); background: #2E8B6B; }
-
-.pet-pick{ display: flex; flex-wrap: wrap; gap: 6px; }
-.pet-sp{
-  width: 58px;
-  padding: 5px 0 4px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--panel);
-  cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-}
-.pet-sp span{ font-size: 9.5px; color: var(--muted); }
-.pet-sp.on{ border: 2px solid var(--accent); }
-.pet-sw{
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  border: 1px solid rgba(0,0,0,.16);
-  cursor: pointer;
-  padding: 0;
-}
-.pet-sw.on{ box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
-
-/* 도감 */
-.pet-dex{
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  gap: 6px;
-}
-.pet-cell{
-  aspect-ratio: 1;
-  border-radius: var(--r-md);
-  background: var(--glass2);
-  display: flex; align-items: center; justify-content: center;
-}
-.pet-cell.empty{
-  border: 1px dashed var(--border);
-  background: transparent;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-/* 만렙 알림 */
-.pet-toast{
-  position: fixed;
-  left: 50%;
-  bottom: 28px;
-  transform: translateX(-50%);
-  z-index: 9500;
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 16px;
-  border-radius: var(--r-full);
-  border: 1px solid var(--accent-line);
-  background: var(--panel);
-  box-shadow: 0 10px 28px rgba(0,0,0,.22);
-  font-size: var(--fs-sm);
-  animation: petToastIn .32s ease;
-}
-@keyframes petToastIn{ from{ opacity:0; transform: translate(-50%, 10px); } }
-
-/* 껍데기 고르기 칸은 이름이 길어서 조금 넓게 */
-.pet-sp.wide{ width: 72px; }
-/* 카드의 펫도 누를 수 있다는 신호 */
-.card-pet.is-clickable{ cursor: pointer; }
-.card-pet.is-clickable:hover .pet-svg{ filter: brightness(1.06); }
-.card-pet.is-clickable:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }
 
 /* ---------------------------------------------------------------
    입장 모달의 안내/오류 한 줄
@@ -4187,3 +4054,527 @@ body.side-collapsed .side-rail{
 #panel-record .rec-today{ margin-top: 2px; }
 #panel-record .rec-week{ margin-bottom: 4px; }
 #panel-record .set-block + .set-block{ margin-top: var(--sp-3); }
+
+/* =====================================================================
+   [테마 3종 전용 스타일] — applyTheme()이 html 에 붙이는
+   data-theme-style="ink | night | studio" 표식을 읽습니다.
+   색은 applyTheme 이 변수로 넣고, 여기서는 질감·서체·모양만 다룹니다.
+   ===================================================================== */
+
+/* ── A. 📜 원고와 잉크 ─────────────────────────────
+   원고지 괘선이 은은하게 깔린 종이 배경 + 명조 제목 + 한쪽만 각진 말풍선 */
+html[data-theme-style="ink"] body{
+  /* 원고지 격자 — 세로줄 + 가로줄이 만나 칸이 보입니다.
+     색은 원고지 특유의 붉은 갈색(인주 계열), 칸은 24px. */
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(163,88,70,.16) 23px 24px),
+    repeating-linear-gradient( 0deg, transparent 0 23px, rgba(163,88,70,.16) 23px 24px);
+}
+html[data-theme-style="ink"] .modal-title,
+html[data-theme-style="ink"] .set-title,
+html[data-theme-style="ink"] .wc-title{
+  font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+  letter-spacing: -0.2px;
+}
+html[data-theme-style="ink"] .me .msg-bubble{
+  border-radius: var(--r-lg) 6px var(--r-lg) var(--r-lg);
+}
+html[data-theme-style="ink"] .other .msg-bubble{
+  border-radius: 6px var(--r-lg) var(--r-lg) var(--r-lg);
+  box-shadow: inset 0 0 0 1px rgba(150,120,80,.28); /* 종이 위 잉크선 느낌의 얇은 테두리 */
+}
+
+/* ── B. 🌙 마감 전야 ─────────────────────────────
+   밤샘 작업실 다크 + 앰버 포인트. 숫자(타이머·글자수)는 모노스페이스로 또렷하게 */
+html[data-theme-style="night"] .pomo-mega-digits,
+html[data-theme-style="night"] .wc-big{
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: .5px;
+}
+
+/* ── C. 💠 조용한 스튜디오 ─────────────────────────────
+   뉴트럴 그레이 위 화이트 카드 — 낮은 그림자로 말풍선을 띄웁니다 */
+html[data-theme-style="studio"] .other .msg-bubble{
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
+}
+html[data-theme-style="studio"] .me .msg-bubble{
+  box-shadow: 0 2px 8px rgba(47,107,255,.22);
+}
+
+/* ── 테마 선택 칩 — 3종이라 이름이 보이는 넓은 카드형으로 ───────────── */
+.theme-grid{
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+}
+.theme-chip{
+  aspect-ratio: auto;
+  height: 62px;
+  max-width: none;
+  border-radius: var(--r-lg);
+}
+.theme-chip::after{
+  clip-path: polygon(72% 0, 100% 0, 100% 100%, 72% 100%);
+}
+.theme-chip .chip-name{
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--chip-label, #141618);
+  pointer-events: none;
+}
+.theme-chip .chip-dot{ display: none; }
+
+/* =====================================================================
+   [이식 2026-08-03 · 벨사탕 0802] starter 표시 · 아이콘 라벨 · 글자수 피드
+   ===================================================================== */
+/* 참여 버튼의 starter 표시 — "starter"는 살짝 작게, 닉네임은 같은 크기 */
+.pomo-starter-lb{ font-size: .82em; opacity: .75; }
+.pomo-starter-nm{ font-size: 1em; font-weight: var(--fw-medium); }
+
+/* 아이콘 옆 문구 — 아이콘만으로는 모르겠다는 분들이 많아서.
+   문구가 있는 버튼은 정사각형을 풀고 알약처럼 늘어납니다. */
+.icon-btn.labeled{ width: auto; padding: 0 9px 0 7px; gap: 4px; }
+.icon-btn-label{
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* 글자수 피드 — 말풍선 옆 시각 (채팅의 msg-time 과 같은 느낌) */
+.wc-said-t{
+  flex: none;
+  font-size: var(--fs-2xs);
+  color: var(--time-muted, var(--text-dim));
+  font-variant-numeric: tabular-nums;
+  padding-bottom: 2px;
+  user-select: none;
+  white-space: nowrap;
+}
+.wc-said-line{ display:flex; justify-content:flex-start; align-items:flex-end; gap:4px; }
+
+/* 내 기록 탭 · "오늘 내 기록" 구분 제목 */
+.wc-me-h{
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--text-dim);
+}
+
+/* =====================================================================
+   [2026-08-03] 전체 UI 리뉴얼 — 시안 v2
+   · 머리말 브랜드(방 이름 + 도장)
+   · 프로필 카드: 책 표지형 (2형)
+   · 창 제목의 포인트 획
+   ===================================================================== */
+
+/* ── 머리말 브랜드 ── */
+.brand-block{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-right: auto;   /* 도구 묶음을 오른쪽 끝으로 밀어냅니다 */
+  min-width: 0;
+}
+.brand-title{
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.3px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.brand-stamp{
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: #fff;
+  white-space: nowrap;
+}
+html[data-theme-style="ink"] .brand-title{ font-family: "Noto Serif KR", serif; }
+html[data-theme-style="ink"] .brand-stamp{
+  /* 전각 도장 — 각진 인주 */
+  border-radius: 4px;
+  font-family: "Noto Serif KR", serif;
+  color: #FAF6EC;
+}
+html[data-theme-style="night"] .brand-stamp{ color: #231A05; }
+html[data-theme-style="studio"] .brand-stamp{ color: #fff; }
+
+/* ── 창 제목의 포인트 획 — 카드 제목마다 인주색 짧은 획 ── */
+.wc-title::before,
+.personal-title::before{
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  margin-right: 7px;
+  vertical-align: 3px;
+}
+
+/* ── 프로필 카드 — 책 표지형 (2형) ─────────────────────────
+   DOM 구조와 클릭 동작(프사=프로필, 상태표=상태, 아래칸=목표·투두/기록)은
+   그대로 두고, 배치만 세로 "책 표지"로 바꿉니다. */
+.user-card{
+  display: flex;
+  flex-direction: column;
+  border-radius: 6px 16px 16px 6px;   /* 왼쪽은 책등처럼 각지게 */
+  border-left: 4px solid var(--accent-line);
+  box-shadow: 0 2px 10px rgba(0,0,0,.07);
+}
+
+/* 프사를 위 가운데로, 상태를 그 아래로 */
+.card-body{
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+.card-avatar-wrap{
+  flex: 0 0 auto;
+  width: 62%;
+  max-width: 118px;
+  align-self: center;
+}
+.card-avatar{
+  border-radius: var(--r-full);       /* 원형 프사 — 책 표지의 초상처럼 */
+  border: 2px solid var(--border);
+}
+.card-side{ width: 100%; }
+.card-state-row{ justify-content: center; }
+/* 폭 기준자는 세로 배치에서는 필요 없습니다 (칸 폭이 카드 폭) */
+.card-state-ghost{ display: none; }
+
+/* 아래칸 — 이름·목표·진척을 가운데 정렬 */
+.card-foot{ text-align: center; }
+.card-name{
+  justify-content: center;
+  font-size: var(--fs-lg);
+  letter-spacing: -0.2px;
+}
+.card-goal .goal-line{ text-align: center; }
+
+/* 잉크 테마 — 이름은 명조, 상태표는 도장 */
+html[data-theme-style="ink"] .card-name{ font-family: "Noto Serif KR", serif; }
+html[data-theme-style="ink"] .card-state{
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  font-family: "Noto Serif KR", serif;
+}
+
+/* =====================================================================
+   [2026-08-03] 상단바 공지 핀 · 채팅 머리말 · 뽀모 창 리디자인
+   ===================================================================== */
+
+/* ── 공지 핀 — 브랜드 줄의 📌 ── */
+.head-notice{
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 34vw;
+  background: var(--accent-softer);
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--r-full);
+  padding: 4px 12px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--anim-fast);
+}
+.head-notice:hover{ background: var(--accent-soft); }
+.head-notice #head-notice-text{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.head-notice.empty{ opacity: .55; }
+
+/* ── 채팅 머리말 — "— Chat" (포인트 획 + 제목 서체) ── */
+#my-info{ font-weight: var(--fw-bold); }
+#my-info::before{
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  margin-right: 7px;
+  vertical-align: 3px;
+}
+html[data-theme-style="ink"] #my-info,
+html[data-theme-style="ink"] .brand-stamp#head-count{ font-family: "Noto Serif KR", serif; }
+
+/* ── 뽀모 창 제목 — [획] 뽀모 🍅 ── */
+.pomo-pane-title{
+  margin: 10px 12px 0;
+  font-size: var(--fs-md);
+}
+
+/* ── 뽀모 타이머 — 도는 동안은 큰 숫자만 ── */
+#timer-pill[data-phase]{
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  justify-content: center;
+}
+#timer-pill[data-phase] #timer-text{
+  font-size: clamp(32px, 3.6vw, 44px);
+  font-weight: var(--fw-bold);
+  letter-spacing: 1px;
+  line-height: 1.15;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+/* 휴식은 ☕ 만 작게 앞에 */
+#timer-pill[data-phase="rest"] #timer-text::before{
+  content: "☕ ";
+  font-size: .45em;
+  vertical-align: 8px;
+}
+html[data-theme-style="ink"] #timer-pill[data-phase] #timer-text{
+  font-family: "Noto Serif KR", serif;
+}
+html[data-theme-style="night"] #timer-pill[data-phase] #timer-text{
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+/* 시간이 얼마 안 남았을 때(경고)는 숫자를 인주색으로 */
+#timer-pill.timer-warn[data-phase] #timer-text{ color: var(--accent); }
+
+/* =====================================================================
+   [2026-08-03·2차] 채팅 위 타이머 제거 · 헤더 여백 · 카드 이름/안테나
+   ===================================================================== */
+
+/* ── 채팅 위 큰 타이머 줄 — 뽀모 창에 크게 뜨므로 중복이라 뺍니다.
+   (코드는 남겨두고 화면에서만 감춥니다 — 되살리기 쉬움) ── */
+.pomo-status-line{ display: none !important; }
+
+/* ── 맨 위 헤더 — 양쪽에 프로필 카드 폭만큼 숨 쉴 자리 ── */
+.app-head{
+  padding-left: var(--card-w);
+  padding-right: var(--card-w);
+}
+@media (max-width: 1100px){
+  .app-head{ padding-left: 16px; padding-right: 16px; }
+}
+
+/* ── 카드 아래칸 — 닉네임 왼쪽 · 안테나 오른쪽 ── */
+.card-foot{
+  text-align: left;
+  padding-left: 11px;
+  padding-right: 26px;   /* 오른쪽 안테나 자리 */
+}
+.card-name{ justify-content: flex-start; }
+.card-goal .goal-line{ text-align: left; }
+.card-conn{
+  left: auto;
+  right: 7px;
+  top: 9px;
+}
+
+/* ── 안테나 새 디자인 — 신호 막대 대신 잉크 방울(점등) ──
+   막대 4개는 감추고, 상태색 점 하나 + 옅은 링으로 바꿉니다.
+   색은 기존 규칙(currentColor: 초록/붉음)을 그대로 따릅니다. */
+.card-conn i{ display: none; }
+.card-conn{
+  height: auto;
+  padding: 3px;
+  border-radius: var(--r-full);
+}
+.card-conn::after{
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+/* 끊겼을 때의 깜빡임(연결 규칙의 connBlink)은 그대로 이어받습니다 */
+
+/* =====================================================================
+   [2026-08-03·3차] 시안 모양 그대로 — 카드 디테일 · 뽀모 버튼 · 보내기 버튼
+   ===================================================================== */
+
+/* ── 프로필 카드 ── */
+/* 프사: 원형 → 둥근 정사각형 */
+.card-avatar{ border-radius: var(--r-md); }
+/* 책등: 왼쪽 색입힘 2배 두껍게 */
+.user-card{ border-left: 8px solid var(--accent-line); }
+/* 닉네임 상자 안 목표·진척 바 — 전부 왼쪽 기준으로 가지런히 */
+.card-goal{ text-align: left; }
+.card-goal .goal-line{ text-align: left; }
+.card-meta{ text-align: left; }
+
+/* ── 뽀모 시간 칩 — 🍅 25분 / ☕ 5분 알약 ── */
+.pomo-setup-field{
+  border: none;
+  border-radius: var(--r-full);
+  padding: 8px 14px;
+  background: var(--fill-2);
+  font-weight: var(--fw-bold);
+  color: var(--muted-strong);
+}
+.pomo-setup-field input{
+  background: transparent;
+  border: none;
+  width: 34px;
+  font-size: var(--fs-sm);
+}
+.pomo-setup-sep{ opacity: .4; }
+
+/* ── 뽀모 버튼 — 시작은 인주색 원, 정지·알림음은 베이지 원 ── */
+.pomo-run-btn{
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-full);
+  border: none;
+}
+.pomo-run-btn.start{
+  background: var(--accent);
+  color: var(--me-text);
+  box-shadow: 0 3px 10px var(--accent-ring);
+}
+.pomo-run-btn.stop{
+  background: var(--fill-2);
+  color: var(--muted-strong);
+}
+:root[data-is-dark="true"] .pomo-run-btn.start{ color: var(--me-text); }
+:root[data-is-dark="true"] .pomo-run-btn.stop{ color: var(--muted-strong); }
+#pomo-detail-toggle{
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: var(--r-full);
+  border: none;
+  background: var(--fill-2);
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* ── 채팅 입력 — 알약 입력창 + 인주색 원형 보내기 ── */
+#message{
+  border-radius: 22px;
+  border: 1px solid var(--border);
+}
+.send-btn{
+  border-radius: var(--r-full);
+  border: none;
+  background: var(--accent);
+  color: var(--me-text);
+  font-size: 19px;
+  box-shadow: 0 3px 10px var(--accent-ring);
+}
+.send-btn:active{ transform: scale(.94); }
+
+/* =====================================================================
+   [2026-08-03·4차] 뽀모 배경 격자 · 시간 칩 간격 · 글자수 창 버튼
+   ===================================================================== */
+
+/* ── 뽀모 창 — 접속자 창처럼 원고지 격자가 비치게.
+   (반투명 막이 pane + timer-wrap 두 겹이라 격자가 막혔었습니다) ── */
+.pane-pomo #timer-wrap{ background: transparent; }
+
+/* ── 시간 칩 — / 를 뺀 자리만큼 간격을 좁힙니다 ── */
+#pomo-setup{ gap: 8px; }
+
+/* ── 글자수 창 — 시안 모양 ── */
+/* 입력 상자: 둥근 알약 */
+.wc-inputline{ gap: 7px; }
+.wc-inputline input{
+  border-radius: var(--r-full);
+  padding: 8px 14px;
+  background: var(--card, var(--surface));
+  border: 1px solid var(--border);
+}
+/* 기록 버튼: 인주색 상자 */
+#wc-send{
+  background: var(--accent);
+  color: var(--me-text);
+  border: none;
+  border-radius: var(--r-md);
+  padding: 8px 15px;
+  font-weight: var(--fw-bold);
+  box-shadow: 0 2px 8px var(--accent-ring);
+}
+#wc-send:active{ transform: scale(.96); }
+/* 기준 · 초기화 · 새 편: 테두리 없는 베이지 상자 3등분 */
+.wc-minirow{ gap: 7px; }
+.wc-minirow .ghost-btn{
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--fill-2);
+  color: var(--muted-strong);
+  font-weight: var(--fw-bold);
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* =====================================================================
+   [2026-08-03·5차] 다크 가독성 · 카드 모양 · 상태 버튼
+   ===================================================================== */
+
+/* ── 음표(알림음) 버튼 — 정지 버튼과 같은 색으로 ── */
+#pomo-detail-toggle{ color: var(--muted-strong); }
+
+/* ── 폰트 조절 — 머리말 배경에 자연스럽게 붙는 색 ── */
+.font-pill,
+.font-btn{
+  background: var(--header);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* ── 프로필 카드 — 책등 제거 · 왼쪽 모서리 각지게 ── */
+.user-card{
+  border-left: 1px solid var(--border);
+  border-radius: 0 16px 16px 0;
+}
+
+/* ── 아래칸 — 닉네임 왼끝 ↔ 안테나 오른끝, 목표·진척은 그 폭을 꽉 채움 ── */
+.card-foot{ padding-right: 11px; }
+.card-name{ padding-right: 22px; }   /* 안테나와 겹치지 않게 이름 줄만 비움 */
+.card-goal,
+.card-meta{ width: 100%; }
+
+/* 내 카드 아래칸만 손 모양 커서 */
+.card-foot{ cursor: default; }
+.card-foot[data-record-of]{ cursor: pointer; }
+
+/* ── 상태 버튼 — 둥근 알약, WORK 는 주황 ── */
+.card-state{ border-radius: var(--r-full); }
+html[data-theme-style="ink"] .card-state{ border-radius: var(--r-full); }
+.card-state.status-writing{
+  background: rgba(255,159,10,.63);
+  border-color: rgba(255,159,10,.76);
+  color: #7A4406;
+}
+:root[data-is-dark="true"] .card-state.status-writing{ color: #FFCE85; }
+
+/* =====================================================================
+   [2026-08-03·6차] 다크(마감 전야) 가독성 — 상태 버튼 · 🍅 횟수
+   ===================================================================== */
+/* 상태 버튼: 다크에서는 짙은 반투명 배경 + 밝은 글자로 또렷하게 */
+:root[data-is-dark="true"] .card-state.status-writing,
+:root[data-is-dark="true"] .card-state.status-focus{
+  background: rgba(255,159,10,.20);
+  border-color: rgba(255,159,10,.45);
+  color: #FFCE85;
+}
+:root[data-is-dark="true"] .card-state.status-rest,
+:root[data-is-dark="true"] .card-state.status-away{
+  background: rgba(48,209,88,.16);
+  border-color: rgba(48,209,88,.40);
+  color: #8CE8C6;
+}
+/* 🍅 오늘 집중 횟수: 다크에서 밝은 라벤더로 */
+:root[data-is-dark="true"]{ --card-pomo: #CFC5F0; }

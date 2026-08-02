@@ -133,18 +133,72 @@
   // Header online list
   // =====================================================
   function updateChatHeader() {
-    const el = document.getElementById("my-info");
-    if (!el || !myNick) return;
-
+    /* [2026-08-03] 접속 현황은 채팅 머리말이 아니라 맨 위 브랜드 줄의
+       레드 박스(#head-count)에 보여줍니다. 닉 목록은 툴팁으로. */
+    if (!myNick) return;
     if (_statusCache) {
       const online = [];
       const now = serverNow();
       for (let nick in _statusCache) {
         if (isOnline(_statusCache[nick], now)) online.push(nick);
       }
-      el.innerText = `👥 ${online.length}명 접속 중 (${online.join(", ")})`;
+      const hc = document.getElementById("head-count");
+      if (hc) {
+        hc.textContent = `${online.length}명 집필 중`;
+        hc.title = online.join(", ");
+      }
     }
   }
+
+  /* =====================================================
+     [2026-08-03] 공지 핀 — 맨 위 브랜드 줄의 📌
+     config/notice { text, by, at } — 보안규칙의 config 는
+     로그인한 사람이면 쓸 수 있어서 규칙 변경이 필요 없습니다.
+     ===================================================== */
+  let _noticeText = "";
+  let _noticeListening = false;
+  function listenNotice() {
+    if (_noticeListening) return;
+    _noticeListening = true;
+    try {
+      db.ref("config/notice").on("value", (snap) => {
+        const v = snap.val();
+        _noticeText = (v && v.text) ? String(v.text) : "";
+        const t = document.getElementById("head-notice-text");
+        const btn = document.getElementById("head-notice");
+        if (!t || !btn) return;
+        t.textContent = _noticeText || "공지를 고정할 수 있어요";
+        btn.classList.toggle("empty", !_noticeText);
+        btn.title = _noticeText
+          ? `📌 ${_noticeText} — 눌러서 고칠 수 있어요`
+          : "공지 — 눌러서 고정할 수 있어요";
+      });
+    } catch (e) { console.warn("[listenNotice]", e); }
+  }
+  function bindNoticeEdit() {
+    const btn = document.getElementById("head-notice");
+    if (!btn || btn._noticeBound) return;
+    btn._noticeBound = true;
+    btn.addEventListener("click", async () => {
+      if (!myNick) { alert("입장 후에 공지를 고정할 수 있어요."); return; }
+      const next = prompt("📌 고정할 공지 (비우고 확인하면 내려요)", _noticeText);
+      if (next === null) return;               // 취소
+      const text = String(next).trim();
+      try {
+        if (text) await db.ref("config/notice").set({ text, by: myNick, at: Date.now() });
+        else      await db.ref("config/notice").remove();
+      } catch (e) {
+        console.warn("[notice save]", e);
+        alert("공지 저장에 실패했어요. 연결을 확인해 주세요.");
+      }
+    });
+  }
+  window.listenNotice = listenNotice;
+  window.bindNoticeEdit = bindNoticeEdit;
+  document.addEventListener("DOMContentLoaded", () => {
+    try { bindNoticeEdit(); } catch (e) {}
+    try { if (window.db) listenNotice(); } catch (e) {}
+  });
 
   function startHeaderTicker() {
     if (_headerIntervalId) clearInterval(_headerIntervalId);
@@ -336,26 +390,6 @@
           /* 펫 — status 에 실려 온 요약으로 그립니다.
              남의 누적 시간을 매번 계산하면 무거워지므로, 각자 자기 값을
              status 에 적어 보냅니다. */
-          const petHtml = (() => {
-            if (!window.Pet) return "";
-            const sp = row.petSpecies;
-            if (!sp) return "";
-            /* 만렙 값을 여기에 또 적지 않습니다. 예전에 10 을 박아뒀다가
-               20레벨로 올린 뒤에도 카드가 10에서 잘렸습니다. */
-            const lv = Math.max(1, Math.min(window.Pet.MAX_LEVEL, Number(row.petLevel) || 1));
-            const mx = !!row.petMax;
-            const pct = Math.max(0, Math.min(100, Number(row.petPct) || 0));
-            return `
-              <div class="card-pet${isMine ? " is-clickable" : ""}"${
-                isMine ? ' data-open-pet="1" role="button" tabindex="0"' : ""
-              } title="${lv <= 1
-                  ? "아직 안 태어났어요"
-                  : escapeHtml(window.Pet.speciesLabel(sp)) + " Lv." + lv + (mx ? " 만렙" : "")}${isMine ? " · 눌러서 펫 관리" : ""}">
-                ${window.Pet.petSvg(sp, lv, 58, mx)}
-                <div class="card-pet-lv">${lv <= 1 ? "🥚" : `Lv.${lv}`}${mx ? " <b>만렙</b>" : ""}</div>
-                <div class="card-pet-bar"><i style="width:${pct}%"></i></div>
-              </div>`;
-          })();
 
           parts.push(`
             <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"${cardStyle}>
@@ -378,13 +412,14 @@
                          덕분에 카드마다 프사 크기가 들쭉날쭉해지지 않아요. -->
                     <span class="card-state-ghost" aria-hidden="true">🔥초집중🔥</span>
                   </div>
-                  ${petHtml}
                 </div>
               </div>
 
-              <div class="card-foot" data-record-of="${escapeHtml(u)}"
-                   role="button" tabindex="0"
-                   title="${isMine ? "오늘 목표와 나의 투두" : escapeHtml(u) + " 님의 기록 보기"}">
+              <!-- [2026-08-03] 아래칸은 내 카드만 눌립니다 (목표·투두 팝업).
+                   남의 작업시간은 보여주지 않습니다 — 본인만 설정 → 📊 나의 기록. -->
+              <div class="card-foot"${isMine
+                ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"`
+                : ""}>
                 <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"
                       title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}">
                   <i></i><i></i><i></i><i></i>
@@ -413,12 +448,14 @@
        writing → WORK      focus → 🔥초집중🔥
        rest    → 휴식      away  → 자리비움 */
   function statusLabel(code) {
+    /* [2026-08-03] 상태는 Work · Break 둘뿐입니다. 저장값은 그대로
+       (writing/rest), 옛 데이터의 focus/away 도 두 이름으로 접힙니다. */
     return ({
-      idle:    "휴식",
-      writing: "WORK",
-      focus:   "🔥초집중🔥",
-      rest:    "휴식",
-      away:    "자리비움"
+      idle:    "☕BREAK☕",
+      writing: "🔥WORK🔥",
+      focus:   "🔥WORK🔥",
+      rest:    "☕BREAK☕",
+      away:    "☕BREAK☕"
     })[code] || "휴식";
   }
 
@@ -447,7 +484,6 @@
     const todoTotal = _todos.length;
     const todoDone = _todos.filter(t => t && t.done).length;
     const pomoCount = Number(window.getTodayFocusSessions?.() || 0);
-    const _pet = window.petState?.() || null;
 
     if (force) {
       window.saveDailyLog?.();
@@ -464,10 +500,6 @@
       todoTotal,
       pomoCount,
       /* 펫 요약 — 남들 카드에도 보이게 */
-      petSpecies: _pet?.species || null,
-      petLevel:   _pet?.level   || 1,
-      petMax:     !!_pet?.isMax,
-      petPct:     Math.round((_pet?.ratio || 0) * 100),
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,
       // 살아 있다는 뜻 — 끊김 표시를 지웁니다
@@ -520,6 +552,8 @@
 
       // ✅ stopped/없음 처리
       if (!data || data.status === "stopped") {
+        window.setPomoStarter?.("");
+        delete pill.dataset.phase;
         text.textContent = "🍅 뽀모도로 대기 중… 🍅";
         window.updatePomoHeaderStatus?.({ running:false });
         window.updatePomoSetupUI?.({ running:false });
@@ -532,6 +566,19 @@
 
       const seq = Number(data.seq || 0);
       const phase = data.phase || "work";
+
+      /* [이식 2026-08-03 · 벨사탕 0802] 참여 버튼에 보여줄 starter — 도는 동안만.
+         startedBy 가 마지막 정지(stoppedAt) 이후에 적힌 것일 때만 믿습니다.
+         옛 코드로 접속한 사람이 시작을 누르면 startedBy 를 안 적어서
+         지난 세션 이름이 남는데, 그 이름은 지난 정지보다 오래된 것이라
+         여기서 걸러집니다. (startedAt 과 비교하면 안 됩니다: 휴식↔집중
+         자동 전환 때마다 startedAt 이 갱신돼서 멀쩡한 starter 도 사라져요) */
+      let _starter = "";
+      if (data.startedBy) {
+        const sbAt = Number(data.startedByAt || 0);
+        if (sbAt && sbAt > Number(data.stoppedAt || 0)) _starter = String(data.startedBy);
+      }
+      window.setPomoStarter?.(_starter);
 
       // ✅ 진행 중인 세션의 집중/휴식 시간을 설정 UI에도 동기화(늦게 들어온 사람도 host가 정한 시간을 확인 가능)
       window.updatePomoSetupUI?.({
@@ -626,10 +673,11 @@
           return;
         }
 
+        /* [2026-08-03] 큰 숫자만 — 문구 없이. 휴식은 CSS 가 ☕ 를 앞에 붙입니다 */
         const mm = Math.floor(remainMs / 60000);
         const ss = Math.floor((remainMs % 60000) / 1000);
-        const label = phaseNow === "work" ? "🍅 작업" : "☁️ 휴식";
-        text.textContent = `${label} · ${mm}분 ${ss}초`;
+        pill.dataset.phase = phaseNow;
+        text.textContent = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
 
         const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
         if (remainMs <= warnMin * 60000) pill.classList.add("timer-warn");
@@ -669,6 +717,13 @@
         endAt:     now + workMin * 60 * 1000,
         status:    "running",
         updatedBy: myNick || "unknown",
+        /* [이식 2026-08-03 · 벨사탕 0802] 시작 버튼을 누른 사람.
+           updatedBy 는 정지·전환 때마다 바뀌지만 startedBy 는 "시작"에서만
+           적혀서, 참여 버튼에 starter 를 보여주는 데 씁니다.
+           startedByAt 은 검증용, stoppedAt 을 지우는 것도 같은 이유입니다. */
+        startedBy:   myNick || "unknown",
+        startedByAt: now,
+        stoppedAt:   null,
         seq:       nextSeq,
         workMin:   workMin,
         restMin:   restMin,

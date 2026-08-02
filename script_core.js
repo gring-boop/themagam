@@ -410,7 +410,8 @@ window.AppSession = AppSession;
 
       document.getElementById("modal").style.display = "none";
       document.getElementById("exit-screen").classList.add("hidden");
-      document.getElementById("my-info").innerText = myNick;
+      /* [2026-08-03] 채팅 머리말은 "Chat" 고정 — 접속 현황은 맨 위 브랜드 줄로 갔습니다 */
+      document.getElementById("my-info").innerText = "Chat";
 
       // ✅ 1) 닉 귀속 테마 먼저 로드/적용 (UI 안정화)
       try { await window.afterJoinLoadNickTheme?.(); } catch(e){ console.warn("[afterJoinLoadNickTheme failed]", e); }
@@ -438,6 +439,7 @@ window.AppSession = AppSession;
       callIfFn("updateStatus", true);
       callIfFn("listenStatus");
       callIfFn("listenPomodoro");
+      callIfFn("listenNotice");
 
       _statusIntervalId = setInterval(() => callIfFn("updateStatus", false), PRESENCE_POLL_MS);
 
@@ -589,7 +591,7 @@ window.AppSession = AppSession;
     // ✅ init은 "로그인 전 프리뷰"만: 기본테마 + 폰트 + 타이머 표시
     // (닉 귀속 로딩은 join() 이후 afterJoinLoadNickTheme에서 처리)
     try {
-      const previewTheme = AppStore.getItem("writerTheme") || "Light (iOS)";
+      const previewTheme = AppStore.getItem("writerTheme") || "📜 원고와 잉크";
       callIfFn("applyTheme", previewTheme);
     } catch(e) {}
 
