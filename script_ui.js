@@ -808,17 +808,19 @@
     ].filter(Boolean);
 
     btns.forEach(btn => {
+      /* [2026-08-03] B+C 혼합 — 단어는 "누르면 일어날 동작"(Join/Leave),
+         켜짐·꺼짐은 스위치 그림이 보여줍니다. */
       if (_pomoParticipating) {
         btn.dataset.state = "on";
-        btn.innerHTML = "Join ‣ 알림 ON" + (_pomoStarter
-          ? ` // <span class="pomo-starter-lb">starter</span> <span class="pomo-starter-nm">${window.escapeHtml ? window.escapeHtml(_pomoStarter) : ""}</span>`
+        btn.innerHTML = `Leave · 알림 <span class="pomo-sw on"><i></i></span>` + (_pomoStarter
+          ? ` <span class="pomo-starter-lb">// starter</span> <span class="pomo-starter-nm">${window.escapeHtml ? window.escapeHtml(_pomoStarter) : ""}</span>`
           : "");
         btn.classList.remove("danger");
         btn.classList.add("primary");
         btn.setAttribute("aria-pressed", "true");
       } else {
         btn.dataset.state = "off";
-        btn.textContent = "Join ‣ 알림 OFF";
+        btn.innerHTML = `Join · 알림 <span class="pomo-sw off"><i></i></span>`;
         btn.classList.remove("primary");
         btn.classList.add("danger");
         btn.setAttribute("aria-pressed", "false");

@@ -5009,3 +5009,30 @@ html[data-theme-style="studio"] .user-card{
 .card-foot .card-wh .card-pomo-count{ color: var(--ink-goal, var(--card-pomo)); }
 .card-foot .card-wh .card-wh-t b{ color: var(--ink-wh, var(--accent)); }
 .card-foot .card-wh .card-wh-t small{ color: var(--ink-wh, var(--muted)); }
+
+/* =====================================================================
+   [2026-08-03·27차] Join 버튼 — 동작 단어(Join/Leave) + 상태 스위치
+   ===================================================================== */
+.pomo-sw{
+  display: inline-block;
+  width: 38px;
+  height: 21px;
+  border-radius: var(--r-full);
+  position: relative;
+  vertical-align: -5px;
+  margin: 0 2px;
+  transition: background var(--anim-fast);
+}
+.pomo-sw i{
+  position: absolute;
+  top: 2.5px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-full);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.pomo-sw.on{ background: var(--accent); }
+.pomo-sw.on i{ right: 2.5px; }
+.pomo-sw.off{ background: var(--fill-3); }
+.pomo-sw.off i{ left: 2.5px; }
