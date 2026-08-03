@@ -4609,12 +4609,10 @@ body.chat-collapsed .split-grip[data-key="panel/chat"]{ display: none; }
    왼쪽에 스프링 링, 오른쪽·아래로 종이 여러 장이 겹친 낌새를 냅니다.
    ===================================================================== */
 .user-card{
-  /* 겹친 종이 — 오른쪽 아래로 낱장 두 장이 삐져나온 그림자 */
+  /* 겹친 종이 — 오른쪽 아래 낱장 두 장 (2026-08-03 B안: 4/8px · 선 진하게) */
   box-shadow:
-    2.5px 2.5px 0 -0.5px var(--panel),
-    2.5px 2.5px 0 0      var(--border),
-    5px   5px   0 -0.5px var(--panel),
-    5px   5px   0 0      var(--border);
+    4px 4px 0 -1px #FFFBF0, 4px 4px 0 0 #C9BB98,
+    8px 8px 0 -1px #F7F1E2, 8px 8px 0 0 #C9BB98;
 }
 
 /* =====================================================================
@@ -4848,4 +4846,20 @@ html[data-theme-style="ink"] .card-state,
 :root[data-is-dark="true"] .card-state,
 .status-pop-item{
   border: none;
+}
+
+/* =====================================================================
+   [2026-08-03·20차] 책 두께 B안 — 테마별 낱장 색
+   ===================================================================== */
+/* 조용한 스튜디오: 회색 계열 낱장 */
+html[data-theme-style="studio"] .user-card{
+  box-shadow:
+    4px 4px 0 -1px #FFFFFF, 4px 4px 0 0 #C6CAD2,
+    8px 8px 0 -1px #F4F5F7, 8px 8px 0 0 #C6CAD2;
+}
+/* 마감 전야(다크): 카드보다 밝은 낱장 + 흰빛 경계선 — 어둠 속에서도 또렷 */
+:root[data-is-dark="true"] .user-card{
+  box-shadow:
+    4px 4px 0 -1px #262B38, 4px 4px 0 0 rgba(255,255,255,.28),
+    8px 8px 0 -1px #1D212C, 8px 8px 0 0 rgba(255,255,255,.28);
 }
