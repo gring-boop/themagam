@@ -4815,3 +4815,27 @@ html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
 
 /* 음표(♪) — 이모지 버튼들과 눈높이가 맞게 키움 */
 #pomo-detail-toggle{ font-size: 26px; line-height: 1; padding-bottom: 3px; }
+
+/* =====================================================================
+   [2026-08-03·18차] WRITE 주황 · 상태표 투명도 90% · 음표 가운데
+   ===================================================================== */
+/* WRITE 는 기존 주황으로 */
+.card-state.status-writing,
+:root[data-is-dark="true"] .card-state.status-writing,
+.status-pop-item.status-writing{
+  background: #F59B2C;
+  border-color: #F59B2C;
+  color: #3A2200;
+}
+
+/* 상태표(카드 위 알약)는 살짝 비치게 — 90% */
+.card-state{ opacity: .9; }
+
+/* 음표(♪)를 원의 정가운데로 */
+#pomo-detail-toggle{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+#pomo-detail-toggle::first-line{ line-height: 1; }
