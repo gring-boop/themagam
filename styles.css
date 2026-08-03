@@ -4956,3 +4956,33 @@ html[data-theme-style="studio"] .user-card{
   font-weight: var(--fw-bold);
 }
 .att-day.today{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+
+/* =====================================================================
+   [2026-08-03·23차] 카드 — 진척바 자리에 Working hours (B안)
+   ===================================================================== */
+.card-wh{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.card-wh .card-wh-t{
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.card-wh .card-wh-t small{
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--muted);
+}
+.card-wh .card-wh-t b{
+  font-size: calc(var(--fs-lg) + 1px);
+  font-weight: var(--fw-bold);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .3px;
+  line-height: 1.1;
+}

@@ -377,23 +377,20 @@
 
           /* 진척 바 한 줄 + 그 아래 [3 / 5 완료] ······ [🍅 4].
              숫자 줄은 바와 같은 폭을 쓰므로 양 끝에 정확히 맞습니다. */
-          const metaBlock = (tTotal > 0 || pCount > 0)
-            ? `<div class="card-meta">
-                 ${tTotal > 0
-                   ? `<div class="card-prog-track" role="progressbar"
-                           aria-valuemin="0" aria-valuemax="${tTotal}" aria-valuenow="${tDone}"
-                           aria-label="오늘 할일 진척"><i style="width:${pct}%"></i></div>`
+          /* [2026-08-03 · B안] 진척 바 대신 오늘 작업 시간(Write+Job)을
+             큰 숫자로. WRITE·JOB 중에는 1분마다 값이 갱신돼 타이머처럼
+             보입니다. 투두 진척은 카드 팝업에서 봅니다. */
+          const _whMs = Math.max(0, Number(row.workMs || 0));
+          const _whM = Math.round(_whMs / 60000);
+          const whTxt = _whM < 60 ? `${_whM}m`
+            : `${Math.floor(_whM / 60)}h${_whM % 60 ? " " + (_whM % 60) + "m" : ""}`;
+          void tDone; void tTotal; void pct;
+          const metaBlock = `<div class="card-meta card-wh">
+                 <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
+                 ${pCount > 0
+                   ? `<span class="card-pomo-count" title="오늘 끝낸 집중 세션">🍅 ${pCount}</span>`
                    : ""}
-                 <div class="card-meta-line">
-                   <span class="card-todo-count">${
-                     tTotal > 0 ? `${tDone} / ${tTotal} 완료` : ""
-                   }</span>
-                   ${pCount > 0
-                     ? `<span class="card-pomo-count" title="오늘 끝낸 집중 세션">🍅 ${pCount}</span>`
-                     : ""}
-                 </div>
-               </div>`
-            : "";
+               </div>`;
 
           // 배지 줄 — 왼쪽 업적(트로피·왕관), 오른쪽 상태
           /* 배지 줄은 비웠습니다. 상태표가 위로 올라오고, 그 아래 자리에
@@ -508,6 +505,7 @@
       status: statusChoice,
       statusLabel: statusLabel(statusChoice),
       todayGoalText: goalText,
+      workMs: Number(window.myTodayWorkMs?.() || 0),
       todayDone: done,
       todoDone,
       todoTotal,

@@ -282,6 +282,7 @@
     if (!myNick) return;
     if (_tlStarted) return;           // 두 번 불려도 타이머가 겹치지 않게
     _tlStarted = true;
+    setTimeout(_refreshTodayWork, 1500);   // 입장 직후 첫 값
 
     // 이전 세션이 남긴 열린 구간을 이어받거나 정리합니다
     try {
@@ -618,6 +619,22 @@
     });
   }
   window.bindRecordOpen = bindRecordOpen;
+
+  /* [2026-08-03] 카드에 보여줄 "오늘 작업 시간(Write+Job)" —
+     1분마다 새로 계산해 status 에 실어 보냅니다. 열린 구간까지 포함해
+     지금 이 순간 기준 값이라, 받는 쪽은 그대로 그리면 타이머처럼 됩니다. */
+  let _todayWork = { ms: 0, at: 0 };
+  window.myTodayWorkMs = () => _todayWork.ms;
+  async function _refreshTodayWork() {
+    if (!myNick) return;
+    try {
+      const rows = await loadSummary(myNick, 1);
+      _todayWork = { ms: rows[0].totals.writing + rows[0].totals.focus, at: nowMs() };
+      window.updateStatus?.(true);   // 새 값을 카드에 반영
+    } catch (e) {}
+  }
+  window.refreshTodayWork = _refreshTodayWork;
+  setInterval(() => { if (myNick && _tlStarted) _refreshTodayWork(); }, 60 * 1000);
 
   /* [2026-08-03] 나가기 직전 마무리 — 열린 구간을 지금까지로 저장하고
      timeCur 를 지웁니다. 묵은 timeCur 가 남아 다음 입장을 어지럽히거나
