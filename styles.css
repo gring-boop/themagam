@@ -4986,3 +4986,9 @@ html[data-theme-style="studio"] .user-card{
   letter-spacing: .3px;
   line-height: 1.1;
 }
+
+/* [2026-08-03·24차] 카드 작업 시간 옆 🍅 — 80% 크기로 */
+.card-wh .card-pomo-count{
+  font-size: 80%;
+  padding: 1px 6px;
+}
