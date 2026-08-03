@@ -4992,3 +4992,9 @@ html[data-theme-style="studio"] .user-card{
   font-size: 80%;
   padding: 1px 6px;
 }
+
+/* [2026-08-03·25차] 카드 ⏱ 기호 — 시간 숫자와 같은 크기로 */
+.card-wh .card-wh-t small{
+  font-size: calc(var(--fs-lg) + 1px);
+  line-height: 1.1;
+}
