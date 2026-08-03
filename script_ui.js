@@ -952,14 +952,18 @@
     return `${y}-${m}-${dd}`;
   }
 
+  /* [고침 2026-08-03] 🍅 오늘 집중 횟수 — 필명 귀속으로.
+     기기 단위 키(pomoSessions_날짜)로 저장하던 탓에, 같은 브라우저에서
+     새 필명으로 들어오면 이전 필명이 쌓은 오늘 횟수를 물려받았습니다. */
+  function _sessKey() {
+    return `pomoSessions_${myNick || "게스트"}_${_todayKey()}`;
+  }
   function _getTodaySessionCount() {
-    const key = `pomoSessions_${_todayKey()}`;
-    return Number(AppStore.getItem(key) || 0);
+    return Number(AppStore.getItem(_sessKey()) || 0);
   }
 
   function _setTodaySessionCount(v) {
-    const key = `pomoSessions_${_todayKey()}`;
-    AppStore.setItem(key, String(Math.max(0, Number(v || 0))));
+    AppStore.setItem(_sessKey(), String(Math.max(0, Number(v || 0))));
   }
 
   /* 화면 표시는 없앴지만 집계는 계속 쌓입니다(추후 통계용). */
@@ -1012,9 +1016,12 @@
       const v = snap.val();
       if (v && typeof v.count === "number") {
         _setTodaySessionCount(v.count);
-        renderTodaySessionCount();
-        window.updateStatus?.(false);
+      } else {
+        /* 서버에 오늘 기록이 없으면 0 — 남은 옛 값을 믿지 않습니다 */
+        _setTodaySessionCount(0);
       }
+      renderTodaySessionCount();
+      window.updateStatus?.(false);
     } catch (e) {}
   }
 
