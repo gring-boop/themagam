@@ -346,6 +346,7 @@
           // 내 카드에만 편집(연필) 버튼. 프사 위에 떠 있다가 마우스를 올리면 나타납니다.
           /* 카드 배경과 무늬 — 각자 프로필에서 고른 값 */
           const cardBg  = window.sanitizeHexColor?.(prof.cardBg) || "";
+          const footInk = window.sanitizeHexColor?.(prof.cardTextColor) || "";
           const patId   = window.sanitizePattern?.(prof.cardPattern) || "none";
           const patCol  = window.sanitizeHexColor?.(prof.patColor) || "#D8DEE8";
           const cardStyle = (cardBg || patId !== "none")
@@ -427,7 +428,7 @@
 
               <!-- [2026-08-03] 아래칸은 내 카드만 눌립니다 (목표·투두 팝업).
                    남의 작업시간은 보여주지 않습니다 — 본인만 설정 → 📊 나의 작업. -->
-              <div class="card-foot"${isMine
+              <div class="card-foot"${footInk ? ` style="--foot-ink:${footInk}"` : ""}${isMine
                 ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"`
                 : ""}>
                 <span class="card-conn${connOk ? "" : " off"}" aria-hidden="true"

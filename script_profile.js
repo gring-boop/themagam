@@ -669,6 +669,7 @@ function renderProfilePanel() {
   const curPat = sanitizePattern(p.cardPattern);
   const curPatColor = sanitizeHexColor(p.patColor) || "#D8DEE8";
   const curNickColor = sanitizeHexColor(p.nickColor) || "#5A6473";
+  const curFootColor = sanitizeHexColor(p.cardTextColor) || "";
 
   host.innerHTML = `
     <div class="set-block">
@@ -703,6 +704,20 @@ function renderProfilePanel() {
       </div>
       <div class="nick-preview" id="prof-nick-preview">${escapeHtml(myNick)}</div>
       <p class="hint">채팅 말풍선 위에 뜨는 <b>내 이름 색</b>이에요. 다른 분들 화면에도 이 색으로 보입니다.</p>
+    </div>
+
+    <div class="set-block">
+      <div class="set-title">카드 글자색</div>
+      <div class="color-row">
+        <input type="color" id="prof-footcolor" class="color-well"
+               value="${curFootColor || "#2B2620"}" aria-label="카드 글자색 고르기">
+        <input type="text" id="prof-footcolor-hex" class="color-hex"
+               value="${curFootColor}" maxlength="7" spellcheck="false"
+               placeholder="테마 기본" aria-label="카드 글자색 코드">
+        <button type="button" class="ghost-btn compact" id="prof-footcolor-reset">기본으로</button>
+      </div>
+      <p class="hint">카드 아래칸의 <b>닉네임 · 목표 · 작업 시간</b> 글자색이에요.
+      비워두면 테마 기본색을 따라갑니다. 다른 분들 화면에도 이 색으로 보여요.</p>
     </div>
 
     <div class="set-block">
@@ -762,6 +777,29 @@ function renderProfilePanel() {
 }
 
 function bindProfilePanel() {
+  /* ---- 카드 글자색 (2026-08-03) ---- */
+  {
+    const well  = document.getElementById("prof-footcolor");
+    const hexIn = document.getElementById("prof-footcolor-hex");
+    const reset = document.getElementById("prof-footcolor-reset");
+    const save = (hex, opts = {}) => {
+      const c = sanitizeHexColor(hex);
+      if (!c) return;
+      if (well && !opts.fromWell) well.value = c;
+      if (hexIn && !opts.fromHex) hexIn.value = c;
+      saveMyProfile({ cardTextColor: c });
+    };
+    if (well) well.oninput = () => save(well.value, { fromWell: true });
+    if (hexIn) {
+      hexIn.oninput = () => { if (sanitizeHexColor(hexIn.value)) save(hexIn.value, { fromHex: true }); };
+      hexIn.onblur  = () => { if (hexIn.value && !sanitizeHexColor(hexIn.value)) hexIn.value = ""; };
+    }
+    if (reset) reset.onclick = () => {
+      if (hexIn) hexIn.value = "";
+      saveMyProfile({ cardTextColor: null });   // 지우면 테마 기본색
+    };
+  }
+
   /* ---- 채팅 닉네임 색 ---- */
   const ncWell  = document.getElementById("prof-nickcolor");
   const ncHex   = document.getElementById("prof-nickcolor-hex");

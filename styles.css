@@ -4998,3 +4998,13 @@ html[data-theme-style="studio"] .user-card{
   font-size: calc(var(--fs-lg) + 1px);
   line-height: 1.1;
 }
+
+/* =====================================================================
+   [2026-08-03·26차] 카드 글자색 — 프로필에서 각자 지정 (--foot-ink)
+   지정하지 않으면 테마 기본색 그대로입니다.
+   ===================================================================== */
+.card-foot .card-name{ color: var(--foot-ink, inherit); }
+.card-foot .card-goal,
+.card-foot .card-goal .goal-line{ color: var(--foot-ink, inherit); }
+.card-foot .card-wh .card-wh-t b{ color: var(--foot-ink, var(--accent)); }
+.card-foot .card-wh .card-wh-t small{ color: var(--foot-ink, var(--muted)); }
