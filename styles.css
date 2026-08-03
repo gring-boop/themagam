@@ -4839,3 +4839,13 @@ html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
   padding: 0;
 }
 #pomo-detail-toggle::first-line{ line-height: 1; }
+
+/* =====================================================================
+   [2026-08-03·19차] 상태표 테두리 제거 — 전 상태·전 테마 통일
+   ===================================================================== */
+.card-state,
+html[data-theme-style="ink"] .card-state,
+:root[data-is-dark="true"] .card-state,
+.status-pop-item{
+  border: none;
+}
