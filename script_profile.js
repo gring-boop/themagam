@@ -669,7 +669,11 @@ function renderProfilePanel() {
   const curPat = sanitizePattern(p.cardPattern);
   const curPatColor = sanitizeHexColor(p.patColor) || "#D8DEE8";
   const curNickColor = sanitizeHexColor(p.nickColor) || "#5A6473";
-  const curFootColor = sanitizeHexColor(p.cardTextColor) || "";
+  /* 카드 글자색 3종 — 옛 단일색(cardTextColor)이 있으면 그걸 물려받습니다 */
+  const _legacyInk = sanitizeHexColor(p.cardTextColor) || "";
+  const curInkNick = sanitizeHexColor(p.cardNickColor) || _legacyInk;
+  const curInkGoal = sanitizeHexColor(p.cardGoalColor) || _legacyInk;
+  const curInkWh   = sanitizeHexColor(p.cardWhColor)   || _legacyInk;
 
   host.innerHTML = `
     <div class="set-block">
@@ -708,16 +712,22 @@ function renderProfilePanel() {
 
     <div class="set-block">
       <div class="set-title">카드 글자색</div>
-      <div class="color-row">
-        <input type="color" id="prof-footcolor" class="color-well"
-               value="${curFootColor || "#2B2620"}" aria-label="카드 글자색 고르기">
-        <input type="text" id="prof-footcolor-hex" class="color-hex"
-               value="${curFootColor}" maxlength="7" spellcheck="false"
-               placeholder="테마 기본" aria-label="카드 글자색 코드">
-        <button type="button" class="ghost-btn compact" id="prof-footcolor-reset">기본으로</button>
-      </div>
-      <p class="hint">카드 아래칸의 <b>닉네임 · 목표 · 작업 시간</b> 글자색이에요.
-      비워두면 테마 기본색을 따라갑니다. 다른 분들 화면에도 이 색으로 보여요.</p>
+      ${[
+        ["nick", "닉네임",       curInkNick],
+        ["goal", "목표 · 🍅",    curInkGoal],
+        ["wh",   "작업 시간 ⏱",  curInkWh]
+      ].map(([k, label, val]) => `
+      <div class="color-row" style="margin-bottom:7px;">
+        <span style="flex:0 0 84px;font-size:12.5px;font-weight:700;">${label}</span>
+        <input type="color" id="prof-ink-${k}" class="color-well"
+               value="${val || "#2B2620"}" aria-label="${label} 색 고르기">
+        <input type="text" id="prof-ink-${k}-hex" class="color-hex"
+               value="${val}" maxlength="7" spellcheck="false"
+               placeholder="테마 기본" aria-label="${label} 색 코드">
+        <button type="button" class="ghost-btn compact" data-ink-reset="${k}">기본</button>
+      </div>`).join("")}
+      <p class="hint">카드 아래칸의 글자색을 <b>세 군데 따로</b> 고를 수 있어요.
+      비워두면(기본) 테마 색을 따라갑니다. 다른 분들 화면에도 이 색으로 보여요.</p>
     </div>
 
     <div class="set-block">
@@ -777,28 +787,29 @@ function renderProfilePanel() {
 }
 
 function bindProfilePanel() {
-  /* ---- 카드 글자색 (2026-08-03) ---- */
-  {
-    const well  = document.getElementById("prof-footcolor");
-    const hexIn = document.getElementById("prof-footcolor-hex");
-    const reset = document.getElementById("prof-footcolor-reset");
-    const save = (hex, opts = {}) => {
-      const c = sanitizeHexColor(hex);
-      if (!c) return;
-      if (well && !opts.fromWell) well.value = c;
-      if (hexIn && !opts.fromHex) hexIn.value = c;
-      saveMyProfile({ cardTextColor: c });
-    };
-    if (well) well.oninput = () => save(well.value, { fromWell: true });
-    if (hexIn) {
-      hexIn.oninput = () => { if (sanitizeHexColor(hexIn.value)) save(hexIn.value, { fromHex: true }); };
-      hexIn.onblur  = () => { if (hexIn.value && !sanitizeHexColor(hexIn.value)) hexIn.value = ""; };
-    }
-    if (reset) reset.onclick = () => {
-      if (hexIn) hexIn.value = "";
-      saveMyProfile({ cardTextColor: null });   // 지우면 테마 기본색
-    };
-  }
+  /* ---- 카드 글자색 3종 (2026-08-03) ---- */
+  [["nick", "cardNickColor"], ["goal", "cardGoalColor"], ["wh", "cardWhColor"]]
+    .forEach(([k, field]) => {
+      const well  = document.getElementById(`prof-ink-${k}`);
+      const hexIn = document.getElementById(`prof-ink-${k}-hex`);
+      const reset = document.querySelector(`[data-ink-reset="${k}"]`);
+      const save = (hex, opts = {}) => {
+        const c = sanitizeHexColor(hex);
+        if (!c) return;
+        if (well && !opts.fromWell) well.value = c;
+        if (hexIn && !opts.fromHex) hexIn.value = c;
+        saveMyProfile({ [field]: c });
+      };
+      if (well) well.oninput = () => save(well.value, { fromWell: true });
+      if (hexIn) {
+        hexIn.oninput = () => { if (sanitizeHexColor(hexIn.value)) save(hexIn.value, { fromHex: true }); };
+        hexIn.onblur  = () => { if (hexIn.value && !sanitizeHexColor(hexIn.value)) hexIn.value = ""; };
+      }
+      if (reset) reset.onclick = () => {
+        if (hexIn) hexIn.value = "";
+        saveMyProfile({ [field]: null });   // 지우면 테마 기본색
+      };
+    });
 
   /* ---- 채팅 닉네임 색 ---- */
   const ncWell  = document.getElementById("prof-nickcolor");

@@ -5003,8 +5003,9 @@ html[data-theme-style="studio"] .user-card{
    [2026-08-03·26차] 카드 글자색 — 프로필에서 각자 지정 (--foot-ink)
    지정하지 않으면 테마 기본색 그대로입니다.
    ===================================================================== */
-.card-foot .card-name{ color: var(--foot-ink, inherit); }
+.card-foot .card-name{ color: var(--ink-nick, inherit); }
 .card-foot .card-goal,
-.card-foot .card-goal .goal-line{ color: var(--foot-ink, inherit); }
-.card-foot .card-wh .card-wh-t b{ color: var(--foot-ink, var(--accent)); }
-.card-foot .card-wh .card-wh-t small{ color: var(--foot-ink, var(--muted)); }
+.card-foot .card-goal .goal-line{ color: var(--ink-goal, inherit); }
+.card-foot .card-wh .card-pomo-count{ color: var(--ink-goal, var(--card-pomo)); }
+.card-foot .card-wh .card-wh-t b{ color: var(--ink-wh, var(--accent)); }
+.card-foot .card-wh .card-wh-t small{ color: var(--ink-wh, var(--muted)); }
