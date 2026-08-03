@@ -1100,19 +1100,103 @@
     } catch (e) { console.warn("[recordAttendance failed]", e); }
   }
 
+  /* [2026-08-03] 퇴장 시각 — 나가기 버튼을 누를 때 찍습니다.
+     (창을 그냥 닫으면 못 찍지만, 입장 기록만으로 출석은 셉니다) */
+  async function recordLeaveAttendance() {
+    if (!myNick) return;
+    try {
+      const day = ymd(Date.now());
+      await db.ref(`attendance/${day}/${myNick}`).update({ leftAt: Date.now(), at: Date.now() });
+    } catch (e) { console.warn("[recordLeaveAttendance]", e); }
+  }
+  window.recordLeaveAttendance = recordLeaveAttendance;
+
+  /* [2026-08-03] 📅 내 출석 달력 — 누구나 자기 출석만 봅니다.
+     recordAttendance 가 users/{닉}/attend/days/{날짜}=true 로 찍어둔 것을
+     달력 모양으로 그립니다. ‹ › 로 지난 달도 넘겨볼 수 있어요. */
+  async function showMyAttendance(monthOffset = 0) {
+    if (!myNick) { alert("입장 후에 볼 수 있어요."); return; }
+    let daysMap = {};
+    try {
+      const snap = await db.ref(`users/${myNick}/attend/days`).once("value");
+      daysMap = snap.val() || {};
+    } catch (e) {}
+
+    const base = new Date();
+    base.setDate(1);
+    base.setMonth(base.getMonth() - monthOffset);
+    const y = base.getFullYear(), m = base.getMonth();
+    const ymKey = `${y}-${String(m + 1).padStart(2, "0")}`;
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    const firstDow = new Date(y, m, 1).getDay();
+    const todayKey = ymd(Date.now());
+    let attended = 0;
+
+    let cells = `<span class="att-dow">일</span><span class="att-dow">월</span><span class="att-dow">화</span><span class="att-dow">수</span><span class="att-dow">목</span><span class="att-dow">금</span><span class="att-dow">토</span>`;
+    for (let i = 0; i < firstDow; i++) cells += `<span></span>`;
+    for (let d = 1; d <= lastDay; d++) {
+      const key = `${ymKey}-${String(d).padStart(2, "0")}`;
+      const on = !!daysMap[key];
+      if (on) attended++;
+      cells += `<span class="att-day${on ? " on" : ""}${key === todayKey ? " today" : ""}">${on ? "✓" : d}</span>`;
+    }
+
+    document.getElementById("my-attend-modal")?.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "my-attend-modal";
+    overlay.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:7000;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);";
+    overlay.innerHTML = `
+      <div class="modal-content" style="width:min(360px, calc(100vw - 32px));">
+        <div class="modal-title rec-weeknav" style="justify-content:center;">
+          <button type="button" class="rec-nav" onclick="showMyAttendance(${monthOffset + 1})" title="지난 달">‹</button>
+          <span>📅 ${y}년 ${m + 1}월 출석</span>
+          <button type="button" class="rec-nav" ${monthOffset === 0 ? "disabled" : ""}
+                  onclick="showMyAttendance(${monthOffset - 1})" title="다음 달">›</button>
+        </div>
+        <div class="modal-sub" style="text-align:center;">${escapeHtml(myNick)} · 이 달 <b>${attended}일</b> 출석했어요</div>
+        <div class="att-grid">${cells}</div>
+        <button class="ghost-btn w-full" style="margin-top:12px;" onclick="document.getElementById('my-attend-modal').remove()">닫기</button>
+      </div>`;
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+  window.showMyAttendance = showMyAttendance;
+
   function _closeAttendanceModal() {
     document.getElementById("attendance-modal")?.remove();
   }
 
-  async function showAttendanceLog() {
+  async function showAttendanceLog(monthOffset = 0) {
     if (!requireAdminPin()) return;
     try {
-      /* 저장은 1000일까지 하지만, 화면에는 최근 30일만 보여줍니다.
-         전체를 내려받으면 기록이 쌓일수록 무거워지므로 조회 단계에서 자릅니다. */
+      /* [2026-08-03] 월별 기준 — ‹ › 로 지난 달을 넘겨봅니다.
+         인원 정리는 달 단위니까, 조회도 그 달 날짜만 가져옵니다. */
+      const base = new Date();
+      base.setDate(1);
+      base.setMonth(base.getMonth() - monthOffset);
+      const ymKey = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
       const snap = await db.ref("attendance")
-        .orderByKey().limitToLast(ATTEND_SHOW_DAYS).once("value");
+        .orderByKey().startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value");
       const v = snap.val() || {};
       const days = Object.keys(v).sort().reverse();
+
+      /* [2026-08-03] 인원 정리용 요약 — 최근 30일 작가별 출석일수 · 마지막 출석일 */
+      const per = {};
+      days.forEach(d => Object.keys(v[d] || {}).forEach(n => {
+        per[n] = per[n] || { days: 0, last: "" };
+        per[n].days += 1;
+        if (d > per[n].last) per[n].last = d;
+      }));
+      const summary = Object.keys(per).length ? `
+        <div class="set-block" style="margin-bottom:10px;">
+          <div class="set-title">👥 작가별 출석 (${ymKey.replace("-", "년 ")}월)</div>
+          ${Object.entries(per).sort((a, b) => b[1].days - a[1].days).map(([n, s]) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px dashed var(--border);">
+              <span style="flex:1;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(n)}</span>
+              <span style="flex:0 0 auto;font-size:12px;font-weight:800;">${s.days}일</span>
+              <span style="flex:0 0 auto;font-size:11.5px;color:var(--sub-muted);">마지막 ${escapeHtml(s.last.slice(5))}</span>
+            </div>`).join("")}
+        </div>` : "";
 
       let body;
       if (!days.length) {
@@ -1129,7 +1213,7 @@
               <div style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px dashed var(--border);">
                 <span style="font-size:17px;flex:0 0 auto;">${r.emoji || "✍️"}</span>
                 <span style="flex:1;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(n)}</span>
-                <span style="flex:0 0 auto;font-size:12px;font-weight:800;color:var(--sub-muted);">첫 접속 ${first ? formatHHMM(first) : "-"}</span>
+                <span style="flex:0 0 auto;font-size:12px;font-weight:800;color:var(--sub-muted);">in ${first ? formatHHMM(first) : "-"}${r.leftAt ? " · out " + formatHHMM(r.leftAt) : ""}</span>
               </div>`;
           }).join("");
           return `
@@ -1149,9 +1233,14 @@
       overlay.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:7000;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);";
       overlay.innerHTML = `
         <div class="modal-content" style="max-height:calc(100vh - 60px);display:flex;flex-direction:column;width:min(440px, calc(100vw - 32px));">
-          <div class="modal-title">📋 접속 기록</div>
-          <div class="modal-sub">최근 30일 · 날짜별 접속한 작가님과 첫 접속 시각이에요.</div>
-          <div style="flex:1;overflow:auto;min-height:0;">${body}</div>
+          <div class="modal-title rec-weeknav" style="justify-content:center;">
+            <button type="button" class="rec-nav" onclick="showAttendanceLog(${monthOffset + 1})" title="지난 달">‹</button>
+            <span>📋 출석부 · ${ymKey.replace("-", "년 ")}월</span>
+            <button type="button" class="rec-nav" ${monthOffset === 0 ? "disabled" : ""}
+                    onclick="showAttendanceLog(${monthOffset - 1})" title="다음 달">›</button>
+          </div>
+          <div class="modal-sub">작가별 출석일수와 날짜별 입·퇴장 시각이에요. (퇴장은 🚪 나가기를 눌렀을 때만 찍혀요)</div>
+          <div style="flex:1;overflow:auto;min-height:0;">${summary}${body}</div>
           <div style="height:10px;"></div>
           <button class="ghost-btn" style="width:100%;" onclick="document.getElementById('attendance-modal').remove()">닫기</button>
         </div>`;

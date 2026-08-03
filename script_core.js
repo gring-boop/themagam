@@ -474,6 +474,7 @@ window.AppSession = AppSession;
       window.savePersonalData?.();
     } catch (e) {}
     try { await window.finalizeTimelogOnLeave?.(); } catch (e) {}
+    try { await window.recordLeaveAttendance?.(); } catch (e) {}
 
     await cancelPresenceOnDisconnect();
     await db.ref("status/" + myNick).remove();

@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608031410">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608031410">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608031537">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608031537">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608031410">
+  <link rel="manifest" href="manifest.json?v=202608031537">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608031410" />
+  <link rel="stylesheet" href="styles.css?v=202608031537" />
 </head>
 
 <body>
@@ -328,6 +328,12 @@
                 <p class="hint">글자수 창의 오늘 기록·말풍선이 모두 지워져요. 되돌릴 수 없어요.</p>
               </div>
 
+              <!-- 출석부 -->
+              <div>
+                <button class="ghost-btn w-full" type="button" onclick="showAttendanceLog()">📋 출석부 보기</button>
+                <p class="hint">최근 30일 작가별 출석일수 — 한 달에 한 번 인원 정리할 때 쓰세요.</p>
+              </div>
+
             </div>
           </div>
         </div>
@@ -359,6 +365,8 @@
       <!-- 창을 비우는 기능이 없어졌으므로 "치워둔 창" 자리도 없앴습니다. -->
 
       <div class="head-tools">
+        <button class="icon-btn labeled" type="button" onclick="showMyAttendance()" aria-label="출석부" title="내 출석 달력">📅<span class="icon-btn-label">출석부</span></button>
+
         <button class="icon-btn guide labeled" type="button" onclick="openManual()" aria-label="가이드" title="가이드">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.6.2-.8.7-.8 1.3v.4"/><path d="M12 17.2h.01"/>
@@ -658,19 +666,19 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608031410"></script>
-<script src="script_core.js?v=202608031410"></script>
-<script src="script_auth.js?v=202608031410"></script>
-<script src="script_ui.js?v=202608031410"></script>
-<script src="script_chat.js?v=202608031410"></script>
-<script src="script_data.js?v=202608031410"></script>
-<script src="script_realtime.js?v=202608031410"></script>
-<script src="script_layout.js?v=202608031410"></script>
-<script src="script_wordcount.js?v=202608031410"></script>
-<script src="script_timelog.js?v=202608031410"></script>
-<script src="script_profile.js?v=202608031410"></script>
-<script src="script_reactions.js?v=202608031410"></script>
-<script src="script_manual.js?v=202608031410"></script>
+<script src="fortune_data.js?v=202608031537"></script>
+<script src="script_core.js?v=202608031537"></script>
+<script src="script_auth.js?v=202608031537"></script>
+<script src="script_ui.js?v=202608031537"></script>
+<script src="script_chat.js?v=202608031537"></script>
+<script src="script_data.js?v=202608031537"></script>
+<script src="script_realtime.js?v=202608031537"></script>
+<script src="script_layout.js?v=202608031537"></script>
+<script src="script_wordcount.js?v=202608031537"></script>
+<script src="script_timelog.js?v=202608031537"></script>
+<script src="script_profile.js?v=202608031537"></script>
+<script src="script_reactions.js?v=202608031537"></script>
+<script src="script_manual.js?v=202608031537"></script>
 
 <script>
   window.addEventListener("load", () => {

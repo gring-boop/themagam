@@ -4918,3 +4918,41 @@ html[data-theme-style="studio"] .user-card{
 :root[data-is-dark="true"] .font-ctl{ background: rgba(255,255,255,.08); }
 :root[data-is-dark="true"] .font-btn{ background: transparent; border: none; color: var(--text); }
 :root[data-is-dark="true"] .font-pill{ background: rgba(255,255,255,.12); border: none; color: var(--text); }
+
+/* =====================================================================
+   [2026-08-03·22차] 카드 간격 · 내 출석 달력
+   ===================================================================== */
+/* 책 두께(오른쪽 아래 8px)만큼 카드 사이를 다시 벌립니다 */
+.user-cards-grid{ gap: calc(var(--cards-gap, 12px) + 8px); }
+
+/* 출석 달력 */
+.att-grid{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+.att-dow{
+  text-align: center;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--muted);
+  padding-bottom: 2px;
+}
+.att-day{
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  background: var(--fill-1, rgba(0,0,0,.04));
+}
+.att-day.on{
+  background: var(--accent);
+  color: var(--me-text);
+  font-weight: var(--fw-bold);
+}
+.att-day.today{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }

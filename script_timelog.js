@@ -486,7 +486,7 @@
     const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 작업 시간 (Write + Job)</div>
+        <div class="rec-sub">오늘 작업 시간 — Write(집필)와 Job(다른 일)을 더한 합계예요</div>
       </div>
 
       <div class="rec-bars">
