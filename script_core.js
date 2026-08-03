@@ -464,6 +464,17 @@ window.AppSession = AppSession;
   async function leaveRoom() {
     if (!myNick) return;
 
+    /* [2026-08-03] 나가기 전 마무리 —
+       ① 열려 있는 작업 구간을 지금까지로 저장 (워크 타임이 날아가지 않게)
+       ② users/{닉}/timeCur 를 지워서 묵은 구간이 남지 않게
+       ③ 상태를 AWAY 로 저장해 두어 다음 입장 때 AWAY 로 시작 */
+    try {
+      const sel = document.getElementById("db-status");
+      if (sel) sel.value = "away";
+      window.savePersonalData?.();
+    } catch (e) {}
+    try { await window.finalizeTimelogOnLeave?.(); } catch (e) {}
+
     await cancelPresenceOnDisconnect();
     await db.ref("status/" + myNick).remove();
     await _writeLeaveSystemMessageOnce();

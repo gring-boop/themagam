@@ -224,6 +224,8 @@
     const rail = document.getElementById("chat-rail");
     if (rail) rail.classList.toggle("hidden",
       !document.body.classList.contains("chat-collapsed"));
+    const rail2 = document.getElementById("pomo-rail");
+    if (rail2) rail2.classList.toggle("hidden", !on);
   }
   window.toggleSideCollapsed = function () {
     try { AppStore.setItem(SIDE_KEY, isSideCollapsed() ? "0" : "1"); } catch (e) {}
@@ -256,9 +258,15 @@
   }
 
   function pickGrowIndex(node, map) {
+    /* [고침 2026-08-03] 접힌 채팅은 후보에서 뺍니다.
+       채팅이 남는 공간 1순위(GROW_RANK 1)라, 접힌 채팅이 뽑히면
+       0px 칸이 "받은 셈"이 되어 남는 공간이 빈 채로 남았습니다. */
+    const folded = document.body.classList.contains("chat-collapsed");
     let best = Infinity, bestIdx = node.kids.length - 1;
     node.kids.forEach((kid, i) => {
-      const ranks = leafPanels(kid, map).map(pid => GROW_RANK[pid] ?? 5);
+      const ids = leafPanels(kid, map);
+      if (folded && ids.length > 0 && ids.every(pid => pid === "chat")) return;
+      const ranks = ids.map(pid => GROW_RANK[pid] ?? 5);
       const r = ranks.length ? Math.min(...ranks) : 99;
       if (r < best) { best = r; bestIdx = i; }
     });
@@ -280,6 +288,9 @@
       const el = panelEl(node, map);
       if (el) {
         el.classList.remove("panel-off");
+        el.classList.remove("chat-collapsed-slot");
+        el.classList.remove("pomo-collapsed-slot");
+        el.style.overflow = "";
         el.style.gridArea = "";
         el.dataset.slot = node;
       }
@@ -302,20 +313,42 @@
       const child = buildDom(kid, orient, map, sizes, keyPrefix + "/" + i);
       if (!child) return;
 
-      /* 채팅을 접었으면 그 칸만 레일 폭으로 좁힙니다.
-         (자리를 어디로 옮겼든 "채팅이 있는 칸"이 좁혀집니다) */
-      const isCollapsedChat =
-        typeof kid === "string" && map[kid] === "chat" &&
-        document.body.classList.contains("chat-collapsed");
+      /* 채팅을 접었으면 그 칸을 0으로 좁힙니다.
+         [고침 2026-08-03] 채팅이 하위 가지 안에 들어 있는 배치에서는
+         문자열 잎만 검사하던 탓에 가지가 저장된 폭을 그대로 차지해
+         빈 기둥이 남았습니다. "채팅만 든 가지"도 통째로 접습니다. */
+      const _chatFolded = document.body.classList.contains("chat-collapsed");
+      const _pomoFolded = isSideCollapsed();
+      const _foldTest = (k, pid) => (
+        typeof k === "string"
+          ? map[k] === pid
+          : (() => { const ids = leafPanels(k, map);
+                     return ids.length > 0 && ids.every(x => x === pid); })()
+      );
+      const isCollapsedPomo = _pomoFolded && _foldTest(kid, "pomo");
+      const isCollapsedChat = _chatFolded && (
+        typeof kid === "string"
+          ? map[kid] === "chat"
+          : (() => { const ids = leafPanels(kid, map);
+                     return ids.length > 0 && ids.every(pid => pid === "chat"); })()
+      );
 
       const last = (i === kids.length - 1);
       if (isCollapsedChat) {
-        /* [고침 2026-08-03] 채팅 본체는 display:none 이므로 칸을 0으로.
-           46px 를 남겨두면 빈 여백 기둥이 생겼습니다. 레일(#chat-rail)이
-           바로 옆에 끼워져 손잡이 노릇을 합니다. */
+        /* 칸을 0으로 접고 표식을 남깁니다 — 레일(#chat-rail)은 아래
+           applyLayout 끝에서 이 표식 "바깥"에 끼워져 손잡이가 됩니다. */
         child.style.flex = "0 0 0px";
         child.style.minWidth = "0";
         child.style.minHeight = "0";
+        child.style.overflow = "hidden";
+        child.classList.add("chat-collapsed-slot");
+      } else if (isCollapsedPomo) {
+        /* [2026-08-03] 뽀모·글자수 줄 접기 — 채팅 접기와 같은 방식 */
+        child.style.flex = "0 0 0px";
+        child.style.minWidth = "0";
+        child.style.minHeight = "0";
+        child.style.overflow = "hidden";
+        child.classList.add("pomo-collapsed-slot");
       } else if (i === growIdx) {
         // 남는 공간을 받는 가지 (아래 pickGrowIndex 가 고릅니다)
         child.style.flex = "1 1 0";
@@ -342,7 +375,11 @@
       }
       box.appendChild(child);
 
-      if (!last) {
+      const nextFolded = !last && (
+        (_chatFolded && _foldTest(kids[i + 1], "chat")) ||
+        (_pomoFolded && _foldTest(kids[i + 1], "pomo"))
+      );
+      if (!last && !isCollapsedChat && !isCollapsedPomo && !nextFolded) {
         // 이 가지와 다음 가지 사이의 손잡이
         const grip = document.createElement("div");
         grip.className = "split-grip " + (node.dir === "h" ? "grip-v" : "grip-h");
@@ -502,6 +539,10 @@
         document.querySelectorAll(p.sel).forEach(el => attic.appendChild(el));
       }
       if (rail0) attic.appendChild(rail0);
+      /* [고침 2026-08-03] 뽀모 레일도 피신 — 안 하면 뿌리를 비울 때
+         통째로 지워져서, 접은 뽀모·글자수 줄을 다시 펼 수 없었습니다. */
+      const railP0 = document.getElementById("pomo-rail");
+      if (railP0) attic.appendChild(railP0);
 
       /* [중요] 목표·투두는 이제 창이 아니지만, 문서에는 살아 있어야 합니다.
 
@@ -557,12 +598,25 @@
     }
     root.classList.toggle("flip", chatRight);
 
-    // 채팅 레일은 채팅 옆에 붙어 다닙니다
+    // 채팅 레일은 채팅(또는 접힌 채팅 가지)의 바로 바깥 옆에 붙어 다닙니다
     const rail = document.getElementById("chat-rail");
     const chatEl = document.querySelector(".chat-sidebar");
     if (rail && chatEl && chatEl.parentNode) {
-      chatEl.parentNode.insertBefore(rail, chatEl);
-      rail.style.flex = "0 0 auto";
+      const slot = root.querySelector(".chat-collapsed-slot") || chatEl;
+      if (slot.parentNode) {
+        slot.parentNode.insertBefore(rail, slot);
+        rail.style.flex = "0 0 auto";
+      }
+    }
+    // 뽀모·글자수 레일도 같은 방식으로
+    const rail2 = document.getElementById("pomo-rail");
+    const pomoEl = document.querySelector(".pane-pomo");
+    if (rail2 && pomoEl && pomoEl.parentNode) {
+      const slot2 = root.querySelector(".pomo-collapsed-slot") || pomoEl;
+      if (slot2.parentNode) {
+        slot2.parentNode.insertBefore(rail2, slot2);
+        rail2.style.flex = "0 0 auto";
+      }
     }
 
     paintSideToggle();

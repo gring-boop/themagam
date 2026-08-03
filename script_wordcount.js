@@ -517,26 +517,49 @@
      보여줍니다. 설정을 여는 사람은 "오늘 얼마나 썼지"를 먼저
      궁금해하니까요.
      --------------------------------------------------------------- */
-  function myWeekHtml() {
-    const days = weekDays();
-    const vals = days.map((k, i) => {
+  async function myWeekHtml(wcBack = 0, timeBack = 0) {
+    /* [2026-08-03] 지난 주 넘겨보기 — 이번 주(wcBack 0)는 듣고 있는
+       캐시(_week)를 그대로 쓰고, 지난 주는 그때 노드를 한 번 읽어옵니다. */
+    const isThisWeek = wcBack === 0;
+    const vals = [];
+    for (let i = 6; i >= 0; i--) {
       const d = new Date();
-      d.setDate(d.getDate() - (days.length - 1 - i));
-      return [DOW_LABEL[(d.getDay() + 6) % 7], Number(_week[k]?.[me()]?.total || 0)];
-    });
+      d.setDate(d.getDate() - (i + wcBack * 7));
+      const key = dayKey(d);
+      let total = 0;
+      if (isThisWeek) {
+        total = Number(_week[key]?.[me()]?.total || 0);
+      } else {
+        try {
+          const snap = await db.ref(`wordlog/${key}/${me()}`).once("value");
+          total = Number(snap.val()?.total || 0);
+        } catch (e) {}
+      }
+      vals.push([DOW_LABEL[(d.getDay() + 6) % 7], total]);
+    }
     const week = vals.reduce((a, b) => a + b[1], 0);
     const today = Number(myRow().total || 0);
     const base = myRow().base;
+    const weekLabel = isThisWeek ? "이번 주" : `${wcBack}주 전`;
 
-    return `
+    const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmt(today)}자</div>
         <div class="rec-sub">오늘 쓴 글자수</div>
+      </div>`;
+
+    return `
+      ${todayHtml}
+      <div class="rec-h2 rec-weeknav">
+        <button type="button" class="rec-nav" title="한 주 전"
+                onclick="renderMyRecordPanel(${timeBack}, ${wcBack + 1})">‹</button>
+        <span>${weekLabel} · 요일별</span>
+        <button type="button" class="rec-nav" title="한 주 뒤" ${isThisWeek ? "disabled" : ""}
+                onclick="renderMyRecordPanel(${timeBack}, ${wcBack - 1})">›</button>
       </div>
-      <div class="rec-h2">이번 주 · 요일별</div>
-      <div class="wc-rows" style="max-height:none">${drawRows(vals, vals.length - 1)}</div>
-      <div class="rec-foot">이번 주 <b>${fmt(week)}자</b></div>
-      ${base === null || base === undefined
+      <div class="wc-rows" style="max-height:none">${drawRows(vals, isThisWeek ? vals.length - 1 : -1)}</div>
+      <div class="rec-foot">${weekLabel} <b>${fmt(week)}자</b></div>
+      ${isThisWeek && (base === null || base === undefined)
         ? `<p class="hint">아직 출발선을 안 잡았어요. 글자수 칸에서 지금 원고의 전체 글자수를 적어주세요.</p>`
         : ""}`;
   }

@@ -198,6 +198,15 @@
   document.addEventListener("DOMContentLoaded", () => {
     try { bindNoticeEdit(); } catch (e) {}
     try { if (window.db) listenNotice(); } catch (e) {}
+    /* 대기 상태(idle)에서는 집중 시간 입력이 곧 표시 시간입니다 */
+    const wmIn = document.getElementById("pomo-work-min");
+    if (wmIn) wmIn.addEventListener("input", () => {
+      const pill = document.getElementById("timer-pill");
+      const text = document.getElementById("timer-text");
+      if (!pill || !text || pill.dataset.phase !== "idle") return;
+      const wm = parseInt(wmIn.value, 10) || 25;
+      text.textContent = `${String(wm).padStart(2, "0")}:00`;
+    });
   });
 
   function startHeaderTicker() {
@@ -416,7 +425,7 @@
               </div>
 
               <!-- [2026-08-03] 아래칸은 내 카드만 눌립니다 (목표·투두 팝업).
-                   남의 작업시간은 보여주지 않습니다 — 본인만 설정 → 📊 나의 기록. -->
+                   남의 작업시간은 보여주지 않습니다 — 본인만 설정 → 📊 나의 작업. -->
               <div class="card-foot"${isMine
                 ? ` data-record-of="${escapeHtml(u)}" role="button" tabindex="0" title="오늘 목표와 나의 투두"`
                 : ""}>
@@ -455,7 +464,7 @@
       writing: "🔥WORK🔥",
       focus:   "🔥WORK🔥",
       rest:    "☕BREAK☕",
-      away:    "☕BREAK☕"
+      away:    "💤AWAY💤"
     })[code] || "휴식";
   }
 
@@ -553,8 +562,10 @@
       // ✅ stopped/없음 처리
       if (!data || data.status === "stopped") {
         window.setPomoStarter?.("");
-        delete pill.dataset.phase;
-        text.textContent = "🍅 뽀모도로 대기 중… 🍅";
+        /* [2026-08-03] 대기 문구 대신 설정된 집중 시간을 25:00 꼴로 보여줍니다 */
+        pill.dataset.phase = "idle";
+        const _wm = parseInt(document.getElementById("pomo-work-min")?.value, 10) || 25;
+        text.textContent = `${String(_wm).padStart(2, "0")}:00`;
         window.updatePomoHeaderStatus?.({ running:false });
         window.updatePomoSetupUI?.({ running:false });
         _lastHandledPomoSeq = 0;
@@ -1171,6 +1182,24 @@
   window.stopPomodoro = stopPomodoro;
   window.requireAdminPin = requireAdminPin;
   window.clearAllChat = clearAllChat;
+
+  /* [2026-08-03] 관리자 — 오늘 글자수 창 초기화 (채팅 전체 삭제와 같은 결)
+     오늘 날짜의 wordfeed(말풍선)와 wordlog(누적)를 지웁니다.
+     보안규칙: $day 에 "삭제만" 허용하는 규칙이 필요합니다 (보안규칙.json 참고). */
+  async function clearAllWordcount() {
+    if (!requireAdminPin()) return;
+    if (!confirm("오늘의 글자수 기록을 초기화할까요?\n모두의 오늘 기록·말풍선이 지워집니다. (되돌릴 수 없어요!)")) return;
+    const day = window.Wordcount?.dayKey?.(new Date()) || new Date().toISOString().slice(0, 10);
+    try {
+      await db.ref(`wordfeed/${day}`).remove();
+      await db.ref(`wordlog/${day}`).remove();
+      alert("🧹 오늘 글자수 기록을 초기화했어요.");
+    } catch (e) {
+      console.warn("[clearAllWordcount]", e);
+      alert("초기화하지 못했어요 — 파이어베이스 콘솔에 새 보안규칙을 적용했는지 확인해 주세요.");
+    }
+  }
+  window.clearAllWordcount = clearAllWordcount;
   window.applyHistoryConfig = applyHistoryConfig;
   window.loadHistoryNow = loadHistoryNow;
   window.recordAttendance = recordAttendance;

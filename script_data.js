@@ -455,9 +455,12 @@
 
   // ✅ 원터치 집필/휴식 전환
   function toggleWritingStatus() {
+    /* [2026-08-03] 상태 3단계 순환: Work → Break → Away → Work */
     const sel = document.getElementById("db-status");
     if (!sel) return;
-    sel.value = (sel.value === "writing") ? "rest" : "writing";
+    sel.value = sel.value === "writing" ? "rest"
+              : sel.value === "rest"    ? "away"
+              : "writing";
     renderQuickStatusBtn();
     saveNow();
   }

@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608030452">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608030452">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608031226">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608031226">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608030452">
+  <link rel="manifest" href="manifest.json?v=202608031226">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608030452" />
+  <link rel="stylesheet" href="styles.css?v=202608031226" />
 </head>
 
 <body>
@@ -159,7 +159,7 @@
       <button class="tab active" data-tab="chat"    role="tab" aria-selected="true"  aria-controls="panel-chat"    onclick="openTab('chat')">💬 채팅</button>
       <button class="tab"        data-tab="profile" role="tab" aria-selected="false" aria-controls="panel-profile" onclick="openTab('profile')">👤 프로필</button>
       <button class="tab"        data-tab="goals"   role="tab" aria-selected="false" aria-controls="panel-goals"   onclick="openTab('goals')">🎯 목표 · 투두</button>
-      <button class="tab"        data-tab="record"  role="tab" aria-selected="false" aria-controls="panel-record"  onclick="openTab('record')">📊 나의 기록</button>
+      <button class="tab"        data-tab="record"  role="tab" aria-selected="false" aria-controls="panel-record"  onclick="openTab('record')">📊 나의 작업</button>
       <button class="tab"        data-tab="theme"   role="tab" aria-selected="false" aria-controls="panel-theme"   onclick="openTab('theme')">🎨 테마</button>
       <button class="tab"        data-tab="privacy" role="tab" aria-selected="false" aria-controls="panel-privacy" onclick="openTab('privacy')">🔒 개인정보</button>
     </div>
@@ -212,7 +212,7 @@
       <div class="panel" id="panel-goals" role="tabpanel"></div>
 
 
-      <!-- 나의 기록 (내용은 script_timelog.js 가 그립니다) -->
+      <!-- 나의 작업 (내용은 script_timelog.js 가 그립니다) -->
       <div class="panel" id="panel-record" role="tabpanel"></div>
 
       <!-- ── 테마 ── -->
@@ -320,6 +320,12 @@
               <div>
                 <button id="admin-clear-btn" class="ghost-btn danger w-full" type="button">🧹 채팅 전체 삭제</button>
                 <p class="hint">주의: 되돌릴 수 없어요.</p>
+              </div>
+
+              <!-- 글자수 창 초기화 -->
+              <div>
+                <button class="ghost-btn danger w-full" type="button" onclick="clearAllWordcount()">🧹 오늘 글자수 초기화</button>
+                <p class="hint">글자수 창의 오늘 기록·말풍선이 모두 지워져요. 되돌릴 수 없어요.</p>
               </div>
 
             </div>
@@ -438,6 +444,13 @@
     <span class="side-rail-label" aria-hidden="true">펼치기</span>
   </div>
 
+  <!-- 뽀모·글자수 줄을 접었을 때 남는 얇은 손잡이 -->
+  <div id="pomo-rail" class="side-rail hidden">
+    <button class="side-rail-btn" type="button" onclick="toggleSideCollapsed()"
+            aria-label="뽀모·글자수 펼치기" title="펼치기">❮</button>
+    <span class="side-rail-label" aria-hidden="true">펼치기</span>
+  </div>
+
 
   <!-- 접속자 프로필 -->
   <main class="cards-area" aria-label="공동 집필 현황">
@@ -451,12 +464,16 @@
 
   <!-- 뽀모도로 -->
   <section class="pane pane-pomo" id="pomo-block" aria-label="뽀모도로">
-    <h4 class="personal-title pomo-pane-title">Pomodoro 🍅</h4>
+    <h4 class="personal-title pomo-pane-title">
+      <span>Pomodoro 🍅</span>
+      <button id="side-fold-btn" class="icon-btn side-fold" type="button"
+              onclick="toggleSideCollapsed()" aria-label="뽀모·글자수 접기" title="뽀모·글자수 접기">❯</button>
+    </h4>
     <div id="timer-wrap">
       <!-- [1줄] 상태 문구 -->
       <div class="pomo-row pomo-row-1">
-        <div id="timer-pill" role="status" aria-live="polite">
-          <span id="timer-text" class="pill-muted">🍅 뽀모도로 대기 중… 🍅</span>
+        <div id="timer-pill" role="status" aria-live="polite" data-phase="idle">
+          <span id="timer-text" class="pill-muted">25:00</span>
         </div>
       </div>
 
@@ -572,7 +589,7 @@
   <!-- 오늘 목표 / 상태 -->
   <section class="pane pane-status" id="status-block" aria-label="오늘 목표와 상태">
     <div class="goal-wrap">
-    <h4 class="personal-title">🎯 오늘 목표</h4>
+    <h4 class="personal-title">🎯 Today's goal</h4>
     <div class="stack" style="gap:10px;">
       <label class="sr-only" for="db-today-goal-text">오늘의 한줄 목표</label>
     <input
@@ -613,7 +630,7 @@
   <!-- 나의 할일 -->
   <section class="pane pane-todo" id="todo-block" aria-label="나의 할일">
     <div class="todo-wrap">
-      <h4 class="personal-title">📌 나의 투두</h4>
+      <h4 class="personal-title">📌 What to do</h4>
       <div class="todo-add">
         <label class="sr-only" for="todo-input">할 일 입력</label>
         <input id="todo-input" class="todo-input" type="text" placeholder="할 일 추가…" enterkeyhint="done" />
@@ -641,19 +658,19 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608030452"></script>
-<script src="script_core.js?v=202608030452"></script>
-<script src="script_auth.js?v=202608030452"></script>
-<script src="script_ui.js?v=202608030452"></script>
-<script src="script_chat.js?v=202608030452"></script>
-<script src="script_data.js?v=202608030452"></script>
-<script src="script_realtime.js?v=202608030452"></script>
-<script src="script_layout.js?v=202608030452"></script>
-<script src="script_wordcount.js?v=202608030452"></script>
-<script src="script_timelog.js?v=202608030452"></script>
-<script src="script_profile.js?v=202608030452"></script>
-<script src="script_reactions.js?v=202608030452"></script>
-<script src="script_manual.js?v=202608030452"></script>
+<script src="fortune_data.js?v=202608031226"></script>
+<script src="script_core.js?v=202608031226"></script>
+<script src="script_auth.js?v=202608031226"></script>
+<script src="script_ui.js?v=202608031226"></script>
+<script src="script_chat.js?v=202608031226"></script>
+<script src="script_data.js?v=202608031226"></script>
+<script src="script_realtime.js?v=202608031226"></script>
+<script src="script_layout.js?v=202608031226"></script>
+<script src="script_wordcount.js?v=202608031226"></script>
+<script src="script_timelog.js?v=202608031226"></script>
+<script src="script_profile.js?v=202608031226"></script>
+<script src="script_reactions.js?v=202608031226"></script>
+<script src="script_manual.js?v=202608031226"></script>
 
 <script>
   window.addEventListener("load", () => {

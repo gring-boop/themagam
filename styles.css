@@ -4603,3 +4603,156 @@ html[data-theme-style="ink"] .card-state{ border-radius: var(--r-full); }
 body.chat-collapsed .chat-sidebar{ display: none !important; }
 /* 접힌 채팅 옆의 크기조절 손잡이는 의미가 없으니 감춥니다 */
 body.chat-collapsed .split-grip[data-key="panel/chat"]{ display: none; }
+
+/* =====================================================================
+   [2026-08-03·9차] 프로필 카드 — 스프링 노트
+   왼쪽에 스프링 링, 오른쪽·아래로 종이 여러 장이 겹친 낌새를 냅니다.
+   ===================================================================== */
+.user-card{
+  /* 겹친 종이 — 오른쪽 아래로 낱장 두 장이 삐져나온 그림자 */
+  box-shadow:
+    2.5px 2.5px 0 -0.5px var(--panel),
+    2.5px 2.5px 0 0      var(--border),
+    5px   5px   0 -0.5px var(--panel),
+    5px   5px   0 0      var(--border);
+}
+
+/* =====================================================================
+   [2026-08-03·10차] 창 제목 서체 통일 — 뽀모 창 제목과 같게
+   Chat · Letters · 카드 닉네임이 잉크 테마에서 명조로 따로 놀던 것을
+   뽀모 제목과 같은 본문 고딕(굵게)으로 맞춥니다.
+   ===================================================================== */
+#my-info,
+.wc-title{
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+}
+html[data-theme-style="ink"] #my-info,
+html[data-theme-style="ink"] .wc-title,
+html[data-theme-style="ink"] .card-name{
+  font-family: var(--font);
+}
+
+/* =====================================================================
+   [2026-08-03·11차] 뽀모·글자수 줄 접기 · 대기 타이머
+   ===================================================================== */
+/* 접힌 뽀모·글자수 본체는 확실히 숨깁니다 */
+body.side-collapsed .pane-pomo{ display: none !important; }
+
+/* 뽀모 제목 줄 — 오른쪽 끝에 접기 버튼 */
+.pomo-pane-title{
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;   /* 제목은 왼쪽 정렬 그대로 */
+  /* 획(::before)의 margin-right 7px 만 쓰도록 gap 은 0 —
+     gap 8px 가 더해져 다른 창 제목보다 간격이 넓어 보였습니다 */
+  gap: 0;
+}
+.pomo-pane-title span{ flex: 0 0 auto; }
+#side-fold-btn{
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  font-size: 12px;
+  margin-left: auto;   /* 접기 버튼만 오른쪽 끝으로 */
+}
+
+/* =====================================================================
+   [2026-08-03·12차] 접속자 창 프레임 제거 — 카드가 원고지 위에 바로
+   ===================================================================== */
+.cards-area{
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* =====================================================================
+   [2026-08-03·13차] 상태 3종 · 기록 주간 넘기기 · 제목 영문 · 카드 정렬
+   ===================================================================== */
+/* 상태 버튼 글꼴 — 창 제목과 같은 본문 고딕 */
+.card-state,
+html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
+
+/* AWAY 인 카드는 색이 빠져 흐리게 (마우스를 올리면 또렷) */
+.user-card.status-away{ filter: grayscale(.85); opacity: .7; transition: filter var(--anim), opacity var(--anim); }
+.user-card.status-away:hover{ filter: none; opacity: 1; }
+
+/* 목표·투두 소제목 — 획 없이 */
+.goal-wrap .personal-title::before,
+.todo-wrap .personal-title::before{ display: none; }
+
+/* 기록 — 주간 넘기기 · 막대 위 시간 표기 */
+.rec-weeknav{ display: flex; align-items: center; gap: 8px; }
+.rec-nav{
+  width: 24px; height: 24px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--panel2);
+  cursor: pointer; line-height: 1; font-size: 13px; color: var(--text);
+}
+.rec-nav:disabled{ opacity: .35; cursor: default; }
+.rec-week span .rec-bar-v{
+  display: block;
+  min-height: 13px;
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 카드 아래칸 — 접속 점은 왼쪽 끝, 닉네임·목표는 오른쪽 정렬 */
+.card-conn{ left: 7px; right: auto; }
+.card-foot{ padding-left: 26px; padding-right: 11px; }
+.card-name{ justify-content: flex-end; text-align: right; padding-right: 0; }
+.card-goal .goal-line{ text-align: right; }
+
+/* =====================================================================
+   [2026-08-03·14차] 카드 진척 바 — 닉네임 상자 양 끝에 맞춤
+   ===================================================================== */
+/* 접속 점의 자리는 이름 줄에서만 비우고,
+   목표·진척 바·완료/토마토 줄은 상자 폭을 끝까지 씁니다. */
+.card-foot{ padding-left: 11px; }
+.card-name{ padding-left: 22px; }   /* 왼쪽 점과 겹치지 않게 이름 줄만 */
+.card-goal,
+.card-meta,
+.card-meta .card-prog-track{ width: 100%; }
+.card-meta-line{ width: 100%; }
+
+/* =====================================================================
+   [2026-08-03·15차] 설정창 리스킨 — 대시보드와 같은 결
+   ===================================================================== */
+/* 탭 — 알약 묶음, 고른 탭은 포인트 컬러 */
+.tabs{
+  border: none;
+  background: var(--fill-2);
+  border-radius: var(--r-full);
+  padding: 5px;
+  gap: 4px;
+}
+.tab{
+  border-radius: var(--r-full);
+  border: none;
+}
+.tab.active{
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--me-text);
+}
+.tab.active:hover{ color: var(--me-text); }
+
+/* 설정 상자 — 낮은 그림자의 카드 */
+.set-block{
+  border: none;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+}
+:root[data-is-dark="true"] .set-block{ box-shadow: 0 1px 6px rgba(0,0,0,.35); }
+
+/* 상자 제목 — 창 제목처럼 포인트 획 */
+.set-title::before{
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  margin-right: 7px;
+  vertical-align: 3px;
+}

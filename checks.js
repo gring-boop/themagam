@@ -307,18 +307,28 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     void i;
   }
 
-  /* A3 상태표 → 고르기 */
+  /* A3 상태표 → Work ↔ Break 토글 (2026-08-03: 상태 2가지로 축소) */
   ok(/data-pick-status="1"/.test(rt), "내 상태표만 누를 수 있다");
-  ok(/window\.openStatusPicker/.test(prof), "상태 고르기 판이 있다");
   {
-    const i = prof.indexOf("const CHOICES = [");
-    const seg = prof.slice(i, i + 400);
-    const vals = (seg.match(/v: "(\w+)"/g) || []).map(x => x.slice(4, -1));
-    ok(vals.join(",") === "writing,focus,rest,away", "상태 네 가지가 맞다 ("+vals.join(",")+")");
-    ok(/🔥초집중🔥/.test(seg), "집중 이름이 초집중이다");
+    const i = prof.indexOf('closest?.("[data-pick-status]")');
+    const seg = prof.slice(i, i + 220);
+    ok(/toggleWritingStatus/.test(seg), "상태표를 누르면 Work↔Break 로 바뀐다");
   }
-  ok(/getElementById\("db-status"\)/.test(prof), "기존 저장 흐름을 그대로 탄다");
-  ok(!/🔥WORK🔥/.test(rt) && !/🔥WORK🔥/.test(HTML), "옛 이름이 남아 있지 않다");
+  {
+    const dat = fs.readFileSync(DIR+"script_data.js","utf8");
+    ok(/"writing" \? "rest"/.test(dat) && /"rest"    \? "away"/.test(dat),
+       "토글이 writing→rest→away 로 돈다 (기존 저장값 호환)");
+  }
+  {
+    const i = rt.indexOf("function statusLabel");
+    const seg = rt.slice(i, i + 500);
+    ok(/writing: "🔥WORK🔥"/.test(seg) && /rest:    "☕BREAK☕"/.test(seg), "이름이 🔥WORK🔥 · ☕BREAK☕ 다");
+    ok(/focus:   "🔥WORK🔥"/.test(seg) && /away:    "💤AWAY💤"/.test(seg),
+       "focus 는 WORK 로 접히고 away 는 AWAY 로 보인다");
+  }
+  /* [2026-08-03] 🔥WORK🔥 는 이제 정식 이름입니다 — 옛 이름 검사는
+     "타인 카드 아래칸이 눌리지 않는가" 로 바꿨습니다. */
+  ok(!/기록 보기/.test(rt), "남의 카드에 기록 보기 입구가 없다");
 
   /* B1 가로만 */
   ok(/function currentOrientation\(\) \{ return "landscape"; \}/.test(ui),
@@ -334,7 +344,10 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   ok(!/hidden-panels/.test(HTML), "치워둔 창 자리가 없다");
   ok(!/function addPanelCloseButtons/.test(lay), "창마다 ✕ 가 없다");
   ok(!/renderSlotPicker/.test(lay), "자리별 선택 목록이 없다");
-  ok(!/id="chat-collapse-btn"/.test(HTML), "채팅만 접는 버튼이 없다");
+  /* [2026-08-03] 채팅 접기 버튼을 요청으로 되살렸습니다 — 레일과 짝으로. */
+  ok(/id="chat-collapse-btn"/.test(HTML), "채팅 헤더에 접기 버튼이 있다");
+  ok(/id="chat-rail-btn"/.test(HTML), "접힌 채팅을 펴는 레일 버튼이 있다");
+  ok(!/id="side-rail-btn"/.test(HTML), "레일이 옛 오른쪽줄 접기와 엉키지 않는다");
   ok(!/data-restore=/.test(lay), "옛 되돌리기 방식이 남아 있지 않다");
   /* 팝업 크기와 덜어낸 것들 */
   ok(/#goals-modal \.modal-content\{ width: min\(416px/.test(CSS), "목표 팝업이 416px 다");
@@ -344,7 +357,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
        지우면 낭독기가 팝업 이름을 못 읽고, 저장 흐름이 끊깁니다. */
     const t = HTML.match(/<h2 class="([^"]*)" id="goals-title"/);
     ok(t && /sr-only/.test(t[1]), "목표 팝업 제목이 화면에서 감춰져 있다");
-    ok(/<h4 class="personal-title">🎯 오늘 목표<\/h4>/.test(HTML), "소제목에서 '상태'를 뺐다");
+    ok(/<h4 class="personal-title">🎯 Today's goal<\/h4>/.test(HTML), "목표 소제목이 영문이다");
     ok(/<select id="db-status" class="w-full hidden"/.test(HTML), "상태 선택박스가 감춰져 있다");
     ok(/id="db-status"/.test(HTML), "상태 선택박스를 지우지는 않았다 (저장 중계기)");
     ok(/<div class="mini-row end hidden">/.test(HTML), "WORK 시작 버튼이 감춰져 있다");
@@ -354,7 +367,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   {
     ok(/function isSideCollapsed/.test(lay), "접힘 상태를 기억한다");
     ok(/window\.toggleSideCollapsed/.test(lay), "접기·펼치기 스위치가 있다");
-    ok(/id="side-toggle-btn"/.test(HTML), "머리말에 접기 버튼이 있다");
+    ok(!/id="side-toggle-btn"/.test(HTML), "머리말의 접기 버튼을 없앴다 (2026-08-03)");
     ok(/isSideCollapsed\(\)/.test(lay.slice(lay.indexOf("const sig = JSON.stringify"), lay.indexOf("const sig = JSON.stringify") + 200)),
        "접으면 배치를 다시 짠다");
     /* ★ 핵심 — 숨기는 게 아니라 아예 빼야 빈 공간이 안 생깁니다 */
@@ -374,8 +387,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   }
 
   /* ② ③ 스위치만 남기기 */
-  ok(/window\.swapSideSlots/.test(lay), "② ③ 서로 바꾸기가 있다");
-  ok(/onclick="swapSideSlots\(\)"/.test(HTML), "설정에 바꾸기 버튼이 있다");
+  ok(/window\.swapSideSlots/.test(lay), "② ③ 바꾸기 함수는 남아 있다 (버튼은 2026-08-03 제거)");
+  ok(!/onclick="swapSideSlots\(\)"/.test(HTML), "설정에서 바꾸기 버튼을 뺐다");
   {
     const i = lay.indexOf("window.swapSideSlots");
     const seg = lay.slice(i, i + 400);
@@ -399,9 +412,8 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     });
   }
 
-  /* 설정 — 뽀모도로 탭 */
-  ok(/🍅 뽀모도로<\/button>/.test(HTML), "타이머 탭 이름이 뽀모도로다");
-  ok(/id="set-pomo-part"/.test(HTML), "설정에 참여·알림 스위치가 있다");
+  /* 설정 — 뽀모도로 탭은 없앴습니다 (2026-08-03). 참여 스위치는 뽀모 창에만. */
+  ok(!/data-tab="timer"/.test(HTML) && !/id="panel-timer"/.test(HTML), "설정에 뽀모도로 탭이 없다");
   {
     /* 같은 스위치가 두 곳에 있으니 한 함수가 둘을 같이 칠해야 합니다 */
     const i = ui.indexOf("function _renderParticipationButton");
@@ -417,307 +429,27 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   ok(/const achChips = "";/.test(rt), "카드 배지 줄이 비었다");
   ok(!/weekly-gold/.test(rt), "금빛 테두리를 쓰지 않는다");
 
-  /* 펫 — 그림 */
+  /* 펫 — 정말로 사라졌는가 (2026-08-03 더마감은 펫 기능을 뺐습니다) */
   {
-    const Pet = require(DIR + "script_pet.js");
-    ok(Pet.SPECIES_IDS.length === 42, `42종이다 (${Pet.SPECIES_IDS.length})`);
-    /* 그룹마다 몇 마리인지 — 한쪽으로 쏠리면 껍데기 고르기가 시시해집니다 */
-    {
-      const cnt = {};
-      Pet.SPECIES.forEach(x => { cnt[x.group] = (cnt[x.group] || 0) + 1; });
-      Object.keys(Pet.SHELLS).forEach(gk =>
-        ok((cnt[gk] || 0) >= 5, `${Pet.SHELLS[gk]} 무리가 5종 이상이다 (${cnt[gk] || 0})`));
-    }
-    /* 이름이 겹치면 도감에서 헷갈립니다 */
-    ok(new Set(Pet.SPECIES.map(x => x.label)).size === Pet.SPECIES.length, "이름이 겹치지 않는다");
-    ok(new Set(Pet.SPECIES_IDS).size === Pet.SPECIES_IDS.length, "종류 이름표가 겹치지 않는다");
-    ok(Pet.SPECIES_IDS.includes("octopus"), "문어가 있다");
-    /* ★ 색은 종류마다 고정 — 서로 겹치면 두 종류가 같은 색이 됩니다 */
-    {
-      const hexes = Pet.SPECIES.map(x => x.hex);
-      ok(hexes.every(h => /^#[0-9A-Fa-f]{6}$/.test(h)), "모든 종류에 색이 정해져 있다");
-      const dup = hexes.filter((h, i) => hexes.indexOf(h) !== i);
-      ok(dup.length === 0, "색이 겹치지 않는다" + (dup.length ? " — " + dup.join(", ") : ""));
-      ok(!Pet.COLOR_IDS, "색 고르기 목록이 없다 (고를 수 없음)");
-    }
-    /* 종류마다 그리는 함수가 실제로 있어야 합니다 —
-       없으면 조용히 고양이로 대체되어 "다 고양이"가 됩니다. */
-    {
-      const src = fs.readFileSync(DIR+"script_pet.js","utf8");
-      /* 두 가지 방식이 있습니다.
-           bear(g) { … }              ← 직접 그리는 것
-           rose: makeFlower(…)        ← 공통 뼈대를 쓰는 꽃들
-         둘 다 세어야 합니다. 한쪽만 보면 꽃이 통째로 빠져 보입니다. */
-      const drawn = (src.match(/^    (\w+)\(g\) \{/gm) || []).map(x => x.trim().replace("(g) {", ""))
-        .concat((src.match(/^    (\w+): makeFlower\(/gm) || []).map(x => x.trim().replace(/: makeFlower\($/, "")));
-      const missing = Pet.SPECIES_IDS.filter(id => !drawn.includes(id));
-      ok(missing.length === 0, "모든 종류에 그리는 함수가 있다" + (missing.length ? " — 없음: " + missing.join(", ") : ""));
-    }
-    /* 껍데기 — Lv.1 은 종류를 숨겨야 합니다 */
-    {
-      const groups = [...new Set(Pet.SPECIES.map(s => s.group))];
-      ok(groups.length === 5, `껍데기가 5가지다 (${groups.length})`);
-      groups.forEach(gp => ok(!!Pet.SHELLS[gp], `${gp} 껍데기에 이름이 있다`));
-      /* 같은 껍데기를 쓰는 두 종류의 Lv.1 그림이 같아야 종류가 안 드러납니다.
-         (aria-label 과 clipPath id 만 다릅니다) */
-      const strip = sv => sv.replace(/aria-label="[^"]*"/, "").replace(/petclip\d+/g, "C");
-      const byGroup = {};
-      Pet.SPECIES.forEach(sp => { (byGroup[sp.group] = byGroup[sp.group] || []).push(sp.id); });
-      let leak = [];
-      Object.entries(byGroup).forEach(([gp, ids]) => {
-        const first = strip(Pet.petSvg(ids[0], 1, 56, false));
-        ids.slice(1).forEach(id => {
-          if (strip(Pet.petSvg(id, 1, 56, false)) !== first) leak.push(gp + "/" + id);
-        });
-      });
-      ok(leak.length === 0, "Lv.1 껍데기가 종류를 드러내지 않는다" + (leak.length ? " — " + leak.join(", ") : ""));
-      /* Lv.2 는 껍데기를 걸치고, Lv.3 부터는 벗어야 합니다 */
-      ok(Pet.petSvg("cat", 2, 56, false).length > Pet.petSvg("cat", 3, 56, false).length - 400,
-         "Lv.2 는 껍데기 조각을 걸친다");
-      /* ★ 껍데기 색이 몸 색을 쓰면 색만 보고 종류를 알 수 있습니다 */
-      Pet.SPECIES.forEach(x => {
-        const sv = Pet.petSvg(x.id, 1, 56, false);
-        if (x.hex !== Pet.SHELL_COLOR[x.group]) {
-          ok(!sv.includes(x.hex), `${x.label} 껍데기에 몸 색이 새지 않는다`);
-        }
-      });
-      /* 보자기의 clipPath id 가 매번 달라야 합니다 (도감에서 여러 마리를 그림) */
-      const a1 = Pet.petSvg("cat", 1, 56, false).match(/petclip(\d+)/)[1];
-      const a2 = Pet.petSvg("dog", 1, 56, false).match(/petclip(\d+)/)[1];
-      ok(a1 !== a2, "보자기 잘라내기 틀 id 가 겹치지 않는다");
-    }
-    /* 껍데기 고르기 — 고르는 것은 껍데기까지, 안은 비밀 */
-    {
-      const groups = [...new Set(Pet.SPECIES.map(s2 => s2.group))];
-      groups.forEach(gp => {
-        const got = Pet.pickInGroup(gp, {}, () => 0.5);
-        ok(!!got && Pet.speciesGroup(got) === gp, `${Pet.SHELLS[gp]} 를 고르면 그 안에서 뽑힌다`);
-      });
-      /* 여러 번 뽑으면 서로 다른 것이 나와야 합니다 (노려서 뽑을 수 없게) */
-      const seen2 = new Set();
-      let r = 0;
-      for (let i = 0; i < 40; i++) seen2.add(Pet.pickInGroup("egg", {}, () => ((r = (r * 9301 + 49297) % 233280) / 233280)));
-      ok(seen2.size > 1, `같은 껍데기에서 여러 종류가 나온다 (${seen2.size}가지)`);
-      /* 이미 모은 종류보다 못 모은 종류를 먼저 */
-      const dexAll = {}; Pet.SPECIES.filter(x => x.group === "egg").slice(0, 3)
-        .forEach(x => { dexAll[Pet.dexKey(x.id)] = 1; });
-      const rest = Pet.SPECIES.filter(x => x.group === "egg").slice(3).map(x => x.id);
-      let ok2 = true;
-      for (let i = 0; i < 20; i++) if (!rest.includes(Pet.pickInGroup("egg", dexAll, Math.random))) ok2 = false;
-      ok(ok2, "못 모은 종류를 먼저 뽑는다");
-    }
-
-    /* 판다는 색 규칙이 뒤집혀 있습니다 */
-    {
-      /* [변경] 몸이 검고 배·얼굴이 흽니다. 반대로 두니 흰 덩어리가
-         너무 커서 곰인지 판다인지 애매했어요. */
-      const pp = Pet.palette("panda");
-      ok(pp.body === Pet.colorHex("panda"), "판다 몸이 정해진 색(검정)이다");
-      ok(/^#F4F2EC$/i.test(pp.mark), "판다 배·얼굴이 흰빛이다");
-    }
-    ok(Pet.HOURS_PER_LEVEL === 5 && Pet.MAX_LEVEL === 20, "5시간 1레벨 · Lv.20 만렙");
-    ok(Pet.PET_MS === 100 * 3600e3, "만렙까지 100시간이다");
-    ok(Pet.AT_TAIL === 5 && Pet.AT_MARK === 10 && Pet.AT_WING === 15,
-       "부품이 Lv.5 / 10 / 15 에 붙는다");
-
-    /* ★ 8종 × 10레벨 × 12색 전수 — 좌표에 NaN 이 새면 그림이 통째로 깨집니다 */
-    let bad = [];
-    for (const sp of Pet.SPECIES_IDS) {
-      for (let lv = 1; lv <= Pet.MAX_LEVEL; lv++) {
-        const svg = Pet.petSvg(sp, lv, 56, lv === Pet.MAX_LEVEL);
-        if (/NaN|undefined|Infinity/.test(svg)) bad.push(`${sp}/Lv${lv}`);
-        if (!/<svg/.test(svg) || !/<\/svg>/.test(svg)) bad.push(`${sp}/Lv${lv} 열림닫힘`);
-      }
-    }
-    ok(bad.length === 0, `펫 그림 ${Pet.SPECIES_IDS.length * Pet.MAX_LEVEL}가지가 온전하다${bad.length ? " — " + bad.slice(0,3).join(", ") : ""}`);
-
-    /* 용의 뿔은 몸 색과 무관하게 금색 */
-    ok(Pet.petSvg("dragon", 10, 56, true).includes(Pet.HORN_GOLD), "용 뿔은 금색이다");
-    /* 뿔 가지는 레벨에 따라 늘어납니다 */
-    const horn = lv => (Pet.petSvg("dragon", lv, 56, false).match(/<path d="M/g) || []).length;
-    ok(horn(2) < horn(10) && horn(10) < horn(15), "용 뿔이 레벨에 따라 뻗는다");
-    /* 날개는 Lv.8 에 */
-    ok(!/q10 -17/.test(Pet.petSvg("dragon",14,56,false)) &&
-        /q10 -17/.test(Pet.petSvg("dragon",15,56,false)), "용 날개는 Lv.15 에 돋는다");
-    /* 반짝이는 정말 다 채운 뒤에만 */
-    ok(!/EF9F27/.test(Pet.petSvg("cat",Pet.MAX_LEVEL,56,false)), "Lv.20 도달만으로는 반짝이지 않는다");
-    ok(/EF9F27/.test(Pet.petSvg("cat",Pet.MAX_LEVEL,56,true)), "만렙이면 반짝인다");
-
-    /* 레벨 계산 */
-    const H = 3600e3;
-    ok(Pet.petProgress(0, 0).level === 1, "0시간은 Lv.1");
-    ok(Pet.petProgress(4.9 * H, 0).level === 1, "4시간 54분은 아직 Lv.1");
-    ok(Pet.petProgress(5 * H, 0).level === 2, "5시간에 Lv.2");
-    ok(Pet.petProgress(95 * H, 0).level === 20, "95시간에 Lv.20 도달");
-    ok(Pet.petProgress(95 * H, 0).isMax === false, "95시간은 아직 만렙이 아니다");
-    ok(Pet.petProgress(100 * H, 0).isMax === true, "100시간에 만렙");
-    ok(Pet.petProgress(300 * H, 0).level === 20, "넘겨도 Lv.20 에서 멈춘다");
-    /* 만렙 펫이 있으면 그만큼 빼고 센다 */
-    ok(Pet.petProgress(101 * H, 1).level === 1, "만렙 1마리 뒤 101시간은 새 펫 Lv.1");
-    ok(Pet.petProgress(206 * H, 2).level === 2, "만렙 2마리 뒤 206시간은 Lv.2");
-    /* 다음 레벨까지 남은 시간 */
-    ok(Pet.petProgress(6 * H, 0).toNextMs === 4 * H, "Lv.2 에서 다음까지 4시간");
-    ok(Pet.petProgress(100 * H, 0).toNextMs === 0, "만렙이면 남은 시간 0");
-
-    /* ★ 승계 — 같은 종류가 또 나오지 않아야 합니다 */
-    let dex = {}, seen = [];
-    const rnd = (() => { let i = 0; return () => ((i = (i * 9301 + 49297) % 233280) / 233280); })();
-    for (let n = 0; n < Pet.SPECIES_IDS.length; n++) {
-      const p2 = Pet.pickNextPet(dex, rnd);
-      seen.push(p2.species);
-      dex[Pet.dexKey(p2.species)] = 1;
-    }
-    ok(new Set(seen).size === Pet.SPECIES_IDS.length,
-       `${Pet.SPECIES_IDS.length}마리가 모두 다른 종류다 (${new Set(seen).size})`);
-    ok(!seen.some(x => x === undefined), "빈 값이 나오지 않는다");
-    /* 도감을 다 채운 뒤에도 죽지 않습니다 */
-    const last = Pet.pickNextPet(dex, rnd);
-    ok(!!last && Pet.SPECIES_IDS.includes(last.species), "도감을 다 채운 뒤에도 펫이 나온다");
-    ok(last.color === undefined, "색은 더 이상 뽑지 않는다");
-
-    /* 색 계산 */
-    ok(/^#[0-9a-f]{6}$/i.test(Pet.shade("#378ADD", 0.4)), "밝게 만든 색이 올바른 형식");
-    ok(/^#[0-9a-f]{6}$/i.test(Pet.shade("#378ADD", -0.5)), "어둡게 만든 색이 올바른 형식");
-    ok(Pet.shade("#000000", 1) === "#ffffff" && Pet.shade("#ffffff", -1) === "#000000",
-       "색 계산이 범위를 넘지 않는다");
-  }
-
-  /* 펫 — 붙어 있는가 */
-  {
-    const Pet = require(DIR + "script_pet.js");
     const tl = fs.readFileSync(DIR+"script_timelog.js","utf8");
-    const pu = fs.readFileSync(DIR+"script_pet_ui.js","utf8");
-    ok(/workMsTotal/.test(tl), "집필 누적을 따로 쌓는다");
-    /* WORK·초집중만 밥이 됩니다 */
-    const i = tl.indexOf('if (seg.s === "writing" || seg.s === "focus")');
-    ok(i > 0, "WORK 와 초집중만 누적한다");
-    ok(/\.transaction\(v => \(Number\(v\) \|\| 0\) \+ len\)/.test(tl),
-       "여러 창을 열어도 어긋나지 않게 트랜잭션으로 올린다");
-    ok(/function promoteIfMaxed/.test(tl), "만렙이면 승계한다");
-    ok(/window\.startPet/.test(tl) && /window\.startPet\?\.\(\)/.test(fs.readFileSync(DIR+"script_profile.js","utf8")),
-       "입장할 때 펫을 시작한다");
-    ok(/function renderPetPanel/.test(pu) && /id="panel-pet"/.test(HTML), "펫 관리 창이 있다");
-    ok(/data-tab="pet"/.test(HTML), "설정에 펫 탭이 있다");
-    ok(/petSpecies/.test(rt) && /petLevel/.test(rt), "카드에 펫 요약을 실어 보낸다");
-    ok(/card-pet/.test(rt) && /\.card-pet\{/.test(CSS), "카드에 펫 자리가 있다");
-    ok(/name === "pet"\)\s+window\.renderPetPanel/.test(fs.readFileSync(DIR+"script_profile.js","utf8")),
-       "펫 탭을 열면 그린다");
+    const prof = fs.readFileSync(DIR+"script_profile.js","utf8");
+    ok(!fs.existsSync(DIR+"script_pet.js") && !fs.existsSync(DIR+"script_pet_ui.js"),
+       "펫 스크립트 파일이 없다");
+    ok(!/script_pet/.test(HTML), "index 가 펫 스크립트를 부르지 않는다");
+    ok(!/data-tab="pet"/.test(HTML) && !/id="panel-pet"/.test(HTML), "설정에 펫 탭·창이 없다");
+    ok(!/petSpecies|petLevel|data-open-pet/.test(rt), "카드에 펫 흔적이 없다");
+    ok(!/startPet|setPetShell|petDex|promoteIfMaxed/.test(tl), "시간 기록에 펫 밥이 없다");
+    ok(!/openPetPanel|renderPetPanel|startPet/.test(prof), "프로필에 펫 연결이 없다");
+    ok(!/\.card-pet\{/.test(CSS), "CSS 에 펫 칸이 없다");
 
-    /* ★ 관리 창을 실제로 끝까지 그려봅니다.
-
-       [왜 넣었나] 블록 하나를 옮기다가 색 고르기 덩어리를 통째로
-       지웠습니다. 그러자 정의되지 않은 변수를 쓰게 되어 함수가 예외로
-       죽고, 펫 탭이 텅 빈 채로 열렸습니다. 브라우저 화면에는 오류가
-       안 뜨니 눈으로만 보면 "왜 안 나오지?" 로만 보입니다.
-
-       파일을 읽어 문자열을 찾는 검사로는 이런 사고를 못 잡습니다.
-       그래서 가짜 화면을 만들어 실제로 호출합니다. */
+    /* ★ 시작 함수가 "입장한 뒤에" 불리는가 — 시간 기록은 필명이 있어야 동작합니다 */
     {
-      const stub = () => ({
-        innerHTML: "", _petBound: false, style: {},
-        addEventListener() {}, remove() {}, setAttribute() {},
-        querySelector() { return null; }, appendChild() {},
-        classList: { add() {}, remove() {}, toggle() {} }
-      });
-      const host = stub();
-      const mk = (level) => ({
-        level, isMax: level >= 10, curMs: level * 4 * 3600e3,
-        totalNeed: Pet.PET_MS, ratio: level / 10,
-        toNextMs: 2 * 3600e3, species: "cat"
-      });
-      const c2 = {
-        window: { Pet, petDex: () => ({ dog: 1 }) },
-        document: { getElementById: id => (id === "panel-pet" ? host : null),
-                    createElement: stub, body: { appendChild() {} } },
-        console
-      };
-      c2.window.document = c2.document;
-      vm.createContext(c2);
-      vm.runInContext(fs.readFileSync(DIR + "script_pet_ui.js", "utf8"), c2);
-
-      let threw = null, sizes = {};
-      for (const lv of [1, 2, 5, 10]) {
-        c2.window.petState = () => mk(lv);
-        host.innerHTML = "";
-        try { c2.window.renderPetPanel(); } catch (e) { threw = `Lv.${lv}: ${e.message}`; }
-        sizes[lv] = host.innerHTML.length;
-      }
-      ok(!threw, "관리 창이 예외 없이 그려진다" + (threw ? " — " + threw : ""));
-      ok(Object.values(sizes).every(v => v > 800),
-         `모든 레벨에서 내용이 채워진다 (${JSON.stringify(sizes)})`);
-
-      /* Lv.1 에만 껍데기 선택지, 색은 늘 */
-      c2.window.petState = () => mk(1); host.innerHTML = ""; c2.window.renderPetPanel();
-      const h1 = host.innerHTML;
-      ok((h1.match(/data-pet-shell/g) || []).length === 5, "Lv.1 에 껍데기 5개가 나온다");
-      ok(!/data-pet-color/.test(h1), "색 고르는 칸이 없다");
-      /* 종류가 새는지는 "글자가 어디 나오나" 로 보면 안 됩니다.
-         나무 상자에는 "나무" 가 들어 있고, "정해집니다" 에는 "해" 가
-         들어 있어서 애먼 곳이 걸립니다. 이름이 실제로 쓰이는 두 자리만
-         정확히 꺼내서 봅니다. */
-      {
-        const nameLine = (h1.match(/class="pet-cur-name">([\s\S]*?)<\/div>/) || [])[1] || "";
-        ok(/아직 안 깨어났어요/.test(nameLine), "Lv.1 은 아직 안 깨어났다고 알린다");
-        ok(Object.values(Pet.SHELLS).some(l => nameLine.includes(l)),
-           "이름 줄에 껍데기 이름이 나온다");
-
-        const btnLabels = [...h1.matchAll(/data-pet-shell="(\w+)"[\s\S]*?<span>([^<]+)<\/span>/g)]
-          .map(m => [m[1], m[2].trim()]);
-        ok(btnLabels.length === 5, `껍데기 버튼이 5개다 (${btnLabels.length})`);
-        const wrong = btnLabels.filter(([gp, lab]) => lab !== Pet.SHELLS[gp]);
-        ok(wrong.length === 0, "껍데기 버튼에 껍데기 이름만 쓴다" +
-           (wrong.length ? " — " + wrong.map(x => x.join(":")).join(", ") : ""));
-        /* 종류 이름을 그대로 쓴 버튼이 있으면 비밀이 새는 것입니다 */
-        const leaked = btnLabels.filter(([, lab]) => Pet.SPECIES.some(x => x.label === lab));
-        ok(leaked.length === 0, "껍데기 버튼이 종류 이름을 쓰지 않는다");
-      }
-
-      c2.window.petState = () => mk(5); host.innerHTML = ""; c2.window.renderPetPanel();
-      const h5 = host.innerHTML;
-      ok(!/data-pet-shell/.test(h5), "Lv.5 에는 껍데기 선택지가 없다");
-      ok(!/data-pet-color/.test(h5), "Lv.5 에도 색 고르는 칸이 없다");
-    }
-
-    /* ★ 시작 함수가 "입장한 뒤에" 불리는가
-
-       [왜] startPet 과 startTimelog 는 필명이 있어야 동작합니다.
-       그런데 페이지 로드(init) 에서만 불렀더니, 그 시점엔 필명이 없어
-       첫 줄에서 그냥 돌아갔습니다. 그래서 펫 정보가 비어 있었고,
-       화면에는 기본값으로 그려지니 "보이는데 안 눌린다" 가 됐습니다. */
-    {
-      const prof3 = fs.readFileSync(DIR+"script_profile.js","utf8");
-      const i = prof3.indexOf("const _join = window.join;");
-      const j = prof3.indexOf("window.join = wrapped;", i);
+      const i = prof.indexOf("const _join = window.join;");
+      const j = prof.indexOf("window.join = wrapped;", i);
       ok(i > 0 && j > i, "입장 감싸개가 있다");
-      const joinSeg = prof3.slice(i, j);
-      ok(/startPet/.test(joinSeg),     "입장한 뒤에 펫을 시작한다");
+      const joinSeg = prof.slice(i, j);
       ok(/startTimelog/.test(joinSeg), "입장한 뒤에 시간 기록을 시작한다");
-      /* 여러 번 불려도 타이머가 겹치지 않아야 합니다 */
-      ok(/_petStarted/.test(tl) && /_tlStarted/.test(tl),
-         "두 번 불려도 안전하다 (타이머 중복 방지)");
-    }
-
-    /* 카드의 펫을 누르면 관리 창 */
-    ok(/data-open-pet="1"/.test(rt), "내 카드의 펫만 누를 수 있다");
-    const prof2 = fs.readFileSync(DIR+"script_profile.js","utf8");
-    ok(/function openPetPanel/.test(prof2) && /openTab\?\.\("pet"\)/.test(prof2),
-       "펫을 누르면 관리 창이 열린다");
-
-    /* 껍데기는 Lv.1 에서만 바꿉니다 */
-    ok(/window\.setPetShell/.test(tl), "껍데기 바꾸기가 있다");
-    {
-      const i = tl.indexOf("window.setPetShell");
-      const seg = tl.slice(i, i + 700);
-      ok(/st\.level !== 1\) return;/.test(seg), "태어난 뒤에는 껍데기를 못 바꾼다");
-    }
-    ok(!/setPetColor/.test(tl), "색 바꾸기가 없다 (종류마다 고정)");
-      ok(!/setPetLook/.test(tl) && !/setPetLook/.test(pu), "종류를 직접 고르는 길이 없다 (비밀 유지)");
-    ok(/data-pet-shell/.test(pu), "관리 창에 껍데기 선택지가 있다");
-    ok(!/data-pet-species/.test(pu), "관리 창에 종류 선택지가 없다");
-    {
-      const i = pu.indexOf("const shellPick");
-      const seg = pu.slice(i, i + 200);
-      ok(/st\.level === 1/.test(seg), "껍데기 선택지는 Lv.1 에만 나온다");
+      ok(/_tlStarted/.test(tl), "두 번 불려도 안전하다 (타이머 중복 방지)");
     }
   }
 
@@ -996,7 +728,7 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(/visibilityState === "visible"\) return;/.test(seg), "보고 있을 때는 알리지 않는다");
     ok(/canNotify\(\)/.test(seg), "권한 없으면 알리지 않는다");
   }
-  ok(/id="set-join-noti"/.test(HTML), "설정에 입장 알림 스위치가 있다");
+  ok(!/id="set-join-noti"/.test(HTML), "입장 알림 스위치도 탭과 함께 빠졌다 (기본값으로 동작)");
   ok(/function detectJoins/.test(rt), "입장 감지 함수가 있다");
   {
     const i=rt.indexOf("function detectJoins");
@@ -1552,7 +1284,9 @@ function finish(){
      앞 블록이 return 으로 끝나면 뒤 블록은 실행조차 되지 않는데,
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
-  const MIN = 510;
+  /* [2026-08-03] 펫 기능을 빼면서 펫 검사 ~130개가 함께 빠졌습니다.
+     새 기준: 390개 언저리 → 하한 380. */
+  const MIN = 380;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");
@@ -1590,10 +1324,11 @@ function checkTimelog(){
   ok(/\.info\/connected/.test(tl), "끊김 판단을 소켓(.info/connected)으로 한다");
 
   // 시간 표기
-  ok(T.fmtDur(0)==="0분", "0분 표기");
-  ok(T.fmtDur(59*1000)==="1분", "59초는 1분으로");
-  ok(T.fmtDur(90*60*1000)==="1시간 30분", "90분 → 1시간 30분");
-  ok(T.fmtDur(120*60*1000)==="2시간", "정확히 2시간은 분을 안 붙인다");
+  /* [2026-08-03] 표기를 3h 20m 꼴로 바꿨습니다 */
+  ok(T.fmtDur(0)==="0m", "0m 표기");
+  ok(T.fmtDur(59*1000)==="1m", "59초는 1m 로");
+  ok(T.fmtDur(90*60*1000)==="1h 30m", "90분 → 1h 30m");
+  ok(T.fmtDur(120*60*1000)==="2h", "정확히 2시간은 m 을 안 붙인다");
 
   // 하루를 넘기는 구간이 날짜별로 쪼개지는가
   const pushed=[];

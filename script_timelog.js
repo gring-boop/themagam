@@ -45,7 +45,7 @@
     { id: "writing", label: "Work",        color: "#C0392B" },
     { id: "focus",   label: "Work(집중)",  color: "#C2701A" },   /* 옛 기록용 */
     { id: "rest",    label: "Break",       color: "#2E8B6B" },
-    { id: "away",    label: "Break(이석)", color: "#8A8F98" }    /* 옛 기록용 */
+    { id: "away",    label: "Away",        color: "#8A8F98" }
   ];
   const STATUS_IDS = STATUSES.map(s => s.id);
 
@@ -384,7 +384,7 @@
   /* ---------------------------------------------------------------
      [4] 합계 계산
      --------------------------------------------------------------- */
-  async function loadSummary(nick, days) {
+  async function loadSummary(nick, days, backWeeks = 0) {
     const out = [];               // [{ date, totals:{status:ms}, pomo }]
     const t = nowMs();
 
@@ -398,7 +398,7 @@
     } catch (e) {}
 
     for (let i = days - 1; i >= 0; i--) {
-      const dayMs = dayStart(t) - i * 24 * 60 * 60 * 1000;
+      const dayMs = dayStart(t) - (i + backWeeks * 7) * 24 * 60 * 60 * 1000;
       const key = ymd(dayMs);
       const totals = {}; STATUS_IDS.forEach(s => totals[s] = 0);
 
@@ -445,10 +445,10 @@
      --------------------------------------------------------------- */
   function fmtDur(ms) {
     const m = Math.round(ms / 60000);
-    if (m < 1) return "0분";
-    if (m < 60) return `${m}분`;
+    if (m < 1) return "0m";
+    if (m < 60) return `${m}m`;
     const h = Math.floor(m / 60), mm = m % 60;
-    return mm ? `${h}시간 ${mm}분` : `${h}시간`;
+    return mm ? `${h}h ${mm}m` : `${h}h`;
   }
   const DOW = ["일","월","화","수","목","금","토"];
 
@@ -473,39 +473,55 @@
      같은 걸 띄우려면 복사해야 했는데, 그러면 한쪽만 고치는 사고가
      반드시 납니다. 함수로 떼어내 한 곳에서만 만듭니다.
      --------------------------------------------------------------- */
-  function recordHtml(rows) {
+  function recordHtml(rows, backWeeks = 0, wcBack = 0) {
     const today = rows[rows.length - 1];
+    const isThisWeek = backWeeks === 0;
     const sumWork = today.totals.writing + today.totals.focus;
     const maxDay = Math.max(1, ...rows.map(r => r.totals.writing + r.totals.focus));
     const weekWork = rows.reduce((a, r) => a + r.totals.writing + r.totals.focus, 0);
     const weekPomo = rows.reduce((a, r) => a + r.pomo, 0);
+    const weekLabel = isThisWeek ? "지난 7일" : `${backWeeks}주 전`;
 
-    return `
+    /* 지난 주를 보는 동안에는 "오늘" 요약은 접어둡니다 — 그 주의 값이 아니니까요 */
+    const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 집필 시간 (WORK + 집중)</div>
+        <div class="rec-sub">오늘 작업 시간 (Work)</div>
       </div>
 
       <div class="rec-bars">
-        ${STATUSES.map(s2 => {
-          const v = today.totals[s2.id];
+        ${[
+          { label: "Work",  color: "#C0392B", v: today.totals.writing + today.totals.focus },
+          { label: "Break", color: "#2E8B6B", v: today.totals.rest },
+          { label: "Away",  color: "#8A8F98", v: today.totals.away }
+        ].map(s2 => {
           const all = Math.max(1, STATUS_IDS.reduce((a, k) => a + today.totals[k], 0));
           return `<div class="rec-row">
                     <span class="rec-name">${s2.label}</span>
-                    <span class="rec-track"><i style="width:${(v / all * 100).toFixed(1)}%;background:${s2.color}"></i></span>
-                    <span class="rec-val">${fmtDur(v)}</span>
+                    <span class="rec-track"><i style="width:${(s2.v / all * 100).toFixed(1)}%;background:${s2.color}"></i></span>
+                    <span class="rec-val">${fmtDur(s2.v)}</span>
                   </div>`;
         }).join("")}
-      </div>
+      </div>`;
 
-      <div class="rec-h2">지난 7일 · 집필 시간</div>
+    return `
+      ${todayHtml}
+
+      <div class="rec-h2 rec-weeknav">
+        <button type="button" class="rec-nav" title="한 주 전"
+                onclick="renderMyRecordPanel(${backWeeks + 1}, ${wcBack})">‹</button>
+        <span>${weekLabel} · Working hours</span>
+        <button type="button" class="rec-nav" title="한 주 뒤" ${isThisWeek ? "disabled" : ""}
+                onclick="renderMyRecordPanel(${backWeeks - 1}, ${wcBack})">›</button>
+      </div>
       <div class="rec-week">
         ${rows.map(r => {
           const v = r.totals.writing + r.totals.focus;
           const h = Math.max(3, Math.round(v / maxDay * 74));
           const d = new Date(r.date + "T00:00:00");
-          const isToday = r === today;
+          const isToday = isThisWeek && r === today;
           return `<span title="${r.date} · ${fmtDur(v)} · 🍅 ${r.pomo}">
+                    <b class="rec-bar-v">${v ? fmtDur(v) : ""}</b>
                     <i style="height:${h}px${v ? "" : ";background:var(--fill-2)"}"></i>
                     <s${isToday ? ' class="on"' : ""}>${DOW[d.getDay()]}</s>
                   </span>`;
@@ -513,7 +529,7 @@
       </div>
 
       <div class="rec-foot">
-        이번 주 <b>${fmtDur(weekWork)}</b> · 🍅 <b>${weekPomo}회</b>
+        ${isThisWeek ? "이번 주" : weekLabel} <b>${fmtDur(weekWork)}</b> · 🍅 <b>${weekPomo}회</b>
       </div>
       <p class="hint">
         상태를 바꾼 시각을 기준으로 계산합니다. <b>창을 내려두고 다른 앱에서
@@ -530,7 +546,7 @@
      집필 시간과 글자수는 같은 하루를 다른 각도에서 본 값이라,
      나란히 두면 "오래 앉아 있었는데 덜 썼네" 같은 게 보입니다.
      --------------------------------------------------------------- */
-  async function renderMyRecordPanel() {
+  async function renderMyRecordPanel(backWeeks = 0, wcBack = 0) {
     const host = document.getElementById("panel-record");
     if (!host) return;
 
@@ -542,17 +558,23 @@
     host.innerHTML = `<div class="set-block"><p class="hint">불러오는 중…</p></div>`;
 
     let timeHtml = "";
-    try { timeHtml = recordHtml(await loadSummary(myNick, 7)); }
+    try { timeHtml = recordHtml(await loadSummary(myNick, 7, backWeeks), backWeeks, wcBack); }
     catch (e) { timeHtml = `<p class="hint">기록을 불러오지 못했어요.</p>`; }
 
     host.innerHTML = `
       <div class="set-block">
-        <div class="set-title">⏱️ 집필 시간</div>
+        <div class="set-title">⏱️ Working hours</div>
         ${timeHtml}
       </div>
       <div class="set-block">
-        <div class="set-title">✍️ 글자수</div>
-        ${window.Wordcount?.myWeekHtml?.() || `<p class="hint">글자수 기록을 불러오지 못했어요.</p>`}
+        <button class="ghost-btn w-full" type="button"
+                onclick="exportMyRecord(${backWeeks}, ${wcBack})">📤 보고 있는 주를 텍스트로 내보내기</button>
+        <p class="hint">위의 Working hours 주와 아래 Letters 주를 .txt 파일로 저장해요.</p>
+      </div>
+      <div class="set-block">
+        <div class="set-title">✍️ Letters</div>
+        ${(window.Wordcount?.myWeekHtml ? await window.Wordcount.myWeekHtml(wcBack, backWeeks) : null)
+          || `<p class="hint">글자수 기록을 불러오지 못했어요.</p>`}
       </div>`;
   }
   window.renderMyRecordPanel = renderMyRecordPanel;
@@ -597,6 +619,60 @@
     });
   }
   window.bindRecordOpen = bindRecordOpen;
+
+  /* [2026-08-03] 나가기 직전 마무리 — 열린 구간을 지금까지로 저장하고
+     timeCur 를 지웁니다. 묵은 timeCur 가 남아 다음 입장을 어지럽히거나
+     지금까지의 작업 시간이 사라지는 일을 막습니다. */
+  window.finalizeTimelogOnLeave = async function () {
+    if (!myNick) return;
+    try {
+      if (_cur && Number(_cur.a) > 0) {
+        await pushSegment(_cur.s, Number(_cur.a), nowMs());
+      }
+      _cur = null;
+      await curRef().remove();
+    } catch (e) { console.warn("[finalizeTimelogOnLeave]", e); }
+    _tlStarted = false;   // 같은 화면에서 다시 입장하면 새로 시작
+  };
+
+  /* [2026-08-03] 나의 작업 — 텍스트 내보내기 */
+  window.exportMyRecord = async function (backWeeks = 0, wcBack = 0) {
+    if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
+    const rows = await loadSummary(myNick, 7, backWeeks);
+    const L = [];
+    L.push(`TheMagam — ${myNick} 작업 기록`);
+    L.push(`내보낸 시각: ${new Date().toLocaleString("ko-KR")}`);
+    L.push("");
+    L.push(`■ Working hours (${backWeeks === 0 ? "이번 주" : backWeeks + "주 전"})`);
+    let tw = 0, tp = 0;
+    rows.forEach(r => {
+      const v = r.totals.writing + r.totals.focus;
+      tw += v; tp += r.pomo;
+      L.push(`${r.date}  Work ${fmtDur(v)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
+    });
+    L.push(`합계      Work ${fmtDur(tw)} · 🍅 ${tp}`);
+    L.push("");
+    L.push(`■ Letters (${wcBack === 0 ? "이번 주" : wcBack + "주 전"})`);
+    let tc = 0;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - (i + wcBack * 7));
+      const key = window.Wordcount?.dayKey?.(d) || "";
+      let total = 0;
+      try {
+        const s = await db.ref(`wordlog/${key}/${myNick}`).once("value");
+        total = Number(s.val()?.total || 0);
+      } catch (e) {}
+      tc += total;
+      L.push(`${key}  ${total.toLocaleString()}자`);
+    }
+    L.push(`합계      ${tc.toLocaleString()}자`);
+    const blob = new Blob([L.join("\n")], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `더마감_${myNick}_기록_${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  };
 
   window.TimeLog = { STATUSES, STATUS_IDS, GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
