@@ -4801,3 +4801,17 @@ html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
   color: #E6E4DC;
 }
 :root[data-is-dark="true"] .pomo-run-btn.stop{ background: #343945; color: #E6E4DC; }
+
+/* =====================================================================
+   [2026-08-03·17차] 기록 항목 줄바꿈 방지 · 음표 크기
+   ===================================================================== */
+/* 상태 이름이 "Write(집필)"처럼 길어져도 한 줄 — 바가 대신 줄어듭니다 */
+.rec-row .rec-name{
+  flex: 0 0 auto;
+  min-width: 104px;
+  white-space: nowrap;
+}
+.rec-row .rec-track{ flex: 1 1 0; min-width: 40px; }
+
+/* 음표(♪) — 이모지 버튼들과 눈높이가 맞게 키움 */
+#pomo-detail-toggle{ font-size: 26px; line-height: 1; padding-bottom: 3px; }
