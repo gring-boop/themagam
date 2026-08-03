@@ -4863,3 +4863,58 @@ html[data-theme-style="studio"] .user-card{
     4px 4px 0 -1px #262B38, 4px 4px 0 0 rgba(255,255,255,.28),
     8px 8px 0 -1px #1D212C, 8px 8px 0 0 rgba(255,255,255,.28);
 }
+
+/* =====================================================================
+   [2026-08-03·21차] 머리말 버튼 — 현재 스타일(테두리 없는 베이지 알약)로
+   ===================================================================== */
+/* 가이드 · 설정 — 베이지 알약, 테두리 없음 */
+.head-tools .icon-btn,
+.head-tools .icon-btn.guide{
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--fill-2);
+  color: var(--muted-strong);
+  box-shadow: none;
+}
+.head-tools .icon-btn:hover{ background: var(--fill-3); }
+
+/* 나가기 — 포인트색이 은은히 밴 알약 */
+.head-tools .icon-btn.danger{
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.head-tools .icon-btn.danger:hover{ background: var(--accent-line); color: #fff; }
+
+/* 폰트 조절 — 한 덩어리 알약: 겉은 베이지, 가운데 숫자만 밝은 판 */
+.font-ctl{
+  background: var(--fill-2);
+  border-radius: var(--r-full);
+  padding: 3px;
+  gap: 0;
+}
+.font-btn{
+  border: none;
+  background: transparent;
+  border-radius: var(--r-full);
+  color: var(--muted-strong);
+}
+.font-btn:hover{ background: var(--fill-3); }
+.font-pill{
+  border: none;
+  background: var(--panel);
+  color: var(--text);
+  height: 26px;
+}
+
+/* 다크 — 같은 구조, 어둠에 맞는 농도 */
+:root[data-is-dark="true"] .head-tools .icon-btn{
+  background: rgba(255,255,255,.08);
+  color: var(--text);
+}
+:root[data-is-dark="true"] .head-tools .icon-btn.danger{
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+:root[data-is-dark="true"] .font-ctl{ background: rgba(255,255,255,.08); }
+:root[data-is-dark="true"] .font-btn{ background: transparent; border: none; color: var(--text); }
+:root[data-is-dark="true"] .font-pill{ background: rgba(255,255,255,.12); border: none; color: var(--text); }
