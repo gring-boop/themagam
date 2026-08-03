@@ -4756,3 +4756,48 @@ html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
   margin-right: 7px;
   vertical-align: 3px;
 }
+
+/* =====================================================================
+   [2026-08-03·16차] 상태 4종(WRITE·JOB·BREAK·AWAY) · 다크 가독성
+   ===================================================================== */
+
+/* ── 상태 알약 — 반투명을 버리고 불투명 단색으로.
+   카드마다 고른 배경색·무늬 위에서도, 어느 테마에서도 또렷합니다. ── */
+.card-state.status-writing,
+:root[data-is-dark="true"] .card-state.status-writing{
+  background: #E85D4A; border-color: #E85D4A; color: #FFF4EC;
+}
+.card-state.status-focus,
+:root[data-is-dark="true"] .card-state.status-focus{
+  background: #5B7BB8; border-color: #5B7BB8; color: #F2F6FF;
+}
+.card-state.status-rest,
+:root[data-is-dark="true"] .card-state.status-rest{
+  background: #3FA974; border-color: #3FA974; color: #F0FFF7;
+}
+.card-state.status-away,
+:root[data-is-dark="true"] .card-state.status-away{
+  background: #8A8F98; border-color: #8A8F98; color: #F4F5F7;
+}
+
+/* 상태 고르기 판의 항목도 같은 단색 규칙을 씁니다 */
+.status-pop-item.status-writing{ background:#E85D4A; color:#FFF4EC; }
+.status-pop-item.status-focus  { background:#5B7BB8; color:#F2F6FF; }
+.status-pop-item.status-rest   { background:#3FA974; color:#F0FFF7; }
+.status-pop-item.status-away   { background:#8A8F98; color:#F4F5F7; }
+
+/* ── 다크: 폰트 조절이 머리말에 묻히지 않게 ── */
+:root[data-is-dark="true"] .font-pill,
+:root[data-is-dark="true"] .font-btn{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.16);
+  color: var(--text);
+}
+
+/* ── 음표(♪) — 텍스트 기호라 색이 듣습니다. 다크는 차콜 받침 + 밝은 기호 ── */
+#pomo-detail-toggle{ font-size: 19px; font-weight: var(--fw-bold); }
+:root[data-is-dark="true"] #pomo-detail-toggle{
+  background: #343945;
+  color: #E6E4DC;
+}
+:root[data-is-dark="true"] .pomo-run-btn.stop{ background: #343945; color: #E6E4DC; }

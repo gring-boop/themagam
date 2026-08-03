@@ -461,8 +461,8 @@
        (writing/rest), 옛 데이터의 focus/away 도 두 이름으로 접힙니다. */
     return ({
       idle:    "☕BREAK☕",
-      writing: "🔥WORK🔥",
-      focus:   "🔥WORK🔥",
+      writing: "🔥WRITE🔥",
+      focus:   "💻JOB💻",
       rest:    "☕BREAK☕",
       away:    "💤AWAY💤"
     })[code] || "휴식";

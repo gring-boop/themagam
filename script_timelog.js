@@ -42,10 +42,10 @@
 (function () {
 
   const STATUSES = [
-    { id: "writing", label: "Work",        color: "#C0392B" },
-    { id: "focus",   label: "Work(집중)",  color: "#C2701A" },   /* 옛 기록용 */
-    { id: "rest",    label: "Break",       color: "#2E8B6B" },
-    { id: "away",    label: "Away",        color: "#8A8F98" }
+    { id: "writing", label: "Write(집필)",   color: "#C0392B" },
+    { id: "focus",   label: "Job(다른 일)",  color: "#5B7BB8" },
+    { id: "rest",    label: "Break(휴식)",   color: "#2E8B6B" },
+    { id: "away",    label: "Away(자리비움)", color: "#8A8F98" }
   ];
   const STATUS_IDS = STATUSES.map(s => s.id);
 
@@ -486,15 +486,14 @@
     const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 작업 시간 (Work)</div>
+        <div class="rec-sub">오늘 작업 시간 (Write + Job)</div>
       </div>
 
       <div class="rec-bars">
-        ${[
-          { label: "Work",  color: "#C0392B", v: today.totals.writing + today.totals.focus },
-          { label: "Break", color: "#2E8B6B", v: today.totals.rest },
-          { label: "Away",  color: "#8A8F98", v: today.totals.away }
-        ].map(s2 => {
+        ${["writing", "rest", "away", "focus"].map(id => {
+          const st = STATUSES.find(x => x.id === id);
+          return { label: st.label, color: st.color, v: today.totals[id] };
+        }).map(s2 => {
           const all = Math.max(1, STATUS_IDS.reduce((a, k) => a + today.totals[k], 0));
           return `<div class="rec-row">
                     <span class="rec-name">${s2.label}</span>
@@ -648,9 +647,9 @@
     rows.forEach(r => {
       const v = r.totals.writing + r.totals.focus;
       tw += v; tp += r.pomo;
-      L.push(`${r.date}  Work ${fmtDur(v)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
+      L.push(`${r.date}  Write ${fmtDur(r.totals.writing)} · Job ${fmtDur(r.totals.focus)} · Break ${fmtDur(r.totals.rest)} · Away ${fmtDur(r.totals.away)} · 🍅 ${r.pomo}`);
     });
-    L.push(`합계      Work ${fmtDur(tw)} · 🍅 ${tp}`);
+    L.push(`합계      Write+Job ${fmtDur(tw)} · 🍅 ${tp}`);
     L.push("");
     L.push(`■ Letters (${wcBack === 0 ? "이번 주" : wcBack + "주 전"})`);
     let tc = 0;

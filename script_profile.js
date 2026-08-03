@@ -978,10 +978,10 @@ function bindCardEditDelegate() {
       openProfileEditor();
       return;
     }
-    /* 상태표 → Work ↔ Break 토글 (2026-08-03: 상태 2가지로 축소) */
+    /* 상태표 → 고르기 판 (2026-08-03: 4가지로 확장하며 팝업 방식 복귀) */
     if (e.target?.closest?.("[data-pick-status]")) {
       e.preventDefault(); e.stopPropagation();
-      window.toggleWritingStatus?.();
+      window.openStatusPicker?.(e.target.closest("[data-pick-status]"));
       return;
     }
   });
@@ -991,7 +991,7 @@ function bindCardEditDelegate() {
     if (e.key !== "Enter" && e.key !== " ") return;
     const t = e.target;
     if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
-    else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.toggleWritingStatus?.(); }
+    else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.openStatusPicker?.(t); }
   });
 }
 window.bindCardEditDelegate = bindCardEditDelegate;
@@ -1112,10 +1112,10 @@ window.rerenderUserCards = function () {
    ===================================================================== */
 (function () {
   const CHOICES = [
-    { v: "writing", label: "WORK",      cls: "status-writing" },
-    { v: "focus",   label: "🔥초집중🔥", cls: "status-focus"   },
-    { v: "rest",    label: "휴식",       cls: "status-rest"    },
-    { v: "away",    label: "자리비움",   cls: "status-away"    }
+    { v: "writing", label: "🔥WRITE🔥", cls: "status-writing" },   /* 집필 */
+    { v: "focus",   label: "💻JOB💻",   cls: "status-focus"   },   /* 본업·다른 작업 */
+    { v: "rest",    label: "☕BREAK☕",  cls: "status-rest"    },   /* 휴식 */
+    { v: "away",    label: "💤AWAY💤",  cls: "status-away"    }    /* 자리비움 */
   ];
 
   let _pop = null;
