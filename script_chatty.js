@@ -138,11 +138,8 @@
       const tabCnt = document.getElementById("chatty-tab-count");
       if (tabCnt) tabCnt.textContent = `(${cnt}명)`;
 
-      /* ② 참여 안내 문구 앞 — "👥 n명 접속 중 · " */
-      const el = document.getElementById("chatty-count");
-      if (el) el.textContent = cnt > 0 ? `👥 ${cnt}명 접속 중 · ` : "";
-
-      /* ③ 머리말 아래 접속자 줄 — [👥 미호, 그링, 버찌]
+      /* ② 머리말 아래 접속자 줄 — [👥 미호, 그링, 버찌]
+         (안내 문구 앞의 "n명 접속 중"은 이 줄과 겹쳐서 뺐습니다 — 사용자 요청)
          핀 배너 자리처럼 한 줄로 시작해 길어지면 최대 3줄(CSS 클램프). */
       const bar = document.getElementById("chatty-online-bar");
       if (bar) {
@@ -215,7 +212,7 @@
 
     const box = _chattyBox();
     if (box) box.innerHTML =
-      `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;"><span id="chatty-count"></span>☕ Chatty Chat에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
+      `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;">☕ Chatty Chat에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
     _updateChattyCount();
     _chattySeenKeys = new Set();
     _chattyLastRendered = { user: null, ts: 0, ymd: null, msg: "" };
