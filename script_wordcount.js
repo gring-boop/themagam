@@ -184,10 +184,10 @@
          가운데 줄로 흐릅니다. 버튼 누른 사람 nick 으로 저장되지만
          방이 알려주는 말이라 이름은 보여주지 않습니다. */
       if (f.type === "pomo") {
-        const ptm = (f.at && window.formatHHMM)
-          ? ` <span class="wc-said-t">${window.formatHHMM(f.at)}</span>` : "";
+        /* [고침 2026-08-04] 시각은 붙이지 않습니다 — 방이 알려주는 말이라
+           글자수 기록과 달리 '언제'가 중요하지 않아요 (사용자 요청). */
         return `<div class="wc-feed">
-          <div class="wc-feed-sys">${esc(f.msg || "")}${ptm}</div>
+          <div class="wc-feed-sys">${esc(f.msg || "")}</div>
         </div>`;
       }
       const isMe = f.nick === me();
