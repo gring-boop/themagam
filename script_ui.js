@@ -250,6 +250,13 @@
     "📜 원고와 잉크":     { isDark:false, style:"ink",    bg:"#FAF6EC", text:"#2B2620", me:"#2B2620", other:"#FFFDF6", header:"#F4EEDF", meText:"#F5EFDF", otherText:"#2B2620", accent:"#B3372B" },
     "🌙 마감 전야":       { isDark:true,  style:"night",  bg:"#15171E", text:"#E6E4DC", me:"#FFB43C", other:"#232733", header:"#1B1E27", meText:"#231A05", otherText:"#E6E4DC", accent:"#FFB43C" },
     "💠 조용한 스튜디오": { isDark:false, style:"studio", bg:"#F1F2F4", text:"#20242B", me:"#2F6BFF", other:"#FFFFFF", header:"#FFFFFF", meText:"#FFFFFF", otherText:"#20242B", accent:"#2F6BFF" },
+    /* [추가 2026-08-04] 새 테마 5종 — 전용 style 표식 없이 색만 바꿉니다(style:"default").
+       솜사탕의 포인트는 옐로 대신 하늘색(사용자 요청). */
+    "🍬 솜사탕":         { isDark:false, style:"default", bg:"#FBEDF3", text:"#463A50", me:"#A98BDE", other:"#FFFFFF", header:"#F6E1ED", meText:"#FFFFFF", otherText:"#463A50", accent:"#5CA8E0" },
+    "🍭 롤리팝":         { isDark:false, style:"default", bg:"#E9F4FB", text:"#2C4657", me:"#F5A8C2", other:"#FFFFFF", header:"#DCEDF8", meText:"#5C2038", otherText:"#2C4657", accent:"#35C4A5" },
+    "🔩 인더스트리":     { isDark:false, style:"default", bg:"#E4E6EA", text:"#2A2E33", me:"#3A6EA5", other:"#FFFFFF", header:"#D6D9DE", meText:"#FFFFFF", otherText:"#2A2E33", accent:"#CF4141" },
+    "🌿 허브티":         { isDark:false, style:"default", bg:"#EFF3EA", text:"#33402B", me:"#6E8F5E", other:"#FFFFFF", header:"#E2EAD8", meText:"#FFFFFF", otherText:"#33402B", accent:"#C6754A" },
+    "🌌 오로라":         { isDark:true,  style:"default", bg:"#141B2A", text:"#D9E2F2", me:"#57D9C0", other:"#243049", header:"#1C2537", meText:"#0B2B24", otherText:"#D9E2F2", accent:"#9D8BE8" },
   };
 
   function hexToRgba(hex, alpha) {
