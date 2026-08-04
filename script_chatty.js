@@ -95,10 +95,44 @@
       // 아직 참여 전이고 상자가 비어 있으면 안내를 채워둡니다
       const box = _chattyBox();
       if (box && !_chattyParticipating && !box.childElementCount) _renderChattyIntro();
+      _updateChattyCount();
       _scrollChattyToBottom();
     } else {
       window.scrollChatToBottom?.(true);
     }
+  }
+
+  // =====================================================
+  // ✅ 접속 중인 참여자 수 — "n명 접속 중 · ☕ Chatty Chat에 참여했어요…"
+  //    지금 온라인인 사람(_statusCache + isOnline) 중에서
+  //    chattyParticipation 이 켜진 사람만 셉니다. 실시간 listener 를
+  //    또 늘리는 대신, Chatty 탭을 보는 동안 30초마다 다시 셉니다.
+  // =====================================================
+  let _chattyCountTimer = null;
+
+  async function _updateChattyCount() {
+    const el = document.getElementById("chatty-count");
+    if (!el) return;
+    try {
+      const cache = window._statusCache || {};
+      const now = window.serverNow ? window.serverNow() : Date.now();
+      const online = Object.keys(cache).filter(n => window.isOnline?.(cache[n], now));
+      const flags = await Promise.all(online.map(async n => {
+        try {
+          const s = await db.ref(`users/${n}/chattyParticipation/participating`).once("value");
+          return s.val() === true;
+        } catch (e) { return false; }
+      }));
+      const cnt = flags.filter(Boolean).length;
+      el.textContent = cnt > 0 ? `👥 ${cnt}명 접속 중 · ` : "";
+    } catch (e) { /* 못 세도 문구만 없을 뿐 — 조용히 넘어갑니다 */ }
+  }
+
+  function _startChattyCountTicker() {
+    if (_chattyCountTimer) clearInterval(_chattyCountTimer);
+    _chattyCountTimer = setInterval(() => {
+      if (_activeChatTab === "chatty" && _chattyParticipating) _updateChattyCount();
+    }, 30 * 1000);
   }
 
   function _renderChattyLeaveBtn() {
@@ -156,7 +190,8 @@
 
     const box = _chattyBox();
     if (box) box.innerHTML =
-      `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;">☕ Chatty Chat에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
+      `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;"><span id="chatty-count"></span>☕ Chatty Chat에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
+    _updateChattyCount();
     _chattySeenKeys = new Set();
     _chattyLastRendered = { user: null, ts: 0, ymd: null, msg: "" };
 
@@ -248,6 +283,7 @@
     if (_chattyParticipating) _attachChattyListener();
     else _renderChattyIntro();
     _renderChattyLeaveBtn();
+    _startChattyCountTicker();
   }
 
   // =====================================================
