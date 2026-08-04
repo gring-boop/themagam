@@ -76,7 +76,9 @@
     _activeChatTab = (tab === "chatty") ? "chatty" : "main";
     const onChatty = _activeChatTab === "chatty";
 
-    document.getElementById("chat-tab-main")?.classList.toggle("on", !onChatty);
+    /* [2026-08-04] 탭 줄을 머리말로 합침 — 제목(#my-info)이 곧 메인 탭.
+       Chatty를 보는 동안 제목은 살짝 흐려집니다(tab-off). */
+    document.getElementById("my-info")?.classList.toggle("tab-off", onChatty);
     document.getElementById("chat-tab-chatty")?.classList.toggle("on", onChatty);
 
     document.getElementById("chat-box")?.classList.toggle("hidden", onChatty);

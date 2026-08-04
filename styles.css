@@ -5057,13 +5057,17 @@ html[data-theme-style="studio"] .user-card{
    여기서 테마별 분기를 둘 필요가 없습니다.
    ===================================================================== */
 
-.chat-tabs{
+/* [2026-08-04] 탭 줄(.chat-tabs)은 없앴습니다 — 머리말에 합쳐졌어요.
+   제목(#my-info)이 메인 탭, 옆의 .chat-tab 버튼이 Chatty 탭입니다. */
+.chat-head-left{
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px var(--sp-3) 0;
-  flex: 0 0 auto;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
+.chat-head-left #my-info{ flex: 0 1 auto; cursor: pointer; }
+#my-info.tab-off{ opacity: .5; }
 .chat-tab{
   position: relative;
   border: 1px solid transparent;

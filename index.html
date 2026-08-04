@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608042242">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608042242">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608050030">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608050030">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608042242">
+  <link rel="manifest" href="manifest.json?v=202608050030">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608042242" />
+  <link rel="stylesheet" href="styles.css?v=202608050030" />
 </head>
 
 <body>
@@ -401,33 +401,28 @@
 
   <!-- 채팅 -->
   <aside class="chat-sidebar" aria-label="채팅">
+      <!-- [2026-08-04] 탭 줄을 없애고 머리말에 합쳤습니다 —
+           기존 제목("— Chat")이 그대로 메인 탭, 그 옆에 ☕ Chatty (사용자 요청) -->
       <div class="header">
-        <span id="my-info">Chat</span>
+        <div class="chat-head-left">
+          <span id="my-info" role="button" tabindex="0" title="기본 채팅 보기"
+                onclick="switchChatTab('main')">Chat</span>
+          <span id="chat-tab-badge-main" class="chat-tab-badge hidden">0</span>
+          <button id="chat-tab-chatty" class="chat-tab" type="button"
+                  onclick="switchChatTab('chatty')">☕ Chatty
+            <span id="chat-tab-badge-chatty" class="chat-tab-badge hidden">0</span>
+          </button>
+        </div>
         <div class="mini-row">
+          <button id="chatty-leave-btn" class="chatty-leave-btn hidden" type="button"
+                  onclick="leaveChatty()" title="Chatty Chat 나가기">나가기</button>
           <div id="admin-area" class="hidden">
             <button class="admin-btn" onclick="clearAllChat()">전체 삭제 🔥</button>
           </div>
           <!-- [2026-08-03] 채팅 접기 — 접으면 왼쪽에 얇은 손잡이(레일)가 남습니다 -->
           <button id="chat-collapse-btn" class="icon-btn" type="button"
                   aria-expanded="true" aria-label="채팅 접기" title="채팅 접기">❮</button>
-          <!-- 채팅만 접는 버튼은 없앴습니다. 오른쪽 줄을 통째로 접습니다
-               (머리말의 ❯ 버튼). 창마다 접기를 두면 무엇이 접힌 상태인지
-               알기 어렵고, 접힌 자리에 빈 공간이 남았습니다. -->
         </div>
-      </div>
-
-      <!-- [2026-08-04] 채팅 탭 — 메인 Chat / 수다방 Chatty Chat (script_chatty.js) -->
-      <div class="chat-tabs" id="chat-tabs" role="tablist" aria-label="채팅방 선택">
-        <button id="chat-tab-main" class="chat-tab on" type="button" role="tab"
-                onclick="switchChatTab('main')">— Chat
-          <span id="chat-tab-badge-main" class="chat-tab-badge hidden">0</span>
-        </button>
-        <button id="chat-tab-chatty" class="chat-tab" type="button" role="tab"
-                onclick="switchChatTab('chatty')">☕ Chatty
-          <span id="chat-tab-badge-chatty" class="chat-tab-badge hidden">0</span>
-        </button>
-        <button id="chatty-leave-btn" class="chatty-leave-btn hidden" type="button"
-                onclick="leaveChatty()" title="Chatty Chat 나가기">나가기</button>
       </div>
 
       <!-- 핀 배너 전용 고정 슬롯 -->
@@ -689,20 +684,20 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608042242"></script>
-<script src="script_core.js?v=202608042242"></script>
-<script src="script_auth.js?v=202608042242"></script>
-<script src="script_ui.js?v=202608042242"></script>
-<script src="script_chat.js?v=202608042242"></script>
-<script src="script_chatty.js?v=202608042242"></script>
-<script src="script_data.js?v=202608042242"></script>
-<script src="script_realtime.js?v=202608042242"></script>
-<script src="script_layout.js?v=202608042242"></script>
-<script src="script_wordcount.js?v=202608042242"></script>
-<script src="script_timelog.js?v=202608042242"></script>
-<script src="script_profile.js?v=202608042242"></script>
-<script src="script_reactions.js?v=202608042242"></script>
-<script src="script_manual.js?v=202608042242"></script>
+<script src="fortune_data.js?v=202608050030"></script>
+<script src="script_core.js?v=202608050030"></script>
+<script src="script_auth.js?v=202608050030"></script>
+<script src="script_ui.js?v=202608050030"></script>
+<script src="script_chat.js?v=202608050030"></script>
+<script src="script_chatty.js?v=202608050030"></script>
+<script src="script_data.js?v=202608050030"></script>
+<script src="script_realtime.js?v=202608050030"></script>
+<script src="script_layout.js?v=202608050030"></script>
+<script src="script_wordcount.js?v=202608050030"></script>
+<script src="script_timelog.js?v=202608050030"></script>
+<script src="script_profile.js?v=202608050030"></script>
+<script src="script_reactions.js?v=202608050030"></script>
+<script src="script_manual.js?v=202608050030"></script>
 
 <script>
   window.addEventListener("load", () => {
