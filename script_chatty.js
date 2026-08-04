@@ -287,7 +287,15 @@
 
     // payload는 메인과 같은 모양 (렌더 함수를 공유하니까)
     db.ref("messages2").push({ user: myNick, emoji: myEmoji, msg: m, time: Date.now() })
-      .catch(e => console.error("Chatty 전송 실패", e));
+      .catch(e => {
+        console.error("Chatty 전송 실패", e);
+        /* 가장 흔한 원인 — 보안규칙에 messages2 가 아직 게시되지 않았을 때.
+           조용히 삼키면 "입력만 지워지고 안 뜨는" 미궁이 되므로 알려줍니다. */
+        const c = String(e && (e.code || e.message) || "");
+        _chattyToast(/permission/i.test(c)
+          ? "전송이 거부됐어요 — Firebase 콘솔에 새 보안규칙(messages2)을 게시했는지 확인해 주세요"
+          : "전송하지 못했어요. 연결을 확인해 주세요");
+      });
     el.value = "";
     el.style.height = "42px";
     _scrollChattyToBottom();
