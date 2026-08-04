@@ -284,9 +284,11 @@
     root.setAttribute("data-theme-style", t.style || "default");
 
     const bg = t.bg || "#E9EDF3";
-    const panel  = t.panel  || (isDark ? "rgba(22,24,28,.96)" : hexToRgba(bg, 0.70));
-    const panel2 = t.panel2 || (isDark ? "rgba(22,24,28,.90)" : hexToRgba(bg, 0.62));
-    const surface= t.surface|| (isDark ? "rgba(22,24,28,.88)" : hexToRgba(bg, 0.56));
+    /* [고침 2026-08-04] 다크 테마도 기본 테마와 같은 반투명도로 —
+       .96 은 사실상 불투명이라 뒤에 깐 원고지 격자가 전혀 비치지 않았습니다. */
+    const panel  = t.panel  || (isDark ? "rgba(22,24,28,.70)" : hexToRgba(bg, 0.70));
+    const panel2 = t.panel2 || (isDark ? "rgba(22,24,28,.62)" : hexToRgba(bg, 0.62));
+    const surface= t.surface|| (isDark ? "rgba(22,24,28,.56)" : hexToRgba(bg, 0.56));
 
     r.setProperty("--panel", panel);
     r.setProperty("--panel2", panel2);
@@ -337,7 +339,9 @@
     /* [추가 2026-08-04] 원고지 격자를 모든 테마에 — 색만 테마 따라.
        기본 테마의 인주색 괘선이 좋다는 요청이라, 다른 테마도 포인트색을
        옅게 푼 괘선을 깝니다. grid 를 따로 적은 테마(원고와 잉크)는 그 색을. */
-    r.setProperty("--grid-line", t.grid || hexToRgba(accent, isDark ? 0.10 : 0.09));
+    /* [고침 2026-08-04] 괘선 농도를 기본 테마(0.16)와 맞춤 —
+       0.09 는 반투명 카드 너머로는 보이지 않을 만큼 옅었습니다. */
+    r.setProperty("--grid-line", t.grid || hexToRgba(accent, isDark ? 0.14 : 0.16));
 
     r.setProperty("--timer-a", hexToRgba(t.me || "#0A84FF", isDark ? 0.14 : 0.10));
     r.setProperty("--timer-b", hexToRgba("#30D158", isDark ? 0.14 : 0.10));
