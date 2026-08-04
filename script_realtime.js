@@ -538,16 +538,27 @@
     else if (phaseOrKind === "work") msg = "🍅 뽀모도로 작업 세션이 시작됐어요!";
     else msg = "☁️ 뽀모도로 휴식이 시작됐어요!";
 
+    /* [변경 2026-08-04] 채팅방 대신 글자수 오늘 탭(wordfeed)에 올립니다.
+       - 같은 seq 키로 한 번만 쓰이고, 보안규칙의 !data.exists() 가
+         중복 쓰기를 막아 dedupe 역할까지 해줍니다 (거절돼도 무해).
+       - 규칙상 nick 이 내 필명이어야 저장되므로 함께 적습니다.
+       - type:"pomo" 라서 '내 기록' 탭에는 나오지 않습니다. */
     try {
-      await db.ref(`messages/${key}`).set({
-        type: "system",
+      const _d = new Date();
+      const dk = window.Wordcount?.dayKey
+        ? window.Wordcount.dayKey()
+        : `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}`;
+      await db.ref(`wordfeed/${dk}/${key}`).set({
+        type: "pomo",
+        nick: myNick,
         msg,
-        time: firebase.database.ServerValue.TIMESTAMP,
+        at: Date.now(),
         pomoSeq: seq,
         pomoPhase: phaseOrKind
       });
     } catch(e) {
-      console.warn("[write pomodoro system msg failed]", e);
+      // 이미 같은 seq 가 적혀 있으면 규칙이 거절합니다 — 정상입니다.
+      console.warn("[write pomodoro wordfeed msg skipped]", e?.code || e);
     }
   }
 
@@ -851,7 +862,10 @@
       if (!data) return;
       const t = data.type;
       const isRealChat = !t || t === "declaration" || t === "fortune";
-      if (isRealChat) histItems.push([key, data]);
+      /* [변경 2026-08-04] 입장/퇴장 알림도 히스토리에 함께 보여줍니다.
+         표시 개수(histCount) 안에 들어 있으면 대화 사이에 그대로 끼어
+         나오게요. 이펙트(fx)·옛 뽀모 시스템 메시지는 여전히 제외. */
+      if (isRealChat || isPresenceSystemMsg(data)) histItems.push([key, data]);
     });
     if (showHist) {
       const toRender = histItems.slice(-histCount);
@@ -996,7 +1010,7 @@
       window.closeSettings?.();
       const n = window._lastHistRenderedCount || 0;
       if (n === 0) {
-        alert("불러올 이전 대화가 아직 없어요.\n(뽀모도로·입장 알림 같은 시스템 메시지는 히스토리에 포함되지 않아요)");
+        alert("불러올 이전 대화가 아직 없어요.\n(이펙트 같은 일부 시스템 메시지는 히스토리에 포함되지 않아요)");
       }
     } catch(e) {
       window._forceHistOnce = false;

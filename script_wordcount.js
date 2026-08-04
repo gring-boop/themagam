@@ -143,7 +143,7 @@
       unit.textContent = "자 · 이번 주 내 합계";
       /* [추가 2026-08-02] 요일별 그래프 아래에 "오늘 내 기록"을 붙입니다.
          오늘 탭과 같은 흐르는 기록이지만, 내가 올린 것만 골라 보여줍니다. */
-      const myFeed = _feed.filter(f => f.nick === me());
+      const myFeed = _feed.filter(f => f.nick === me() && f.type !== "pomo");
       rows.innerHTML = drawRows(vals, vals.length - 1)
         + `<div class="wc-me-h">오늘 내 기록</div>`
         + (myFeed.length
@@ -180,6 +180,16 @@
               지금 전체 글자수를 적으면 여기에 올라옵니다.</div>`;
     }
     return list.slice(-FEED_MAX).map(f => {
+      /* [추가 2026-08-04] 뽀모도로 알림 — 채팅방 대신 여기(오늘 탭)에
+         가운데 줄로 흐릅니다. 버튼 누른 사람 nick 으로 저장되지만
+         방이 알려주는 말이라 이름은 보여주지 않습니다. */
+      if (f.type === "pomo") {
+        const ptm = (f.at && window.formatHHMM)
+          ? ` <span class="wc-said-t">${window.formatHHMM(f.at)}</span>` : "";
+        return `<div class="wc-feed">
+          <div class="wc-feed-sys">${esc(f.msg || "")}${ptm}</div>
+        </div>`;
+      }
       const isMe = f.nick === me();
       const nick = esc(f.nick);
       /* 옛 기록에는 snap 이 없습니다. 그럴 땐 윗줄을 생략합니다. */
