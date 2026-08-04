@@ -5114,6 +5114,27 @@ html[data-theme-style="studio"] .user-card{
 }
 .chatty-leave-btn:hover{ color: var(--danger); border-color: var(--danger-line); }
 
+/* ☕ Chatty 탭 라벨의 (n명) — 숫자는 조금 작고 옅게 */
+#chatty-tab-count{ font-size: var(--fs-xs); font-weight: var(--fw-medium); opacity: .8; }
+
+/* ☕ Chatty 접속자 줄 — 핀 배너 자리처럼 머리말 바로 아래.
+   길어지면 최대 3줄까지 보이고 그 뒤는 … 으로 접습니다. */
+#chatty-online-bar{
+  flex: 0 0 auto;
+  padding: 6px var(--sp-3);
+  font-size: var(--fs-xs);
+  color: var(--muted-strong);
+  background: var(--accent-softer);
+  border-bottom: 1px solid var(--border);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  word-break: break-all;
+}
+#chatty-online-bar.hidden{ display: none; }
+
 /* 두 번째 로그 상자 — #chat-box와 같은 자리를 번갈아 씁니다 */
 #chat-box2{
   font-size: var(--font-size);

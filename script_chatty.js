@@ -84,6 +84,7 @@
     document.getElementById("chat-box")?.classList.toggle("hidden", onChatty);
     _chattyBox()?.classList.toggle("hidden", !onChatty);
     document.getElementById("pin-banner-slot")?.classList.toggle("hidden", onChatty);
+    document.getElementById("chatty-online-bar")?.classList.toggle("hidden", !onChatty);
     if (onChatty) document.getElementById("new-msg-float")?.classList.add("hidden");
 
     // 연 탭의 안 읽음은 그 자리에서 0으로
@@ -110,9 +111,12 @@
   // =====================================================
   let _chattyCountTimer = null;
 
+  function _escChatty(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
   async function _updateChattyCount() {
-    const el = document.getElementById("chatty-count");
-    if (!el) return;
     try {
       const cache = window._statusCache || {};
       const now = window.serverNow ? window.serverNow() : Date.now();
@@ -120,19 +124,36 @@
       const flags = await Promise.all(online.map(async n => {
         try {
           const s = await db.ref(`users/${n}/chattyParticipation/participating`).once("value");
-          return s.val() === true;
-        } catch (e) { return false; }
+          return s.val() === true ? n : null;
+        } catch (e) { return null; }
       }));
-      const cnt = flags.filter(Boolean).length;
-      el.textContent = cnt > 0 ? `👥 ${cnt}명 접속 중 · ` : "";
+      const names = flags.filter(Boolean);
+      const cnt = names.length;
+
+      /* ① 탭 라벨 — "☕ Chatty (n명)". 아무도 없으면 (0명) */
+      const tabCnt = document.getElementById("chatty-tab-count");
+      if (tabCnt) tabCnt.textContent = `(${cnt}명)`;
+
+      /* ② 참여 안내 문구 앞 — "👥 n명 접속 중 · " */
+      const el = document.getElementById("chatty-count");
+      if (el) el.textContent = cnt > 0 ? `👥 ${cnt}명 접속 중 · ` : "";
+
+      /* ③ 머리말 아래 접속자 줄 — [👥 미호, 그링, 버찌]
+         핀 배너 자리처럼 한 줄로 시작해 길어지면 최대 3줄(CSS 클램프). */
+      const bar = document.getElementById("chatty-online-bar");
+      if (bar) {
+        bar.innerHTML = cnt > 0
+          ? `👥 ${names.map(_escChatty).join(", ")}`
+          : `👥 아직 아무도 없어요`;
+      }
     } catch (e) { /* 못 세도 문구만 없을 뿐 — 조용히 넘어갑니다 */ }
   }
 
   function _startChattyCountTicker() {
     if (_chattyCountTimer) clearInterval(_chattyCountTimer);
-    _chattyCountTimer = setInterval(() => {
-      if (_activeChatTab === "chatty" && _chattyParticipating) _updateChattyCount();
-    }, 30 * 1000);
+    /* 탭 라벨의 (n명)은 어느 탭을 보고 있어도 갱신돼야 해서 늘 돕니다 */
+    _updateChattyCount();
+    _chattyCountTimer = setInterval(_updateChattyCount, 30 * 1000);
   }
 
   function _renderChattyLeaveBtn() {
@@ -292,6 +313,7 @@
   // =====================================================
   function detachChatty() {
     _detachChattyListener();
+    if (_chattyCountTimer) { clearInterval(_chattyCountTimer); _chattyCountTimer = null; }
     _chattyParticipating = false;
     _chattySeenKeys = new Set();
     _tabUnread = { main: 0, chatty: 0 };
