@@ -47,14 +47,22 @@ window.reactionAddButtonHtml = reactionAddButtonHtml;
 /* ---------------------------------------------------------------------
    렌더
    ------------------------------------------------------------------- */
+/* [2026-08-05] Chatty(chat-box2)에도 같은 반응을 지원합니다.
+   메시지 키는 messages/messages2 각각의 push 키라 겹치지 않으므로,
+   두 상자 중 그 키의 줄이 있는 쪽을 찾으면 됩니다. */
+const _REACTION_BOX_IDS = ["chat-box", "chat-box2"];
+
 function _rowFor(key) {
-  const box = document.getElementById("chat-box");
-  if (!box || !key) return null;
-  try {
-    return box.querySelector(`.reaction-row[data-reactions-for="${CSS.escape(key)}"]`);
-  } catch (e) {
-    return null;
+  if (!key) return null;
+  for (const id of _REACTION_BOX_IDS) {
+    const box = document.getElementById(id);
+    if (!box) continue;
+    try {
+      const row = box.querySelector(`.reaction-row[data-reactions-for="${CSS.escape(key)}"]`);
+      if (row) return row;
+    } catch (e) {}
   }
+  return null;
 }
 
 function renderReactionRow(key) {
@@ -84,10 +92,12 @@ function renderReactionRow(key) {
 }
 
 function renderAllReactionRows() {
-  const box = document.getElementById("chat-box");
-  if (!box) return;
-  box.querySelectorAll(".reaction-row").forEach(row => {
-    renderReactionRow(row.dataset.reactionsFor);
+  _REACTION_BOX_IDS.forEach(id => {
+    const box = document.getElementById(id);
+    if (!box) return;
+    box.querySelectorAll(".reaction-row").forEach(row => {
+      renderReactionRow(row.dataset.reactionsFor);
+    });
   });
 }
 window.renderAllReactionRows = renderAllReactionRows;
@@ -183,11 +193,25 @@ function openReactionPicker(btn) {
    반응 버튼/칩/피커는 모두 말풍선 밖이라 서로 간섭하지 않습니다.
    ------------------------------------------------------------------- */
 function bindReactionInteractions() {
-  const box = document.getElementById("chat-box");
-  if (!box || box.dataset.reactionBound === "true") return;
-  box.dataset.reactionBound = "true";
+  _REACTION_BOX_IDS.forEach(id => {
+    const box = document.getElementById(id);
+    if (!box || box.dataset.reactionBound === "true") return;
+    box.dataset.reactionBound = "true";
+    box.addEventListener("click", _onReactionBoxClick);
+  });
 
-  box.addEventListener("click", (e) => {
+  if (document.body.dataset.reactionDocBound !== "true") {
+    document.body.dataset.reactionDocBound = "true";
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest?.(".reaction-picker, [data-reaction-add]")) closeReactionPicker();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeReactionPicker();
+    });
+  }
+}
+
+function _onReactionBoxClick(e) {
     const toggle = e.target.closest("[data-reaction-toggle]");
     if (toggle) {
       e.preventDefault();
@@ -206,15 +230,6 @@ function bindReactionInteractions() {
     }
 
     closeReactionPicker();
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest?.(".reaction-picker, [data-reaction-add]")) closeReactionPicker();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeReactionPicker();
-  });
 }
 window.bindReactionInteractions = bindReactionInteractions;
 

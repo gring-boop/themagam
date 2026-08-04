@@ -87,6 +87,10 @@
     document.getElementById("chatty-online-bar")?.classList.toggle("hidden", !onChatty);
     if (onChatty) document.getElementById("new-msg-float")?.classList.add("hidden");
 
+    /* [2026-08-05] 탭을 건너가면 답장 대상도 접습니다 — 메인 메시지를
+       가리킨 채 Chatty 로 보내는(또는 그 반대) 어긋남 방지 */
+    window.cancelReply?.();
+
     // 연 탭의 안 읽음은 그 자리에서 0으로
     _tabUnread[_activeChatTab] = 0;
     _renderTabBadges();
@@ -175,7 +179,7 @@
         <p class="chatty-intro-desc">
           작업 얘기 말고 그냥 수다 떠는 방이에요.<br>
           이전 대화는 보이지 않아요 — 참여한 순간부터의 메시지만 보여요.<br>
-          명령어(/선언 /운세 …)는 여기선 쓸 수 없어요.
+          명령어(/선언 /운세 …)·답장·이모지 반응도 똑같이 쓸 수 있어요.
         </p>
         <button type="button" class="chatty-join-btn" onclick="joinChatty()">참여하기</button>
       </div>`;
@@ -339,27 +343,12 @@
       _chattyToast("먼저 참여하기를 눌러주세요 ☕");
       return true;
     }
-    // 명령어는 메인 Chat 전용 — 안내만 하고 입력은 그대로 둡니다
-    if (m.startsWith("/")) {
-      _chattyToast("Chatty Chat에서는 명령어를 쓸 수 없어요");
-      return true;
-    }
 
-    // payload는 메인과 같은 모양 (렌더 함수를 공유하니까)
-    db.ref("messages2").push({ user: myNick, emoji: myEmoji, msg: m, time: Date.now() })
-      .catch(e => {
-        console.error("Chatty 전송 실패", e);
-        /* 가장 흔한 원인 — 보안규칙에 messages2 가 아직 게시되지 않았을 때.
-           조용히 삼키면 "입력만 지워지고 안 뜨는" 미궁이 되므로 알려줍니다. */
-        const c = String(e && (e.code || e.message) || "");
-        _chattyToast(/permission/i.test(c)
-          ? "전송이 거부됐어요 — Firebase 콘솔에 새 보안규칙(messages2)을 게시했는지 확인해 주세요"
-          : "전송하지 못했어요. 연결을 확인해 주세요");
-      });
-    el.value = "";
-    el.style.height = "42px";
-    _scrollChattyToBottom();
-    return true;
+    /* [2026-08-05] 여기서부터는 메인 send() 가 이어서 처리합니다.
+       명령어(/운세 /축하 …)·답장(replyTo)·payload 구성 모두 메인과 같은
+       코드를 타고, 전송 ref 만 _activeMsgRef() 가 messages2 로 갈라줍니다.
+       (전송 실패 안내 — 보안규칙 미게시 등 — 도 send() 쪽 _chattySendFail 담당) */
+    return false;
   }
 
   // =====================================================
@@ -398,3 +387,6 @@
   window.startChatty   = startChatty;
   window.detachChatty  = detachChatty;
   window.chattySend    = chattySend;
+  /* [2026-08-05] 메인 send()·reactions 가 활성 방을 알아볼 때 씁니다 */
+  window.isChattyActive = () => _activeChatTab === "chatty";
+  window.scrollChattyToBottom = _scrollChattyToBottom;

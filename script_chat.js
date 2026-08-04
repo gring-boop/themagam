@@ -781,10 +781,21 @@
     _renderReplyPreview();
   }
 
+  /* [2026-08-05] 메시지 키로 말풍선 찾기 — 메인/Chatty 두 상자 모두에서.
+     push 키는 방마다 고유하므로 먼저 찾히는 쪽이 정답입니다. */
+  function _findChatItemByKey(key) {
+    if (!key) return null;
+    for (const id of ["chat-box", "chat-box2"]) {
+      const el = document.getElementById(id)
+        ?.querySelector(`.chat-item[data-key="${CSS.escape(key)}"]`);
+      if (el) return el;
+    }
+    return null;
+  }
+
   function _startReply(key) {
     if (!key) return;
-    const box = document.getElementById("chat-box");
-    const item = box?.querySelector(`.chat-item[data-key="${CSS.escape(key)}"]`);
+    const item = _findChatItemByKey(key);
     if (!item) return; // ✅ 본인 메시지도 답장 가능(자기 메시지를 가리키고 싶을 때 대비)
 
     const user = item.dataset.user || "";
@@ -819,8 +830,7 @@
 
   function _scrollToOriginalMessage(targetKey) {
     if (!targetKey) return;
-    const box = document.getElementById("chat-box");
-    const targetEl = box?.querySelector(`.chat-item[data-key="${CSS.escape(targetKey)}"]`);
+    const targetEl = _findChatItemByKey(targetKey);
     if (!targetEl) {
       showCommandToast("원본 메시지를 찾을 수 없어요 (화면에서 지워졌을 수 있어요) 😢");
       return;
@@ -834,11 +844,18 @@
   }
 
   function bindReplyInteractions() {
-    const box = document.getElementById("chat-box");
-    if (!box || box.dataset.replyBound === "true") return;
-    box.dataset.replyBound = "true";
+    /* [2026-08-05] Chatty(chat-box2)에서도 같은 3연속 클릭 답장을 지원 */
+    ["chat-box", "chat-box2"].forEach(id => {
+      const box = document.getElementById(id);
+      if (!box || box.dataset.replyBound === "true") return;
+      box.dataset.replyBound = "true";
+      box.addEventListener("click", _onReplyBoxClick);
+    });
 
-    box.addEventListener("click", (e) => {
+    document.getElementById("reply-preview-close")?.addEventListener("click", _cancelReply);
+  }
+
+  function _onReplyBoxClick(e) {
       // 1) 인용 발췌 클릭 → 원문으로 스크롤
       const quote = e.target.closest(".reply-quote");
       if (quote) {
@@ -862,9 +879,6 @@
         _replyClickTracker.delete(bubble);
         _startReply(item.dataset.key);
       }
-    });
-
-    document.getElementById("reply-preview-close")?.addEventListener("click", _cancelReply);
   }
 
   window.bindReplyInteractions = bindReplyInteractions;
@@ -1042,8 +1056,29 @@
     }
   }
 
+  /* [2026-08-05] Chatty 탭에서도 명령어·답장을 그대로 쓰기 위해
+     전송 대상 ref를 활성 탭에 따라 갈라주는 헬퍼.
+     window.isChattyActive 는 script_chatty.js 가 나중에 export 하므로
+     호출 시점에 window 에서 찾습니다 (없으면 늘 메인). */
+  function _chattyActive() { return window.isChattyActive?.() === true; }
+  function _activeMsgRef() { return db.ref(_chattyActive() ? "messages2" : "messages"); }
+  function _scrollActiveChat() {
+    if (_chattyActive()) window.scrollChattyToBottom?.();
+    else scrollChatToBottom(true);
+  }
+  /* Chatty 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라 콕 집어줍니다 */
+  function _chattySendFail(e) {
+    if (!_chattyActive()) return;
+    const c = String(e && (e.code || e.message) || "");
+    showCommandToast(/permission/i.test(c)
+      ? "전송이 거부됐어요 — Firebase 콘솔에 새 보안규칙(messages2)을 게시했는지 확인해 주세요"
+      : "전송하지 못했어요. 연결을 확인해 주세요");
+  }
+
   async function send() {
-    // ✅ [2026-08-04] Chatty 탭이 활성이면 script_chatty.js 가 대신 처리
+    // ✅ [2026-08-04] Chatty 탭이 활성이면 script_chatty.js 가 먼저 문지기 역할.
+    //    true 를 돌려주면(미참여·빈 입력 등) 여기서 멈추고,
+    //    false 면 chatty 모드로 이어서 처리합니다 (_activeMsgRef 가 messages2 로 갈라줌).
     if (window.chattySend?.()) return;
 
     const el = document.getElementById("message");
@@ -1075,12 +1110,12 @@
         runEffect(def.emojis, def.colors, def.count);
         if (!_dndEnabled) showCommandToast(sysMsg);
         try {
-          await db.ref("messages").push({
+          await _activeMsgRef().push({
             type: "declaration",
             user: myNick, emoji: myEmoji,
             text: extraText, time: Date.now()
           });
-        } catch(e) { console.error("선언 전송 실패", e); }
+        } catch(e) { console.error("선언 전송 실패", e); _chattySendFail(e); }
         el.value = ""; el.style.height = "42px";
         return;
       }
@@ -1090,14 +1125,14 @@
         const fortuneMsg = _buildFortuneMsg(myNick);
         runEffect(def.emojis, def.colors, def.count);
         try {
-          await db.ref("messages").push({
+          await _activeMsgRef().push({
             type: "fortune",
             user: myNick,
             emoji: myEmoji,
             msg: fortuneMsg,
             time: Date.now()
           });
-        } catch(e) { console.error("운세 전송 실패", e); }
+        } catch(e) { console.error("운세 전송 실패", e); _chattySendFail(e); }
         el.value = ""; el.style.height = "42px";
         return;
       }
@@ -1108,14 +1143,14 @@
         runEffect(def.emojis, def.colors, def.count);
         if (!_dndEnabled) showCommandToast(sysMsg);
         try {
-          await db.ref("messages").push({
+          await _activeMsgRef().push({
             type: "fx", cmd, sysMsg, extraText,
             user: myNick, emoji: myEmoji, time: Date.now()
           });
-        } catch(e) { console.error("외치기 전송 실패", e); }
+        } catch(e) { console.error("외치기 전송 실패", e); _chattySendFail(e); }
         el.value = ""; el.style.height = "42px";
-        // ✅ 카드가 채팅에 추가됐으므로 스크롤
-        scrollChatToBottom(true);
+        // ✅ 카드가 채팅에 추가됐으므로 스크롤 (활성 탭 기준)
+        _scrollActiveChat();
         return;
       }
 
@@ -1123,11 +1158,11 @@
       runEffect(def.emojis, def.colors, def.count);
       if (!_dndEnabled) showCommandToast(sysMsg);
       try {
-        await db.ref("messages").push({
+        await _activeMsgRef().push({
           type: "fx", cmd, sysMsg,
           user: myNick, emoji: myEmoji, time: Date.now()
         });
-      } catch(e) { console.error("fx 전송 실패", e); }
+      } catch(e) { console.error("fx 전송 실패", e); _chattySendFail(e); }
       el.value = ""; el.style.height = "42px";
       return;
     }
@@ -1147,13 +1182,14 @@
         payload.replyTo = { key: _replyTarget.key, user: _replyTarget.user, msg: excerpt };
       }
 
-      await db.ref("messages").push(payload);
+      await _activeMsgRef().push(payload);
       el.value = ""; el.style.height = "42px";
       _cancelReply();
-      scrollChatToBottom(true);
-      checkAndTrimChat();
+      _scrollActiveChat();
+      if (!_chattyActive()) checkAndTrimChat();   // 트림은 메인 전용 (Chatty는 히스토리 없음)
     } catch(e) {
       console.error("전송 실패", e);
+      _chattySendFail(e);
     }
   }
 
