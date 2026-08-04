@@ -4040,6 +4040,18 @@ body.side-collapsed .side-rail{
   word-break: break-all;
 }
 .wc-feed-sys b{ color: var(--text); font-weight: var(--fw-medium); }
+
+/* [추가 2026-08-04] 뽀모 알림 줄 — 형광펜을 그은 듯한 하이라이트.
+   테마 포인트색(--accent-soft)을 쓰므로 어느 테마에서도 은은하게 맞습니다. */
+.wc-pomo-line{
+  display: inline-block;
+  margin: 4px auto 0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.wc-feed:has(.wc-pomo-line){ text-align: center; }
 .wc-feed.me .wc-feed-sys b{ color: var(--accent); }
 
 /* 뽀모 — 시간 설정을 버튼과 다른 줄에 둡니다 (좁은 칸에서 서로 밀려서) */

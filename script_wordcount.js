@@ -187,7 +187,7 @@
         /* [고침 2026-08-04] 시각은 붙이지 않습니다 — 방이 알려주는 말이라
            글자수 기록과 달리 '언제'가 중요하지 않아요 (사용자 요청). */
         return `<div class="wc-feed">
-          <div class="wc-feed-sys">${esc(f.msg || "")}</div>
+          <div class="wc-feed-sys wc-pomo-line">${esc(f.msg || "")}</div>
         </div>`;
       }
       const isMe = f.nick === me();
