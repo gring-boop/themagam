@@ -4075,12 +4075,13 @@ body.side-collapsed .side-rail{
 
 /* ── A. 📜 원고와 잉크 ─────────────────────────────
    원고지 괘선이 은은하게 깔린 종이 배경 + 명조 제목 + 한쪽만 각진 말풍선 */
-html[data-theme-style="ink"] body{
-  /* 원고지 격자 — 세로줄 + 가로줄이 만나 칸이 보입니다.
-     색은 원고지 특유의 붉은 갈색(인주 계열), 칸은 24px. */
+/* [고침 2026-08-04] 원고지 격자를 잉크 전용에서 모든 테마 공용으로.
+   색은 applyTheme 이 --grid-line 으로 넣습니다 (잉크는 인주색,
+   나머지는 각 테마의 포인트색을 옅게). 변수가 없으면 투명이라 무해. */
+body{
   background-image:
-    repeating-linear-gradient(90deg, transparent 0 23px, rgba(163,88,70,.16) 23px 24px),
-    repeating-linear-gradient( 0deg, transparent 0 23px, rgba(163,88,70,.16) 23px 24px);
+    repeating-linear-gradient(90deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px),
+    repeating-linear-gradient( 0deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px);
 }
 html[data-theme-style="ink"] .modal-title,
 html[data-theme-style="ink"] .set-title,

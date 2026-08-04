@@ -247,7 +247,7 @@
   // 🎨 Themes
   // =====================================================
   const themes = {
-    "📜 원고와 잉크":     { isDark:false, style:"ink",    bg:"#FAF6EC", text:"#2B2620", me:"#2B2620", other:"#FFFDF6", header:"#F4EEDF", meText:"#F5EFDF", otherText:"#2B2620", accent:"#B3372B" },
+    "📜 원고와 잉크":     { isDark:false, style:"ink",    bg:"#FAF6EC", text:"#2B2620", me:"#2B2620", other:"#FFFDF6", header:"#F4EEDF", meText:"#F5EFDF", otherText:"#2B2620", accent:"#B3372B", grid:"rgba(163,88,70,.16)" },
     "🌙 마감 전야":       { isDark:true,  style:"night",  bg:"#15171E", text:"#E6E4DC", me:"#FFB43C", other:"#232733", header:"#1B1E27", meText:"#231A05", otherText:"#E6E4DC", accent:"#FFB43C" },
     "💠 조용한 스튜디오": { isDark:false, style:"studio", bg:"#F1F2F4", text:"#20242B", me:"#2F6BFF", other:"#FFFFFF", header:"#FFFFFF", meText:"#FFFFFF", otherText:"#20242B", accent:"#2F6BFF" },
     /* [추가 2026-08-04] 새 테마 5종 — 전용 style 표식 없이 색만 바꿉니다(style:"default").
@@ -333,6 +333,11 @@
     r.setProperty("--accent-softer", hexToRgba(accent, isDark ? 0.12 : 0.06));
     r.setProperty("--accent-line",   hexToRgba(accent, isDark ? 0.34 : 0.22));
     r.setProperty("--accent-ring",   hexToRgba(accent, isDark ? 0.48 : 0.32));
+
+    /* [추가 2026-08-04] 원고지 격자를 모든 테마에 — 색만 테마 따라.
+       기본 테마의 인주색 괘선이 좋다는 요청이라, 다른 테마도 포인트색을
+       옅게 푼 괘선을 깝니다. grid 를 따로 적은 테마(원고와 잉크)는 그 색을. */
+    r.setProperty("--grid-line", t.grid || hexToRgba(accent, isDark ? 0.10 : 0.09));
 
     r.setProperty("--timer-a", hexToRgba(t.me || "#0A84FF", isDark ? 0.14 : 0.10));
     r.setProperty("--timer-b", hexToRgba("#30D158", isDark ? 0.14 : 0.10));
