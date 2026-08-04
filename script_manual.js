@@ -129,8 +129,8 @@ const MANUAL_SECTIONS = [
 
       <div class="man-cmds">
         <span class="man-cmd">/운세</span><span class="man-cmd">/축하</span><span class="man-cmd">/마감</span>
-        <span class="man-cmd">/달성</span><span class="man-cmd">/연재</span><span class="man-cmd">/휴식</span>
-        <span class="man-cmd">/집필</span><span class="man-cmd">/만세</span><span class="man-cmd">/수고</span>
+        <span class="man-cmd">/환영</span><span class="man-cmd">/응원</span>
+        <span class="man-cmd">/만세</span><span class="man-cmd">/수고</span>
         <span class="man-cmd">/고추</span>
       </div>
 

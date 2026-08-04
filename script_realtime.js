@@ -316,7 +316,14 @@
 
       const parts = [];
 
-      for (let u in data) {
+      /* [2026-08-04] 내 카드는 항상 맨 앞으로.
+         sort 는 안정 정렬이라 내 닉만 앞으로 빼고, 나머지의 기존 순서
+         (데이터 순서·접속중 필터)는 그대로 유지됩니다. */
+      const orderedNicks = Object.keys(data);
+      orderedNicks.sort((a, b) =>
+        (a === myNick ? -1 : 0) - (b === myNick ? -1 : 0));
+
+      for (const u of orderedNicks) {
         const row = data[u] || {};
         if (isOnline(row, now)) {
           const st = row.status || "idle";

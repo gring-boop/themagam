@@ -690,6 +690,44 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   };
 
+  /* [2026-08-04] ⏱️ 오늘 작업 시간 초기화 — 목표·투두 팝업의 버튼이 부릅니다.
+
+     이 파일의 저장 구조를 그대로 따릅니다.
+       · 닫힌 구간  users/{닉}/timeSegs/{오늘} → 통째로 삭제
+       · 열린 구간  users/{닉}/timeCur        → 시작점(a)만 지금으로 옮김
+     열린 구간을 닫아서 저장하면 그게 다시 오늘 기록이 되므로, 닫지 않고
+     시작점만 옮깁니다. 상태는 그대로라 흐름이 끊기지 않습니다.
+     본인 것만 지웁니다 (myNick 경로만 만짐). */
+  window.resetTodayWorkTime = async function () {
+    if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
+    if (!confirm("오늘 작업 시간을 0으로 되돌릴까요?\n오늘의 상태별 시간 기록이 모두 지워지고, 되돌릴 수 없어요.")) return;
+    try {
+      const t = nowMs();
+      await db.ref(`users/${myNick}/timeSegs/${ymd(t)}`).remove();
+
+      if (_cur) {
+        _cur = { s: _cur.s, a: t, sid: SID };
+        await curRef().set(_cur);
+        markAlive();
+        armDisc();
+      } else {
+        /* 다른 탭·기기가 열어둔 구간이 있으면 그것도 지금부터 다시 시작 */
+        const snap = await curRef().once("value");
+        const v = snap.val();
+        if (v && Number(v.a) > 0) {
+          await curRef().set({ s: normStatus(v.s), a: t, sid: v.sid || SID });
+        }
+      }
+
+      _todayWork = { ms: 0, at: t };
+      await _refreshTodayWork();   // 재계산 → updateStatus(true) → 카드 갱신
+      alert("오늘 작업 시간을 초기화했어요.");
+    } catch (e) {
+      console.warn("[resetTodayWorkTime]", e);
+      alert("초기화에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
   window.TimeLog = { STATUSES, STATUS_IDS, GAP_LIMIT_MS, OFFLINE_MIN_MS, SEG_CAP_MS,
                      loadSummary, fmtDur, pushSegment };
   if (typeof module !== "undefined" && module.exports) module.exports = window.TimeLog;
