@@ -5036,3 +5036,106 @@ html[data-theme-style="studio"] .user-card{
 .pomo-sw.on i{ right: 2.5px; }
 .pomo-sw.off{ background: var(--fill-3); }
 .pomo-sw.off i{ left: 2.5px; }
+
+/* =====================================================================
+   [2026-08-04] Chatty Chat ☕ — 채팅 탭 바 + 두 번째 로그 상자
+   ---------------------------------------------------------------------
+   색은 전부 기존 토큰(--panel2 --border --accent --muted --danger)만
+   씁니다. 세 테마(ink/night/studio)가 이 토큰들을 런타임에 덮어쓰므로
+   여기서 테마별 분기를 둘 필요가 없습니다.
+   ===================================================================== */
+
+.chat-tabs{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px var(--sp-3) 0;
+  flex: 0 0 auto;
+}
+.chat-tab{
+  position: relative;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.chat-tab:hover{ background: var(--fill-1); }
+.chat-tab.on{
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+/* 비활성 탭에 쌓인 새 메시지 수 — 99+ 캡은 JS에서 */
+.chat-tab-badge{
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  vertical-align: 1px;
+}
+/* Chatty 탭을 보는 중에만 오른쪽 끝에 살짝 보이는 나가기 */
+.chatty-leave-btn{
+  margin-left: auto;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.chatty-leave-btn:hover{ color: var(--danger); border-color: var(--danger-line); }
+
+/* 두 번째 로그 상자 — #chat-box와 같은 자리를 번갈아 씁니다 */
+#chat-box2{
+  font-size: var(--font-size);
+  flex: 1;
+  overflow: auto;
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
+}
+body.narrow-chat-focus #chat-box2{ flex: 1; min-height: 0; }
+body.split-dragging #chat-box2{ user-select: none; }
+
+/* 참여 전 안내 */
+.chatty-intro{
+  margin: auto;
+  text-align: center;
+  padding: var(--sp-4);
+  max-width: 300px;
+}
+.chatty-intro-emoji{ font-size: 34px; }
+.chatty-intro-title{ font-weight: 700; margin-top: 6px; }
+.chatty-intro-desc{
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  margin: 8px 0 14px;
+}
+.chatty-join-btn{
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--on-accent-btn);
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  min-height: var(--tap-sm);
+}
+.chatty-join-btn:hover{ background: var(--accent-softer); }

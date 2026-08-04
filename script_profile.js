@@ -1126,7 +1126,10 @@ window.bindCardEditDelegate = bindCardEditDelegate;
     const wrapped = function (box, data, key) {
       const r = _render.apply(this, arguments);
       try {
-        if (data && data.type !== "system" && data.user !== myNick) {
+        /* [2026-08-04] Chatty 메시지는 레일 배지에 세지 않습니다 —
+           접힘 중 레일 카운트는 메인 Chat 전용 (script_chatty.js 깃발) */
+        if (data && data.type !== "system" && data.user !== myNick
+            && !window._chattySuppressCount) {
           noteChatMessageWhileCollapsed();
         }
       } catch (e) {}

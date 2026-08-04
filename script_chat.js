@@ -776,7 +776,9 @@
        이 함수를 감싸는 곳이 네 군데(ui·reactions·profile)나 되어서
        순서가 조금만 틀어져도 조용히 안 불렸습니다.
        세는 일은 원본에서 직접 하는 편이 확실합니다. */
-    if (!isMe) { try { window.noteNarrowChatUnread?.(); } catch (e) {} }
+    /* [2026-08-04] Chatty 메시지는 세지 않음 — script_chatty.js 가 렌더를
+       빌려 쓰는 동안 깃발을 올립니다 (💬 배지는 메인 Chat 전용) */
+    if (!isMe && !window._chattySuppressCount) { try { window.noteNarrowChatUnread?.(); } catch (e) {} }
   }
 
   // =====================================================
@@ -1055,6 +1057,9 @@
   }
 
   async function send() {
+    // ✅ [2026-08-04] Chatty 탭이 활성이면 script_chatty.js 가 대신 처리
+    if (window.chattySend?.()) return;
+
     const el = document.getElementById("message");
     if (!el || !myNick) return;
     const m = el.value.trim();

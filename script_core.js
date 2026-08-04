@@ -419,6 +419,9 @@ window.AppSession = AppSession;
       // ✅ 2) 메시지 리슨
       await window.listenMessages?.();
 
+      // ✅ 2-1) Chatty Chat 초기화 — 참여 여부 로드 후 참여 중이면 listener 부착
+      try { await window.startChatty?.(); } catch(e){ console.warn("[startChatty failed]", e); }
+
       // ✅ 3) 사운드/참가/상세/세션카운트 등 닉귀속 UI 초기화
       try { await window.afterJoinInitSoundPrefs?.(); } catch(e){ console.warn("[afterJoinInitSoundPrefs failed]", e); }
 
@@ -485,6 +488,8 @@ window.AppSession = AppSession;
     window.removeEventListener("beforeunload", _handleBeforeUnload);
     window.removeEventListener("pagehide", _handleBeforeUnload);
     detachListeners();
+    // ✅ Chatty listener도 함께 정리 (참여 여부 자체는 서버에 남습니다)
+    try { window.detachChatty?.(); } catch(e) {}
 
     myNick = "";
     myEmoji = "";
