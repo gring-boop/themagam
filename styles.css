@@ -2795,6 +2795,74 @@ body.pomo-nonpart .pomo-status-line{
 #settings-modal{ display: none; }
 
 /* =====================================================================
+   [2026-08-05] 입장 창 리디자인 — B(책 표지) + C(부드러운 결) 혼합
+   로그인 전 화면이라 개인 테마와 무관하게 기본(원고와 잉크) 결로
+   고정합니다. 어두운 유리 대신 원고지 종이를 그대로 깝니다.
+   ===================================================================== */
+#modal{
+  background: #FAF6EC;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(163,88,70,.14) 23px 24px),
+    repeating-linear-gradient( 0deg, transparent 0 23px, rgba(163,88,70,.14) 23px 24px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#modal .modal-content{
+  background: rgba(255,253,246,.96);
+  border: 1.5px solid #B3372B;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(90,70,40,.10);
+}
+#modal .join-eyebrow{
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: #B3372B;
+  letter-spacing: 1px;
+  font-weight: var(--fw-medium);
+  margin-bottom: 6px;
+}
+#modal .modal-title{
+  font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+  text-align: center;
+  letter-spacing: 3px;
+  color: #2B2620;
+  margin-bottom: 0;
+}
+#modal .join-en{
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: #B3372B;
+  letter-spacing: 4px;
+  margin: 2px 0 14px;
+}
+#modal .modal-sub{ text-align: center; color: #6B5F52; }
+/* 밑줄 입력칸 — 종이에 줄 긋고 적는 느낌 */
+#modal input{
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(150,120,80,.5);
+  border-radius: 0;
+  color: #2B2620;
+  box-shadow: none;
+}
+#modal input:focus{
+  background: transparent;
+  border-bottom-color: #B3372B;
+  box-shadow: none;
+}
+#modal input::placeholder{ color: #8A7B68; }
+/* 입장하기 — 블랙에 가까운 레드 */
+#modal #join-btn{
+  background: #4A140D;
+  border: none;
+  color: #FFFDF6;
+  font-weight: var(--fw-medium);
+}
+#modal #join-btn:hover{ background: #5C1A11; }
+#modal .hint{ color: #8A7B68; }
+#modal .hint b{ color: #6B5F52; }
+
+/* =====================================================================
    기록 팝업 (카드 아래쪽 상자를 누르면)
    ===================================================================== */
 /* [FIX] 새로 만든 두 팝업이 화면 옆에 어색하게 붙던 문제
