@@ -2851,6 +2851,20 @@ body.pomo-nonpart .pomo-status-line{
   box-shadow: none;
 }
 #modal input::placeholder{ color: #8A7B68; }
+/* 자동완성(autofill) 파란/분홍 물듦 방지 — 브라우저가 배경을 직접 칠해서
+   background 로는 못 덮고, 안쪽 그림자로 종이색을 크게 깔아 가립니다. */
+#modal input:-webkit-autofill,
+#modal input:-webkit-autofill:hover,
+#modal input:-webkit-autofill:focus{
+  -webkit-box-shadow: 0 0 0 1000px #FFFDF6 inset;
+  box-shadow: 0 0 0 1000px #FFFDF6 inset;
+  -webkit-text-fill-color: #2B2620;
+  caret-color: #2B2620;
+  transition: background-color 99999s ease-in-out 0s;
+}
+#modal input:autofill{
+  box-shadow: 0 0 0 1000px #FFFDF6 inset;
+}
 /* 입장하기 — 블랙에 가까운 레드 */
 #modal #join-btn{
   background: #4A140D;
