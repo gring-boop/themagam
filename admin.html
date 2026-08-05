@@ -116,6 +116,40 @@
     }
     .adm-nav button:disabled{ opacity: .35; cursor: default; }
     .adm-radio{ display: block; font-size: 13.5px; padding: 4px 0; cursor: pointer; }
+    /* ---- 출근부 표 ---- */
+    .adm-att-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table.adm-att-table{
+      border-collapse: collapse; font-size: 12px; color: #2B2620;
+      white-space: nowrap;
+    }
+    .adm-att-table th, .adm-att-table td{
+      border: 1px solid rgba(150,120,80,.45);
+      padding: 3px 5px; text-align: center; min-width: 34px;
+    }
+    .adm-att-table th{ font-weight: 700; }
+    .adm-att-table th.d{ background: #DCEDF8; }
+    .adm-att-table th.d.we{ background: #E2EAD8; }
+    .adm-att-table th.name-h, .adm-att-table td.name-c{
+      background: #FBEDE3; position: sticky; left: 0; z-index: 1;
+      text-align: left; font-weight: 800; max-width: 110px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .adm-att-table th.sum-h{ background: #F3D9D3; font-size: 11px; }
+    .adm-att-table td.sum-c{ background: #FDF7F0; font-weight: 700; }
+    .adm-att-table td.cell{ font-variant-numeric: tabular-nums; font-size: 11px; color: #4A3F33; }
+    .adm-att-table td.cell.vac{ background: #F5E3B8; }
+    .adm-att-table td.cell.short{ background: #F3D9D3; }
+    .adm-att-table td.cell.today, .adm-att-table th.d.today{
+      box-shadow: inset 0 0 0 2px #B3372B;
+    }
+    .adm-att-legend{
+      font-size: 11.5px; color: #6B5F52; margin-top: 8px;
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+    .adm-att-legend .sw{
+      display: inline-block; width: 11px; height: 11px; border-radius: 3px;
+      border: 1px solid rgba(150,120,80,.5); vertical-align: -1px; margin-right: 3px;
+    }
     .adm-gap{ height: 10px; }
     #adm-dash{ display: none; }
   </style>
@@ -152,13 +186,18 @@
     <div id="adm-dash">
       <div class="adm-card" id="adm-att-card">
         <h2>📅 출석·휴가 현황</h2>
-        <p class="adm-sub">멤버별 최근 30일 출석과 휴가 기록이에요.</p>
+        <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.</p>
         <div class="adm-nav">
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
           <button type="button" id="adm-att-next" title="다음 달">›</button>
         </div>
         <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
+        <div class="adm-att-legend">
+          <span><span class="sw" style="background:#F5E3B8"></span>🏖️ 휴가</span>
+          <span><span class="sw" style="background:#F3D9D3"></span>1시간 미만</span>
+          <span><span class="sw" style="box-shadow:inset 0 0 0 2px #B3372B; border:none;"></span>오늘</span>
+        </div>
       </div>
 
       <div class="adm-card">

@@ -122,8 +122,17 @@
     loadHistoryConfig();
   }
 
-  // ------------------------------------------------- ③-1 출석·휴가 현황
+  // ------------------------------------------------- ③-1 출석·휴가 현황 (출근부 표)
+  /* 데이터 구조 — script_realtime.js / script_timelog.js 와 동일:
+       attendance/{YYYY-MM-DD}/{닉} = { firstAt, at, leftAt? }  ← 첫 입장 = firstAt(없으면 at)
+       users/{닉}/vacations/{YYYY-MM-DD} = true
+       users/{닉}/timeSegs/{YYYY-MM-DD}/{pushId} = { s, a, b }  ← 접속 구간(ms) */
   let _attOffset = 0;
+
+  function hhmm(ts) {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
 
   async function loadAttendance(monthOffset) {
     _attOffset = monthOffset;
@@ -134,50 +143,79 @@
     base.setDate(1);
     base.setMonth(base.getMonth() - monthOffset);
     const ymKey = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
+    const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+    const todayKey = dayKey(new Date());
     el("adm-att-month").textContent = ymKey.replace("-", "년 ") + "월";
     el("adm-att-next").disabled = monthOffset === 0;
 
     try {
-      /* 최근 30일 출석 — script_realtime.js showAttendanceLog 의 요약과 같은 계산 */
-      const from = dayKey(new Date(Date.now() - 29 * 86400000));
-      const asnap = await db.ref("attendance").orderByKey().startAt(from).once("value");
-      const av = asnap.val() || {};
-      const per = {};
-      Object.keys(av).sort().forEach(d => Object.keys(av[d] || {}).forEach(n => {
-        per[n] = per[n] || { days: 0, last: "" };
-        per[n].days += 1;
-        if (d > per[n].last) per[n].last = d;
-      }));
+      /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번 */
+      const [asnap, nickSnap] = await Promise.all([
+        db.ref("attendance").orderByKey()
+          .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value"),
+        db.ref("nickOwner").once("value")
+      ]);
+      const attMonth = asnap.val() || {};
+      const nicks = Object.keys(nickSnap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
+      if (!nicks.length) { body.innerHTML = "아직 기록이 없어요."; return; }
 
-      /* 멤버 목록은 nickOwner(누구나 읽기 가능)에서 가져와 휴가를 모읍니다 */
-      const nickSnap = await db.ref("nickOwner").once("value");
-      const nicks = Object.keys(nickSnap.val() || {});
-      const vacByNick = {};
+      const vacByNick = {};   // { 닉: {날짜:true} }
+      const minsByNick = {};  // { 닉: {날짜: 합계분} }
       await Promise.all(nicks.map(async n => {
         try {
-          const v = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
-          vacByNick[n] = Object.keys(v).sort();
-        } catch (e) { vacByNick[n] = []; }
+          vacByNick[n] = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
+        } catch (e) { vacByNick[n] = {}; }
+        try {
+          const segs = (await db.ref(`users/${n}/timeSegs`).orderByKey()
+            .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")).val() || {};
+          const per = {};
+          Object.keys(segs).forEach(d => {
+            let ms = 0;
+            Object.values(segs[d] || {}).forEach(sg => {
+              if (sg && sg.b > sg.a) ms += sg.b - sg.a;
+            });
+            per[d] = ms / 60000;
+          });
+          minsByNick[n] = per;
+        } catch (e) { minsByNick[n] = {}; }
       }));
 
-      const all = Array.from(new Set([...nicks, ...Object.keys(per)]));
-      if (!all.length) { body.innerHTML = "아직 기록이 없어요."; return; }
+      /* 표 만들기 */
+      let head = `<tr><th class="name-h">이름</th><th class="sum-h">출석</th><th class="sum-h">휴가</th>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+        const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
+        const cls = "d" + (dow === 0 || dow === 6 ? " we" : "") + (dk === todayKey ? " today" : "");
+        head += `<th class="${cls}">${d}</th>`;
+      }
+      head += "</tr>";
 
-      all.sort((a, b) => (per[b]?.days || 0) - (per[a]?.days || 0));
-      body.innerHTML = all.map(n => {
-        const s = per[n] || { days: 0, last: "" };
-        const vacs = vacByNick[n] || [];
-        const vacsMonth = vacs.filter(d => d.startsWith(ymKey));
-        const dates = vacsMonth.length
-          ? `<div class="adm-vac-dates">🏖️ ${vacsMonth.map(d => escapeHtml(d.slice(5))).join(", ")}</div>` : "";
-        return `
-          <div class="adm-row">
-            <span class="n">${escapeHtml(n)}</span>
-            <span class="s">30일 출석 <b>${s.days}일</b></span>
-            <span class="s">마지막 ${s.last ? escapeHtml(s.last.slice(5)) : "-"}</span>
-            <span class="s">휴가 ${vacsMonth.length}/${vacs.length}일</span>
-          </div>${dates}`;
+      const rows = nicks.map(n => {
+        const vacs = vacByNick[n] || {};
+        const mins = minsByNick[n] || {};
+        let attDays = 0, vacDays = 0, cells = "";
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+          const rec = attMonth[dk]?.[n];
+          const inAt = rec ? (rec.firstAt || rec.at) : null;
+          const isVac = vacs[dk] === true;
+          if (inAt) attDays++;
+          if (isVac) vacDays++;
+          let cls = "cell", txt = "";
+          if (isVac) { cls += " vac"; txt = "🏖️"; }
+          else if (inAt) {
+            txt = hhmm(inAt);
+            if ((mins[dk] || 0) < 60) cls += " short"; // 출석했는데 1일 접속 1시간 미만
+          }
+          if (dk === todayKey) cls += " today";
+          cells += `<td class="${cls}">${txt}</td>`;
+        }
+        return `<tr><td class="name-c">${escapeHtml(n)}</td>` +
+               `<td class="sum-c">${attDays}</td><td class="sum-c">${vacDays}</td>${cells}</tr>`;
       }).join("");
+
+      body.classList.remove("adm-msg");
+      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${head}${rows}</table></div>`;
     } catch (e) {
       console.warn("[adm attendance]", e);
       body.innerHTML = "불러오지 못했어요.";
