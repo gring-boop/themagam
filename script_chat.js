@@ -16,7 +16,13 @@
     const box = document.getElementById("chat-box");
     if (!box) return;
     box.addEventListener("scroll", () => {
-      const near = (box.scrollHeight - box.scrollTop - box.clientHeight) <= 80;
+      /* [고침 2026-08-05] 80 → 200px.
+
+         지난 대화를 거슬러 올라가 읽는("연어") 중에 새 메시지가 오면
+         화면이 맨 아래로 끌려 내려가 읽던 자리를 잃었습니다. 80px 은
+         말풍선 한 개 높이도 안 돼서, 조금만 올려도 다시 붙잡히곤 했어요.
+         이제 맨 아래 200px 안을 보고 있을 때만 따라 내려갑니다. */
+      const near = (box.scrollHeight - box.scrollTop - box.clientHeight) <= 200;
       autoScrollEnabled = near;
       if (near) {
         unreadCount = 0;

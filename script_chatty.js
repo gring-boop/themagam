@@ -48,9 +48,34 @@
     else console.log("[chatty]", msg);
   }
 
-  function _scrollChattyToBottom() {
+  /* [추가 2026-08-05] 수다방에도 "연어" 보호막.
+
+     [무엇이 잘못됐었나]
+     지난 대화를 거슬러 올라가 읽는 중에 새 메시지가 오면, 화면이
+     그때마다 맨 아래로 끌려 내려갔습니다. 읽던 자리를 잃으니
+     차분히 되짚어 읽을 수가 없었어요.
+
+     이제 맨 아래 근처(200px 안)를 보고 있을 때만 따라 내려갑니다.
+     위로 올라가 읽는 중이면 그 자리에 그대로 머물러요. */
+  let _chattyAutoScroll = true;
+
+  function _bindChattyScrollGuard() {
     const box = _chattyBox();
-    if (box) box.scrollTop = box.scrollHeight;
+    if (!box || box.dataset.chattyScrollBound === "true") return;
+    box.dataset.chattyScrollBound = "true";
+    box.addEventListener("scroll", () => {
+      _chattyAutoScroll =
+        (box.scrollHeight - box.scrollTop - box.clientHeight) <= 200;
+    });
+  }
+
+  function _scrollChattyToBottom(force) {
+    const box = _chattyBox();
+    if (!box) return;
+    if (force || _chattyAutoScroll) {
+      box.scrollTop = box.scrollHeight;
+      _chattyAutoScroll = true;
+    }
   }
 
   // =====================================================
@@ -101,9 +126,12 @@
       const box = _chattyBox();
       if (box && !_chattyParticipating && !box.childElementCount) _renderChattyIntro();
       _updateChattyCount();
+      _bindChattyScrollGuard();
       _scrollChattyToBottom();
     } else {
-      window.scrollChatToBottom?.(true);
+      /* [고침 2026-08-05] 탭을 돌아왔다고 맨 아래로 끌지 않습니다 —
+         위에서 읽던 중이었다면 그 자리가 그대로 남아야 하니까요. */
+      window.scrollChatToBottom?.();
     }
   }
 
@@ -217,6 +245,8 @@
     _updateChattyCount();
     _chattySeenKeys = new Set();
     _chattyLastRendered = { user: null, ts: 0, ymd: null, msg: "" };
+    _chattyAutoScroll = true;
+    _bindChattyScrollGuard();
 
     const attachedAt = Date.now();
     _chattyQuery = db.ref("messages2").orderByChild("time").startAt(attachedAt);
@@ -233,7 +263,8 @@
       const isSystemLike = (data.type === "system" || data.type === "fx");
 
       if (_activeChatTab === "chatty") {
-        _scrollChattyToBottom();
+        /* 내가 보낸 것은 무조건 따라 내려갑니다 — 방금 쓴 말은 보여야죠 */
+        _scrollChattyToBottom(isMine);
       } else if (!isMine && !isSystemLike
                  && !document.body.classList.contains("chat-collapsed")) {
         // 패널이 열려 있고 다른 탭을 보는 중 → Chatty 탭에 배지
