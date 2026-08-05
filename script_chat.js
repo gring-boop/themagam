@@ -745,6 +745,14 @@
           <div class="bubble-row ${isMe ? "me" : ""}">
             <div class="${bubbleClass}" style="${bubbleStyle}">${msgHtml}</div>
             <div class="msg-time">${formatHHMM(time)}</div>
+            <button type="button" class="reply-add-btn" data-reply-add="1"
+                    aria-label="답장 쓰기" title="답장 쓰기">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 14 4 9l5-5"/>
+                <path d="M4 9h10a6 6 0 0 1 6 6v3"/>
+              </svg>
+            </button>
             ${window.reactionAddButtonHtml ? window.reactionAddButtonHtml() : ""}
           </div>
           <div class="reaction-row" data-reactions-for="${escapeHtml(String(key || ""))}"></div>
@@ -863,7 +871,16 @@
         return;
       }
 
-      // 2) 메시지 말풍선 3연속 클릭 → 답장 모드 (본인 메시지도 가능)
+      // 2) [추가 2026-08-05] ↩ 답장 버튼 — 카톡처럼 반응 버튼 왼편에.
+      //    3연속 클릭도 그대로 두되, 한 번에 가는 길을 하나 더 냅니다.
+      const replyBtn = e.target.closest("[data-reply-add]");
+      if (replyBtn) {
+        const it = replyBtn.closest(".chat-item");
+        if (it) _startReply(it.dataset.key);
+        return;
+      }
+
+      // 3) 메시지 말풍선 3연속 클릭 → 답장 모드 (본인 메시지도 가능)
       const bubble = e.target.closest(".msg-bubble");
       if (!bubble) return;
       const item = bubble.closest(".chat-item");

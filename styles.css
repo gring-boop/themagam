@@ -2301,9 +2301,34 @@ body.pomo-nonpart .pomo-status-line{
 .reaction-add-btn:hover{ background: var(--fill-2); color: var(--text); }
 .reaction-add-btn:active{ transform: scale(.92); }
 
+/* [추가 2026-08-05] ↩ 답장 버튼 — 반응 버튼과 똑같은 결, 그 왼편에 */
+.reply-add-btn{
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--sub-muted);
+  border-radius: var(--r-full);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(.85);
+  transition: opacity var(--anim-fast), transform var(--anim-fast);
+}
+.reply-add-btn svg{ width: 15px; height: 15px; display: block; }
+.chat-item:hover .reply-add-btn,
+.reply-add-btn:focus-visible{ opacity: 1; transform: scale(1); }
+.reply-add-btn:hover{ background: var(--fill-2); color: var(--text); }
+.reply-add-btn:active{ transform: scale(.92); }
+
 /* 터치 기기는 hover가 없으니 항상 보이되 은은하게 */
 @media (hover: none){
   .reaction-add-btn{ opacity: .55; transform: scale(1); }
+  .reply-add-btn{ opacity: .55; transform: scale(1); }
 }
 
 /* 반응 칩 줄 */
