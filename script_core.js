@@ -425,6 +425,9 @@ window.AppSession = AppSession;
       // ✅ 3) 사운드/참가/상세/세션카운트 등 닉귀속 UI 초기화
       try { await window.afterJoinInitSoundPrefs?.(); } catch(e){ console.warn("[afterJoinInitSoundPrefs failed]", e); }
 
+      // ✅ 3-1) 자리비움 자동 감지 — 저장값이 켜짐이고 권한이 있으면 조용히 시작
+      try { await window.afterJoinInitIdleDetect?.(); } catch(e){ console.warn("[afterJoinInitIdleDetect failed]", e); }
+
       armPresenceOnDisconnect();
       bindConnectionWatcher();
 

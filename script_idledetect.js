@@ -1,0 +1,245 @@
+/* =====================================================================
+   TheMagam — 자리비움 자동 감지 (script_idledetect.js)
+
+   크롬의 Idle Detection API(IdleDetector)로 "시스템 전체" 무입력을
+   감지합니다. 탭 밖에서 다른 프로그램을 쓰고 있어도 키보드·마우스가
+   움직이는 한 '활동 중'으로 봅니다.
+
+   하는 일 두 가지.
+     ① 무입력 20분 → 내 상태를 💤AWAY 로 자동 강등.
+        (직접 WORK 를 골라뒀어도 예외 없음 — 자리에 없으면 없는 것)
+     ② 입력이 다시 감지되면, **자동으로 AWAY 가 된 경우에만**
+        강등 직전 상태로 복귀. 사람이 직접 AWAY 를 고른 경우엔
+        절대 건드리지 않습니다.
+
+   상태 전환은 새 길을 뚫지 않습니다. 상태 고르기 판(pick)과 똑같이
+   숨은 <select id="db-status"> 를 조작하고 input 이벤트를 쏩니다.
+   그러면 savePersonalData → updateStatus → (timelog 래퍼) switchTo 로
+   이어지는 기존 저장·집계 흐름을 그대로 타서, 작업 시간도 함께
+   멈추고 다시 흐릅니다.
+
+   알려진 한계 — 브라우저가 탭을 통째로 재우면(메모리 절약 등) 이
+   감지기도 함께 멈춥니다. 코드로는 어쩔 수 없어서 여기 적어만 둡니다.
+   미지원 브라우저(사파리·파이어폭스)에서는 버튼이 흐려지고, 누르면
+   안내만 나옵니다.
+   ===================================================================== */
+(function () {
+  /* IdleDetector threshold 는 최소 60000ms 제약이 있습니다. 20분이면 넉넉. */
+  const IDLE_THRESHOLD_MS = 20 * 60 * 1000;
+
+  let _idleEnabled = false;      // 토글 상태 (저장값과 동기)
+  let _idleDetector = null;      // 돌고 있는 IdleDetector
+  let _idleAbort = null;         // 감지 중단용 AbortController
+  let _prevStatus = null;        // 자동 강등 직전 상태 — 복귀할 곳
+  let _autoAway = false;         // "마지막 AWAY 전환이 자동이었나" 꼬리표
+  let _settingByCode = false;    // 지금 상태를 바꾸는 게 이 코드인가 (수동 감지용)
+
+  function _supported() { return typeof IdleDetector !== "undefined"; }
+
+  function _curStatus() {
+    return document.getElementById("db-status")?.value || "rest";
+  }
+
+  /** 상태 고르기 판의 pick() 과 같은 길 — 기존 저장·집계 흐름을 그대로 탑니다 */
+  function _setStatus(v) {
+    const sel = document.getElementById("db-status");
+    if (!sel) return;
+    _settingByCode = true;
+    try {
+      sel.value = v;
+      sel.dispatchEvent(new Event("input", { bubbles: true }));
+      window.renderQuickStatusBtn?.();
+    } finally {
+      /* input 리스너는 동기로 다 돌고 나서야 여기로 돌아옵니다 */
+      _settingByCode = false;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     수동 전환 감지 — 사람이 상태를 직접 바꾸면 꼬리표를 뗍니다.
+     상태 고르기 판이든 어디든, db-status 의 input 은 여기로 다 옵니다.
+     --------------------------------------------------------------- */
+  function _watchManualChange() {
+    const sel = document.getElementById("db-status");
+    if (!sel || sel.__idleWatched) return;
+    sel.__idleWatched = true;
+    sel.addEventListener("input", () => {
+      if (_settingByCode) return;          // 우리가 바꾼 것 — 수동 아님
+      /* 사람이 손으로 골랐습니다. 자동 복귀는 없던 일로. */
+      _autoAway = false;
+      _prevStatus = null;
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     강등과 복귀
+     --------------------------------------------------------------- */
+  function _demoteToAway() {
+    if (!myNick) return;
+    const cur = _curStatus();
+    if (cur === "away") return;            // 이미 자리비움 — 할 일 없음
+    _prevStatus = cur;                     // 돌아올 곳을 기억
+    _autoAway = true;
+    _setStatus("away");
+    console.log("[자동감지] 무입력 20분 →", cur, "→ away 자동 전환");
+  }
+
+  function _restoreIfAutoAway() {
+    if (!myNick) return;
+    if (!_autoAway) return;                // 사람이 직접 고른 AWAY — 건드리지 않음
+    if (_curStatus() !== "away") { _autoAway = false; return; }
+    const back = _prevStatus || "writing";
+    _autoAway = false;
+    _prevStatus = null;
+    _setStatus(back);
+    console.log("[자동감지] 입력 재감지 → away →", back, "자동 복귀");
+  }
+
+  /* ---------------------------------------------------------------
+     감지기 시작·중단
+     --------------------------------------------------------------- */
+  async function _startDetector() {
+    if (!_supported()) return false;
+    _stopDetector();
+    try {
+      _idleAbort = new AbortController();
+      _idleDetector = new IdleDetector();
+      _idleDetector.addEventListener("change", () => {
+        const st = _idleDetector?.userState;
+        if (st === "idle") _demoteToAway();
+        else if (st === "active") _restoreIfAutoAway();
+      });
+      await _idleDetector.start({
+        threshold: IDLE_THRESHOLD_MS,
+        signal: _idleAbort.signal
+      });
+      return true;
+    } catch (e) {
+      console.warn("[IdleDetector start failed]", e);
+      window._idleLastErr = e;             // 알림에 이유를 보여주기 위해 보관
+      _stopDetector();
+      return false;
+    }
+  }
+
+  function _stopDetector() {
+    try { _idleAbort?.abort(); } catch (e) {}
+    _idleAbort = null;
+    _idleDetector = null;
+  }
+
+  /* ---------------------------------------------------------------
+     설정 저장·로드 — pomoParticipation 과 같은 모양
+     --------------------------------------------------------------- */
+  async function _saveIdleDetectToFirebase(isOn) {
+    if (!myNick) return;
+    try {
+      await db.ref(`users/${myNick}/idleDetect`).set({
+        enabled: !!isOn,
+        updatedAt: Date.now()
+      });
+    } catch (e) {
+      console.warn("[saveIdleDetect failed]", e);
+    }
+  }
+
+  async function _loadIdleDetectFromFirebase() {
+    if (!myNick) return false;
+    try {
+      const snap = await db.ref(`users/${myNick}/idleDetect`).once("value");
+      const v = snap.val();
+      return !!(v && v.enabled === true);
+    } catch (e) {
+      console.warn("[loadIdleDetect failed]", e);
+      return false;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     버튼 그리기
+     --------------------------------------------------------------- */
+  function _renderButton() {
+    const btn = document.getElementById("idle-detect-btn");
+    if (!btn) return;
+    if (!_supported()) {
+      /* 미지원 브라우저 — 흐리게. 누르면 toggleIdleDetect 가 안내를 냅니다 */
+      btn.classList.add("dim");
+      btn.style.opacity = ".45";
+      btn.title = "자리비움 자동 감지 — 크롬·엣지 전용";
+    }
+    const label = btn.querySelector(".icon-btn-label");
+    if (label) label.textContent = _idleEnabled ? "자동감지 ON" : "자동감지 OFF";
+  }
+
+  /* ---------------------------------------------------------------
+     토글 (버튼 onclick) — 켜기는 사용자 제스처가 필요합니다
+     (IdleDetector.requestPermission 은 클릭 안에서만 허용됩니다)
+     --------------------------------------------------------------- */
+  async function toggleIdleDetect() {
+    if (!_supported()) {
+      alert("자리비움 자동 감지는 크롬·엣지에서만 쓸 수 있어요.");
+      return;
+    }
+    if (!myNick) return;
+
+    if (_idleEnabled) {
+      /* 끄기 */
+      _idleEnabled = false;
+      _stopDetector();
+      _autoAway = false;
+      _prevStatus = null;
+      _renderButton();
+      await _saveIdleDetectToFirebase(false);
+      return;
+    }
+
+    /* 켜기 — 권한부터 */
+    let perm = "denied";
+    try { perm = await IdleDetector.requestPermission(); } catch (e) {}
+    if (perm !== "granted") {
+      alert("자리비움 감지 권한이 거부됐어요. 주소창 자물쇠 → 사이트 설정에서 허용해 주세요.");
+      return;
+    }
+    /* [고침 2026-08-05] 첫 시작이 간혹 거절되는 경우가 있어 1초 뒤 한 번 더.
+       그래도 안 되면 실패 이유(에러 이름·문구)를 그대로 보여줍니다 —
+       "잠시 후 다시"만으로는 원인을 알 수 없었습니다. */
+    let ok = await _startDetector();
+    if (!ok) {
+      await new Promise(r => setTimeout(r, 1000));
+      ok = await _startDetector();
+    }
+    if (!ok) {
+      const err = window._idleLastErr;
+      const why = err ? `\n\n(이유: ${err.name || ""} ${err.message || err})` : "";
+      alert("자리비움 감지를 시작하지 못했어요." + why
+        + "\n\n이 문구를 캡쳐해서 알려주시면 원인을 찾을 수 있어요.");
+      return;
+    }
+    _idleEnabled = true;
+    _watchManualChange();
+    _renderButton();
+    await _saveIdleDetectToFirebase(true);
+  }
+  window.toggleIdleDetect = toggleIdleDetect;
+
+  /* ---------------------------------------------------------------
+     입장 후 초기화 (core 가 호출) — 저장값이 켜짐이고 권한이 이미
+     granted 인 경우에만 조용히 자동 시작. 권한이 없으면 OFF 표시.
+     (권한 요청은 사용자 제스처가 필요해서 여기선 못 합니다)
+     --------------------------------------------------------------- */
+  window.afterJoinInitIdleDetect = async function () {
+    _watchManualChange();
+    if (!_supported()) { _renderButton(); return; }
+
+    const saved = await _loadIdleDetectFromFirebase();
+    if (saved) {
+      let granted = false;
+      try {
+        const st = await navigator.permissions.query({ name: "idle-detection" });
+        granted = (st.state === "granted");
+      } catch (e) {}
+      if (granted && await _startDetector()) _idleEnabled = true;
+    }
+    _renderButton();
+  };
+})();
