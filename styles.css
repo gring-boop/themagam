@@ -5076,6 +5076,11 @@ html[data-theme-style="studio"] .user-card{
   font-weight: var(--fw-bold);
 }
 .att-day.today{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+/* [2026-08-05] 🏖️ 휴가 날 — 출석과 구분되는 모래빛 배경 */
+.att-day.vac{
+  background: rgba(255, 205, 110, .35);
+  border: 1px dashed rgba(200, 150, 60, .55);
+}
 
 /* =====================================================================
    [2026-08-03·23차] 카드 — 진척바 자리에 Working hours (B안)

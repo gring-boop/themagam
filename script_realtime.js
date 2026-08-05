@@ -1145,9 +1145,15 @@
   async function showMyAttendance(monthOffset = 0) {
     if (!myNick) { alert("입장 후에 볼 수 있어요."); return; }
     let daysMap = {};
+    let vacMap = {};
     try {
       const snap = await db.ref(`users/${myNick}/attend/days`).once("value");
       daysMap = snap.val() || {};
+    } catch (e) {}
+    /* [2026-08-05] 🏖️ 휴가 — 날짜 칸을 눌러 표시해 둔 날들 */
+    try {
+      const vsnap = await db.ref(`users/${myNick}/vacations`).once("value");
+      vacMap = vsnap.val() || {};
     } catch (e) {}
 
     const base = new Date();
@@ -1159,14 +1165,18 @@
     const firstDow = new Date(y, m, 1).getDay();
     const todayKey = ymd(Date.now());
     let attended = 0;
+    let vacCount = 0;
 
     let cells = `<span class="att-dow">일</span><span class="att-dow">월</span><span class="att-dow">화</span><span class="att-dow">수</span><span class="att-dow">목</span><span class="att-dow">금</span><span class="att-dow">토</span>`;
     for (let i = 0; i < firstDow; i++) cells += `<span></span>`;
     for (let d = 1; d <= lastDay; d++) {
       const key = `${ymKey}-${String(d).padStart(2, "0")}`;
       const on = !!daysMap[key];
+      const vac = !!vacMap[key];
       if (on) attended++;
-      cells += `<span class="att-day${on ? " on" : ""}${key === todayKey ? " today" : ""}">${on ? "✓" : d}</span>`;
+      if (vac) vacCount++;
+      /* [2026-08-05] 날짜 칸을 누르면 휴가 토글 — 과거·미래 아무 날이나 됩니다 */
+      cells += `<span class="att-day${on ? " on" : ""}${vac ? " vac" : ""}${key === todayKey ? " today" : ""}" style="cursor:pointer;" title="누르면 휴가 표시를 켜고 꺼요" onclick="toggleMyVacation('${key}', ${monthOffset})">${vac ? "🏖️" : (on ? "✓" : d)}</span>`;
     }
 
     document.getElementById("my-attend-modal")?.remove();
@@ -1183,12 +1193,40 @@
         </div>
         <div class="modal-sub" style="text-align:center;">${escapeHtml(myNick)} · 이 달 <b>${attended}일</b> 출석했어요</div>
         <div class="att-grid">${cells}</div>
+        <div class="modal-sub" style="text-align:center;margin-top:10px;">🏖️ 이번 달 휴가 <b>${vacCount}일</b></div>
+        <div class="hint" style="text-align:center;margin-top:2px;">날짜를 누르면 휴가로 표시돼요</div>
         <button class="ghost-btn w-full" style="margin-top:12px;" onclick="document.getElementById('my-attend-modal').remove()">닫기</button>
       </div>`;
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
   }
   window.showMyAttendance = showMyAttendance;
+
+  /* [2026-08-05] 🏖️ 휴가 토글 — 출석 달력의 날짜 칸을 누르면 켜고 끕니다.
+     users/{닉}/vacations/{YYYY-MM-DD} = true 로 저장하고, 끄면 지웁니다.
+     users 하위라 기존 보안규칙(닉 주인만 쓰기)이 그대로 적용돼요. */
+  async function toggleMyVacation(dateKey, monthOffset = 0) {
+    if (!myNick) return;
+    const ref = db.ref(`users/${myNick}/vacations/${dateKey}`);
+    try {
+      const cur = (await ref.once("value")).val();
+      if (cur) await ref.remove();
+      else await ref.set(true);
+    } catch (e) {
+      console.warn("[toggleMyVacation]", e);
+      alert("휴가 표시를 저장하지 못했어요. 연결을 확인해 주세요.");
+      return;
+    }
+    showMyAttendance(monthOffset);   // 달력을 다시 그려 바로 보여줍니다
+  }
+  window.toggleMyVacation = toggleMyVacation;
+
+  /* [2026-08-05] 🛡️ 관리자 페이지 — 헤더 버튼. PIN을 통과해야 새 탭이 열립니다. */
+  function openAdminPage() {
+    if (!requireAdminPin()) return;
+    window.open("admin.html", "_blank");
+  }
+  window.openAdminPage = openAdminPage;
 
   function _closeAttendanceModal() {
     document.getElementById("attendance-modal")?.remove();
