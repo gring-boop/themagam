@@ -172,10 +172,11 @@
     box.innerHTML = `
       <div class="chatty-intro">
         <div class="chatty-intro-emoji">☕</div>
-        <div class="chatty-intro-title">Chatty Chat</div>
+        <div class="chatty-intro-title">수다방</div>
         <p class="chatty-intro-desc">
           작업 얘기 말고 그냥 수다 떠는 방이에요.<br>
           이전 대화는 보이지 않아요 — 참여한 순간부터의 메시지만 보여요.<br>
+          참여는 이번 접속에만 유효해요. 다음에 오면 다시 눌러주세요.<br>
           명령어(/선언 /운세 …)·답장·이모지 반응도 똑같이 쓸 수 있어요.
         </p>
         <button type="button" class="chatty-join-btn" onclick="joinChatty()">참여하기</button>
@@ -212,7 +213,7 @@
 
     const box = _chattyBox();
     if (box) box.innerHTML =
-      `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;">☕ Chatty Chat에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
+      `<div class="system" style="text-align:left;line-height:1.7;max-width:92%;">☕ 수다방에 참여했어요. 지금부터의 메시지만 보여요.</div>`;
     _updateChattyCount();
     _chattySeenKeys = new Set();
     _chattyLastRendered = { user: null, ts: 0, ymd: null, msg: "" };
@@ -294,27 +295,41 @@
   // =====================================================
   async function startChatty() {
     if (!myNick) return;
+    /* [변경 2026-08-05] 참여는 이번 접속에만 유효합니다.
+
+       예전에는 지난번 참여가 그대로 이어져서, 한 번 눌러본 사람이
+       다음 접속에도 수다방에 들어와 있었습니다. 조용히 쓰고 싶은 날엔
+       시끄럽게 느껴지고요. 이제 들어올 때마다 새로 고르게 합니다.
+       (서버에 남은 값도 꺼짐으로 되돌려, 접속자 수에도 안 잡힙니다) */
     _chattyParticipating = false;
     try {
-      const snap = await db.ref(`users/${myNick}/chattyParticipation`).once("value");
-      const v = snap.val();
-      if (v && typeof v.participating === "boolean") _chattyParticipating = v.participating;
+      await db.ref(`users/${myNick}/chattyParticipation`).set({
+        participating: false,
+        updatedAt: Date.now()
+      });
     } catch (e) {
-      console.warn("[chattyParticipation load failed]", e);
+      console.warn("[chattyParticipation reset failed]", e);
     }
-    if (_chattyParticipating) _attachChattyListener();
-    else _renderChattyIntro();
+    _renderChattyIntro();
     _renderChattyLeaveBtn();
     _startChattyCountTicker();
   }
 
   // =====================================================
-  // ✅ 퇴장/재입장 대비 — listener를 떼고 화면을 처음 상태로
-  //    (참여 여부 자체는 서버에 남아 다음 입장 때 이어집니다)
+  // ✅ 퇴장 — listener를 떼고 화면을 처음 상태로.
+  //    [변경 2026-08-05] 서버의 참여 값도 함께 꺼서, 다음 접속 때
+  //    다시 "참여하기"를 고르게 합니다. 나가기를 안 누르고 창을 닫아도
+  //    startChatty 가 입장 때 꺼짐으로 되돌리니 결과는 같습니다.
   // =====================================================
   function detachChatty() {
     _detachChattyListener();
     if (_chattyCountTimer) { clearInterval(_chattyCountTimer); _chattyCountTimer = null; }
+    if (_chattyParticipating && myNick) {
+      try {
+        db.ref(`users/${myNick}/chattyParticipation`)
+          .set({ participating: false, updatedAt: Date.now() });
+      } catch (e) {}
+    }
     _chattyParticipating = false;
     _chattySeenKeys = new Set();
     _tabUnread = { main: 0, chatty: 0 };
