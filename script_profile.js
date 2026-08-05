@@ -319,6 +319,10 @@ function sanitizeAccent(v) {
 const PHOTO_SIZE = 128;          // 정사각 한 변(px)
 const PHOTO_MAX_BYTES = 60 * 1024;  // data URL 문자열 상한
 const PHOTO_INPUT_MAX = 12 * 1024 * 1024; // 원본 파일 상한(12MB)
+/* [추가 2026-08-05] 움직이는 GIF 프사 — 캔버스에 넣으면 첫 프레임만
+   남아 정지화면이 됩니다. GIF만은 변환 없이 원본을 그대로 담는데,
+   여러 사람 화면에 매번 내려가는 값이라 크기 상한을 따로 둡니다. */
+const PHOTO_GIF_MAX_BYTES = 300 * 1024;  // GIF 원본 상한(300KB)
 
 /**
  * 저장된 사진 값 검증.
@@ -327,8 +331,12 @@ const PHOTO_INPUT_MAX = 12 * 1024 * 1024; // 원본 파일 상한(12MB)
  */
 function sanitizePhoto(v) {
   const s = String(v || "");
-  if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s)) return "";
-  if (s.length > PHOTO_MAX_BYTES * 2) return "";
+  if (!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s)) return "";
+  /* GIF 는 원본 그대로라 상한이 더 큽니다 (base64 는 원본의 약 4/3배) */
+  const cap = s.startsWith("data:image/gif")
+    ? Math.ceil(PHOTO_GIF_MAX_BYTES * 4 / 3) + 64
+    : PHOTO_MAX_BYTES * 2;
+  if (s.length > cap) return "";
   return s;
 }
 
@@ -338,6 +346,19 @@ function fileToSquareDataUrl(file) {
     if (!file) return reject(new Error("파일이 없어요."));
     if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
     if (file.size > PHOTO_INPUT_MAX) return reject(new Error("파일이 너무 커요. 12MB 이하로 올려주세요."));
+
+    /* [추가 2026-08-05] 움직이는 GIF — 변환 없이 원본 그대로.
+       (캔버스를 거치면 첫 프레임만 남습니다) 크기만 확인합니다. */
+    if (file.type === "image/gif") {
+      if (file.size > PHOTO_GIF_MAX_BYTES) {
+        return reject(new Error("움직이는 GIF는 300KB 이하만 올릴 수 있어요. 더 작은 GIF로 부탁해요!"));
+      }
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result || ""));
+      fr.onerror = () => reject(new Error("이미지를 읽지 못했어요."));
+      fr.readAsDataURL(file);
+      return;
+    }
 
     const url = URL.createObjectURL(file);
     const img = new Image();
