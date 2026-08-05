@@ -33,11 +33,23 @@
         repeating-linear-gradient(90deg, transparent 0 23px, rgba(163,88,70,.14) 23px 24px),
         repeating-linear-gradient( 0deg, transparent 0 23px, rgba(163,88,70,.14) 23px 24px);
     }
+    /* [고침 2026-08-05] 출근부 캡쳐용 확장 — 한 달(31일)이 한 화면에
+       다 보이도록 페이지를 넓혔습니다. 로그인·PIN 칸까지 넓으면 허전해서
+       그 둘만 좁게(.narrow) 가운데 둡니다. 글씨 크기는 그대로. */
     .adm-wrap{
-      max-width: 640px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 28px 16px 60px;
     }
+    .adm-card.narrow{ max-width: 640px; margin-left: auto; margin-right: auto; }
+    /* 출석부 아래 관리 카드 3개는 가로로 나란히 — 공간 절약 */
+    .adm-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+    .adm-grid .adm-card{ margin-bottom: 0; }
     .adm-eyebrow{
       text-align: center; font-size: 11px; color: #B3372B;
       letter-spacing: 1px; font-weight: 600; margin-bottom: 6px;
@@ -121,6 +133,7 @@
     table.adm-att-table{
       border-collapse: collapse; font-size: 12px; color: #2B2620;
       white-space: nowrap;
+      width: 100%;   /* 넓어진 페이지를 꽉 채워 한 달이 한 화면에 */
     }
     .adm-att-table th, .adm-att-table td{
       border: 1px solid rgba(150,120,80,.45);
@@ -161,7 +174,7 @@
     <div class="adm-en">THEMAGAM · ADMIN</div>
 
     <!-- ① 로그인 (메인과 같은 필명+비밀번호) -->
-    <div class="adm-card" id="adm-login">
+    <div class="adm-card narrow" id="adm-login">
       <h2>🔐 로그인</h2>
       <p class="adm-sub">메인 방에서 쓰는 닉네임과 비밀번호로 들어와요.</p>
       <input type="text" id="adm-nick" placeholder="닉네임" autocomplete="username" />
@@ -173,7 +186,7 @@
     </div>
 
     <!-- ② 관리자 PIN -->
-    <div class="adm-card" id="adm-pin-card" style="display:none;">
+    <div class="adm-card narrow" id="adm-pin-card" style="display:none;">
       <h2>🛡️ 관리자 PIN</h2>
       <p class="adm-sub">관리자 PIN을 입력해야 대시보드가 열려요.</p>
       <input type="password" id="adm-pin" placeholder="PIN" inputmode="numeric" />
@@ -200,6 +213,8 @@
         </div>
       </div>
 
+      <!-- 출석부 아래 세 카드는 나란히 — 공간 절약 (좁은 창에선 자동으로 세로) -->
+      <div class="adm-grid">
       <div class="adm-card">
         <h2>📌 공지 관리</h2>
         <p class="adm-sub">방 머리말에 고정되는 공지예요. 비우고 저장하면 내려가요.</p>
@@ -232,6 +247,7 @@
         <button class="adm-btn danger" id="adm-wc-clear">오늘 글자수 전체 초기화</button>
         <div class="adm-msg" id="adm-wc-msg"></div>
       </div>
+      </div><!-- /adm-grid -->
     </div>
   </div>
 
