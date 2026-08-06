@@ -5655,6 +5655,8 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .mw-todo.is-done .mw-todo-t{ text-decoration: line-through; color: #8A7B68; }
 .mw-rbadge{ flex: none; font-size: var(--fs-2xs); }
+/* 🗃 — 프로필 목록에서 치운(완료 정리한) 할 일. 여기엔 기록으로 남습니다 */
+.mw-abadge{ flex: none; font-size: var(--fs-2xs); opacity: .55; }
 .mw-todo-btns{ display: flex; flex: none; gap: 2px; }
 .mw-todo-btns button{
   border: none;

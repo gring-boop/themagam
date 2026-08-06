@@ -168,6 +168,7 @@
     const today = ymd(Date.now());
     return getTodoItemsFromUI().filter(x => {
       if (!x) return false;
+      if (x.archived) return false;               // 치운 것은 여기선 감춥니다
       if (x.routine) return true;                 // 반복은 늘 보입니다
       if (!isTodoDue(x.due)) return true;         // 날짜 없는 것도 늘
       return x.due === today;                     // 날짜가 있으면 오늘 것만
@@ -412,9 +413,14 @@
   }
 
   function toggleTodo(id, done) {
-    const items = getTodoItemsFromUI().map(x =>
-      x.id === id ? ({...x, done: !!done, doneDay: done ? ymd(Date.now()) : ""}) : x
-    );
+    const items = getTodoItemsFromUI().map(x => {
+      if (x.id !== id) return x;
+      const next = { ...x, done: !!done, doneDay: done ? ymd(Date.now()) : "" };
+      /* [추가 2026-08-06] 치워둔 할 일의 체크를 풀면 다시 목록으로.
+         "아직 안 한 일"이 감춰진 채로 남으면 잊어버리게 되니까요. */
+      if (!done) delete next.archived;
+      return next;
+    });
     setTodoItemsToUI(items);
     savePersonalDataDebounced();
   }
@@ -435,11 +441,30 @@
     const items = getTodoItemsFromUI();
     const doneCount = items.filter(x => x.done).length;
     if (!doneCount) { alert("완료된 투두가 없어요!"); return; }
-    if (!confirm(`완료된 투두 ${doneCount}개를 정리할까요?\n(🔁 반복 투두는 삭제되지 않고 체크만 풀려요)`)) return;
+    if (!confirm(
+      `완료한 할 일 ${doneCount}개를 목록에서 치울까요?\n\n` +
+      `· 이 목록에서만 사라지고, 🗂️ 나의 작업에는 "완료"로 남아요.\n` +
+      `· 🔁 반복 할 일은 지워지지 않고 체크만 풀려요.`
+    )) return;
 
-    const next = items
-      .filter(x => !(x.done && !x.routine))
-      .map(x => x.done ? ({...x, done: false, doneDay: ""}) : x);
+    /* [바뀜 2026-08-06] 지우지 않고 **치웁니다**.
+
+       예전에는 완료한 할 일을 목록에서 통째로 지웠습니다. 그런데 그러면
+       "그날 무엇을 해냈는지"가 함께 사라졌어요. 이제 archived 표시만
+       붙여서, 이 목록(프로필 팝업)에서는 감추되 🗂️ 나의 작업 달력에는
+       완료한 채로 남깁니다.
+
+       날짜가 없던 할 일은 끝낸 날(doneDay, 없으면 오늘)을 날짜로 붙여
+       그날 칸에 얹습니다. 그래야 "날짜 없는 할 일" 칸이 끝낸 일로
+       불어나지 않고, 달력에는 해낸 기록이 쌓입니다. */
+    const today = ymd(Date.now());
+    const next = items.map(x => {
+      if (!x || !x.done) return x;
+      /* 반복은 예전처럼 체크만 풀어줍니다 (매일 새로 뜨는 일이니까요) */
+      if (x.routine) return { ...x, done: false, doneDay: "" };
+      const due = isTodoDue(x.due) ? x.due : (isTodoDue(x.doneDay) ? x.doneDay : today);
+      return { ...x, archived: true, due };
+    });
 
     setTodoItemsToUI(next);
     savePersonalData();

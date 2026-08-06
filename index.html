@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608061536">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608061536">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608061615">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608061615">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608061536">
+  <link rel="manifest" href="manifest.json?v=202608061615">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608061536" />
+  <link rel="stylesheet" href="styles.css?v=202608061615" />
 </head>
 
 <body>
@@ -661,7 +661,10 @@
         다른 날짜는 🗂️ 나의 작업에서 · 그날이 되면 여기에도 뜹니다.
       </p>
       <div class="mini-row todo-foot" style="margin-top:8px;">
-        <button class="ghost-btn compact" type="button" onclick="clearCompletedTodos()">🧹 완료 일괄 삭제</button>
+        <!-- [2026-08-06] "삭제" → "치우기". 실제로 지우지 않고 이 목록에서만
+             감추고, 🗂️ 나의 작업에는 완료로 남습니다. -->
+        <button class="ghost-btn compact" type="button" onclick="clearCompletedTodos()"
+                title="이 목록에서만 감춰요 — 나의 작업에는 완료로 남습니다">🧹 완료한 것 치우기</button>
       </div>
     </div>
     
@@ -681,23 +684,23 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608061536"></script>
-<script src="script_core.js?v=202608061536"></script>
-<script src="script_auth.js?v=202608061536"></script>
-<script src="script_ui.js?v=202608061536"></script>
-<script src="script_chat.js?v=202608061536"></script>
-<script src="script_chatty.js?v=202608061536"></script>
-<script src="script_secret.js?v=202608061536"></script>
-<script src="script_data.js?v=202608061536"></script>
-<script src="script_realtime.js?v=202608061536"></script>
-<script src="script_layout.js?v=202608061536"></script>
-<script src="script_wordcount.js?v=202608061536"></script>
-<script src="script_timelog.js?v=202608061536"></script>
-<script src="script_idledetect.js?v=202608061536"></script>
-<script src="script_profile.js?v=202608061536"></script>
-<script src="script_mywork.js?v=202608061536"></script>
-<script src="script_reactions.js?v=202608061536"></script>
-<script src="script_manual.js?v=202608061536"></script>
+<script src="fortune_data.js?v=202608061615"></script>
+<script src="script_core.js?v=202608061615"></script>
+<script src="script_auth.js?v=202608061615"></script>
+<script src="script_ui.js?v=202608061615"></script>
+<script src="script_chat.js?v=202608061615"></script>
+<script src="script_chatty.js?v=202608061615"></script>
+<script src="script_secret.js?v=202608061615"></script>
+<script src="script_data.js?v=202608061615"></script>
+<script src="script_realtime.js?v=202608061615"></script>
+<script src="script_layout.js?v=202608061615"></script>
+<script src="script_wordcount.js?v=202608061615"></script>
+<script src="script_timelog.js?v=202608061615"></script>
+<script src="script_idledetect.js?v=202608061615"></script>
+<script src="script_profile.js?v=202608061615"></script>
+<script src="script_mywork.js?v=202608061615"></script>
+<script src="script_reactions.js?v=202608061615"></script>
+<script src="script_manual.js?v=202608061615"></script>
 
 <script>
   window.addEventListener("load", () => {

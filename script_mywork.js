@@ -255,6 +255,7 @@
                  aria-label="${esc(t.text || "할 일")} 완료">
           <span class="mw-todo-t">${esc(t.text || "")}</span>
           ${routine ? `<span class="mw-rbadge" title="매일 반복 — 자정에 체크가 풀려요">🔁</span>` : ""}
+          ${t.archived ? `<span class="mw-abadge" title="프로필 목록에서 치운 할 일이에요 — 여기엔 기록으로 남습니다">🗃</span>` : ""}
         </label>
         <span class="mw-todo-btns">
           <button type="button" data-act="edit" data-id="${esc(t.id)}" title="고치기" aria-label="고치기">✏️</button>
