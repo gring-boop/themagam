@@ -1101,7 +1101,8 @@ window.bindCardEditDelegate = bindCardEditDelegate;
     const wrapped = function (name) {
       _openTab.apply(this, arguments);
       if (name === "profile") renderProfilePanel();
-      if (name === "goals")   mountGoalBlocks(document.getElementById("panel-goals"));
+      /* [2026-08-06] 설정의 🎯 목표·투두 탭은 없앴습니다 (중복이라서).
+         덩어리는 카드 아래칸 팝업과 🗂️ 나의 작업이 나눠 씁니다. */
       /* [2026-08-06] "📊 나의 작업" 탭은 설정에서 뺐습니다 —
          머리말의 [🗂️ 나의 작업] → 📊 기록 탭이 같은 것을 그립니다. */
     };

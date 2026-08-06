@@ -294,8 +294,13 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
   /* A2 아래칸 → 목표·투두 */
   ok(/window\.openGoals\?\.\(\)/.test(tl), "내 카드 아래칸은 목표·투두를 연다");
   ok(/function openGoals/.test(prof) && /id="goals-modal"/.test(HTML), "목표·투두 팝업이 있다");
-  ok(/id="panel-goals"/.test(HTML) && /data-tab="goals"/.test(HTML), "설정에도 목표·투두 탭이 있다");
-  ok(/name === "goals"\)\s+mountGoalBlocks/.test(prof), "설정 탭을 열면 옮겨 넣는다");
+  /* [고침 2026-08-06] 설정의 🎯 목표·투두 탭은 없앴습니다.
+     카드 아래칸 팝업과 🗂️ 나의 작업이 같은 일을 하니 중복이었어요. */
+  ok(!/id="panel-goals"/.test(HTML) && !/data-tab="goals"/.test(HTML),
+     "설정에서 목표·투두 탭을 걷어냈다");
+  /* 탭이 사라졌으니 옮겨 넣는 곳은 팝업 두 군데뿐입니다 */
+  ok(/mountGoalBlocks\(document\.getElementById\("goals-body"\)\)/.test(prof),
+     "카드 아래칸 팝업을 열면 옮겨 넣는다");
   /* 실제 덩어리는 하나뿐이어야 합니다 — 두 벌이면 저장이 엉킵니다 */
   ok((HTML.match(/id="status-block"/g) || []).length === 1, "목표 덩어리는 하나뿐이다");
   ok((HTML.match(/id="todo-block"/g)   || []).length === 1, "투두 덩어리는 하나뿐이다");
@@ -726,6 +731,179 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
    "mw-panel","mw-dayhead","mw-daytitle","mw-todaytag","mw-daycount","mw-todolist",
    "mw-todo","mw-chk","mw-empty","mw-add","mw-add-in","mw-add-btn","mw-sep","mw-hint"]
     .forEach(c => ok(new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS), `CSS 에 .${c} 가 있다`));
+}
+
+/* ---- 16. 🎋 대숲 (익명 게시판) ----
+
+   [무엇이 무너지면 안 되는가]
+   이 기능의 값어치는 오직 "익명" 하나입니다. 필명이나 uid 가 한 줄이라도
+   서버로 새어 나가면 기능 전체가 거짓말이 됩니다. 그래서 여기서는
+   화면 모양보다 **무엇이 서버에 적히는가** 를 제일 세게 봅니다.
+
+   ★ 이 블록도 아래 로그인 블록의 `return` 보다 위에 두어야 합니다.
+     (모듈 맨 바깥의 return 은 거기서 파일을 끝내버립니다) */
+{
+  const fr  = fs.readFileSync(DIR+"script_forest.js","utf8");
+  const adm = fs.readFileSync(DIR+"script_admin.js","utf8");
+  const ADH = fs.readFileSync(DIR+"admin.html","utf8");
+  const bs2 = fs.readFileSync(DIR+"build-single.py","utf8");
+  const FLAT2 = CSS.replace(/\s+/g, " ");
+  /* 주석에는 "필명을 넣지 않는다" 같은 설명이 잔뜩 있으므로,
+     익명성 검사는 주석을 걷어낸 알맹이에만 겁니다. */
+  const FR = fr.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  /* ── 익명성 — 서버에 무엇이 적히는가 ── */
+  ok(!/\bnick\b/.test(FR),  "대숲 코드에 nick 이라는 말이 아예 없다");
+  ok(!/\buid\b/.test(FR),   "대숲 코드에 uid 라는 말이 아예 없다");
+  ok(!/myNick\s*[,}]/.test(FR) && !/nick:/.test(FR) && !/uid:/.test(FR),
+     "쪽지에 글쓴이를 담는 항목이 없다");
+  {
+    /* 서버로 보내는 덩어리(note = { ... })에 정확히 무엇이 들어가는지 */
+    const i = FR.indexOf("const note = {");
+    const seg = FR.slice(i, FR.indexOf("};", i));
+    ok(i > 0, "붙이기가 만드는 쪽지 덩어리를 찾았다");
+    const keys = (seg.match(/^\s*(\w+)\s*:/gm) || []).map(s => s.trim().replace(/:$/, ""));
+    ["text","color","x","y","rot","at","hearts"].forEach(k =>
+      ok(keys.includes(k), `쪽지에 ${k} 가 있다`));
+    ok(keys.length === 7, `쪽지에 그 일곱 가지 말고는 아무것도 없다 (${keys.join(",")})`);
+  }
+  ok(/window\.db\.ref\("forest"\)\.push\(\)/.test(FR), "자동 키(push)로 붙인다 — 순서 말고는 아무 단서도 남기지 않게");
+  ok(/AppStore/.test(FR), "내가 쓴 쪽지 목록은 이 기기(AppStore)에만 둔다");
+  ok(/forestMine/.test(fr) && /forestHearts/.test(fr), "그 목록의 열쇠 이름이 정해져 있다");
+  ok(/isMine\(/.test(FR), "이 기기가 기억하는 쪽지에만 ✕ 를 보여준다");
+  ok(/didHeart\(/.test(FR), "♥ 중복은 이 기기 기록으로 막는다");
+  ok(/hearts`\)\.transaction|hearts"\)\.transaction/.test(FR),
+     "♥ 는 총 개수만 올린다 (누가 눌렀는지는 서버에 안 적는다)");
+
+  /* ── 30일이 지나면 시든다 ── */
+  ok(/30 \* DAY_MS/.test(fr), "보관 기간이 30일이다");
+  ok(/function sweepOld/.test(FR), "오래된 쪽지를 걷어내는 함수가 있다");
+  ok(/await sweepOld\(\)/.test(FR), "팝업을 열 때 그 청소를 돌린다");
+  ok(/catch \(e\) \{\}/.test(fr), "청소가 실패해도 조용히 넘어간다");
+  ok(/30일이 지나면 저절로 시들어요/.test(HTML), "화면 아래에 그 규칙을 적어 두었다");
+
+  /* ── 색 팔레트 (A안 "먹지와 한지") ── */
+  ok(/const FOREST_COLORS = \[/.test(fr), "색을 상수 배열 FOREST_COLORS 에 모아 두었다");
+  [["한지","#F2EBDC","#4A4034","#9A8E7C"],
+   ["이끼","#E3E7E0","#3B443A","#8B968A"],
+   ["매화","#E9E1E4","#4B3D42","#9C8B92"],
+   ["새벽","#DFE4EA","#3A4450","#8794A2"],
+   ["볕",  "#EDE6DA","#4C4436","#9B927F"]].forEach(([n,bg,fg,sub]) =>
+    ok(new RegExp(`"${n}".*${bg}.*${fg}.*${sub}`).test(fr), `${n} 색 세 벌이 그대로다`));
+  ok(/color: 0~4|0, FOREST_COLORS\.length - 1/.test(fr), "서버에는 색 번호(0~4)만 저장한다");
+
+  /* ── 머리말 버튼 ── */
+  ok(/id="forest-btn"[^>]*onclick="openForest\(\)"/.test(HTML), "머리말에 [🎋 대숲] 버튼이 있다");
+  ok((HTML.match(/openForest\(\)/g) || []).length === 1, "그 버튼은 하나뿐이다");
+  ok((HTML.match(/closeForest\(\)/g) || []).length === 2, "닫는 길은 둘 (바깥 누르기 · [닫기] 버튼)");
+  ok(HTML.indexOf('id="forest-btn"') > HTML.indexOf('onclick="openMyWork()"')
+     && HTML.indexOf('id="forest-btn"') < HTML.indexOf('onclick="openManual()"'),
+     "[대숲] 이 [나의 작업] 과 [가이드] 사이에 있다");
+
+  /* ── 창 뼈대 ── */
+  ["forest-modal","forest-board","forest-count"].forEach(id =>
+    ok(new RegExp('id="'+id+'"').test(HTML), `${id} 자리가 있다`));
+  ok(/— WHISPER —/.test(HTML), "표지식 작은 제목이 있다");
+  ok(/id="forest-title">대 숲</.test(HTML), "명조 제목이 '대 숲' 이다");
+  ok(/빈 곳을 클릭해서 아무 말이나 붙여요 · 누가 썼는지는 아무도 몰라요/.test(HTML),
+     "안내 한 줄이 있다");
+  {
+    const a = HTML.indexOf('id="forest-modal"');
+    const b = HTML.indexOf('id="settings-modal"');
+    const seg = HTML.slice(a, b > a ? b : HTML.length);
+    ok(seg.length > 400, "대숲 창 덩어리를 찾았다");
+    ok(!/class="tabs?[ "]/.test(seg), "설정 탭과 같은 클래스(.tab/.tabs)를 쓰지 않는다");
+    ok(!/class="panel[ "]/.test(seg), "설정 패널과 같은 클래스(.panel)를 쓰지 않는다");
+    ok(/closeForest\(\)/.test(seg), "닫기 버튼이 창 안에 있다");
+    ok(/다른 기기/.test(seg), "✕ 가 이 기기에서만 보인다는 한계를 창 안에 적어 두었다");
+  }
+
+  /* ── 창구 · 파일 배선 ── */
+  ["openForest","closeForest"].forEach(f =>
+    ok(new RegExp("window\\."+f+" =").test(fr), `${f} 를 밖에서 부를 수 있다`));
+  ok(/<script src="script_forest\.js/.test(HTML), "index.html 이 새 파일을 부른다");
+  ok(/"script_forest\.js":\s+"openForest"/.test(HTML), "로드 자가진단 목록에 새 파일이 있다");
+  ok(/"script_forest\.js"/.test(bs2), "단일파일 빌드 목록(ORDER)에도 있다");
+
+  /* ── 팝업 안 클릭이 죽지 않는가 (script_mywork.js 와 같은 함정) ── */
+  ok(/querySelector\(["'`]\.modal-content["'`]\)/.test(fr),
+     "위임 리스너를 안쪽 상자(.modal-content)에 단다");
+
+  /* ── 보드와 쪽지 ── */
+  ok(/#DED6C6/.test(CSS), "보드 바탕이 #DED6C6 이다");
+  ok(/\.fr-board\{[^}]*radial-gradient/.test(FLAT2), "보드에 은은한 점 패턴이 있다");
+  ok(/\.fr-board\{[^}]*border-radius: 10px/.test(FLAT2), "보드 모서리가 10px 이다");
+  ok(/\.fr-board\{[^}]*min-height: 430px/.test(FLAT2), "보드 최소 높이가 430px 이다");
+  ok(/\.fr-board\{[^}]*inset/.test(FLAT2), "보드에 안쪽 그림자가 있다");
+  ok(/\.fr-note\{[^}]*position: absolute/.test(FLAT2), "쪽지는 저장된 자리에 절대 배치된다");
+  ok(/\.fr-note\{[^}]*width: 150px/.test(FLAT2), "쪽지 폭이 150px 이다");
+  ok(/\.fr-note\{[^}]*padding: 11px 12px/.test(FLAT2), "쪽지 안쪽 여백이 11~12px 이다");
+  ok(/\.fr-note\{[^}]*rotate\(var\(--fr-rot/.test(FLAT2), "저장된 각도로 기울인다 (볼 때마다 바뀌지 않게)");
+  ok(/\.fr-note\{[^}]*min\(var\(--fr-x/.test(FLAT2) && /\.fr-note\{[^}]*min\(var\(--fr-y/.test(FLAT2),
+     "쪽지가 보드 밖으로 나가지 않게 자른다");
+  ok(/Math\.random\(\) \* 6 - 3/.test(fr), "각도는 -3° ~ 3° 사이에서 한 번만 뽑는다");
+  ok(/z-index:\$\{z\}/.test(fr) && /a\.at - b\.at/.test(fr), "최신 쪽지가 위로 온다");
+  ok(/function ago\(/.test(FR) && /시간 전/.test(fr), "'2시간 전' 처럼 흐릿하게 보여준다");
+  ok(/MAX_TEXT = 200/.test(fr) && /maxlength="\$\{MAX_TEXT\}"/.test(fr), "쪽지는 200자까지다");
+  ok(/data-fr-color=/.test(fr) && /fr-swatch/.test(fr), "색 고르기 원형 버튼이 있다");
+  ok(/data-fr-act="cancel"/.test(fr) && /data-fr-act="post"/.test(fr), "[취소] [붙이기] 가 있다");
+  ok(/취소<\/button>/.test(fr) && /붙이기<\/button>/.test(fr), "그 두 버튼의 이름이 그대로다");
+  ok(/function openCompose/.test(FR) && /e\.clientX - r\.left/.test(fr),
+     "누른 자리를 보드 기준 %로 바꿔 기억한다");
+
+  /* ── 좁은 화면에서는 세로 목록으로 ── */
+  ok(/@media \(max-width: 600px\)\{ \.fr-board\{ height: auto/.test(FLAT2),
+     "600px 이하에서 보드가 세로로 흐른다");
+  ok(/@media \(max-width: 600px\)[\s\S]*\.fr-note, \.fr-compose\{ position: static/.test(FLAT2),
+     "그때 쪽지는 절대 배치를 버린다 (모바일에서 겹쳐 안 보이는 사고 방지)");
+
+  /* ── CSS 클래스가 다 있는가 ── */
+  ["fr-eyebrow","fr-lead","fr-board","fr-empty","fr-note","fr-note-text","fr-note-foot",
+   "fr-note-time","fr-heart","fr-del","fr-compose","fr-text","fr-count","fr-swatches",
+   "fr-swatch","fr-compose-btns","fr-btn","fr-foot","fr-wither"]
+    .forEach(c => ok(new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS), `CSS 에 .${c} 가 있다`));
+  ok(/#forest-modal \.modal-content\{ width: min\(920px/.test(FLAT2), "창이 넉넉하다 (920px)");
+  {
+    /* 팝업 공용 규칙(자리 잡기·어둡게 덮기) 목록에 빠지면 화면 옆에
+       어색하게 붙습니다 — 예전에 #goals-modal 이 그랬어요. */
+    const i = FLAT2.indexOf("#record-modal, #goals-modal,");
+    const seg = FLAT2.slice(i, FLAT2.indexOf("}", i));
+    ok(/#forest-modal/.test(seg), "팝업 공용 규칙 선택자 목록에 #forest-modal 이 있다");
+  }
+
+  /* ── 보안규칙 ── */
+  {
+    const rules = JSON.parse(fs.readFileSync(DIR+"보안규칙.json","utf8")).rules;
+    const f = rules.forest;
+    ok(!!f, "보안규칙에 forest 가 있다");
+    ok(f[".read"] === "auth != null", "익명이지만 로그인은 해야 읽는다 (방 밖 사람은 못 읽게)");
+    const w = (f.$id || {})[".write"] || "";
+    ok(/auth != null/.test(w), "쓰기도 로그인이 필요하다");
+    ok(/!data\.exists\(\)/.test(w), "새로 쓰기를 허용한다");
+    ok(/!newData\.exists\(\)/.test(w), "지우기를 허용한다");
+    ok(/newData\.child\('text'\)\.val\(\) === data\.child\('text'\)\.val\(\)/.test(w),
+       "글이 그대로인 수정만 허용한다 (♥ 때문에 — 내용 바꿔치기는 막힘)");
+    ok(/ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(w), "관리자 uid 는 무조건 쓸 수 있다");
+    ok(/ABM1ZJndrqaV3gpYUs03SV9qglr1/.test(f[".write"] || ""),
+       "관리자는 forest 를 통째로 지울 수 있다 (전체 비우기)");
+  }
+
+  /* ── 관리자 화면 ── */
+  ok(/🎋 대숲 관리/.test(ADH), "관리자 페이지에 대숲 카드가 있다");
+  ["adm-forest-count","adm-forest-list","adm-forest-sweep","adm-forest-clear"].forEach(id =>
+    ok(new RegExp('id="'+id+'"').test(ADH), `관리자 화면에 ${id} 가 있다`));
+  ok(/function loadForest/.test(adm), "쪽지 목록을 읽어온다");
+  ok(/쪽지 \$\{rows\.length\}장/.test(adm), "쪽지 개수를 보여준다");
+  ok(/function sweepForest/.test(adm), "[30일 지난 쪽지 정리] 가 움직인다");
+  ok(/function clearForest/.test(adm), "[대숲 전체 비우기] 가 움직인다");
+  {
+    const i = adm.indexOf("async function clearForest");
+    const seg = adm.slice(i, adm.indexOf("\n  }", i));
+    ok((seg.match(/confirm\(/g) || []).length === 2, "전체 비우기는 confirm 을 두 번 받는다");
+  }
+  ok(/data-forest-del=/.test(adm), "목록의 각 줄에 [삭제] 가 있다");
+  ok(/loadForest\(\);/.test(adm.slice(adm.indexOf("function openDash"))),
+     "대시보드를 열면 대숲도 불러온다");
 }
 
 /* 보안 규칙이 앱이 쓰는 경로를 모두 덮는가
@@ -1462,8 +1640,9 @@ function finish(){
   /* [2026-08-03] 펫 기능을 빼면서 펫 검사 ~130개가 함께 빠졌습니다.
      새 기준: 390개 언저리 → 하한 380.
      [2026-08-06] 🗂️ 나의 작업 검사가 붙어 470개 언저리 → 하한 440.
-     (죽어 있던 "설정 → 나의 기록" 블록도 살려서 위로 옮겼습니다) */
-  const MIN = 440;
+     (죽어 있던 "설정 → 나의 기록" 블록도 살려서 위로 옮겼습니다)
+     [2026-08-06] 🎋 대숲 검사가 붙어 638개 → 하한 600. */
+  const MIN = 600;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");

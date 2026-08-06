@@ -138,6 +138,7 @@
     loadPinnedMessage();
     loadHistoryConfig();
     loadSecretAllow();
+    loadForest();
   }
 
   // ------------------------------------------------- ③-0 내 계정 uid
@@ -564,6 +565,94 @@
     }
   }
 
+  // ------------------------------------------------- ③-5 🎋 대숲 (익명 게시판)
+  /* 데이터 구조 — script_forest.js 와 동일:
+       forest/{자동키} = { text, color, x, y, rot, at, hearts }
+
+     ★ 글쓴이 정보가 **아예 없습니다.** 관리자도 누가 썼는지 알 수
+       없어요. 그것이 이 기능의 목적이라 여기서도 굳이 캐지 않습니다.
+       내용 앞부분과 붙인 시각만 보고 지웁니다. */
+  const FOREST_KEEP_MS = 30 * 24 * 60 * 60 * 1000;   // 30일
+
+  function forestWhen(at) {
+    const t = Number(at) || 0;
+    if (!t) return "?";
+    const d = new Date(t);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  async function loadForest() {
+    const box = el("adm-forest-list");
+    const cnt = el("adm-forest-count");
+    if (box) box.textContent = "불러오는 중…";
+    try {
+      const raw = (await db.ref("forest").once("value")).val() || {};
+      const rows = Object.keys(raw)
+        .map(id => ({ id, ...(raw[id] || {}) }))
+        .sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
+
+      if (cnt) cnt.textContent = `쪽지 ${rows.length}장`;
+      if (!box) return;
+      if (!rows.length) { box.textContent = "아직 붙은 쪽지가 없어요."; return; }
+
+      box.innerHTML = rows.map(r => {
+        const head = String(r.text == null ? "" : r.text).replace(/\s+/g, " ").slice(0, 40);
+        return `<div class="adm-forest-row">
+                  <span class="t" title="${escapeHtml(String(r.text || ""))}">${escapeHtml(head)}</span>
+                  <span class="w">${escapeHtml(forestWhen(r.at))} · ♥${Number(r.hearts) || 0}</span>
+                  <button class="adm-btn ghost" data-forest-del="${escapeHtml(r.id)}">삭제</button>
+                </div>`;
+      }).join("");
+    } catch (e) {
+      console.warn("[adm forest]", e);
+      if (cnt) cnt.textContent = "—";
+      if (box) box.textContent = "불러오지 못했어요 — 보안규칙(forest)을 확인해 주세요.";
+    }
+  }
+
+  async function removeForestNote(id) {
+    if (!confirm("이 쪽지를 지울까요? (되돌릴 수 없어요!)")) return;
+    try {
+      await db.ref("forest/" + id).remove();
+      msg("adm-forest-msg", "🗑 쪽지 하나를 지웠어요.");
+      await loadForest();
+    } catch (e) {
+      msg("adm-forest-msg", "지우지 못했어요 — 보안규칙을 확인해 주세요.", true);
+    }
+  }
+
+  /* 30일이 지난 쪽지 정리 — 메인 앱도 팝업을 열 때마다 같은 일을 하지만,
+     아무도 대숲을 열지 않으면 청소가 안 됩니다. 그래서 여기에도 둡니다. */
+  async function sweepForest() {
+    try {
+      const raw = (await db.ref("forest").once("value")).val() || {};
+      const cut = Date.now() - FOREST_KEEP_MS;
+      const dead = Object.keys(raw).filter(id => {
+        const at = Number((raw[id] || {}).at) || 0;
+        return at && at < cut;
+      });
+      if (!dead.length) { msg("adm-forest-msg", "시든 쪽지가 없어요. (30일 지난 것 0장)"); return; }
+      for (const id of dead) await db.ref("forest/" + id).remove();
+      msg("adm-forest-msg", `🍂 30일 지난 쪽지 ${dead.length}장을 정리했어요.`);
+      await loadForest();
+    } catch (e) {
+      msg("adm-forest-msg", "정리하지 못했어요 — 보안규칙을 확인해 주세요.", true);
+    }
+  }
+
+  /* 전체 비우기 — 되돌릴 수 없어서 confirm 을 두 번 받습니다 */
+  async function clearForest() {
+    if (!confirm("정말 대숲의 쪽지를 모두 지울까요? (되돌릴 수 없어요!)")) return;
+    if (!confirm("한 번 더 확인할게요.\n대숲이 완전히 비워집니다. 계속할까요?")) return;
+    try {
+      await db.ref("forest").remove();
+      msg("adm-forest-msg", "🧹 대숲을 모두 비웠어요.");
+      await loadForest();
+    } catch (e) {
+      msg("adm-forest-msg", "비우지 못했어요 — 보안규칙의 관리자 조건을 확인해 주세요.", true);
+    }
+  }
+
   // ------------------------------------------------- 배선
   document.addEventListener("DOMContentLoaded", () => {
     el("adm-login-btn")?.addEventListener("click", doLogin);
@@ -594,6 +683,14 @@
     el("adm-secret-list")?.addEventListener("click", e => {
       const btn = e.target.closest("[data-secret-off]");
       if (btn) removeSecret(btn.getAttribute("data-secret-off"));
+    });
+    el("adm-forest-reload")?.addEventListener("click", loadForest);
+    el("adm-forest-sweep")?.addEventListener("click", sweepForest);
+    el("adm-forest-clear")?.addEventListener("click", clearForest);
+    /* 목록은 다시 그려지므로 개별 [삭제] 대신 목록에 위임합니다 */
+    el("adm-forest-list")?.addEventListener("click", e => {
+      const btn = e.target.closest("[data-forest-del]");
+      if (btn) removeForestNote(btn.getAttribute("data-forest-del"));
     });
   });
 })();
