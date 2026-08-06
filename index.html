@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608061254">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608061254">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608061411">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608061411">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608061254">
+  <link rel="manifest" href="manifest.json?v=202608061411">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608061254" />
+  <link rel="stylesheet" href="styles.css?v=202608061411" />
 </head>
 
 <body>
@@ -149,6 +149,34 @@
     <h2 class="modal-title sr-only" id="goals-title">오늘 목표 · 나의 투두</h2>
     <div id="goals-body"></div>
     <button class="ghost-btn w-full" type="button" onclick="closeGoals()" style="margin-top:14px;">닫기</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     🗓️ 나의 일정 (헤더의 🗓️ 일정 버튼)
+     안쪽은 script_schedule.js 가 그립니다 — 달력 탭과 일정 탭이
+     같은 데이터를 보므로 한쪽에서 고치면 다른 쪽도 바로 바뀝니다.
+     ===================================================================== -->
+<div id="schedule-modal" onclick="closeSchedule()" role="dialog" aria-modal="true" aria-labelledby="schedule-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 class="modal-title" id="schedule-title">🗓️ 나의 일정</h2>
+
+    <div class="tabs" id="sch-tabs" role="tablist" aria-label="일정 탭">
+      <button class="tab active" type="button" data-sch-tab="cal"  role="tab" aria-selected="true"
+              onclick="switchScheduleTab('cal')">🗓️ 달력</button>
+      <button class="tab"        type="button" data-sch-tab="list" role="tab" aria-selected="false"
+              onclick="switchScheduleTab('list')">📋 일정</button>
+    </div>
+
+    <div id="schedule-body"></div>
+
+    <p class="hint">
+      일정은 <b>내 필명 아래에만</b> 저장되고, 남이 고치거나 지울 수 없어요.
+      다만 이 방은 데이터를 누구나 <b>읽을 수는</b> 있는 구조라
+      마음먹으면 남이 볼 수도 있습니다. 정말 비밀인 일정은 적지 말아 주세요.
+    </p>
+
+    <button class="ghost-btn w-full" type="button" onclick="closeSchedule()" style="margin-top:14px;">닫기</button>
   </div>
 </div>
 
@@ -282,6 +310,9 @@
         <button class="icon-btn labeled" type="button" id="idle-detect-btn" onclick="toggleIdleDetect()" aria-label="자리비움 자동 감지" title="무입력 20분이면 자동으로 AWAY">🖱️<span class="icon-btn-label">자동감지 OFF</span></button>
 
         <button class="icon-btn labeled" type="button" onclick="showMyAttendance()" aria-label="출석부" title="내 출석 달력">📅<span class="icon-btn-label">출석부</span></button>
+
+        <!-- [2026-08-06] 개인 일정 — 마감·송고처럼 날짜가 정해진 일을 적어두는 곳 -->
+        <button class="icon-btn labeled" type="button" id="schedule-btn" onclick="openSchedule()" aria-label="일정" title="나의 일정">🗓️<span class="icon-btn-label">일정</span></button>
 
         <button class="icon-btn guide labeled" type="button" onclick="openManual()" aria-label="가이드" title="가이드">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -613,22 +644,23 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608061254"></script>
-<script src="script_core.js?v=202608061254"></script>
-<script src="script_auth.js?v=202608061254"></script>
-<script src="script_ui.js?v=202608061254"></script>
-<script src="script_chat.js?v=202608061254"></script>
-<script src="script_chatty.js?v=202608061254"></script>
-<script src="script_secret.js?v=202608061254"></script>
-<script src="script_data.js?v=202608061254"></script>
-<script src="script_realtime.js?v=202608061254"></script>
-<script src="script_layout.js?v=202608061254"></script>
-<script src="script_wordcount.js?v=202608061254"></script>
-<script src="script_timelog.js?v=202608061254"></script>
-<script src="script_idledetect.js?v=202608061254"></script>
-<script src="script_profile.js?v=202608061254"></script>
-<script src="script_reactions.js?v=202608061254"></script>
-<script src="script_manual.js?v=202608061254"></script>
+<script src="fortune_data.js?v=202608061411"></script>
+<script src="script_core.js?v=202608061411"></script>
+<script src="script_auth.js?v=202608061411"></script>
+<script src="script_ui.js?v=202608061411"></script>
+<script src="script_chat.js?v=202608061411"></script>
+<script src="script_chatty.js?v=202608061411"></script>
+<script src="script_secret.js?v=202608061411"></script>
+<script src="script_data.js?v=202608061411"></script>
+<script src="script_realtime.js?v=202608061411"></script>
+<script src="script_layout.js?v=202608061411"></script>
+<script src="script_wordcount.js?v=202608061411"></script>
+<script src="script_timelog.js?v=202608061411"></script>
+<script src="script_idledetect.js?v=202608061411"></script>
+<script src="script_profile.js?v=202608061411"></script>
+<script src="script_schedule.js?v=202608061411"></script>
+<script src="script_reactions.js?v=202608061411"></script>
+<script src="script_manual.js?v=202608061411"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -652,6 +684,7 @@
       "script_data.js":     "loadPersonalData",
       "script_realtime.js": "listenStatus",
       "script_profile.js":  "renderProfilePanel",
+      "script_schedule.js": "openSchedule",
       "script_reactions.js":"toggleReaction",
       "script_manual.js":   "openManual",
       "script_layout.js":   "applyLayout",
