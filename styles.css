@@ -2860,9 +2860,7 @@ body.pomo-nonpart .pomo-status-line{
   align-items: center;
   justify-content: center;
   z-index: 6000;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0,0,0,.28);
   padding: var(--sp-4);
 }
 #modal{ display: flex; }
@@ -2962,6 +2960,9 @@ body.pomo-nonpart .pomo-status-line{
 
    같은 규칙을 함께 받도록 선택자에 나란히 적습니다. 앞으로 팝업을
    더 만들 때도 여기에 이름을 추가해야 합니다. */
+/* [2026-08-06] 팝업 뒤 화면을 흐리지 않습니다.
+   흐림(backdrop-filter)을 걷어내고 덮개도 옅게(.55 → .28) 두어,
+   팝업을 열어둔 채로도 채팅과 카드가 그대로 보이게 했습니다. */
 #record-modal,
 #goals-modal,
 #mywork-modal,
@@ -2972,9 +2973,7 @@ body.pomo-nonpart .pomo-status-line{
   align-items: center;
   justify-content: center;
   z-index: 6300;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0,0,0,.28);
   padding: var(--sp-4);
 }
 #record-modal .modal-content,
@@ -3079,9 +3078,7 @@ body.pomo-nonpart .pomo-status-line{
   align-items: center;
   justify-content: center;
   z-index: 6200;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0,0,0,.28);
   padding: var(--sp-4);
 }
 #manual-modal .modal-content{
@@ -3218,9 +3215,7 @@ body.pomo-nonpart .pomo-status-line{
   align-items: center;
   justify-content: center;
   z-index: 6500;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0,0,0,.28);
   padding: var(--sp-4);
 }
 
