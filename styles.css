@@ -3531,9 +3531,15 @@ input[type="range"]:focus{ box-shadow: none; }
 }
 .icon-btn[aria-expanded="false"]{ transform: rotate(180deg); }
 
+/* [고침 2026-08-06] 버튼이 늘어나 화면이 좁으면 오른쪽으로 밀려
+   잘려 보였습니다(자동감지·나의 작업·대숲·화면 공유·가이드·설정·나가기).
+   줄바꿈을 허용해 어떤 창 너비에서도 전부 보이게 합니다. */
 .head-tools{
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 4px;
   gap: 3px;
   margin-left: auto;
   min-width: 0;
