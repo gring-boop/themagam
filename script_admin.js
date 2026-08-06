@@ -219,7 +219,34 @@
         } catch (e) { minsByNick[n] = {}; }
       }));
 
-      /* 표 만들기 */
+      /* 날짜별 출석 인원 수 — 그날 attendance 기록(firstAt/at)이 있는 사람만 셉니다.
+         휴가만 표시된 사람은 출근한 게 아니니 세지 않아요.
+         명단(nickOwner)에 없는 옛 기록은 표에도 줄이 없으므로 함께 뺍니다. */
+      const nickSet = new Set(nicks);
+      const cntByDay = {};
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+        const rec = attMonth[dk] || {};
+        let c = 0;
+        Object.keys(rec).forEach(n => {
+          if (!nickSet.has(n)) return;
+          const r = rec[n];
+          if (r && (r.firstAt || r.at)) c++;
+        });
+        cntByDay[dk] = c;
+      }
+
+      /* 표 만들기 — ① 인원 수 줄 ② 날짜 머리글 줄 ③ 멤버 줄들 */
+      let cntRow = `<tr><th class="name-h cnt-h">인원</th><th class="sum-h cnt-h"></th><th class="sum-h cnt-h"></th>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+        const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
+        const c = cntByDay[dk] || 0;
+        const cls = "cnt" + (dow === 0 || dow === 6 ? " we" : "") + (c === 0 ? " zero" : "");
+        cntRow += `<th class="${cls}">${c === 0 ? "" : c}</th>`;
+      }
+      cntRow += "</tr>";
+
       let head = `<tr><th class="name-h">이름</th><th class="sum-h">출석</th><th class="sum-h">휴가</th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
@@ -249,15 +276,92 @@
           if (dk === todayKey) cls += " today";
           cells += `<td class="${cls}">${txt}</td>`;
         }
-        return `<tr><td class="name-c">${escapeHtml(n)}</td>` +
+        /* 이름 옆 [✕] — 탈퇴 인원 삭제. 늘 있지만 아주 옅게, 마우스를 올리면 진해집니다. */
+        return `<tr><td class="name-c"><span class="nmw">` +
+                 `<span class="nm">${escapeHtml(n)}</span>` +
+                 `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>` +
+               `</span></td>` +
                `<td class="sum-c">${attDays}</td><td class="sum-c">${vacDays}</td>${cells}</tr>`;
       }).join("");
 
       body.classList.remove("adm-msg");
-      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${head}${rows}</table></div>`;
+      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${head}${rows}</table></div>`;
     } catch (e) {
       console.warn("[adm attendance]", e);
       body.innerHTML = "불러오지 못했어요.";
+    }
+  }
+
+  /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제
+     출근부 이름 칸의 [✕] 로 부릅니다. 두 번 확인(확인창 + 닉네임 직접 입력)을
+     거쳐야 지워집니다. 되돌릴 수 없어요.
+
+     지우는 곳
+       users/{닉}                 프로필·투두·목표·timeSegs·timeCur·vacations·
+                                  chattyParticipation·idleDetect … 전부
+       status/{닉}                접속 상태
+       nickOwner/{닉}             닉 도장 — 이걸 지워야 그 닉을 다시 쓸 수 있어요
+       attendance/{모든 날짜}/{닉} 출근 기록
+       wordlog/{모든 날짜}/{닉}    글자수 기록
+       rooms/secret/allow/{uid}   비밀방 승인
+
+     남기는 곳
+       messages / messages2 / messages3 — 지난 발언은 지우지 않습니다.
+         한 사람의 말만 빼면 대화 맥락이 끊겨 읽을 수 없게 되니까요.
+       wordfeed — push 키라 닉 필드로 하나하나 걸러야 하는데, 그날치만 남고
+         금방 사라지는 구조라 굳이 손대지 않습니다.
+     ------------------------------------------------------------------- */
+  async function removeMember(nick) {
+    if (!nick) return;
+    if (!confirm(
+      `${nick}님을 명단에서 지울까요? 출석·휴가·작업시간·글자수 기록이 모두 삭제되고 되돌릴 수 없어요.\n` +
+      `채팅에 남은 지난 말은 그대로 남아요.`
+    )) return;
+
+    /* 두 번째 확인 — 오타·실수로 엉뚱한 사람을 지우지 않도록 닉을 직접 적게 합니다 */
+    const typed = prompt(`정말 지우려면 아래 닉네임을 똑같이 입력해 주세요.\n\n${nick}`);
+    if (typed === null) return;                       // 취소
+    if (typed.trim() !== nick) {
+      msg("adm-att-msg", "입력한 닉네임이 달라서 지우지 않았어요.", true);
+      return;
+    }
+
+    msg("adm-att-msg", "지우는 중…");
+    try {
+      /* ★ 순서 주의 — nickOwner 를 지우기 전에 uid 를 먼저 확보해야
+         비밀방 승인(rooms/secret/allow/{uid})을 찾아 지울 수 있어요. */
+      const uid = (await db.ref("nickOwner/" + nick).once("value")).val();
+
+      /* attendance·wordlog 은 날짜별로 흩어져 있어 통째로 읽어 해당 닉만 골라
+         multi-path update 로 한 번에 지웁니다. (날짜마다 remove 하면 요청이 너무 많아요) */
+      const [attSnap, wlSnap] = await Promise.all([
+        db.ref("attendance").once("value"),
+        db.ref("wordlog").once("value")
+      ]);
+
+      const attUpd = {};
+      Object.entries(attSnap.val() || {}).forEach(([day, byNick]) => {
+        if (byNick && Object.prototype.hasOwnProperty.call(byNick, nick)) attUpd[`${day}/${nick}`] = null;
+      });
+      if (Object.keys(attUpd).length) await db.ref("attendance").update(attUpd);
+
+      const wlUpd = {};
+      Object.entries(wlSnap.val() || {}).forEach(([day, byNick]) => {
+        if (byNick && Object.prototype.hasOwnProperty.call(byNick, nick)) wlUpd[`${day}/${nick}`] = null;
+      });
+      if (Object.keys(wlUpd).length) await db.ref("wordlog").update(wlUpd);
+
+      await db.ref("users/" + nick).remove();
+      await db.ref("status/" + nick).remove();
+      if (uid) { try { await db.ref("rooms/secret/allow/" + uid).remove(); } catch (e) {} }
+      await db.ref("nickOwner/" + nick).remove();     // 맨 마지막 — 도장 반납
+
+      await loadAttendance(_attOffset);
+      msg("adm-att-msg", `🗑️ ${nick}님을 지웠어요.`);
+      try { await loadSecretAllow(); } catch (e) {}
+    } catch (e) {
+      console.warn("[adm removeMember]", e);
+      msg("adm-att-msg", "지우지 못했어요 — 보안규칙에 관리자 예외가 들어갔는지 확인해 주세요.", true);
     }
   }
 
@@ -468,6 +572,11 @@
     el("adm-pin")?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) doPin(); });
     el("adm-att-prev")?.addEventListener("click", () => loadAttendance(_attOffset + 1));
     el("adm-att-next")?.addEventListener("click", () => loadAttendance(Math.max(0, _attOffset - 1)));
+    /* 출근부는 매번 다시 그려지므로 개별 [✕] 대신 표가 담긴 상자에 위임합니다 */
+    el("adm-att-body")?.addEventListener("click", e => {
+      const btn = e.target.closest("[data-del-nick]");
+      if (btn) removeMember(btn.getAttribute("data-del-nick"));
+    });
     el("adm-notice-save")?.addEventListener("click", saveNotice);
     el("adm-notice-clear")?.addEventListener("click", clearNotice);
     el("adm-pin-msg-save")?.addEventListener("click", savePinnedMessage);

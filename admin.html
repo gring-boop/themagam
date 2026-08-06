@@ -156,6 +156,32 @@
       overflow: hidden; text-overflow: ellipsis;
     }
     .adm-att-table th.sum-h{ background: #F3D9D3; font-size: 11px; }
+    /* [2026-08-06] 날짜 머리글 위 한 줄 — 그날 출석한 사람 수.
+       날짜 줄보다 한 톤 옅게 두어 눈이 날짜에 먼저 가도록 합니다. */
+    .adm-att-table th.cnt{
+      background: #EEF4F9; font-size: 11px; font-weight: 600; color: #5A6B78;
+    }
+    .adm-att-table th.cnt.we{ background: #F0F3EC; }
+    .adm-att-table th.cnt.zero{ color: rgba(90,107,120,.25); }
+    .adm-att-table th.name-h.cnt-h, .adm-att-table th.sum-h.cnt-h{
+      background: #F6F1EA; font-size: 10.5px; font-weight: 600; color: #8A7B68;
+    }
+    /* 이름 칸 — 이름 왼쪽, 지우기 [✕] 오른쪽 */
+    .adm-att-table td.name-c .nmw{
+      display: flex; align-items: center; justify-content: space-between; gap: 4px;
+    }
+    .adm-att-table td.name-c .nm{
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .adm-att-table td.name-c .del-x{
+      flex: 0 0 auto; cursor: pointer;
+      background: transparent; border: none; border-radius: 4px;
+      color: rgba(90,70,40,.26); font-size: 11px; line-height: 1;
+      padding: 2px 3px; font-weight: 700;
+    }
+    .adm-att-table td.name-c .del-x:hover{
+      color: #B3372B; background: rgba(179,55,43,.10);
+    }
     .adm-att-table td.sum-c{ background: #FDF7F0; font-weight: 700; }
     .adm-att-table td.cell{ font-variant-numeric: tabular-nums; font-size: 11px; color: #4A3F33; }
     .adm-att-table td.cell.vac{ background: #F5E3B8; }
@@ -209,7 +235,8 @@
     <div id="adm-dash">
       <div class="adm-card" id="adm-att-card">
         <h2>📅 출석·휴가 현황</h2>
-        <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.</p>
+        <p class="adm-sub">멤버별 출근부 — 셀은 그날 첫 입장 시간이에요.
+          맨 윗줄은 그날 출석한 인원 수, 이름 옆 ✕ 는 명단에서 지우기예요.</p>
         <div class="adm-nav">
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
@@ -220,7 +247,9 @@
           <span><span class="sw" style="background:#F5E3B8"></span>🏖️ 휴가</span>
           <span><span class="sw" style="background:#F3D9D3"></span>1시간 미만</span>
           <span><span class="sw" style="box-shadow:inset 0 0 0 2px #B3372B; border:none;"></span>오늘</span>
+          <span><span class="sw" style="background:#EEF4F9"></span>날짜 위 숫자 = 그날 출석 인원</span>
         </div>
+        <div class="adm-msg" id="adm-att-msg"></div>
       </div>
 
       <!-- 출석부 아래 세 카드는 나란히 — 공간 절약 (좁은 창에선 자동으로 세로) -->
