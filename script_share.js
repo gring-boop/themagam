@@ -37,7 +37,9 @@
     { name: "보통", w: 44 },
     { name: "강함", w: 22 }
   ];
-  const SHARE_DEFAULT_LEVEL = 1;          // 기본은 "보통"(44px)
+  /* [고침 2026-08-06] 기본을 "약함"(88px)으로. 화면에서 고를 수 없게 됐으니
+     기본값이 곧 유일한 값입니다 — 뭉갠 정도는 이 상수로만 바꿉니다. */
+  const SHARE_DEFAULT_LEVEL = 0;          // 기본은 "약함"(88px)
 
   const SHARE_INTERVAL_MS = 5000;         // 5초에 한 장
   const SHARE_MAX_BYTES   = 8 * 1024;     // 한 장 상한 8KB
@@ -320,27 +322,25 @@
     return rows;
   }
 
-  function levelBtnsHtml() {
-    return SHARE_LEVELS.map((lv, i) =>
-      `<button type="button" class="share-lv${i === _levelIdx ? " on" : ""}"
-               data-share-level="${i}" title="가로 ${lv.w}px 로 뭉갭니다">${lv.name}</button>`
-    ).join("");
-  }
+  /* [2026-08-06] 강도 고르기 버튼은 화면에서 뺐습니다.
+     setShareLevel 과 SHARE_LEVELS 는 남겨둡니다 — 콘솔에서 바꿔보거나
+     나중에 다시 버튼을 달 때 그대로 쓸 수 있게. */
 
   /* 카드 HTML 에는 "몇 초 전"과 "끊김" 표시를 넣지 않습니다.
      그 둘은 시계만 흘러도 달라지므로, 만든 HTML 이 매번 달라져
      그림이 새로 붙고(=깜빡이고) 맙니다. 두 가지는 tickAgo 가
      1초마다 글자와 클래스만 고쳐 씁니다. */
+  /* [고침 2026-08-06] 카드를 프로필 카드와 같은 크기로 고정합니다.
+
+     화면이 주인공이라, 그림이 카드를 꽉 채우고 아래 한 줄만 남깁니다.
+       · 강도 고르기 버튼과 안내 문구는 뺐습니다 (기본 "약함" 고정)
+       · 아래 한 줄 = "닉네임의 화면" + [off] 나란히
+     그림은 카드 비율에 맞춰 잘라 넣습니다(양옆이 잘려도 괜찮습니다). */
   function shareCardHtml(row) {
     const mine = (row.nick === myNick);
-    const ctl = mine
-      ? `<div class="share-ctl">
-           <div class="share-levels">${levelBtnsHtml()}</div>
-           <button type="button" class="share-off" data-share-stop="1">공유 끄기</button>
-           <div class="share-note">${
-             SHARE_NOTICE_LINES.map(t => `<span>· ${esc(t)}</span>`).join("")
-           }</div>
-         </div>`
+    const off = mine
+      ? `<button type="button" class="share-off" data-share-stop="1"
+                 title="화면 공유 끄기" aria-label="화면 공유 끄기">off</button>`
       : "";
     return `
       <div class="user-card share-card${mine ? " is-me" : ""}"
@@ -351,11 +351,10 @@
           <span class="share-live">● 공유 중</span>
           <span class="share-ago"></span>
         </div>
-        <div class="card-foot">
-          <div class="card-name">${esc(row.nick)}</div>
-          <div class="card-goal"><div class="goal-line">🖥️ 화면</div></div>
+        <div class="card-foot share-foot">
+          <span class="share-who">${esc(row.nick)}의 화면</span>
+          ${off}
         </div>
-        ${ctl}
       </div>`;
   }
 
@@ -452,9 +451,6 @@
     list.__shareBound = true;
 
     list.addEventListener("click", (e) => {
-      const lv = e.target.closest("[data-share-level]");
-      if (lv) { e.stopPropagation(); setShareLevel(lv.getAttribute("data-share-level")); return; }
-
       const off = e.target.closest("[data-share-stop]");
       if (off) { e.stopPropagation(); stopScreenShare(); return; }
 
@@ -476,6 +472,9 @@
      창구
      --------------------------------------------------------------- */
   window.toggleScreenShare = toggleScreenShare;
+  /* 화면에는 버튼이 없지만, 뭉갠 정도를 바꿔보고 싶으면 F12 콘솔에서
+     setShareLevel(0|1|2) — 0 약함(88px) · 1 보통(44px) · 2 강함(22px) */
+  window.setShareLevel = setShareLevel;
   window.stopScreenShare   = stopScreenShare;
   window.renderShareCards  = renderShareCards;
   window.isScreenSharing   = () => _sharing;

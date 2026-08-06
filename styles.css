@@ -6071,20 +6071,32 @@ body.split-dragging #chat-box3{ user-select: none; }
 
 /* 접속자 카드 목록에 나란히 붙는 공유 카드.
    .user-card 의 테두리·배경을 그대로 쓰고 여기서는 차이만 적습니다. */
+/* [고침 2026-08-06] 프로필 카드와 같은 크기로 고정.
+   화면 그림이 남는 자리를 전부 채우고, 아래 한 줄만 남깁니다.
+   비율이 안 맞으면 양옆(또는 위아래)이 잘립니다 — 그게 낫습니다. */
 .share-card{
   cursor: zoom-in;
   border-color: var(--danger-line);
+  display: flex;
+  flex-direction: column;
+  height: 100%;          /* 옆 프로필 카드와 같은 높이 */
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--sp-2);
 }
 .share-card .card-foot{ margin-top: var(--sp-2); }
 
 .share-shot{
   position: relative;
+  flex: 1 1 auto;        /* 아래 한 줄을 뺀 나머지를 전부 차지 */
   width: 100%;
-  aspect-ratio: 5 / 3;
+  min-height: 0;
   border-radius: var(--r-md);
   overflow: hidden;
   background: var(--fill-1);
   border: 1px solid var(--border);
+  /* 카드가 혼자 있는 줄에서도 납작해지지 않게 최소 높이를 둡니다 */
+  min-height: 120px;
 }
 .share-img{
   width: 100%;
@@ -6129,53 +6141,35 @@ body.split-dragging #chat-box3{ user-select: none; }
 .share-card.is-stale{ opacity: .45; }
 .share-card.is-stale .share-img{ filter: grayscale(1); }
 
-/* 내 카드 안 조작 줄 — 강도 셋 + [공유 끄기] */
-.share-ctl{
-  margin-top: 6px;
+/* [고침 2026-08-06] 강도 버튼·안내 문구는 화면에서 뺐습니다.
+   아래 한 줄에 "닉네임의 화면"과 [off] 만 나란히 둡니다. */
+.share-foot{
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px !important;
+  flex: 0 0 auto;
 }
-.share-levels{
-  display: flex;
-  gap: 4px;
-}
-.share-lv{
-  flex: 1 1 0;
+.share-who{
   min-width: 0;
-  font-size: var(--fs-2xs);
-  padding: 4px 0;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: var(--fill-1);
-  color: var(--muted);
-  cursor: pointer;
-}
-.share-lv:hover{ background: var(--fill-2); }
-.share-lv.on{
-  background: var(--accent-soft);
-  border-color: var(--accent-line);
-  color: var(--on-accent-btn);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
+  color: var(--text);
 }
 .share-off{
+  flex: 0 0 auto;
   font-size: var(--fs-2xs);
-  padding: 5px 0;
-  border-radius: 7px;
+  line-height: 1;
+  padding: 4px 9px;
+  border-radius: var(--r-full);
   border: 1px solid var(--danger-line);
   background: var(--danger-soft);
   color: var(--on-danger-btn);
   cursor: pointer;
-}
-/* 안내 — 짧은 문장을 한 줄씩. 한 문단으로 이으면 읽다가 놓칩니다 */
-.share-note{
-  font-size: var(--fs-2xs);
-  line-height: 1.55;
-  color: var(--muted);
-  word-break: keep-all;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
 }
 
 /* 크게 보기 — 배경을 누르면 닫힙니다 */
