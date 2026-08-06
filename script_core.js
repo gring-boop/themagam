@@ -133,7 +133,7 @@ window.AppSession = AppSession;
   // =====================================================
   let myNick = "";
   let myEmoji = "";
-  let _msgRef = null, _statusRef = null, _pomodoroRef = null;
+  let _msgRef = null, _statusRef = null;
   let _statusIntervalId = null, _backupIntervalId = null;
 
   let _joining = false;
@@ -179,12 +179,10 @@ window.AppSession = AppSession;
       window.detachMessageListeners?.();
       _msgRef?.off();
       _statusRef?.off();
-      _pomodoroRef?.off();
     } catch (e) {}
 
     _msgRef = null;
     _statusRef = null;
-    _pomodoroRef = null;
 
     if (_statusIntervalId) clearInterval(_statusIntervalId);
     if (_backupIntervalId) clearInterval(_backupIntervalId);

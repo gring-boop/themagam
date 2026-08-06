@@ -65,6 +65,13 @@
   let _started = false;
   let _day     = null;    // 지금 듣고 있는 날짜 — 자정 감시에 씁니다
 
+  /* [2026-08-06] 내 뽀모 알림 — 이 화면에만 있는 줄입니다.
+     뽀모가 개인 타이머가 되면서, 남의 시작·휴식까지 여기 흐르면
+     사람 수만큼 줄이 쌓여 정작 글자수 기록이 밀려납니다. 그래서
+     서버(wordfeed)에 올리지 않고 이 배열에만 담아 내 화면에 그립니다.
+     새로고침하면 사라집니다 — 지나간 알림이라 남길 이유가 없어요. */
+  let _pomoLines = [];
+
   /* 뽀모도로 알림도 같은 자리에 흐르므로, 글자수 기록이 밀려나지 않게
      넉넉히 잡습니다 (하루치라 양은 크지 않습니다) */
   const FEED_MAX = 200;   // 너무 길어지지 않게 최근 것만 봅니다
@@ -158,7 +165,7 @@
         .reduce((a, v) => a + Number(v?.total || 0), 0);
       big.textContent  = fmt(roomSum);
       unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
-      rows.innerHTML = drawFeed(_feed);
+      rows.innerHTML = drawFeed(mergedFeed());
       /* 새 줄이 아래에 붙으므로 맨 아래를 보여줍니다 */
       rows.scrollTop = rows.scrollHeight;
     }
@@ -169,6 +176,22 @@
         : `기준 ${fmt(mine.base)}자 · 다음에도 그때의 전체 글자수를 적으면 차이만 쌓여요.`;
     }
   }
+
+  /* 방의 글자수 기록 + 내 뽀모 알림을 시간순으로 섞습니다.
+     오늘 탭에서만 씁니다 — '내 기록' 탭은 숫자만 봅니다. */
+  function mergedFeed() {
+    if (!_pomoLines.length) return _feed;
+    return _feed.concat(_pomoLines).sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+  }
+
+  /* 뽀모 쪽(script_realtime.js)에서 부릅니다 */
+  function addMyPomoLine(msg) {
+    if (!msg) return;
+    _pomoLines.push({ type: "pomo", msg: String(msg), at: Date.now() });
+    if (_pomoLines.length > 40) _pomoLines = _pomoLines.slice(-40);
+    render();
+  }
+  window.addMyPomoLine = addMyPomoLine;
 
   /* 흐르는 기록 — 하나당 두 줄입니다.
 
@@ -429,7 +452,7 @@
   function attach() {
     detach();
     _day = dayKey();
-    _today = {}; _feed = []; _week = {};
+    _today = {}; _feed = []; _week = {}; _pomoLines = [];
 
     _ref = window.db.ref(`wordlog/${_day}`);
     _ref.on("value", snap => {
@@ -460,7 +483,11 @@
     _feedRef = window.db.ref(`wordfeed/${_day}`).orderByChild("at").limitToLast(FEED_MAX);
     _feedRef.on("value", snap => {
       const v = snap.val() || {};
-      _feed = Object.values(v).sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+      /* 옛 방식(공용 뽀모)으로 서버에 쌓인 알림은 걸러냅니다.
+         내 뽀모 알림은 _pomoLines 로 따로 들어와요. */
+      _feed = Object.values(v)
+        .filter(f => f && f.type !== "pomo")
+        .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
       render();
     });
 
@@ -588,6 +615,7 @@
         : ""}`;
   }
 
-  window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek, myWeekHtml,
-                       _state: () => ({ today: _today, week: _week, feed: _feed, tab: _tab }) };
+  window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
+                       _state: () => ({ today: _today, week: _week, feed: _feed,
+                                        pomoLines: _pomoLines, tab: _tab }) };
 })();

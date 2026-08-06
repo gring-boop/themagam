@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608062125">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608062125">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608070101">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608070101">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608062125">
+  <link rel="manifest" href="manifest.json?v=202608070101">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608062125" />
+  <link rel="stylesheet" href="styles.css?v=202608070101" />
 </head>
 
 <body>
@@ -563,12 +563,12 @@
       <!-- [4줄] 시작 · 정지 · 알림음 -->
       <div class="pomo-row pomo-row-4 timer-controls">
         <button class="pomo-run-btn start" onclick="startPomodoro()"
-                aria-label="뽀모도로 시작" title="정한 시간으로 시작해요">
+                aria-label="뽀모도로 시작" title="내 타이머를 시작해요 (남에게는 영향 없어요)">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
         </button>
 
         <button class="pomo-run-btn stop" onclick="stopPomodoro()"
-                aria-label="뽀모도로 정지" title="모두의 타이머가 멈춰요">
+                aria-label="뽀모도로 정지" title="내 타이머만 멈춰요">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>
         </button>
 
@@ -582,7 +582,7 @@
       <div class="pomo-row pomo-row-2">
         <button id="pomo-opt-btn" class="ghost-btn compact" data-state="on"
                 onclick="togglePomodoroParticipation()" aria-pressed="true"
-                title="내 알림음을 끄고/켜요">🔔 참여 중 · 알림 ON</button>
+                title="세션이 바뀔 때 소리와 알림을 받아요">🔔 소리·알림 ON</button>
 
       </div>
 
@@ -729,25 +729,25 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608062125"></script>
-<script src="script_core.js?v=202608062125"></script>
-<script src="script_auth.js?v=202608062125"></script>
-<script src="script_ui.js?v=202608062125"></script>
-<script src="script_chat.js?v=202608062125"></script>
-<script src="script_chatty.js?v=202608062125"></script>
-<script src="script_secret.js?v=202608062125"></script>
-<script src="script_data.js?v=202608062125"></script>
-<script src="script_realtime.js?v=202608062125"></script>
-<script src="script_layout.js?v=202608062125"></script>
-<script src="script_wordcount.js?v=202608062125"></script>
-<script src="script_timelog.js?v=202608062125"></script>
-<script src="script_idledetect.js?v=202608062125"></script>
-<script src="script_profile.js?v=202608062125"></script>
-<script src="script_mywork.js?v=202608062125"></script>
-<script src="script_forest.js?v=202608062125"></script>
-<script src="script_reactions.js?v=202608062125"></script>
-<script src="script_share.js?v=202608062125"></script>
-<script src="script_manual.js?v=202608062125"></script>
+<script src="fortune_data.js?v=202608070101"></script>
+<script src="script_core.js?v=202608070101"></script>
+<script src="script_auth.js?v=202608070101"></script>
+<script src="script_ui.js?v=202608070101"></script>
+<script src="script_chat.js?v=202608070101"></script>
+<script src="script_chatty.js?v=202608070101"></script>
+<script src="script_secret.js?v=202608070101"></script>
+<script src="script_data.js?v=202608070101"></script>
+<script src="script_realtime.js?v=202608070101"></script>
+<script src="script_layout.js?v=202608070101"></script>
+<script src="script_wordcount.js?v=202608070101"></script>
+<script src="script_timelog.js?v=202608070101"></script>
+<script src="script_idledetect.js?v=202608070101"></script>
+<script src="script_profile.js?v=202608070101"></script>
+<script src="script_mywork.js?v=202608070101"></script>
+<script src="script_forest.js?v=202608070101"></script>
+<script src="script_reactions.js?v=202608070101"></script>
+<script src="script_share.js?v=202608070101"></script>
+<script src="script_manual.js?v=202608070101"></script>
 
 <script>
   window.addEventListener("load", () => {

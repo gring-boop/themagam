@@ -102,11 +102,8 @@
   let _msgLiveQuery = null;
   let _messagesListening = false;
 
-  // ✅ pomodoro 이벤트 중복 방지 (클라별)
-  let _lastHandledPomoSeq = 0;
-
-  // ✅ 입장 직후 “현재 뽀모 상태”는 이벤트로 처리하지 않기(메시지 폭탄 방지)
-  let _pomoBootstrapped = false;
+  /* [뺌 2026-08-06] 뽀모가 개인 타이머가 되면서 seq·중복 방지 장치가
+     필요 없어졌습니다. 서버에서 오는 이벤트가 아예 없으니까요. */
 
   // =====================================================
   // UI helpers
@@ -151,10 +148,6 @@
     return !!(data && data.type === "system" && (data.joinOf || data.leaveOf));
   }
 
-  // ✅ [추가] 뽀모 시스템 메시지인지 판별 (입장 이전 렌더에서 제외할 용도)
-  function isPomodoroSystemMsg(data) {
-    return !!(data && data.type === "system" && data.pomoSeq !== undefined && data.pomoPhase !== undefined);
-  }
 
   // =====================================================
   // Header online list
@@ -429,11 +422,21 @@
           const whTxt = _whM < 60 ? `${_whM}m`
             : `${Math.floor(_whM / 60)}h${_whM % 60 ? " " + (_whM % 60) + "m" : ""}`;
           void tDone; void tTotal; void pct;
+          /* [2026-08-06] 지금 뽀모를 돌리는 중이면 🍅 이 살짝 뜁니다.
+             타이머는 각자 것이라 남은 시간은 모릅니다 — "달리는 중"만 보여요.
+             집중이면 붉게, 휴식이면 차분하게. */
+          const pRun = !!row.pomoRunning;
+          const pRest = pRun && row.pomoPhase === "rest";
+          const pomoChip = pRun
+            ? `<span class="card-pomo-count is-live${pRest ? " is-rest" : ""}"
+                     title="${pRest ? "휴식 중" : "집중 중"}${pCount > 0 ? ` · 오늘 ${pCount}회 마침` : ""}"
+                     >${pRest ? "☕" : "🍅"}${pCount > 0 ? ` ${pCount}` : ""}</span>`
+            : (pCount > 0
+                ? `<span class="card-pomo-count" title="오늘 끝낸 집중 세션">🍅 ${pCount}</span>`
+                : "");
           const metaBlock = `<div class="card-meta card-wh">
                  <span class="card-wh-t"><small>⏱</small><b>${whTxt}</b></span>
-                 ${pCount > 0
-                   ? `<span class="card-pomo-count" title="오늘 끝낸 집중 세션">🍅 ${pCount}</span>`
-                   : ""}
+                 ${pomoChip}
                </div>`;
 
           // 배지 줄 — 왼쪽 업적(트로피·왕관), 오른쪽 상태
@@ -544,6 +547,10 @@
     const todoTotal = _todos.length;
     const todoDone = _todos.filter(t => t && t.done).length;
     const pomoCount = Number(window.getTodayFocusSessions?.() || 0);
+    /* [2026-08-06] 지금 집중 중인지 — 남들 카드에 작은 🍅 을 띄우는 용도.
+       개인 타이머라 남은 시간은 보내지 않습니다. "달리는 중"만 알립니다. */
+    const pomoRunning = (typeof isPomodoroRunning === "function") ? isPomodoroRunning() : false;
+    const pomoPhaseNow = pomoRunning ? pomodoroPhase() : "";
 
     if (force) {
       window.saveDailyLog?.();
@@ -560,6 +567,8 @@
       todoDone,
       todoTotal,
       pomoCount,
+      pomoRunning,
+      pomoPhase: pomoPhaseNow,
       /* 펫 요약 — 남들 카드에도 보이게 */
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,
@@ -572,192 +581,153 @@
   // pomodoro realtime
   // =====================================================
 
-  async function _writePomodoroSystemMessageOnce(seq, phaseOrKind) {
-    if (!seq) return;
-    const key = `sys_pomo_${seq}`;
+  /* =====================================================================
+     🍅 뽀모도로 — 개인 타이머
 
+     [바뀐 이유 2026-08-06]
+     예전에는 방 전체가 서버의 `pomodoro` 한 칸을 같이 봤습니다. 누가
+     시작하면 모두의 타이머가 같이 돌고, 누가 멈추면 모두 멈췄어요.
+     그런데 이 방은 "다 같이 하나 둘 셋" 하고 출발하는 곳이 아니라
+     각자 자기 리듬으로 쓰는 곳입니다. 그러다 보니 가이드를 안 읽고
+     이것저것 눌러 본 사람이 남의 집중을 통째로 끊어 버리는 사고만
+     남았습니다. 그래서 타이머를 각자 것으로 돌렸습니다.
+
+     [지금 구조]
+       · 서버에 아무것도 쓰지 않습니다. 타이머는 내 브라우저 안에서만 돕니다
+       · 집중/휴식 시간도 각자 마음대로 — 남에게 영향이 없습니다
+       · 새로고침하거나 창을 닫았다 열어도 이어집니다 (끝나는 시각을
+         이 기기에 적어 두고, 돌아왔을 때 남은 시간을 다시 계산합니다)
+       · 알림 줄은 내 화면에만 뜹니다 (서버에 올리지 않습니다)
+       · 도는 동안에는 내 카드에 작은 🍅 이 붙어서, 남들도 "쟤 지금
+         달리는 중이구나" 정도는 볼 수 있습니다
+
+     서버에 남는 것: 없음. 카드에 실려 나가는 pomoRunning(참/거짓)뿐.
+     ===================================================================== */
+
+  const POMO_SAVE_KEY = "pomoLocal";   // 이 기기에 저장하는 열쇠
+
+  /* 지금 도는 세션. status 가 "running" 일 때만 값이 찹니다. */
+  let _pomo = null;   // { phase:"work"|"rest", endAt, workMin, restMin }
+
+  /* 내 화면에만 뜨는 알림 줄 — 서버로 나가지 않습니다 */
+  function _showMyPomoLine(kind) {
     let msg = "";
-    if (phaseOrKind === "stop") msg = "⏹️ 뽀모도로가 정지됐어요.";
-    else if (phaseOrKind === "work") msg = "🍅 뽀모도로 작업 세션이 시작됐어요!";
-    else msg = "☁️ 뽀모도로 휴식이 시작됐어요!";
+    if (kind === "stop")      msg = "⏹️ 뽀모도로를 멈췄어요.";
+    else if (kind === "work") msg = "🍅 집중 세션을 시작했어요!";
+    else                      msg = "☁️ 휴식을 시작했어요!";
+    window.addMyPomoLine?.(msg);
+  }
 
-    /* [변경 2026-08-04] 채팅방 대신 글자수 오늘 탭(wordfeed)에 올립니다.
-       - 같은 seq 키로 한 번만 쓰이고, 보안규칙의 !data.exists() 가
-         중복 쓰기를 막아 dedupe 역할까지 해줍니다 (거절돼도 무해).
-       - 규칙상 nick 이 내 필명이어야 저장되므로 함께 적습니다.
-       - type:"pomo" 라서 '내 기록' 탭에는 나오지 않습니다. */
+  function _pomoSave() {
     try {
-      const _d = new Date();
-      const dk = window.Wordcount?.dayKey
-        ? window.Wordcount.dayKey()
-        : `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}`;
-      await db.ref(`wordfeed/${dk}/${key}`).set({
-        type: "pomo",
-        nick: myNick,
-        msg,
-        at: Date.now(),
-        pomoSeq: seq,
-        pomoPhase: phaseOrKind
-      });
-    } catch(e) {
-      // 이미 같은 seq 가 적혀 있으면 규칙이 거절합니다 — 정상입니다.
-      console.warn("[write pomodoro wordfeed msg skipped]", e?.code || e);
+      if (_pomo) AppStore.setItem(POMO_SAVE_KEY, JSON.stringify(_pomo));
+      else AppStore.removeItem(POMO_SAVE_KEY);
+    } catch (e) {}
+  }
+
+  /* 새로고침 뒤 이어 달리기 — 저장해 둔 끝나는 시각을 되살립니다.
+     이미 지나 버린 세션이면 살리지 않습니다. 몇 시간 뒤에 돌아왔는데
+     "3시간 전에 끝난 타이머"가 되살아나면 더 이상하니까요. */
+  function _pomoLoad() {
+    try {
+      const raw = AppStore.getItem(POMO_SAVE_KEY);
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      if (!v || !v.endAt || Number(v.endAt) <= Date.now()) return null;
+      return {
+        phase:   v.phase === "rest" ? "rest" : "work",
+        endAt:   Number(v.endAt),
+        workMin: Math.max(1, Math.min(180, Number(v.workMin) || 25)),
+        restMin: Math.max(1, Math.min(60,  Number(v.restMin) || 5))
+      };
+    } catch (e) { return null; }
+  }
+
+  /* 화면에 "멈춰 있음" 을 그립니다 */
+  function _paintIdle() {
+    const pill = document.getElementById("timer-pill");
+    const text = document.getElementById("timer-text");
+    if (!pill || !text) return;
+    pill.classList.remove("timer-warn");
+    pill.dataset.phase = "idle";
+    const wm = parseInt(document.getElementById("pomo-work-min")?.value, 10) || 25;
+    text.textContent = `${String(wm).padStart(2, "0")}:00`;
+    window.updatePomoHeaderStatus?.({ running: false });
+    window.updatePomoSetupUI?.({ running: false });
+    window.updatePomoProgressBar?.(1, 1);
+  }
+
+  /* 1초마다 도는 몸통 — 남은 시간을 다시 그리고, 다 되면 단계를 넘깁니다 */
+  function _pomoTick() {
+    if (!_pomo) return;
+    const pill = document.getElementById("timer-pill");
+    const text = document.getElementById("timer-text");
+    if (!pill || !text) return;
+
+    const remainMs = _pomo.endAt - Date.now();
+    const totalSec = (_pomo.phase === "work" ? _pomo.workMin : _pomo.restMin) * 60;
+    const remainingSec = Math.max(0, Math.ceil(remainMs / 1000));
+
+    window.updatePomoProgressBar?.(totalSec, remainingSec);
+    window.updatePomoHeaderStatus?.({ running: true, mode: _pomo.phase, remainingSec });
+
+    if (remainMs <= 0) { _pomoNextPhase(); return; }
+
+    const mm = Math.floor(remainMs / 60000);
+    const ss = Math.floor((remainMs % 60000) / 1000);
+    pill.dataset.phase = _pomo.phase;
+    text.textContent = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+
+    const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
+    pill.classList.toggle("timer-warn", remainMs <= warnMin * 60000);
+  }
+
+  /* 집중 ↔ 휴식 전환. 소리·알림·오늘 집중 횟수도 여기서 처리합니다. */
+  function _pomoNextPhase() {
+    if (!_pomo) return;
+    const next = _pomo.phase === "work" ? "rest" : "work";
+    const dur  = next === "work" ? _pomo.workMin : _pomo.restMin;
+
+    // 집중을 끝내고 휴식으로 넘어갈 때만 "오늘 1회"를 더합니다
+    if (next === "rest") window.incrementTodayFocusSessions?.();
+
+    _pomo = { ..._pomo, phase: next, endAt: Date.now() + dur * 60 * 1000 };
+    _pomoSave();
+
+    if (next === "work") {
+      window.playPomodoroSound?.("work_start");
+      window.notifyPomodoro?.("work");
+    } else {
+      window.playPomodoroSound?.("rest_start");
+      window.notifyPomodoro?.("rest");
     }
+    _showMyPomoLine(next);
+
+    window.updatePomoSetupUI?.({ running: true, workMin: _pomo.workMin, restMin: _pomo.restMin });
+    updateStatus();                 // 카드의 🍅 갱신
+    _pomoTick();
   }
 
-  function _remainingSecFrom(data) {
-    const endAt = Number(data?.endAt || 0);
-    if (!endAt) return 0;
-    return Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+  function _pomoStartLoop() {
+    if (window.pomodoroTick) { clearInterval(window.pomodoroTick); }
+    window.pomodoroTick = setInterval(_pomoTick, 1000);
+    _pomoTick();
   }
 
+  /* 켤 때 한 번 부릅니다. 이름은 그대로 두었습니다 — 다른 파일들이
+     이 이름으로 부르고 있어서, 바꾸면 조용히 안 도는 사고가 납니다. */
   function listenPomodoro() {
-    _pomodoroRef = db.ref("pomodoro");
-    _pomodoroRef.on("value", snap => {
-      const data = snap.val();
-      const pill = document.getElementById("timer-pill");
-      const text = document.getElementById("timer-text");
-      if (!pill || !text) return;
-
-      if (window.pomodoroTick) { clearInterval(window.pomodoroTick); window.pomodoroTick = null; }
-      pill.classList.remove("timer-warn");
-
-      // ✅ stopped/없음 처리
-      if (!data || data.status === "stopped") {
-        window.setPomoStarter?.("");
-        /* [2026-08-03] 대기 문구 대신 설정된 집중 시간을 25:00 꼴로 보여줍니다 */
-        pill.dataset.phase = "idle";
-        const _wm = parseInt(document.getElementById("pomo-work-min")?.value, 10) || 25;
-        text.textContent = `${String(_wm).padStart(2, "0")}:00`;
-        window.updatePomoHeaderStatus?.({ running:false });
-        window.updatePomoSetupUI?.({ running:false });
-        _lastHandledPomoSeq = 0;
-        _pomoBootstrapped = false;
-
-        window.updatePomoProgressBar?.(1, 1);
-        return;
-      }
-
-      const seq = Number(data.seq || 0);
-      const phase = data.phase || "work";
-
-      /* [이식 2026-08-03 · 벨사탕 0802] 참여 버튼에 보여줄 starter — 도는 동안만.
-         startedBy 가 마지막 정지(stoppedAt) 이후에 적힌 것일 때만 믿습니다.
-         옛 코드로 접속한 사람이 시작을 누르면 startedBy 를 안 적어서
-         지난 세션 이름이 남는데, 그 이름은 지난 정지보다 오래된 것이라
-         여기서 걸러집니다. (startedAt 과 비교하면 안 됩니다: 휴식↔집중
-         자동 전환 때마다 startedAt 이 갱신돼서 멀쩡한 starter 도 사라져요) */
-      let _starter = "";
-      if (data.startedBy) {
-        const sbAt = Number(data.startedByAt || 0);
-        if (sbAt && sbAt > Number(data.stoppedAt || 0)) _starter = String(data.startedBy);
-      }
-      window.setPomoStarter?.(_starter);
-
-      // ✅ 진행 중인 세션의 집중/휴식 시간을 설정 UI에도 동기화(늦게 들어온 사람도 host가 정한 시간을 확인 가능)
-      window.updatePomoSetupUI?.({
-        running: true,
-        workMin: Number(data.workMin || 25),
-        restMin: Number(data.restMin || 5)
-      });
-
-      // ✅ [핵심] 첫 수신(입장 직후)에는 “현재 상태”를 이벤트로 처리하지 않음
-      if (!_pomoBootstrapped) {
-        _pomoBootstrapped = true;
-        _lastHandledPomoSeq = seq || 0;
-      } else {
-        // ✅ seq 기반 이벤트 1회 처리
-        if (seq && seq !== _lastHandledPomoSeq) {
-          _lastHandledPomoSeq = seq;
-
-          // ✅ 시스템 메시지는 updatedBy(버튼 누른 사람)만 작성
-          const updatedBy = String(data.updatedBy || "");
-          // ✅ [FIX] 최초 "시작" 클릭 시의 work 메시지는 startPomodoro().then()에서 이미 처리되지만,
-          // 이후 rest→work 자동 전환(휴식이 끝나고 다시 작업 세션이 시작되는 경우)은
-          // 여기서만 감지되므로 phase 종류와 무관하게 항상 기록해야 한다.
-          // (같은 seq 키에 .set()으로 덮어쓰기 때문에 중복 기록돼도 안전함)
-          if (updatedBy && myNick && updatedBy === myNick) {
-            _writePomodoroSystemMessageOnce(seq, phase);
-          }
-
-          // 소리(개인) + 브라우저 알림 (탭이 가려져 있어도 보이게)
-          if (phase === "work") {
-            window.playPomodoroSound?.("work_start");
-            window.notifyPomodoro?.("work");
-          } else {
-            window.playPomodoroSound?.("rest_start");
-            window.notifyPomodoro?.("rest");
-          }
-
-          // work -> rest 전환이면 “오늘 집중 1회” 증가
-          if (phase === "rest") {
-            window.incrementTodayFocusSessions?.();
-          }
-        }
-      }
-
-      // 초기 즉시 1회 갱신
-      window.updatePomoHeaderStatus?.({
-        running: true,
-        mode: phase,
-        remainingSec: _remainingSecFrom(data)
-      });
-
-      window.pomodoroTick = setInterval(() => {
-        const remainMs = (data.endAt || 0) - Date.now();
-        const phaseNow = data.phase || "work";
-
-        const workMin = Number(data.workMin || 25);
-        const restMin = Number(data.restMin || 5);
-        const totalSec = (phaseNow === "work" ? workMin : restMin) * 60;
-
-        const remainingSec = Math.max(0, Math.ceil(remainMs / 1000));
-
-        window.updatePomoProgressBar?.(totalSec, remainingSec);
-
-        window.updatePomoHeaderStatus?.({
-          running: true,
-          mode: phaseNow,
-          remainingSec
-        });
-
-        if (remainMs <= 0) {
-          db.ref("pomodoro").transaction((cur) => {
-            if (!cur || cur.status !== "running") return cur;
-
-            const now = Date.now();
-            if ((cur.endAt || 0) > now) return cur;
-
-            const currentPhase = cur.phase || "work";
-            const nextPhase = currentPhase === "work" ? "rest" : "work";
-            const dur = nextPhase === "work" ? (cur.workMin || 25) : (cur.restMin || 5);
-
-            const nextSeq = Number(cur.seq || 0) + 1;
-
-            return {
-              ...cur,
-              phase: nextPhase,
-              startedAt: now,
-              endAt: now + dur * 60 * 1000,
-              seq: nextSeq,
-              updatedBy: myNick || cur.updatedBy || "unknown",
-              updatedAt: now
-            };
-          });
-          return;
-        }
-
-        /* [2026-08-03] 큰 숫자만 — 문구 없이. 휴식은 CSS 가 ☕ 를 앞에 붙입니다 */
-        const mm = Math.floor(remainMs / 60000);
-        const ss = Math.floor((remainMs % 60000) / 1000);
-        pill.dataset.phase = phaseNow;
-        text.textContent = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-
-        const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
-        if (remainMs <= warnMin * 60000) pill.classList.add("timer-warn");
-        else pill.classList.remove("timer-warn");
-      }, 1000);
-    });
+    _pomo = _pomoLoad();
+    if (_pomo) {
+      window.updatePomoSetupUI?.({ running: true, workMin: _pomo.workMin, restMin: _pomo.restMin });
+      const wi = document.getElementById("pomo-work-min");
+      const ri = document.getElementById("pomo-rest-min");
+      if (wi) wi.value = _pomo.workMin;
+      if (ri) ri.value = _pomo.restMin;
+      _pomoStartLoop();
+    } else {
+      _paintIdle();
+    }
   }
 
   function startPomodoro() {
@@ -765,7 +735,6 @@
        사용자 동작 없이 물으면 브라우저가 막거나 대체로 거부됩니다. */
     window.askNotifyPermissionOnce?.();
 
-    // ✅ 호스트(=지금 "시작"을 누른 사람)가 입력한 집중/휴식 시간을 읽어서 세션에 반영
     const workInput = document.getElementById("pomo-work-min");
     const restInput = document.getElementById("pomo-rest-min");
 
@@ -779,74 +748,31 @@
     if (workInput) workInput.value = workMin;
     if (restInput) restInput.value = restMin;
 
-    db.ref("pomodoro").transaction((cur) => {
-      const now     = Date.now();
-      const prevSeq = Number(cur?.seq || 0);
-      const nextSeq = prevSeq + 1;
+    _pomo = { phase: "work", endAt: Date.now() + workMin * 60 * 1000, workMin, restMin };
+    _pomoSave();
 
-      return {
-        ...(cur || {}),
-        phase:     "work",
-        startedAt: now,
-        endAt:     now + workMin * 60 * 1000,
-        status:    "running",
-        updatedBy: myNick || "unknown",
-        /* [이식 2026-08-03 · 벨사탕 0802] 시작 버튼을 누른 사람.
-           updatedBy 는 정지·전환 때마다 바뀌지만 startedBy 는 "시작"에서만
-           적혀서, 참여 버튼에 starter 를 보여주는 데 씁니다.
-           startedByAt 은 검증용, stoppedAt 을 지우는 것도 같은 이유입니다. */
-        startedBy:   myNick || "unknown",
-        startedByAt: now,
-        stoppedAt:   null,
-        seq:       nextSeq,
-        workMin:   workMin,
-        restMin:   restMin,
-        updatedAt: now
-      };
-    }).then((res) => {
-      // ✅ stopPomodoro와 동일한 패턴: transaction 커밋 후 직접 메시지 작성
-      try {
-        if (!myNick) return;
-        if (!res || !res.committed) return;
-        const v         = res.snapshot?.val?.();
-        const seq       = Number(v?.seq || 0);
-        const updatedBy = String(v?.updatedBy || "");
-        if (seq && updatedBy === myNick) {
-          _writePomodoroSystemMessageOnce(seq, "work");
-        }
-      } catch(e) {}
-    });
+    window.updatePomoSetupUI?.({ running: true, workMin, restMin });
+    window.playPomodoroSound?.("work_start");
+    _showMyPomoLine("work");
+    updateStatus();                 // 카드에 🍅 붙이기
+    _pomoStartLoop();
   }
 
   function stopPomodoro() {
-    db.ref("pomodoro").transaction((cur) => {
-      const now = Date.now();
-      const prevSeq = Number(cur?.seq || 0);
-      const nextSeq = prevSeq + 1;
-
-      return {
-        ...(cur || {}),
-        status: "stopped",
-        updatedBy: myNick || cur?.updatedBy || "unknown",
-        seq: nextSeq,
-        updatedAt: now,
-        stoppedAt: now,
-        phase: cur?.phase || "work"
-      };
-    }).then((res) => {
-      // ✅ stop 메시지는 "정확한 seq"로, 그리고 버튼 누른 사람만 작성
-      try {
-        if (!myNick) return;
-        if (!res || !res.committed) return;
-        const v = res.snapshot?.val?.();
-        const seq = Number(v?.seq || 0);
-        const updatedBy = String(v?.updatedBy || "");
-        if (seq && updatedBy === myNick) {
-          _writePomodoroSystemMessageOnce(seq, "stop");
-        }
-      } catch(e){}
-    });
+    const wasRunning = !!_pomo;
+    _pomo = null;
+    _pomoSave();
+    if (window.pomodoroTick) { clearInterval(window.pomodoroTick); window.pomodoroTick = null; }
+    _paintIdle();
+    if (wasRunning) {
+      _showMyPomoLine("stop");
+      updateStatus();               // 카드에서 🍅 떼기
+    }
   }
+
+  /* 카드에 실어 보낼 값 — 지금 집중 중인가 */
+  function isPomodoroRunning() { return !!_pomo; }
+  function pomodoroPhase() { return _pomo ? _pomo.phase : ""; }
 
   // =====================================================
   // messages realtime
@@ -1404,6 +1330,8 @@
   window.renderUserCards = renderUserCards;   // ✅ [프로필] 프로필 변경 시 재렌더용
   window.startPomodoro = startPomodoro;
   window.stopPomodoro = stopPomodoro;
+  window.isPomodoroRunning = isPomodoroRunning;
+  window.pomodoroPhase = pomodoroPhase;
   window.requireAdminPin = requireAdminPin;
   window.clearAllChat = clearAllChat;
 

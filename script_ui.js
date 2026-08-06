@@ -806,14 +806,10 @@
     return _pomoParticipating;
   }
 
-  /* [이식 2026-08-03 · 벨사탕 0802] 지금 도는 뽀모를 시작한 사람 — 참여 버튼에 표시 */
-  let _pomoStarter = "";
-  window.setPomoStarter = function (nick) {
-    const n = String(nick || "");
-    if (n === _pomoStarter) return;
-    _pomoStarter = n;
-    _renderParticipationButton();
-  };
+  /* [뺌 2026-08-06] "starter"(지금 도는 뽀모를 시작한 사람)는 없어졌습니다.
+     뽀모가 각자 것이 되면서 시작한 사람이 곧 나 자신이니까요.
+     함수는 껍데기만 남겨 둡니다 — 옛 코드가 부르더라도 조용히 넘어가게. */
+  window.setPomoStarter = function () {};
 
   function _renderParticipationButton() {
     /* 같은 스위치가 두 곳에 있습니다 — 뽀모도로 창과 설정 → 🍅 뽀모도로.
@@ -827,17 +823,20 @@
     btns.forEach(btn => {
       /* [2026-08-03] B+C 혼합 — 단어는 "누르면 일어날 동작"(Join/Leave),
          켜짐·꺼짐은 스위치 그림이 보여줍니다. */
+      /* [고침 2026-08-06] 타이머가 각자 것이 되면서 "참여/미참여"라는 말이
+         뜻을 잃었습니다. 이제 이 스위치가 하는 일은 딱 하나 —
+         세션이 바뀔 때 소리와 알림을 받을지 말지입니다. */
       if (_pomoParticipating) {
         btn.dataset.state = "on";
-        btn.innerHTML = `Leave · 알림 <span class="pomo-sw on"><i></i></span>` + (_pomoStarter
-          ? ` <span class="pomo-starter-lb">// starter</span> <span class="pomo-starter-nm">${window.escapeHtml ? window.escapeHtml(_pomoStarter) : ""}</span>`
-          : "");
+        btn.innerHTML = `소리·알림 <span class="pomo-sw on"><i></i></span>`;
+        btn.title = "세션이 바뀔 때 소리와 알림을 받아요 — 누르면 꺼집니다";
         btn.classList.remove("danger");
         btn.classList.add("primary");
         btn.setAttribute("aria-pressed", "true");
       } else {
         btn.dataset.state = "off";
-        btn.innerHTML = `Join · 알림 <span class="pomo-sw off"><i></i></span>`;
+        btn.innerHTML = `소리·알림 <span class="pomo-sw off"><i></i></span>`;
+        btn.title = "지금은 조용히 돌아갑니다 — 누르면 켜집니다";
         btn.classList.remove("primary");
         btn.classList.add("danger");
         btn.setAttribute("aria-pressed", "false");
@@ -993,18 +992,15 @@
   }
 
   async function incrementTodayFocusSessions() {
-    /* [FIX] 뽀모에 참여하지 않는 사람도 집중 횟수가 올라가던 문제
+    /* [고침 2026-08-06] "참여 중일 때만 센다"는 조건을 뺐습니다.
 
-       타이머는 모두의 화면에서 함께 돌기 때문에, 세션이 끝나면
-       참여 여부와 무관하게 이 함수가 불렸습니다. 그래서 "미참가"인데도
-       카드에 🍅 개수가 붙었어요.
-       참여 중일 때만 세도록 막습니다. */
-    if (!_pomoParticipating) return;
+       예전에는 타이머가 방 전체에서 하나로 돌아서, 참여를 끈 사람의
+       화면에서도 세션이 끝나면 이 함수가 불렸습니다. 그래서 막아야 했어요.
+       지금은 내가 직접 시작한 내 타이머만 여기까지 옵니다. 소리를 껐다고
+       내가 한 집중을 안 센다면 그게 더 이상하죠.
 
-    /* [FIX] 자리비움인데 🍅 가 쌓이던 문제
-
-       참여를 끄지 않은 채 자리를 비우면, 남이 돌린 타이머가 끝날 때마다
-       내 집중 횟수가 올라갔습니다. 자리에 없었으니 집중한 게 아닙니다.
+       [FIX] 자리비움인데 🍅 가 쌓이던 문제 — 이건 그대로 둡니다.
+       자리를 비운 채 타이머만 굴러가는 경우가 있어서요.
        휴식은 일부러 그대로 셉니다. 뽀모의 휴식 구간과 상태의 "휴식"이
        겹치는 순간이 흔해서, 빼면 정상적으로 집중한 회차까지 사라집니다. */
     const st = document.getElementById("db-status")?.value || "";

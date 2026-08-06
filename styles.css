@@ -4345,8 +4345,7 @@ html[data-theme-style="studio"] .me .msg-bubble{
    [이식 2026-08-03 · 벨사탕 0802] starter 표시 · 아이콘 라벨 · 글자수 피드
    ===================================================================== */
 /* 참여 버튼의 starter 표시 — "starter"는 살짝 작게, 닉네임은 같은 크기 */
-.pomo-starter-lb{ font-size: .82em; opacity: .75; }
-.pomo-starter-nm{ font-size: 1em; font-weight: var(--fw-medium); }
+/* [뺌 2026-08-06] starter 표시 — 뽀모가 각자 것이 되면서 없앴습니다 */
 
 /* 아이콘 옆 문구 — 아이콘만으로는 모르겠다는 분들이 많아서.
    문구가 있는 버튼은 정사각형을 풀고 알약처럼 늘어납니다. */
@@ -5211,6 +5210,29 @@ html[data-theme-style="studio"] .user-card{
 .card-wh .card-pomo-count{
   font-size: 80%;
   padding: 1px 6px;
+}
+
+/* [2026-08-06] 지금 뽀모를 돌리는 중 — 숨쉬듯 아주 느리게 깜빡입니다.
+   타이머는 각자 것이라 남은 시간은 모릅니다. "달리는 중"이라는 신호만요.
+   빠르게 깜빡이면 옆자리에서 눈에 거슬리므로 3초 주기로 잡았습니다. */
+.card-pomo-count.is-live{
+  animation: pomo-breathe 3s ease-in-out infinite;
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+}
+.card-pomo-count.is-live.is-rest{
+  animation: none;                 /* 쉬는 중에는 조용히 */
+  background: var(--fill-2);
+  border-color: var(--border);
+  opacity: .8;
+}
+@keyframes pomo-breathe{
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .5; }
+}
+/* 움직임을 불편해하는 사람에게는 멈춰 보여줍니다 (접근성) */
+@media (prefers-reduced-motion: reduce){
+  .card-pomo-count.is-live{ animation: none; }
 }
 
 /* [2026-08-03·25차] 카드 ⏱ 기호 — 시간 숫자와 같은 크기로 */
