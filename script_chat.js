@@ -1,3 +1,4 @@
+/* TheMagam © 그링링 · 무단 복제·재배포 금지 */
 
   // =====================================================
   // ✅ Chat render state
@@ -799,7 +800,7 @@
      push 키는 방마다 고유하므로 먼저 찾히는 쪽이 정답입니다. */
   function _findChatItemByKey(key) {
     if (!key) return null;
-    for (const id of ["chat-box", "chat-box2"]) {
+    for (const id of ["chat-box", "chat-box2", "chat-box3"]) {
       const el = document.getElementById(id)
         ?.querySelector(`.chat-item[data-key="${CSS.escape(key)}"]`);
       if (el) return el;
@@ -858,8 +859,9 @@
   }
 
   function bindReplyInteractions() {
-    /* [2026-08-05] Chatty(chat-box2)에서도 같은 3연속 클릭 답장을 지원 */
-    ["chat-box", "chat-box2"].forEach(id => {
+    /* [2026-08-05] Chatty(chat-box2)에서도 같은 3연속 클릭 답장을 지원
+       [2026-08-06] 비밀방(chat-box3)도 같은 줄에 합류 */
+    ["chat-box", "chat-box2", "chat-box3"].forEach(id => {
       const box = document.getElementById(id);
       if (!box || box.dataset.replyBound === "true") return;
       box.dataset.replyBound = "true";
@@ -1084,17 +1086,26 @@
      window.isChattyActive 는 script_chatty.js 가 나중에 export 하므로
      호출 시점에 window 에서 찾습니다 (없으면 늘 메인). */
   function _chattyActive() { return window.isChattyActive?.() === true; }
-  function _activeMsgRef() { return db.ref(_chattyActive() ? "messages2" : "messages"); }
+  /* [2026-08-06] 세 번째 방(비밀방 · messages3)도 같은 자리를 씁니다.
+     window.isSecretActive 는 script_secret.js 가 나중에 export 합니다. */
+  function _secretActive() { return window.isSecretActive?.() === true; }
+  function _activeMsgRef() {
+    if (_secretActive()) return db.ref("messages3");
+    return db.ref(_chattyActive() ? "messages2" : "messages");
+  }
   function _scrollActiveChat() {
-    if (_chattyActive()) window.scrollChattyToBottom?.();
+    if (_secretActive()) window.scrollSecretToBottom?.(true);
+    else if (_chattyActive()) window.scrollChattyToBottom?.();
     else scrollChatToBottom(true);
   }
-  /* Chatty 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라 콕 집어줍니다 */
+  /* Chatty/비밀방 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라
+     어느 노드를 게시해야 하는지 콕 집어줍니다 */
   function _chattySendFail(e) {
-    if (!_chattyActive()) return;
+    const node = _secretActive() ? "messages3" : (_chattyActive() ? "messages2" : null);
+    if (!node) return;
     const c = String(e && (e.code || e.message) || "");
     showCommandToast(/permission/i.test(c)
-      ? "전송이 거부됐어요 — Firebase 콘솔에 새 보안규칙(messages2)을 게시했는지 확인해 주세요"
+      ? `전송이 거부됐어요 — Firebase 콘솔에 새 보안규칙(${node})을 게시했는지 확인해 주세요`
       : "전송하지 못했어요. 연결을 확인해 주세요");
   }
 
@@ -1103,6 +1114,9 @@
     //    true 를 돌려주면(미참여·빈 입력 등) 여기서 멈추고,
     //    false 면 chatty 모드로 이어서 처리합니다 (_activeMsgRef 가 messages2 로 갈라줌).
     if (window.chattySend?.()) return;
+    /* ✅ [2026-08-06] 비밀방(messages3)도 같은 문지기 구조.
+       미승인자는 여기서 막히고, 승인자는 아래 흐름을 그대로 탑니다. */
+    if (window.secretSend?.()) return;
 
     const el = document.getElementById("message");
     if (!el || !myNick) return;
@@ -1209,7 +1223,7 @@
       el.value = ""; el.style.height = "42px";
       _cancelReply();
       _scrollActiveChat();
-      if (!_chattyActive()) checkAndTrimChat();   // 트림은 메인 전용 (Chatty는 히스토리 없음)
+      if (!_chattyActive() && !_secretActive()) checkAndTrimChat();   // 트림은 메인 전용
     } catch(e) {
       console.error("전송 실패", e);
       _chattySendFail(e);

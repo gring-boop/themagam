@@ -1,3 +1,4 @@
+/* TheMagam © 그링링 · 무단 복제·재배포 금지 */
 /* =====================================================================
    벨사탕 작업실 — styles.css (RENEWAL)
    ---------------------------------------------------------------------
@@ -2945,6 +2946,13 @@ body.pomo-nonpart .pomo-status-line{
   font-weight: var(--fw-medium);
 }
 #modal #join-btn:hover{ background: #5C1A11; }
+#modal .join-copy{
+  text-align: center;
+  font-size: var(--fs-2xs);
+  color: #A99B88;
+  margin: 12px 0 0;
+  letter-spacing: .2px;
+}
 #modal .hint{ color: #8A7B68; }
 #modal .hint b{ color: #6B5F52; }
 
@@ -6025,3 +6033,194 @@ body.split-dragging #chat-box3{ user-select: none; }
   }
   .fr-foot{ flex-direction: column; align-items: flex-start; gap: 2px; }
 }
+
+/* =====================================================================
+   🖥️ 화면 공유 (자체 모자이크) — .share-*
+   ---------------------------------------------------------------------
+   서버에 있는 그림 자체가 가로 22~88px 짜리 아주 작은 JPEG 입니다.
+   그걸 카드 크기로 늘려 보여주기 때문에 image-rendering: pixelated 로
+   "번지지 않게" 그립니다. 부드럽게 늘리면 오히려 글자 모양이 살아나서
+   뭉갠 뜻이 옅어집니다.
+   ===================================================================== */
+
+/* 캡쳐용 숨긴 <video> — 화면 밖에 두되 문서에는 붙여 둡니다
+   (문서에서 떼면 브라우저에 따라 프레임이 멈춥니다) */
+.share-video{
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 2px;
+  height: 2px;
+  opacity: .01;
+  pointer-events: none;
+}
+
+/* 머리말 버튼 — 공유 중이면 붉게 */
+.icon-btn.share-on{
+  color: var(--on-danger-btn);
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+}
+.icon-btn.share-on:hover{ background: var(--danger-soft); }
+
+/* 접속자 카드 목록에 나란히 붙는 공유 카드.
+   .user-card 의 테두리·배경을 그대로 쓰고 여기서는 차이만 적습니다. */
+.share-card{
+  cursor: zoom-in;
+  border-color: var(--danger-line);
+}
+.share-card .card-foot{ margin-top: var(--sp-2); }
+
+.share-shot{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--fill-1);
+  border: 1px solid var(--border);
+}
+.share-img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* 작은 그림을 크게 늘려도 번지지 않게 — 네모 칸이 그대로 보입니다 */
+  image-rendering: pixelated;
+}
+
+/* 왼쪽 위 "● 공유 중" */
+.share-live{
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255,59,48,.86);
+  color: #fff;
+  letter-spacing: -.2px;
+}
+
+/* 오른쪽 아래 "n초 전" */
+.share-ago{
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  font-size: var(--fs-2xs);
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.42);
+  color: rgba(255,255,255,.92);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 20초 넘게 소식이 없으면 흐리게 — 끊긴 것으로 봅니다
+   (30초가 넘으면 카드 자체가 목록에서 빠집니다) */
+.share-card.is-stale{ opacity: .45; }
+.share-card.is-stale .share-img{ filter: grayscale(1); }
+
+/* 내 카드 안 조작 줄 — 강도 셋 + [공유 끄기] */
+.share-ctl{
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.share-levels{
+  display: flex;
+  gap: 4px;
+}
+.share-lv{
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--fs-2xs);
+  padding: 4px 0;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--fill-1);
+  color: var(--muted);
+  cursor: pointer;
+}
+.share-lv:hover{ background: var(--fill-2); }
+.share-lv.on{
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--on-accent-btn);
+  font-weight: var(--fw-bold);
+}
+.share-off{
+  font-size: var(--fs-2xs);
+  padding: 5px 0;
+  border-radius: 7px;
+  border: 1px solid var(--danger-line);
+  background: var(--danger-soft);
+  color: var(--on-danger-btn);
+  cursor: pointer;
+}
+/* 안내 — 짧은 문장을 한 줄씩. 한 문단으로 이으면 읽다가 놓칩니다 */
+.share-note{
+  font-size: var(--fs-2xs);
+  line-height: 1.55;
+  color: var(--muted);
+  word-break: keep-all;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 크게 보기 — 배경을 누르면 닫힙니다 */
+.share-lightbox{
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(0,0,0,.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  cursor: zoom-out;
+}
+.share-lightbox-in{
+  max-width: min(880px, 92vw);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: default;
+}
+.share-big{
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  background: #000;
+  image-rendering: pixelated;
+}
+.share-lightbox-cap{
+  color: rgba(255,255,255,.94);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+}
+.share-lightbox-note{
+  color: rgba(255,255,255,.62);
+  font-size: var(--fs-2xs);
+  text-align: center;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.share-lightbox-close{
+  margin-top: 2px;
+  padding: 7px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(255,255,255,.10);
+  color: rgba(255,255,255,.92);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+.share-lightbox-close:hover{ background: rgba(255,255,255,.18); }
