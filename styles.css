@@ -6122,20 +6122,6 @@ body.split-dragging #chat-box3{ user-select: none; }
   letter-spacing: -.2px;
 }
 
-/* 오른쪽 아래 "n초 전" */
-.share-ago{
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  font-size: var(--fs-2xs);
-  line-height: 1;
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.42);
-  color: rgba(255,255,255,.92);
-  font-variant-numeric: tabular-nums;
-}
-
 /* 20초 넘게 소식이 없으면 흐리게 — 끊긴 것으로 봅니다
    (30초가 넘으면 카드 자체가 목록에서 빠집니다) */
 .share-card.is-stale{ opacity: .45; }

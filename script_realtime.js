@@ -446,7 +446,8 @@
              status 에 적어 보냅니다. */
 
           parts.push(`
-            <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"${cardStyle}>
+            <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"
+                 data-card-nick="${escapeHtml(u)}"${cardStyle}>
               <div class="card-body">
                 <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0"'

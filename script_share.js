@@ -98,12 +98,6 @@
     return Math.round((url.length - i - 1) * 3 / 4);
   }
 
-  function agoText(ms) {
-    const s = Math.max(0, Math.round(ms / 1000));
-    if (s < 60) return `${s}초 전`;
-    return `${Math.floor(s / 60)}분 전`;
-  }
-
   /* ---------------------------------------------------------------
      모자이크 만들기 — 여기서 원본이 사라집니다
 
@@ -205,7 +199,7 @@
 
     listenScreens();
     _timer    = setInterval(pushFrame, SHARE_INTERVAL_MS);
-    _agoTimer = setInterval(tickAgo, 1000);
+    _agoTimer = setInterval(tickShare, 1000);
     renderShareButton();
     noticeOnce();
     pushFrame();                       // 첫 장은 기다리지 않고 바로
@@ -326,10 +320,9 @@
      setShareLevel 과 SHARE_LEVELS 는 남겨둡니다 — 콘솔에서 바꿔보거나
      나중에 다시 버튼을 달 때 그대로 쓸 수 있게. */
 
-  /* 카드 HTML 에는 "몇 초 전"과 "끊김" 표시를 넣지 않습니다.
-     그 둘은 시계만 흘러도 달라지므로, 만든 HTML 이 매번 달라져
-     그림이 새로 붙고(=깜빡이고) 맙니다. 두 가지는 tickAgo 가
-     1초마다 글자와 클래스만 고쳐 씁니다. */
+  /* 카드 HTML 에는 "끊김" 표시를 넣지 않습니다. 시계만 흘러도 달라지므로
+     만든 HTML 이 매번 달라져 그림이 새로 붙고(=깜빡이고) 맙니다.
+     끊김은 tickShare 가 1초마다 클래스만 고쳐 씁니다. */
   /* [고침 2026-08-06] 카드를 프로필 카드와 같은 크기로 고정합니다.
 
      화면이 주인공이라, 그림이 카드를 꽉 채우고 아래 한 줄만 남깁니다.
@@ -349,7 +342,6 @@
         <div class="share-shot" role="button" tabindex="0" title="크게 보기">
           <img class="share-img" src="${row.img}" alt="${esc(row.nick)} 님이 공유 중인 화면 (모자이크)">
           <span class="share-live">● 공유 중</span>
-          <span class="share-ago"></span>
         </div>
         <div class="card-foot share-foot">
           <span class="share-who">${esc(row.nick)}의 화면</span>
@@ -362,33 +354,43 @@
     const list = document.getElementById("user-cards");
     if (!list) return;
 
-    const html = _sharing ? shareRows().map(shareCardHtml).join("") : "";
+    const rows = _sharing ? shareRows() : [];
+    const html = rows.map(shareCardHtml).join("");
     const present = !!list.querySelector(".share-card");
 
     /* 만든 HTML 이 직전과 같고 카드도 그대로 붙어 있으면 손대지 않습니다.
        (다시 그리면 <img> 가 새 요소가 되어 그림이 깜빡입니다) */
-    if (html === _lastShareHtml && present === !!html) { tickAgo(); return; }
+    if (html === _lastShareHtml && present === !!html) { tickShare(); return; }
 
     list.querySelectorAll(".share-card").forEach(el => el.remove());
-    if (html) list.insertAdjacentHTML("beforeend", html);
+
+    /* [고침 2026-08-06] 공유 카드를 그 사람의 프로필 카드 바로 뒤에 끼웁니다.
+       예전에는 목록 맨 끝에 몰아 붙여서, 누구 화면인지 눈으로 잇기 어려웠어요.
+       접속자 목록에 그 사람이 없으면(방금 나갔다든지) 맨 뒤에 붙입니다. */
+    rows.forEach(row => {
+      const own = Array.from(list.querySelectorAll(".user-card:not(.share-card)"))
+        .find(el => el.getAttribute("data-card-nick") === row.nick);
+      const one = shareCardHtml(row);
+      if (own) own.insertAdjacentHTML("afterend", one);
+      else list.insertAdjacentHTML("beforeend", one);
+    });
     _lastShareHtml = html;
 
-    tickAgo();          // 방금 붙인 카드에 "n초 전"을 채웁니다
+    tickShare();
     // 크게 보기가 열려 있으면 그 그림도 새것으로 바꿔 줍니다
     syncLightbox();
   }
 
-  /* "n초 전"만 1초마다 고쳐 씁니다 — 카드를 다시 만들지 않으므로
-     그림이 깜빡이지 않습니다. 20초가 넘으면 흐리게, 30초가 넘으면 뺍니다. */
-  function tickAgo() {
+  /* 1초마다 끊김만 살핍니다 — 카드를 다시 만들지 않으므로 깜빡이지 않아요.
+     20초가 넘으면 흐리게, 30초가 넘으면 카드를 뺍니다.
+     ("n초 전" 글자는 뺐습니다 — 화면이 흐려지는 것만으로 충분해서요) */
+  function tickShare() {
     const t = now();
     document.querySelectorAll(".share-card").forEach(card => {
       const at = Number(card.getAttribute("data-share-at") || 0);
       const age = t - at;
       if (age > SHARE_DROP_MS) { card.remove(); _lastShareHtml = null; return; }
       card.classList.toggle("is-stale", age > SHARE_STALE_MS);
-      const ago = card.querySelector(".share-ago");
-      if (ago) ago.textContent = agoText(age);
     });
   }
 
