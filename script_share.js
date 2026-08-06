@@ -6,7 +6,7 @@
 
    브라우저 화면 캡쳐(getDisplayMedia)로 창을 하나 잡습니다. 그 영상은
    이 컴퓨터 안에서만 흐릅니다. 5초에 한 번, **내 컴퓨터에서 먼저**
-   아주 작은 캔버스(가로 48~192px)에 옮겨 그려 글자를 못 읽게 뭉갠 다음,
+   아주 작은 캔버스(가로 52~210px)에 옮겨 그려 글자를 못 읽게 뭉갠 다음,
    그 작은 그림 한 장만 서버로 보냅니다. 원본 해상도의 프레임은 서버로도
    다른 사람에게도 절대 나가지 않습니다. 나가는 것은 언제나 뭉갠 뒤입니다.
 
@@ -31,21 +31,21 @@
    ===================================================================== */
 (function () {
   /* 모자이크 강도 — 작은 캔버스의 가로 픽셀 수가 곧 강도입니다.
-     가로 48px 이면 화면 전체가 마흔여덟 칸으로 뭉개집니다. */
+     가로 52px 이면 화면 전체가 쉰두 칸으로 뭉개집니다. */
   const SHARE_LEVELS = [
-    { name: "약함", w: 192 },
-    { name: "보통", w: 96 },
-    { name: "강함", w: 48 }
+    { name: "약함", w: 210 },
+    { name: "보통", w: 105 },
+    { name: "강함", w: 52 }
   ];
-  /* [고침 2026-08-06 · 2차] 88px 는 너무 뭉개져 "무슨 창인지"조차 안 보였습니다.
-     세 단을 통째로 두 배 넘게 키웠어요.
+  /* [고침 2026-08-06 · 3차] 약함을 210px 로. 나머지 두 단은 절반씩 —
+     210 → 105 → 52 로 맞춰, 한 단 내릴 때마다 뭉개짐이 두 배가 됩니다.
 
-     가로 192px 이면 1920px 짜리 화면이 10분의 1로 줄어듭니다. 창 배치와
+     가로 210px 이면 1920px 짜리 화면이 9분의 1로 줄어듭니다. 창 배치와
      색, 문단 덩어리는 알아볼 수 있지만 글자는 여전히 못 읽습니다 —
-     본문 16px 글자가 1.6px 로 뭉개지기 때문입니다(획이 아예 사라짐).
+     본문 16px 글자가 1.7px 로 뭉개지기 때문입니다(획이 아예 사라짐).
      더 키우고 싶으면 이 숫자만 올리세요. 다만 250 을 넘으면 슬슬
      큰 제목 정도는 읽힐 수 있으니 그 아래로 두는 편이 안전합니다. */
-  const SHARE_DEFAULT_LEVEL = 0;          // 기본은 "약함"(192px)
+  const SHARE_DEFAULT_LEVEL = 0;          // 기본은 "약함"(210px)
 
   const SHARE_INTERVAL_MS = 5000;         // 5초에 한 장
   /* 그림이 커졌으니 상한도 함께 올립니다. 8KB 로 두면 대부분의 프레임이
@@ -128,7 +128,7 @@
     const ctx = cv.getContext("2d");
     ctx.drawImage(_video, 0, 0, w, h);
 
-    /* 192px 폭 JPEG 0.5 품질이면 보통 5~15KB 입니다. 그림이 복잡해서
+    /* 210px 폭 JPEG 0.5 품질이면 보통 5~15KB 입니다. 그림이 복잡해서
        24KB 를 넘으면 품질을 0.4 → 0.3 → 0.22 로 낮춰 다시 만들고,
        그래도 넘으면 이 프레임은 통째로 건너뜁니다. */
     for (const q of SHARE_QUALITIES) {
@@ -230,7 +230,6 @@
 
     detachScreens();
     _screensCache = null;
-    closeShareLightbox();
     _lastShareHtml = null;
     renderShareCards();                // 공유를 끄면 남의 화면도 치웁니다
     renderShareButton();
@@ -348,7 +347,7 @@
       <div class="user-card share-card${mine ? " is-me" : ""}"
            data-share-nick="${esc(row.nick)}" data-share-at="${row.at}"
            title="${esc(SHARE_NOTICE)}">
-        <div class="share-shot" role="button" tabindex="0" title="크게 보기">
+        <div class="share-shot">
           <img class="share-img" src="${row.img}" alt="${esc(row.nick)} 님이 공유 중인 화면 (모자이크)">
           <span class="share-live">● 공유 중</span>
         </div>
@@ -386,8 +385,6 @@
     _lastShareHtml = html;
 
     tickShare();
-    // 크게 보기가 열려 있으면 그 그림도 새것으로 바꿔 줍니다
-    syncLightbox();
   }
 
   /* 1초마다 끊김만 살핍니다 — 카드를 다시 만들지 않으므로 깜빡이지 않아요.
@@ -403,55 +400,9 @@
     });
   }
 
-  /* ---------------------------------------------------------------
-     크게 보기 (라이트박스) — 뭉갠 그림을 화면 가운데 크게.
-     배경을 누르면 닫힙니다.
-     --------------------------------------------------------------- */
-  function openShareLightbox(nick) {
-    const row = shareRows().find(r => r.nick === nick);
-    if (!row) return;
-    closeShareLightbox();
-
-    const box = document.createElement("div");
-    box.id = "share-lightbox";
-    box.className = "share-lightbox";
-    box.innerHTML = `
-      <div class="share-lightbox-in">
-        <img class="share-big" src="${row.img}" alt="${esc(nick)} 님이 공유 중인 화면 (모자이크)">
-        <div class="share-lightbox-cap">${esc(nick)} · 🖥️ 화면 · 5초마다 한 장</div>
-        <div class="share-lightbox-note">${esc(SHARE_NOTICE)}</div>
-        <button type="button" class="share-lightbox-close" data-share-close="1">닫기</button>
-      </div>`;
-    box.addEventListener("click", (e) => {
-      // 배경(또는 [닫기])을 누르면 닫힙니다. 그림을 누른 건 그대로 둡니다.
-      if (e.target === box || e.target.closest("[data-share-close]")) closeShareLightbox();
-    });
-    document.body.appendChild(box);
-    document.addEventListener("keydown", onLightboxKey);
-  }
-
-  function closeShareLightbox() {
-    const box = document.getElementById("share-lightbox");
-    if (box) box.remove();
-    document.removeEventListener("keydown", onLightboxKey);
-  }
-
-  function onLightboxKey(e) {
-    if (e.key === "Escape") closeShareLightbox();
-  }
-
-  /* 새 그림이 오면 열려 있는 크게 보기도 따라 갱신 */
-  function syncLightbox() {
-    const box = document.getElementById("share-lightbox");
-    if (!box) return;
-    const img = box.querySelector(".share-big");
-    const cap = box.querySelector(".share-lightbox-cap");
-    if (!img || !cap) return;
-    const nick = cap.textContent.split(" · ")[0];
-    const row = shareRows().find(r => r.nick === nick);
-    if (!row) { closeShareLightbox(); return; }
-    if (img.getAttribute("src") !== row.img) img.setAttribute("src", row.img);
-  }
+  /* [뺌 2026-08-06] 크게 보기(라이트박스)는 없앴습니다.
+     카드를 누르면 화면이 크게 떠서, 뭉갠 그림이라도 부담스럽다는 얘기가
+     있었어요. 이제 공유 화면은 카드 안에서만 보입니다. */
 
   /* ---------------------------------------------------------------
      카드 안 클릭 — 위임으로 한 번만 답니다
@@ -461,21 +412,11 @@
     if (!list || list.__shareBound) return;
     list.__shareBound = true;
 
+    /* 이제 카드 안에서 할 일은 [off] 하나뿐입니다.
+       카드를 눌러도 아무 일도 일어나지 않습니다. */
     list.addEventListener("click", (e) => {
       const off = e.target.closest("[data-share-stop]");
       if (off) { e.stopPropagation(); stopScreenShare(); return; }
-
-      const card = e.target.closest(".share-card");
-      if (card) openShareLightbox(card.getAttribute("data-share-nick"));
-    });
-
-    list.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      const shot = e.target.closest(".share-shot");
-      if (!shot) return;
-      e.preventDefault();
-      const card = shot.closest(".share-card");
-      if (card) openShareLightbox(card.getAttribute("data-share-nick"));
     });
   }
 
@@ -484,7 +425,7 @@
      --------------------------------------------------------------- */
   window.toggleScreenShare = toggleScreenShare;
   /* 화면에는 버튼이 없지만, 뭉갠 정도를 바꿔보고 싶으면 F12 콘솔에서
-     setShareLevel(0|1|2) — 0 약함(192px) · 1 보통(96px) · 2 강함(48px) */
+     setShareLevel(0|1|2) — 0 약함(210px) · 1 보통(105px) · 2 강함(52px) */
   window.setShareLevel = setShareLevel;
   window.stopScreenShare   = stopScreenShare;
   window.renderShareCards  = renderShareCards;

@@ -4571,10 +4571,12 @@ html[data-theme-style="night"] #timer-pill[data-phase] #timer-text{
    (코드는 남겨두고 화면에서만 감춥니다 — 되살리기 쉬움) ── */
 .pomo-status-line{ display: none !important; }
 
-/* ── 맨 위 헤더 — 양쪽에 프로필 카드 폭만큼 숨 쉴 자리 ── */
+/* ── 맨 위 헤더 — 양쪽에 프로필 카드 폭만큼 숨 쉴 자리 ──
+   [고침 2026-08-06] 버튼이 늘어 줄이 넘치기 시작해서, 여백을
+   카드 폭의 80% 로 줄였습니다 (214px → 약 171px). */
 .app-head{
-  padding-left: var(--card-w);
-  padding-right: var(--card-w);
+  padding-left: calc(var(--card-w) * 0.8);
+  padding-right: calc(var(--card-w) * 0.8);
 }
 @media (max-width: 1100px){
   .app-head{ padding-left: 16px; padding-right: 16px; }
@@ -6075,7 +6077,7 @@ body.split-dragging #chat-box3{ user-select: none; }
    화면 그림이 남는 자리를 전부 채우고, 아래 한 줄만 남깁니다.
    비율이 안 맞으면 양옆(또는 위아래)이 잘립니다 — 그게 낫습니다. */
 .share-card{
-  cursor: zoom-in;
+  cursor: default;                 /* 눌러도 아무 일 없습니다 */
   border-color: var(--danger-line);
   display: flex;
   flex-direction: column;
@@ -6158,55 +6160,4 @@ body.split-dragging #chat-box3{ user-select: none; }
   cursor: pointer;
 }
 
-/* 크게 보기 — 배경을 누르면 닫힙니다 */
-.share-lightbox{
-  position: fixed;
-  inset: 0;
-  z-index: 9500;
-  background: rgba(0,0,0,.72);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  cursor: zoom-out;
-}
-.share-lightbox-in{
-  max-width: min(880px, 92vw);
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  cursor: default;
-}
-.share-big{
-  width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: var(--r-md);
-  background: #000;
-  image-rendering: pixelated;
-}
-.share-lightbox-cap{
-  color: rgba(255,255,255,.94);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-}
-.share-lightbox-note{
-  color: rgba(255,255,255,.62);
-  font-size: var(--fs-2xs);
-  text-align: center;
-  line-height: 1.5;
-  word-break: keep-all;
-}
-.share-lightbox-close{
-  margin-top: 2px;
-  padding: 7px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.28);
-  background: rgba(255,255,255,.10);
-  color: rgba(255,255,255,.92);
-  font-size: var(--fs-2xs);
-  cursor: pointer;
-}
-.share-lightbox-close:hover{ background: rgba(255,255,255,.18); }
+/* [뺌 2026-08-06] 크게 보기(라이트박스)는 없앴습니다 — 카드 안에서만 봅니다 */
