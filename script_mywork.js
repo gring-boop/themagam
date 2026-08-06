@@ -214,7 +214,7 @@
 
       cells += `<span class="${cls}" data-d="${key}" role="button" tabindex="0"
                       aria-label="${label}" aria-pressed="${key === _sel ? "true" : "false"}"
-                      title="${dowLabel(key)} — 누르면 그날 할 일 · 두 번 누르면 휴가">${
+                      title="${dowLabel(key)} — 클릭: 그날 할 일 · 더블 클릭: 휴가">${
         vac ? "🏖️" : (on ? "✓" : d)}${dot}</span>`;
     }
 
@@ -233,7 +233,7 @@
         <span>🏖️ 이번 달 휴가 <b>${vacCount}일</b></span>
       </div>
       <p class="mw-calhint">
-        날짜를 누르면 그날 할 일이 보여요 · 두 번 누르면 휴가로 표시돼요
+        <b>클릭</b> — 그날 할 일 보기 · <b>더블 클릭</b> — 휴가로 표시
       </p>`;
   }
 
@@ -404,11 +404,20 @@
     if (!root) return;
     _bound = true;
 
-    root.addEventListener("click", onClick);
-    root.addEventListener("dblclick", onDblClick);
-    root.addEventListener("input", onInput);
-    root.addEventListener("change", onChange);
-    root.addEventListener("keydown", onKeydown);
+    /* [고침 2026-08-06] 리스너를 바깥 덮개가 아니라 **안쪽 상자**에 답니다.
+
+       [무엇이 잘못됐었나]
+       팝업 껍데기(#mywork-modal)에는 "바깥을 누르면 닫기"가 걸려 있고,
+       안쪽 상자(.modal-content)에는 onclick="event.stopPropagation()" 이
+       붙어 있습니다. 그래서 안에서 누른 click 은 껍데기까지 올라오지
+       못했고, 껍데기에 달아둔 이 리스너는 한 번도 불리지 않았습니다.
+       (dblclick 은 막히지 않아서 휴가 토글만 되던 이유입니다) */
+    const box = root.querySelector(".modal-content") || root;
+    box.addEventListener("click", onClick);
+    box.addEventListener("dblclick", onDblClick);
+    box.addEventListener("input", onInput);
+    box.addEventListener("change", onChange);
+    box.addEventListener("keydown", onKeydown);
   }
 
   function onClick(e) {

@@ -526,6 +526,208 @@ ok(/\.card-conn\.off/.test(CSS), "끊김 모양이 정의돼 있다");
     ok(new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS), `CSS 에 .${c} 가 있다`));
 }
 
+/* ---- 15. 🗂️ 나의 작업 (출석 달력 · 할 일 · 목표 · 기록) ----
+
+   [2026-08-06] 머리말의 [📅 출석부] 와 [🗓️ 일정] 을 한 창으로 합쳤습니다.
+   합치는 작업은 "옮기다가 하나를 흘리는" 사고가 특히 잦아서, 옮긴 것과
+   버린 것을 둘 다 붙잡아 둡니다.
+
+   ★ 이 블록을 파일 위쪽에 둔 이유
+
+   checks.js 는 node 가 모듈로 읽습니다. 모듈 맨 바깥의 `return` 은
+   **거기서 파일을 끝냅니다.** 아래쪽 로그인 검사 블록이 return 으로
+   끝나기 때문에, 그보다 뒤에 적은 블록은 통째로 실행되지 않아요.
+   (실제로 예전 "설정 → 나의 기록" 블록이 그렇게 죽어 있었고, 화면에는
+    "전부 통과"라고만 나왔습니다.) 새 블록은 반드시 여기 위쪽에 둡니다. */
+{
+  const mw = fs.readFileSync(DIR+"script_mywork.js","utf8");
+  const dt = fs.readFileSync(DIR+"script_data.js","utf8");
+  const tl = fs.readFileSync(DIR+"script_timelog.js","utf8");
+  const pr = fs.readFileSync(DIR+"script_profile.js","utf8");
+  const bs = fs.readFileSync(DIR+"build-single.py","utf8");
+  const FLAT = CSS.replace(/\s+/g, " ");
+
+  /* ── 옛 일정 기능이 정말 빠졌는가 ── */
+  ok(!/script_schedule\.js/.test(HTML), "index.html 이 옛 일정 스크립트를 부르지 않는다");
+  ok(!/script_schedule\.js/.test(bs),   "단일파일 빌드 목록에서도 빠졌다");
+  ok(!/id="schedule-modal"/.test(HTML), "일정 팝업 자리가 없다");
+  ok(!/openSchedule|switchScheduleTab/.test(HTML), "일정 버튼·탭이 남아 있지 않다");
+  ok(!/sch-cell|sch-pill|sch-table/.test(CSS), "일정 팝업 CSS 도 함께 지웠다");
+  /* 주석에는 "일정은 없앴다"는 설명이 남아 있으므로, 주석을 걷어내고 봅니다.
+     (예전에 이 함정에 한 번 걸렸습니다) */
+  const MW = mw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  ok(!/schedule/i.test(MW), "새 창은 일정 데이터를 읽지도 쓰지도 않는다");
+  if (fs.existsSync(DIR+"script_schedule.js")) {
+    const old = fs.readFileSync(DIR+"script_schedule.js","utf8");
+    ok(!/window\.openSchedule/.test(old), "남아 있는 옛 파일은 비어 있다 (아무것도 내보내지 않는다)");
+  } else {
+    ok(true, "옛 일정 파일이 지워졌다");
+  }
+
+  /* ── 머리말 버튼은 하나뿐 ── */
+  ok(/onclick="openMyWork\(\)"/.test(HTML), "머리말에 [🗂️ 나의 작업] 버튼이 있다");
+  ok((HTML.match(/openMyWork\(\)/g) || []).length === 1, "그 버튼은 하나뿐이다");
+  ok(!/onclick="showMyAttendance\(\)"/.test(HTML), "머리말의 [📅 출석부] 버튼은 빠졌다");
+  ok(HTML.indexOf('onclick="openMyWork()"') < HTML.indexOf('onclick="openManual()"'),
+     "[나의 작업] 이 [가이드] 왼쪽에 있다 (예전 출석부 자리)");
+
+  /* ── 창 뼈대 ── */
+  ["mywork-modal","mywork-cal","mywork-tabs","mywork-goal-slot",
+   "mywork-panel-todo","mywork-panel-goal","mywork-panel-rec"].forEach(id =>
+    ok(new RegExp('id="'+id+'"').test(HTML), `${id} 자리가 있다`));
+  ["todo","goal","rec"].forEach(k =>
+    ok(new RegExp('data-mw-tab="'+k+'"').test(HTML), `${k} 탭 버튼이 있다`));
+  ok(/— MY DESK —/.test(HTML), "표지식 작은 제목이 있다");
+  ok(/id="mywork-title">나의 작업</.test(HTML), "명조 제목이 '나의 작업' 이다");
+
+  {
+    /* ★ 설정 모달과 클래스 이름이 겹치면 안 됩니다.
+       openTab() 은 문서 전체의 .tab / .panel 에서 active 를 떼어냅니다.
+       나의 작업 탭이 같은 이름을 쓰면, 설정에서 탭을 한 번 누르는 것만으로
+       이 창의 탭이 통째로 꺼집니다. */
+    const a = HTML.indexOf('id="mywork-modal"');
+    const b = HTML.indexOf('id="settings-modal"');
+    const seg = HTML.slice(a, b > a ? b : HTML.length);
+    ok(seg.length > 500, "나의 작업 창 덩어리를 찾았다");
+    ok(!/class="tabs?[ "]/.test(seg), "설정 탭과 같은 클래스(.tab/.tabs)를 쓰지 않는다");
+    ok(!/class="panel[ "]/.test(seg), "설정 패널과 같은 클래스(.panel)를 쓰지 않는다");
+    ok(/closeMyWork\(\)/.test(seg), "닫기 버튼이 창 안에 있다");
+  }
+
+  /* ── 창구 ── */
+  ["openMyWork","closeMyWork","switchMyWorkTab","renderMyWorkIfOpen"].forEach(f =>
+    ok(new RegExp("window\\."+f+" =").test(mw), `${f} 를 밖에서 부를 수 있다`));
+  ok(/"script_mywork\.js":\s+"openMyWork"/.test(HTML), "로드 자가진단 목록에 새 파일이 있다");
+
+  /* ── 왼쪽 출석 달력 ── */
+  ok(/att-grid/.test(mw) && /att-day/.test(mw), "옛 출석 달력의 뼈대를 그대로 쓴다");
+  ok(/attend\/days/.test(mw), "출석 도장을 users/{닉}/attend/days 에서 읽는다");
+  ok(/vacations\//.test(mw), "휴가를 users/{닉}/vacations 에 쓴다");
+  ok(/이 달 <b>\$\{attended\}일<\/b> 출석했어요/.test(mw), "이 달 출석 일수를 알려준다");
+  ok(/🏖️ 이번 달 휴가 <b>\$\{vacCount\}일<\/b>/.test(mw), "이번 달 휴가 일수를 알려준다");
+  ok(/data-mv="-1"/.test(mw) && /data-mv="1"/.test(mw), "‹ › 로 달을 넘긴다");
+  /* [고침 2026-08-06] 문구를 "누르면" → "클릭 / 더블 클릭" 으로 바꿨습니다 */
+  ok(/<b>클릭<\/b>/.test(mw) && /<b>더블 클릭<\/b>/.test(mw),
+     "단일·더블 클릭 안내 문구가 달력 아래에 있다");
+  /* [추가 2026-08-06] 팝업 안쪽 상자는 click 을 막습니다(.modal-content 의
+     stopPropagation). 리스너를 껍데기에 달면 단일 클릭이 통째로 죽습니다. */
+  ok(/querySelector\(["'`]\.modal-content["'`]\)/.test(mw),
+     "클릭 리스너를 안쪽 상자(.modal-content)에 단다");
+  ok(/addEventListener\("dblclick"/.test(mw), "더블클릭을 따로 듣는다");
+  ok(/_clickTimer = setTimeout/.test(mw) && /DBL_MS/.test(mw),
+     "단일 클릭은 잠깐 기다렸다 처리한다 (더블클릭과 겹치지 않게)");
+  ok(/toggleVac\(cell\.dataset\.d\)/.test(mw), "두 번 누르면 휴가를 껐다 켠다");
+  ok(!/showMyAttendance/.test(MW), "옛 출석 팝업을 다시 띄우지 않는다 (창이 겹치지 않게)");
+  ok(/mw-dot/.test(mw) && /is-clear/.test(mw), "그날 할 일이 있으면 점을 찍고, 다 끝냈으면 옅게 한다");
+  ok(/key === _sel \? "picked"/.test(mw), "고른 날짜를 따로 표시한다");
+  ok(/\.att-day\.picked\{[^}]*inset 0 0 0 2px/.test(FLAT), "고른 날짜는 짙은 안쪽 테두리다");
+  ok(/\.att-day\.today\{[^}]*outline/.test(FLAT), "오늘은 바깥 테두리라 고른 날짜와 구분된다");
+
+  /* ── 📌 할 일 — 연동 규칙 ── */
+  ok(/window\.renderMyWorkIfOpen\?\.\(\)/.test(dt), "할 일이 바뀌면 나의 작업 창도 다시 그린다");
+  ok(!/renderScheduleIfOpen/.test(dt), "옛 일정 훅이 남아 있지 않다");
+  ok(/function todosForProfileList/.test(dt), "프로필 목록용 걸러내기가 있다");
+  ok(/const items = todosForProfileList\(\)/.test(dt), "프로필 투두 목록이 그 걸러내기를 쓴다");
+  ["getTodoItems","toggleTodoDone","setTodoDue","addTodoWithDue","editTodo","deleteTodo"]
+    .forEach(f => ok(new RegExp("window\\."+f+" =").test(dt), `${f} 창구가 열려 있다`));
+  ok(/window\.addTodoWithDue/.test(mw), "새 창은 그 창구로 할 일을 넣는다");
+  ok(!/db\.ref\([^)]*todos/.test(mw), "새 창이 할 일을 직접 저장하지 않는다 (주인은 script_data.js)");
+  ok(/날짜 없는 할 일/.test(mw), "날짜 없는 할 일 칸이 있다");
+  ok(/개 중 \$\{doneN\}개 완료/.test(mw), "그날 몇 개 중 몇 개를 끝냈는지 보여준다");
+  ok(/todo-scope-hint/.test(HTML), "프로필 투두에도 무엇만 보이는지 안내가 붙어 있다");
+
+  {
+    /* ★ 규칙을 말로만 적어두면 언젠가 어긋납니다 — 실제로 굴려봅니다.
+       프로필 팝업에는 오늘 것 · 날짜 없는 것 · 🔁 반복만 보여야 합니다. */
+    const a = dt.indexOf("function todosForProfileList");
+    const b = dt.indexOf("window.todosForProfileList");
+    const ctx = { console };
+    ctx.window = ctx;
+    ctx._list = [];
+    ctx.ymd = () => "2026-08-06";
+    ctx.isTodoDue = v => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    ctx.getTodoItemsFromUI = () => ctx._list;
+    vm.createContext(ctx);
+    vm.runInContext(dt.slice(a, b) + "\nglobalThis.F = todosForProfileList;", ctx);
+
+    ctx._list = [
+      { id:"오늘",   due:"2026-08-06" },
+      { id:"다음달", due:"2026-09-01" },
+      { id:"지난것", due:"2026-08-01" },
+      { id:"날짜없음" },
+      { id:"반복",   routine:true, due:"2026-09-01" }
+    ];
+    const got = ctx.F().map(x => x.id).join(",");
+    ok(got === "오늘,날짜없음,반복",
+       "프로필에는 오늘 것·날짜 없는 것·반복만 보인다 ("+got+")");
+    ok(ctx.F().length !== ctx._list.length, "다른 날짜 것은 프로필에서 가려진다");
+  }
+
+  /* ── 🎯 목표 탭 ── */
+  ok(/window\.mountStatusBlock/.test(pr), "목표 덩어리를 옮기는 함수가 있다");
+  ok(/mountStatusBlock/.test(mw), "🎯 목표 탭이 그 함수를 쓴다");
+  ok(!/innerHTML/.test(mw.slice(mw.indexOf("function renderGoalPanel"),
+                                mw.indexOf("function renderRecPanel"))),
+     "목표 덩어리를 다시 그리지 않고 옮기기만 한다 (다시 그리면 저장이 끊깁니다)");
+  {
+    const sb = HTML.slice(HTML.indexOf('id="status-block"'), HTML.indexOf('id="todo-block"'));
+    ok(/resetTodayWorkTime/.test(sb),
+       "[⏱️ 오늘 작업 시간 초기화] 가 #status-block 안에 있다 (목표 탭으로 함께 옮겨감)");
+    ok(/id="db-today-goal-text"/.test(sb), "오늘 목표 입력칸도 같은 덩어리다");
+  }
+
+  /* ── 📊 기록 탭 — 설정에서 옮겨왔습니다 ── */
+  ok(/mywork-panel-rec/.test(tl), "기록 화면이 새 자리를 찾는다");
+  ok(/renderMyRecordPanel/.test(mw), "📊 기록 탭이 그 함수를 쓴다");
+  ok(/window\.renderMyRecordPanel/.test(tl), "그리는 함수가 밖에서 불린다");
+  ok(!/data-tab="record"/.test(HTML), "설정의 📊 나의 작업 탭이 빠졌다");
+  ok(!/id="panel-record"/.test(HTML), "설정의 기록 패널 자리도 빠졌다");
+  ok(!/name === "record"/.test(pr), "설정 탭 전환 훅에서도 빠졌다");
+
+  /* ★ 팝업과 기록 탭이 같은 코드를 써야 합니다.
+     예전처럼 openRecord 안에 HTML 이 박혀 있으면, 다른 자리용으로 복사하게
+     되고 한쪽만 고치는 사고가 반드시 납니다. */
+  ok(/function recordHtml\(rows/.test(tl), "기록 화면을 만드는 함수가 하나로 떼어져 있다");
+  ok((tl.match(/rec-today/g) || []).length === 1, "기록 화면 뼈대가 한 곳에만 있다 (복사본 없음)");
+  ok(/body\.innerHTML = recordHtml\(/.test(tl), "카드 기록 팝업이 그 함수를 쓴다");
+  ok(/recordHtml\(await loadSummary\(myNick, 7/.test(tl), "나의 작업의 📊 기록도 그 함수를 쓴다");
+  ok(/Wordcount\?\.myWeekHtml/.test(tl), "글자수 요약도 함께 가져다 쓴다");
+  ok(/글자수 기록을 불러오지 못했어요/.test(tl), "글자수를 못 가져와도 화면이 깨지지 않는다");
+  ok(/입장 후에 볼 수 있어요/.test(tl), "입장 전에는 그렇다고 알려준다");
+
+  {
+    /* 글자수 요약 — 옛 검사는 myWeekHtml() 을 그 자리에서 굴려 결과 글을
+       들여다봤습니다. 그 함수가 그 뒤 async 로 바뀌면서 이제는 Promise 가
+       돌아옵니다(문자열이 아니라). 이 검사 블록은 동기라 기다릴 수 없어서,
+       "무엇이 들어 있어야 하는가"를 코드에서 봅니다. */
+    const wc = fs.readFileSync(DIR+"script_wordcount.js","utf8");
+    ok(/myWeekHtml/.test(wc), "글자수 요약을 만드는 함수가 있다");
+    ok(/async function myWeekHtml/.test(wc), "그 함수는 서버를 기다리는 async 다");
+    ok(/await window\.Wordcount\?\.myWeekHtml|\(await window\.Wordcount\?\.myWeekHtml|await Wordcount/.test(tl)
+       || /\(window\.Wordcount\?\.myWeekHtml \? await window\.Wordcount\.myWeekHtml/.test(tl),
+       "쓰는 쪽이 await 로 기다린다 (Promise 를 그대로 붙이면 [object Promise] 가 나옵니다)");
+    ok(/rec-big/.test(wc),  "글자수 요약에 오늘 숫자 자리가 있다");
+    ok(/이번 주/.test(wc),  "이번 주 합계 자리도 있다");
+    ok(/출발선/.test(wc),   "출발선을 안 잡았으면 그렇다고 알려준다");
+  }
+
+  /* ── 디자인 (원고지 결) ── */
+  ok(/#mywork-modal \.modal-content\{ width: min\(920px/.test(FLAT), "창이 넉넉하다 (920px)");
+  ok(/#mywork-modal \.modal-content\{[^}]*#FAF6EC/.test(FLAT), "원고지 종이 바탕을 쓴다");
+  ok(/#mywork-modal \.modal-content\{[^}]*1\.5px solid #B3372B/.test(FLAT), "붉은 테두리를 두른다");
+  ok(/#mywork-modal \.modal-content\{[^}]*Noto Serif KR|#mywork-modal \.modal-title\{[^}]*Noto Serif KR/.test(FLAT),
+     "제목이 명조다");
+  ok(/\.mw-tab\.is-on\{[^}]*#4A140D/.test(FLAT) && /\.mw-tab\.is-on\{[^}]*#FFFDF6/.test(FLAT),
+     "고른 탭은 짙은 붉은 바탕에 흰 글자다");
+  ok(/@media \(max-width: 720px\)\{ \.mw-cols\{ flex-direction: column/.test(FLAT),
+     "좁은 화면에서는 달력이 위, 탭이 아래로 간다");
+  ["mw-eyebrow","mw-cols","mw-calwrap","mw-side","mw-calhead","mw-caltitle",
+   "mw-nav","mw-todaybtn","mw-calfoot","mw-calhint","mw-dot","mw-tabs","mw-tab",
+   "mw-panel","mw-dayhead","mw-daytitle","mw-todaytag","mw-daycount","mw-todolist",
+   "mw-todo","mw-chk","mw-empty","mw-add","mw-add-in","mw-add-btn","mw-sep","mw-hint"]
+    .forEach(c => ok(new RegExp("\\."+c+"[^a-zA-Z0-9_-]").test(CSS), `CSS 에 .${c} 가 있다`));
+}
+
 /* 보안 규칙이 앱이 쓰는 경로를 모두 덮는가
 
    [왜] 규칙에 없는 경로는 파이어베이스가 조용히 거절합니다. 오류가
@@ -1243,53 +1445,14 @@ function checkWordcount(){
   })();
 }
 
-/* ---- 15. 설정 → 나의 기록 ---- */
-{
-  const H  = fs.readFileSync(DIR+"index.html","utf8");
-  const tl = fs.readFileSync(DIR+"script_timelog.js","utf8");
-  const wc = fs.readFileSync(DIR+"script_wordcount.js","utf8");
-  const pr = fs.readFileSync(DIR+"script_profile.js","utf8");
+/* [2026-08-06] 여기 있던 "15. 설정 → 나의 기록" 블록은 위쪽(보안 규칙
+   블록 앞)의 "15. 🗂️ 나의 작업" 으로 옮겼습니다.
 
-  ok(/id="panel-record"/.test(H), "설정에 나의 기록 자리가 있다");
-  ok(/data-tab="record"/.test(H), "탭 버튼이 있다");
-  ok(/name === "record"/.test(pr), "그 탭을 열면 내용을 그린다");
-  ok(/window\.renderMyRecordPanel/.test(tl), "그리는 함수가 밖에서 불린다");
-
-  /* ★ 팝업과 설정이 같은 코드를 써야 합니다.
-     예전처럼 openRecord 안에 HTML 이 박혀 있으면, 설정용으로 복사하게
-     되고 한쪽만 고치는 사고가 반드시 납니다. */
-  ok(/function recordHtml\(rows\)/.test(tl), "기록 화면을 만드는 함수가 하나로 떼어져 있다");
-  ok((tl.match(/rec-today/g) || []).length === 1, "기록 화면 뼈대가 한 곳에만 있다 (복사본 없음)");
-  ok(/body\.innerHTML = recordHtml\(/.test(tl), "팝업이 그 함수를 쓴다");
-  ok(/recordHtml\(await loadSummary\(myNick, 7\)\)/.test(tl), "설정도 그 함수를 쓴다");
-
-  /* 글자수도 함께 보여야 합니다 */
-  ok(/myWeekHtml/.test(wc), "글자수 요약을 만드는 함수가 있다");
-  ok(/Wordcount\?\.myWeekHtml/.test(tl), "설정이 글자수 요약을 가져다 쓴다");
-  ok(/글자수 기록을 불러오지 못했어요/.test(tl), "글자수를 못 가져와도 화면이 깨지지 않는다");
-  ok(/입장 후에 볼 수 있어요/.test(tl), "입장 전에는 그렇다고 알려준다");
-
-  /* 실제로 그려봅니다 */
-  {
-    const inputs = {};
-    const mk = id => (inputs[id] = { id, innerHTML: "", textContent: "",
-      style:{}, classList:{toggle(){},add(){},remove(){},contains(){return false}},
-      addEventListener(){}, querySelectorAll(){return []}, focus(){}, select(){} });
-    ["wc-big","wc-unit","wc-rows","wc-hint","wc-log","wc-input",
-     "wc-send","wc-base","wc-reset","wc-fresh","wordcount-block"].forEach(mk);
-    const ctx = { console, Date, Number, Math, JSON, String, Object,
-      document:{ readyState:"complete", addEventListener(){}, getElementById:id=>inputs[id]||null } };
-    ctx.window = ctx; ctx.myNick = "호랑";
-    ctx.db = { ref:()=>({ update(){}, push(){}, limitToLast(){return this}, on(){}, off(){} }) };
-    vm.createContext(ctx);
-    vm.runInContext(wc, ctx);
-    const html = ctx.Wordcount.myWeekHtml();
-    ok(/rec-big/.test(html), "글자수 요약에 오늘 숫자가 들어간다");
-    ok(/이번 주/.test(html), "이번 주 합계도 들어간다");
-    ok(!/NaN|undefined/.test(html), "기록이 하나도 없어도 깨지지 않는다");
-    ok(/출발선/.test(html), "출발선을 안 잡았으면 그렇다고 알려준다");
-  }
-}
+   두 가지를 함께 고쳤어요.
+     · 내용 — 그 기록 화면은 설정 탭이 아니라 나의 작업 창으로 옮겼습니다.
+     · 자리 — 이 자리는 위쪽 로그인 블록의 `return` 때문에 **실행되지
+       않는 죽은 자리**였습니다. 검사를 적어두어도 아무도 돌리지 않았어요.
+   새 블록은 반드시 그 return 보다 위에 둡니다. */
 
 function finish(){
   /* ★ 블록이 통째로 안 돌던 사고가 있었습니다.
@@ -1297,8 +1460,10 @@ function finish(){
      화면에는 "전부 통과"라고 나왔어요. 검사 개수가 크게 줄면
      그런 일이 생긴 것이므로, 최소 개수를 지켜봅니다. */
   /* [2026-08-03] 펫 기능을 빼면서 펫 검사 ~130개가 함께 빠졌습니다.
-     새 기준: 390개 언저리 → 하한 380. */
-  const MIN = 380;
+     새 기준: 390개 언저리 → 하한 380.
+     [2026-08-06] 🗂️ 나의 작업 검사가 붙어 470개 언저리 → 하한 440.
+     (죽어 있던 "설정 → 나의 기록" 블록도 살려서 위로 옮겼습니다) */
+  const MIN = 440;
   if (pass + fail < MIN) {
     console.log(`\n검사가 ${pass+fail}개밖에 안 돌았습니다 (${MIN}개 이상이어야 함).`);
     console.log("블록 하나가 실행되지 않은 것 같아요 — 비동기 블록의 연결을 확인하세요.");

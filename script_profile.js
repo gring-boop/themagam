@@ -681,6 +681,10 @@ function openGoals() {
   const modal = document.getElementById("goals-modal");
   if (!modal) return;
   mountGoalBlocks(document.getElementById("goals-body"));
+  /* [추가 2026-08-06] 열 때마다 목록을 다시 그립니다.
+     🗂️ 나의 작업에서 넣은 할 일이 곧바로 보이도록 하는 안전장치예요
+     (덩어리를 옮겨 오는 과정에서 낡은 화면이 남는 일을 막습니다). */
+  try { window.renderTodoList?.(); } catch (e) {}
   modal.style.display = "flex";
 }
 function closeGoals() {

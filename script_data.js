@@ -174,6 +174,8 @@
     });
   }
   window.todosForProfileList = todosForProfileList;
+  /* 프로필 팝업이 열릴 때 목록을 새로 그리려고 내보냅니다 */
+  window.renderTodoList = () => renderTodoList();
 
   function renderTodoList() {
     const ul = document.getElementById("todo-list");
