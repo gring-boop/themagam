@@ -66,7 +66,59 @@
   function setTodoItemsToUI(items) {
     window._todoItems = _normalizeRoutineTodos(items);
     renderTodoList();
+
+    /* 투두가 바뀌면 🗓️ 일정 팝업의 달력·목록도 함께 바뀌어야 합니다.
+       (날짜가 붙은 투두를 거기서도 보여주니까요)
+       팝업이 닫혀 있으면 script_schedule.js 쪽이 알아서 아무것도 안 합니다. */
+    try { window.renderScheduleIfOpen?.(); } catch (e) {}
   }
+
+  // =====================================================
+  // ✅ 투두 날짜(due) — 있어도 되고 없어도 되는 선택 필드
+  // =====================================================
+  /* 항목에 `due: "YYYY-MM-DD"` 를 붙일 수 있습니다. 없는 항목은 예전과
+     똑같이 동작합니다(필드 자체가 아예 없어요).
+
+     [반복(🔁)과 날짜는 함께 쓰지 않습니다 — 한쪽을 켜면 다른 쪽이 꺼집니다]
+     반복은 "매일 새로 뜨는 일", 날짜는 "그 하루에 하는 일"이라 성격이
+     정반대입니다. 둘을 함께 두면 자정에 체크가 풀리면서 달력에 박힌
+     그 하루가 영영 "지난 미완료"로 붉게 남습니다. 그래서 날짜를 고르면
+     반복이 풀리고, 반복을 켜면 날짜가 지워집니다. */
+  const DUE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  function isTodoDue(v) {
+    return typeof v === "string" && DUE_RE.test(v);
+  }
+
+  /** 오늘부터 며칠 뒤인가 (어제면 -1, 오늘이면 0) */
+  function _todoDueDiff(due) {
+    const a = new Date(due + "T00:00:00");
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return Math.round((a.getTime() - t.getTime()) / 86400000);
+  }
+
+  /** 날짜 배지에 쓸 글자·모양. 날짜가 없으면 null */
+  function todoDueBadgeInfo(item) {
+    /* 반복 항목에 날짜가 함께 남아 있는 옛 자료라면 날짜는 없는 셈 칩니다
+       (저장할 때 실제로 털어냅니다 — _todosForSave 참고) */
+    if (!item || item.routine || !isTodoDue(item.due)) return null;
+
+    const [, mm, dd] = item.due.split("-");
+    const short = `${Number(mm)}/${dd}`;
+    const diff = _todoDueDiff(item.due);
+
+    if (diff === 0) {
+      return { text: "오늘", cls: "is-today", title: `오늘(${short})까지 하는 일이에요` };
+    }
+    if (diff < 0 && !item.done) {
+      return { text: `D+${-diff}`, cls: "is-late", title: `${short}에 하기로 했는데 ${-diff}일 지났어요` };
+    }
+    return { text: short, cls: "", title: `${item.due} 에 하는 일이에요` };
+  }
+
+  window.isTodoDue = isTodoDue;
+  window.todoDueBadgeInfo = todoDueBadgeInfo;
 
   // =====================================================
   // ✅ Todo render: “... 버튼 → 메뉴(수정/삭제)” + 한 줄 1개
@@ -107,8 +159,14 @@
     ul.innerHTML = "";
 
     items.forEach(item => {
+      const dueInfo = todoDueBadgeInfo(item);
+      const hasDue = !!dueInfo;
+      const dueShort = hasDue
+        ? `${Number(item.due.slice(5, 7))}/${item.due.slice(8, 10)}`
+        : "";
+
       const li = document.createElement("li");
-      li.className = "todo-item" + (item.done ? " done" : "");
+      li.className = "todo-item" + (item.done ? " done" : "") + (hasDue ? " has-due" : "");
       li.dataset.id = item.id;
 
       li.innerHTML = `
@@ -121,12 +179,23 @@
 
         <div class="todo-menu" role="menu">
           <button type="button" class="edit" role="menuitem">✏️ 수정</button>
+          <button type="button" class="due" role="menuitem">${hasDue ? `🗓️ 날짜 바꾸기 (${dueShort})` : "🗓️ 날짜 정하기"}</button>
+          ${hasDue ? `<button type="button" class="due-clear" role="menuitem">🚫 날짜 지우기</button>` : ""}
           <button type="button" class="routine" role="menuitem">${item.routine ? "🔁 반복 해제" : "🔁 매일 반복"}</button>
           <button type="button" class="danger delete" role="menuitem">🗑 삭제</button>
         </div>
       `;
 
       li.querySelector(".todo-text").textContent = item.text || "";
+
+      /* 날짜 배지 — 🔁 반복 배지와 나란히 텍스트 옆에 붙습니다 */
+      if (dueInfo) {
+        const dbadge = document.createElement("span");
+        dbadge.className = "todo-due-badge " + dueInfo.cls;
+        dbadge.textContent = dueInfo.text;
+        dbadge.title = dueInfo.title;
+        li.querySelector(".todo-left")?.appendChild(dbadge);
+      }
 
       if (item.routine) {
         const badge = document.createElement("span");
@@ -163,6 +232,18 @@
         editTodo(item.id);
       });
 
+      li.querySelector(".todo-menu .due").addEventListener("click", (e) => {
+        e.stopPropagation();
+        menu.classList.remove("open");
+        openTodoDuePicker(li, item);
+      });
+
+      li.querySelector(".todo-menu .due-clear")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menu.classList.remove("open");
+        setTodoDue(item.id, "");
+      });
+
       li.querySelector(".todo-menu .routine").addEventListener("click", (e) => {
         e.stopPropagation();
         menu.classList.remove("open");
@@ -183,6 +264,81 @@
 
   // 문서 어디든 클릭하면 메뉴 닫기
   document.addEventListener("click", () => _closeAllTodoMenus());
+
+  // =====================================================
+  // ✅ 날짜 고르는 줄 (항목 바로 아래에 잠깐 열리는 <input type="date">)
+  // =====================================================
+  /* prompt("2026-08-07 처럼 적어주세요") 는 휴대폰에서 특히 괴롭습니다.
+     달력이 뜨는 <input type="date"> 를 항목 아래에 끼워 넣고, 고르는
+     즉시 저장한 뒤 줄을 걷습니다. 취소도 됩니다. */
+  function _closeTodoDuePicker() {
+    document.querySelectorAll(".todo-duepick").forEach(n => n.remove());
+  }
+
+  function openTodoDuePicker(li, item) {
+    _closeTodoDuePicker();
+    if (!li || !li.parentNode) return;
+
+    const row = document.createElement("li");
+    row.className = "todo-duepick";
+    row.innerHTML = `
+      <span class="todo-duepick-label">🗓️ 언제 할까요?</span>
+      <input type="date" class="todo-duepick-input" aria-label="투두 날짜">
+      <button type="button" class="todo-duepick-btn today">오늘</button>
+      ${isTodoDue(item.due) ? `<button type="button" class="todo-duepick-btn clear">지우기</button>` : ""}
+      <button type="button" class="todo-duepick-btn cancel">취소</button>
+    `;
+
+    const inp = row.querySelector(".todo-duepick-input");
+    inp.value = isTodoDue(item.due) ? item.due : ymd(Date.now());
+
+    /* 고르는 즉시 저장 — 저장하면 목록을 다시 그리므로 줄은 저절로 사라집니다 */
+    inp.addEventListener("change", () => {
+      const v = String(inp.value || "");
+      if (!v) return;                 // 입력칸을 비운 것은 취소로 봅니다
+      setTodoDue(item.id, v);
+    });
+
+    row.querySelector(".todo-duepick-btn.today").addEventListener("click", () => {
+      setTodoDue(item.id, ymd(Date.now()));
+    });
+    row.querySelector(".todo-duepick-btn.clear")?.addEventListener("click", () => {
+      setTodoDue(item.id, "");
+    });
+    row.querySelector(".todo-duepick-btn.cancel").addEventListener("click", () => {
+      _closeTodoDuePicker();
+    });
+
+    li.parentNode.insertBefore(row, li.nextSibling);
+
+    /* 크롬·엣지는 showPicker() 로 달력을 바로 펼칠 수 있습니다.
+       지원하지 않는 브라우저에서는 그냥 입력칸에 초점만 갑니다. */
+    try { inp.focus(); inp.showPicker?.(); } catch (e) {}
+  }
+
+  /** 날짜 붙이기 / 떼기 ("" 를 주면 뗍니다) */
+  function setTodoDue(id, due) {
+    const v = isTodoDue(due) ? due : "";
+
+    const items = getTodoItemsFromUI().map(x => {
+      if (x.id !== id) return x;
+
+      const next = { ...x };
+      if (v) {
+        next.due = v;
+        /* 날짜와 반복은 함께 쓰지 않습니다 (위 주석 참고) */
+        if (next.routine) { next.routine = false; next.doneDay = ""; }
+      } else {
+        delete next.due;
+      }
+      return next;
+    });
+
+    _closeTodoDuePicker();
+    setTodoItemsToUI(items);
+    savePersonalData();
+  }
+
 
   function bindTodoInputEnter() {
     const inp = document.getElementById("todo-input");
@@ -233,9 +389,13 @@
   }
 
   function toggleRoutineTodo(id) {
-    const items = getTodoItemsFromUI().map(x =>
-      x.id === id ? ({...x, routine: !x.routine}) : x
-    );
+    const items = getTodoItemsFromUI().map(x => {
+      if (x.id !== id) return x;
+      const next = { ...x, routine: !x.routine };
+      /* 반복을 켜면 붙어 있던 날짜는 뗍니다 — 둘은 함께 쓰지 않아요 */
+      if (next.routine) delete next.due;
+      return next;
+    });
     setTodoItemsToUI(items);
     savePersonalData();
   }
@@ -282,14 +442,49 @@
   window.toggleRoutineTodo = toggleRoutineTodo;
   window.clearCompletedTodos = clearCompletedTodos;
 
+  /* 🗓️ 일정 팝업(script_schedule.js)이 쓰는 최소한의 창구.
+     투두의 주인은 여기(script_data.js)이므로, 달력 쪽에서는 읽기와
+     "체크 토글"만 이 함수를 통해 부탁합니다. */
+  window.getTodoItems = getTodoItemsFromUI;
+  window.toggleTodoDone = toggleTodo;
+  window.setTodoDue = setTodoDue;
+
   // =====================================================
   // ✅ Personal data (Firebase)
   // =====================================================
+  /* 저장 직전 청소.
+
+     Firebase 는 값 하나라도 undefined 면 저장 요청 **전체**를 거절합니다.
+     due 처럼 "있을 수도 없을 수도" 있는 필드가 생겼으니, 보내기 전에
+     undefined·null 을 털어내고 due 는 형식이 맞을 때만 남깁니다.
+     (모르는 필드는 건드리지 않고 그대로 옮깁니다 — 나중에 다른 곳에서
+      필드를 하나 더 붙여도 여기서 사라지지 않게) */
+  function _todosForSave() {
+    return getTodoItemsFromUI().map((x, i) => {
+      const src = (x && typeof x === "object") ? x : {};
+      const out = {};
+
+      Object.keys(src).forEach(k => {
+        const v = src[k];
+        if (v === undefined || v === null) return;
+        if (k === "due") return;                 // due 는 아래에서 따로 검사
+        out[k] = v;
+      });
+
+      if (isTodoDue(src.due) && !src.routine) out.due = src.due;
+
+      if (!out.id) out.id = `${Date.now()}_${i}`;   // 아주 옛 자료 대비
+      out.text = String(out.text == null ? "" : out.text);
+      out.done = !!out.done;
+      return out;
+    });
+  }
+
   function savePersonalData() {
     if (!myNick) return;
 
     const data = {
-      todoItems: getTodoItemsFromUI(),
+      todoItems: _todosForSave(),
       todayGoalText: document.getElementById("db-today-goal-text")?.value || "",
       todayDone: document.getElementById("db-today-done")?.value || "",
       statusChoice: document.getElementById("db-status")?.value || "rest"
@@ -375,7 +570,7 @@
     if (!myNick) return;
     const payload = {
       at: Date.now(),
-      todoItems: getTodoItemsFromUI(),
+      todoItems: _todosForSave(),
       todayGoalText: document.getElementById("db-today-goal-text")?.value || "",
       todayDone: document.getElementById("db-today-done")?.value || "",
       status: document.getElementById("db-status")?.value || "writing",

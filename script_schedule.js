@@ -53,6 +53,12 @@
     { id: "done",  label: "완료",   bg: "#E2EAD8", fg: "#3E5230" }
   ];
 
+  /* 할 일(투두)에서 건너온 알약의 색.
+     일정 종류 색표에는 넣지 않습니다 — 투두는 여기서 만드는 물건이
+     아니라 프로필 팝업에서 온 손님이라, 색도 종류도 중립이어야
+     "이건 일정이 아니구나"가 한눈에 보입니다. */
+  const TODO_TAG = { label: "할 일", bg: "#F1EEE7", fg: "#5F5647" };
+
   /* 밖에서도 들여다볼 수 있게 (색만 살짝 바꿔보고 싶을 때) */
   window.SCHEDULE_KINDS  = SCHEDULE_KINDS;
   window.SCHEDULE_STATES = SCHEDULE_STATES;
@@ -156,6 +162,49 @@
     const g = {};
     allItems().forEach(it => { (g[it.date] = g[it.date] || []).push(it); });
     return g;
+  }
+
+  /* ---------------------------------------------------------------
+     🗓️ 날짜가 붙은 할 일 — 여기서는 "읽기만" 합니다
+
+     투두의 주인은 script_data.js 입니다(프로필 팝업의 그 목록이에요).
+     여기서는 window._todoItems 를 읽어 달력에 얹어 보여주고, 체크를
+     껐다 켜는 것만 script_data.js 가 열어둔 창구(window.toggleTodoDone)에
+     부탁합니다. 고치기·지우기는 일부러 막아 두었습니다 — 한 물건을
+     두 곳에서 고치게 만들면 언젠가 반드시 어긋나니까요.
+     --------------------------------------------------------------- */
+  function todoRows() {
+    const src = (typeof window.getTodoItems === "function")
+      ? window.getTodoItems()
+      : window._todoItems;
+
+    return (Array.isArray(src) ? src : [])
+      .filter(t => t && !t.routine && /^\d{4}-\d{2}-\d{2}$/.test(String(t.due || "")))
+      .map(t => ({
+        isTodo: true,
+        id: String(t.id || ""),
+        date: String(t.due),
+        title: String(t.text || ""),
+        done: !!t.done,
+        at: Number(t.createdAt || 0)
+      }))
+      .filter(t => t.id);
+  }
+
+  function todosByDate() {
+    const g = {};
+    todoRows().forEach(t => { (g[t.date] = g[t.date] || []).push(t); });
+    return g;
+  }
+
+  /** 일정 + 할 일을 한 줄로 세운 목록 (일정 탭의 표에 씁니다) */
+  function allRowsMixed() {
+    return allItems().concat(todoRows())
+      .sort((a, b) =>
+        a.date.localeCompare(b.date) ||
+        (a.isTodo ? 1 : 0) - (b.isTodo ? 1 : 0) ||   // 같은 날이면 일정 먼저
+        a.at - b.at
+      );
   }
 
   function isOpen() {
@@ -282,6 +331,7 @@
     const lastDay = new Date(y, m + 1, 0).getDate();
     const today = todayStr();
     const g = groupByDate();
+    const gt = todosByDate();
 
     let cells = "";
     /* 1일이 시작되기 전 빈 칸 */
@@ -290,7 +340,10 @@
     }
     for (let d = 1; d <= lastDay; d++) {
       const ds = dateStr(y, m, d);
-      const list = g[ds] || [];
+      const sch = g[ds] || [];
+      const tds = gt[ds] || [];
+      /* 일정을 먼저, 할 일을 그 아래에. 한 칸에 너무 많으면 "+N" 으로 접습니다 */
+      const list = sch.concat(tds);
       const shown = list.slice(0, MAX_PILL);
       const rest = list.length - shown.length;
       const cls = [
@@ -299,11 +352,15 @@
         ds === _formDate ? "is-picked" : ""
       ].filter(Boolean).join(" ");
 
+      const countLabel = tds.length
+        ? `일정 ${sch.length}개, 할 일 ${tds.length}개`
+        : `일정 ${sch.length}개`;
+
       cells += `<div class="${cls}" data-date="${ds}" role="button" tabindex="0"
-                     aria-label="${y}년 ${m + 1}월 ${d}일, 일정 ${list.length}개">
+                     aria-label="${y}년 ${m + 1}월 ${d}일, ${countLabel}">
           <span class="sch-daynum">${d}</span>
           <span class="sch-pills">
-            ${shown.map(pillHtml).join("")}
+            ${shown.map(it => it.isTodo ? todoPillHtml(it) : pillHtml(it)).join("")}
             ${rest > 0 ? `<span class="sch-more">+${rest}</span>` : ""}
           </span>
         </div>`;
@@ -328,6 +385,8 @@
         ${SCHEDULE_KINDS.map(k =>
           `<span class="sch-pill sch-pill-static" style="background:${k.bg};color:${k.fg}">${k.label}</span>`
         ).join("")}
+        <span class="sch-pill sch-pill-static sch-todopill"
+              style="background:${TODO_TAG.bg};color:${TODO_TAG.fg}">☐ ${TODO_TAG.label}</span>
       </div>`;
   }
 
@@ -336,6 +395,14 @@
     return `<button type="button" class="sch-pill${it.state === "done" ? " is-done" : ""}"
               data-key="${esc(it.key)}" style="background:${k.bg};color:${k.fg}"
               title="${esc(it.title)} · ${k.label} · ${stateOf(it.state).label}">${esc(it.title || "(제목 없음)")}</button>`;
+  }
+
+  /* 할 일 알약 — 일정과 헷갈리지 않게 점선 테두리 + 옅은 바탕 + ☐/☑ */
+  function todoPillHtml(t) {
+    return `<button type="button" class="sch-pill sch-todopill${t.done ? " is-done" : ""}"
+              data-act="todotoggle" data-todo="${esc(t.id)}"
+              style="background:${TODO_TAG.bg};color:${TODO_TAG.fg}"
+              title="할 일 · ${esc(t.title)} (눌러서 완료 표시)">${t.done ? "☑" : "☐"} ${esc(t.title || "(제목 없음)")}</button>`;
   }
 
   /** 달력 아래에 열리는 인라인 폼 — 새로 넣기와 고치기가 같은 폼입니다 */
@@ -374,11 +441,11 @@
   function listHtml() {
     const y = _cur.y, m = _cur.m;
     const prefix = `${y}-${String(m + 1).padStart(2, "0")}`;
-    const rows = allItems().filter(it => _showAll || it.date.startsWith(prefix));
+    const rows = allRowsMixed().filter(it => _showAll || it.date.startsWith(prefix));
     const today = todayStr();
 
     const body = rows.length
-      ? rows.map(it => rowHtml(it, today)).join("")
+      ? rows.map(it => it.isTodo ? todoRowHtml(it, today) : rowHtml(it, today)).join("")
       : `<tr><td class="sch-empty" colspan="6">${_showAll
             ? "아직 적어둔 일정이 없어요."
             : `${y}년 ${m + 1}월에는 일정이 없어요. 전체 보기를 켜면 다른 달도 보여요.`}</td></tr>`;
@@ -423,6 +490,7 @@
       <p class="hint">
         제목·메모는 <b>눌러서 바로 고칠 수</b> 있어요 (Enter 또는 다른 곳을 누르면 저장).
         종류·상태는 고르는 즉시 저장됩니다.
+        <b>할 일</b> 줄은 프로필의 투두에서 건너온 것이라 여기서는 체크만 됩니다.
       </p>`;
   }
 
@@ -455,6 +523,33 @@
           <button type="button" class="sch-del" data-act="del" data-k="${esc(it.key)}"
                   aria-label="이 일정 지우기" title="지우기">✕</button>
         </td>
+      </tr>`;
+  }
+
+  /* 할 일 줄 — 일정 줄과 같은 표에 섞이되, 한눈에 달라 보이게.
+     종류 칸은 중립색 "할 일" 뱃지, 상태는 예정/완료 두 가지뿐(누르면 토글),
+     메모·삭제 칸은 비활성입니다(투두는 프로필 팝업이 주인이니까요). */
+  function todoRowHtml(t, today) {
+    const dd = new Date(t.date + "T00:00:00");
+    const dow = DOW[dd.getDay()];
+    const late = !t.done && t.date < today;
+
+    return `
+      <tr class="sch-row sch-row-todo${t.done ? " is-done" : ""}${t.date === today ? " is-today" : ""}" data-todo="${esc(t.id)}">
+        <td class="c-date"><span class="sch-date">${t.date.slice(5).replace("-", ".")}</span><span class="sch-dowmark">(${dow})</span></td>
+        <td class="c-title">
+          <span class="sch-todotitle">${t.done ? "☑" : "☐"} ${esc(t.title || "(제목 없음)")}</span>
+          ${late ? `<span class="sch-todolate" title="날짜가 지났어요">지남</span>` : ""}
+        </td>
+        <td class="c-kind">
+          <span class="sch-tag-todo" style="background:${TODO_TAG.bg};color:${TODO_TAG.fg}">${TODO_TAG.label}</span>
+        </td>
+        <td class="c-state">
+          <button type="button" class="sch-todostate" data-act="todotoggle" data-todo="${esc(t.id)}"
+                  title="눌러서 완료 표시를 바꿔요">${t.done ? "☑ 완료" : "☐ 예정"}</button>
+        </td>
+        <td class="c-memo"><span class="sch-todohint">프로필에서 관리</span></td>
+        <td class="c-del"><span class="sch-del is-off" title="할 일은 프로필 팝업에서 고치고 지워요">·</span></td>
       </tr>`;
   }
 
@@ -538,6 +633,11 @@
   }
 
   function handleAct(act, node) {
+    if (act === "todotoggle") {
+      toggleTodoHere(node.dataset.todo);
+      return;
+    }
+
     if (act === "today") {
       const t = new Date();
       _cur = { y: t.getFullYear(), m: t.getMonth() };
@@ -586,6 +686,54 @@
       }
       return;
     }
+  }
+
+  /* 할 일 체크 껐다 켜기.
+
+     저장은 script_data.js 가 합니다(그쪽이 투두의 주인이니까요).
+     저장 함수는 setTodoItemsToUI → renderScheduleIfOpen 을 거쳐 이 화면도
+     다시 그려주므로, 여기서 render() 를 또 부를 필요가 없습니다. */
+  function toggleTodoHere(id) {
+    if (!id) return;
+    const t = todoRows().find(x => x.id === String(id));
+    if (!t) return;
+
+    const next = !t.done;
+
+    if (typeof window.toggleTodoDone === "function") {
+      window.toggleTodoDone(t.id, next);
+    } else {
+      /* 창구가 없는 아주 옛 화면 대비 — 직접 고치고 저장을 부탁합니다 */
+      const list = Array.isArray(window._todoItems) ? window._todoItems : [];
+      const day = (window.ymd ? window.ymd(Date.now()) : todayStr());
+      window._todoItems = list.map(x =>
+        (x && String(x.id) === String(id))
+          ? { ...x, done: next, doneDay: next ? day : "" }
+          : x
+      );
+      try { window.savePersonalData?.(); } catch (e) {}
+      render();
+    }
+
+    schToast(next ? "완료 표시했어요 ☑" : "다시 예정으로 되돌렸어요 ☐");
+  }
+
+  /* 짧은 안내 쪽지. 일정 팝업(z-index 6300)보다 위에 떠야 해서
+     body 에 붙입니다 — 팝업 안에 넣으면 다시 그릴 때 함께 지워집니다. */
+  let _toastTimer = null;
+  function schToast(text) {
+    let n = el("sch-toast");
+    if (!n) {
+      n = document.createElement("div");
+      n.id = "sch-toast";
+      n.className = "sch-toast";
+      n.setAttribute("role", "status");
+      document.body.appendChild(n);
+    }
+    n.textContent = text;
+    n.classList.add("show");
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => n.classList.remove("show"), 1600);
   }
 
   function onChange(e) {
@@ -739,7 +887,14 @@
     if (e.key === "Escape" && isOpen()) closeSchedule();
   });
 
+  /* 투두가 바뀌었을 때 script_data.js 가 불러주는 창구.
+     팝업이 닫혀 있으면 아무것도 하지 않습니다(괜히 그리면 낭비니까요). */
+  function renderScheduleIfOpen() {
+    if (isOpen()) render();
+  }
+
   window.openSchedule = openSchedule;
   window.closeSchedule = closeSchedule;
   window.switchScheduleTab = switchScheduleTab;
+  window.renderScheduleIfOpen = renderScheduleIfOpen;
 })();

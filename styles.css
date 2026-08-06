@@ -2000,6 +2000,80 @@ body.pomo-nonpart .pomo-status-line{
   margin-left: var(--sp-1);
 }
 
+/* 날짜 배지 — 🔁 반복 배지와 나란히 섭니다.
+   평소엔 중립색, 오늘은 강조색, 지났는데 아직 안 끝냈으면 붉게. */
+.todo-due-badge{
+  flex: 0 0 auto;
+  margin-left: var(--sp-1);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: var(--fill-1);
+  color: var(--muted-strong);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.todo-due-badge.is-today{
+  border-style: solid;
+  border-color: var(--accent-line);
+  background: var(--accent-softer);
+  color: var(--on-accent-btn);
+  font-weight: var(--fw-bold);
+}
+.todo-due-badge.is-late{
+  border-style: solid;
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+  color: var(--on-danger-btn);
+  font-weight: var(--fw-bold);
+}
+.todo-item.done .todo-due-badge{ opacity: .5; }
+
+/* 항목 아래에 잠깐 열리는 날짜 고르는 줄 */
+.todo-duepick{
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px var(--sp-3);
+  margin-top: -4px;
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--accent-softer);
+}
+.todo-duepick-label{
+  font-size: var(--fs-xs);
+  color: var(--muted-strong);
+  font-weight: var(--fw-medium);
+}
+.todo-duepick-input{
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-radius: var(--r-sm);
+  padding: 5px 7px;
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  min-height: 32px;
+  max-width: 100%;
+}
+.todo-duepick-btn{
+  border: 1px solid var(--border);
+  background: var(--fill-1);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 5px 9px;
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.todo-duepick-btn:hover{ background: var(--fill-2); }
+.todo-duepick-btn.clear{ color: var(--on-danger-btn); }
+
 .todo-more{
   width: var(--tap-sm);
   height: var(--tap-sm);
@@ -5593,6 +5667,87 @@ body.split-dragging #chat-box3{ user-select: none; }
   color: var(--muted);
   padding: var(--sp-5) var(--sp-3);
 }
+
+/* ── 🗓️ 날짜가 붙은 할 일 (프로필 투두에서 건너온 손님) ────────
+   일정과 헷갈리면 안 되니 모양을 일부러 다르게 둡니다.
+   알약은 점선 테두리, 표에서는 중립색 "할 일" 뱃지. */
+.sch-pill.sch-todopill{
+  border: 1px dashed #C9C0B0;
+  font-weight: var(--fw-normal);
+}
+.sch-pill.sch-todopill.is-done{ opacity: .5; text-decoration: line-through; }
+.sch-legend .sch-todopill{ font-weight: var(--fw-medium); }
+
+.sch-tag-todo{
+  display: inline-block;
+  border: 1px dashed #C9C0B0;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.sch-row-todo td{ background: var(--fill-1); }
+.sch-todotitle{
+  display: inline-block;
+  padding: 5px 6px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+.sch-row-todo.is-done .sch-todotitle{ text-decoration: line-through; }
+.sch-todolate{
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--danger-soft);
+  color: var(--on-danger-btn);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+}
+.sch-todostate{
+  width: 100%;
+  border: 1px dashed #C9C0B0;
+  background: transparent;
+  color: var(--muted-strong);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: var(--fs-xs);
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sch-todostate:hover{ background: var(--panel2); }
+.sch-todohint{ color: var(--muted); font-size: var(--fs-2xs); }
+.sch-del.is-off{
+  display: inline-block;
+  color: var(--muted);
+  opacity: .5;
+  cursor: default;
+}
+
+/* 달력에서 할 일을 눌렀을 때 잠깐 뜨는 쪽지 (일정 팝업보다 위) */
+.sch-toast{
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 6400;
+  max-width: min(320px, 86vw);
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--anim-fast), transform var(--anim-fast);
+}
+.sch-toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ── 좁은 화면 ──────────────────────────────────────────────── */
 @media (max-width: 560px){
