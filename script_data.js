@@ -174,8 +174,13 @@
     });
   }
   window.todosForProfileList = todosForProfileList;
-  /* 프로필 팝업이 열릴 때 목록을 새로 그리려고 내보냅니다 */
-  window.renderTodoList = () => renderTodoList();
+  /* [고침 2026-08-06] 여기에 `window.renderTodoList = () => renderTodoList()`
+     를 두었다가 목록이 통째로 사라졌습니다.
+
+     이 파일은 IIFE 로 감싸여 있지 않아서, 최상위 `function renderTodoList`
+     가 곧 `window.renderTodoList` 입니다. 거기에 화살표 함수를 덮어쓰면
+     화살표 안의 이름도 그 화살표를 가리켜 자기를 끝없이 부릅니다.
+     이미 전역에 있으니 따로 내보낼 필요가 없었어요. */
 
   function renderTodoList() {
     const ul = document.getElementById("todo-list");
