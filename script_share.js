@@ -6,14 +6,14 @@
 
    브라우저 화면 캡쳐(getDisplayMedia)로 창을 하나 잡습니다. 그 영상은
    이 컴퓨터 안에서만 흐릅니다. 5초에 한 번, **내 컴퓨터에서 먼저**
-   아주 작은 캔버스(가로 22~88px)에 옮겨 그려 알아볼 수 없게 뭉갠 다음,
+   아주 작은 캔버스(가로 48~192px)에 옮겨 그려 글자를 못 읽게 뭉갠 다음,
    그 작은 그림 한 장만 서버로 보냅니다. 원본 해상도의 프레임은 서버로도
    다른 사람에게도 절대 나가지 않습니다. 나가는 것은 언제나 뭉갠 뒤입니다.
 
    [무엇이 서버에 남는가]
      screens/{닉} = { img: 뭉갠 JPEG dataURL, at: 서버시각, level: 가로 픽셀 }
-   한 장이 보통 1~3KB, 상한 8KB. 5초에 한 번이니 한 사람이 공유하는 동안
-   시간당 대략 1~2MB 정도가 오갑니다. 낡은 그림은 덮어쓰기라 쌓이지 않고,
+   한 장이 보통 5~15KB, 상한 24KB. 5초에 한 번이니 한 사람이 공유하는 동안
+   시간당 대략 10~17MB 정도가 오갑니다. 낡은 그림은 덮어쓰기라 쌓이지 않고,
    공유를 끄거나 창이 닫히면(onDisconnect) 서버에서 사라집니다.
 
    [보기 규칙 — 공유 중인 사람끼리만]
@@ -31,19 +31,28 @@
    ===================================================================== */
 (function () {
   /* 모자이크 강도 — 작은 캔버스의 가로 픽셀 수가 곧 강도입니다.
-     가로 22px 이면 화면 전체가 스물두 칸으로 뭉개집니다. */
+     가로 48px 이면 화면 전체가 마흔여덟 칸으로 뭉개집니다. */
   const SHARE_LEVELS = [
-    { name: "약함", w: 88 },
-    { name: "보통", w: 44 },
-    { name: "강함", w: 22 }
+    { name: "약함", w: 192 },
+    { name: "보통", w: 96 },
+    { name: "강함", w: 48 }
   ];
-  /* [고침 2026-08-06] 기본을 "약함"(88px)으로. 화면에서 고를 수 없게 됐으니
-     기본값이 곧 유일한 값입니다 — 뭉갠 정도는 이 상수로만 바꿉니다. */
-  const SHARE_DEFAULT_LEVEL = 0;          // 기본은 "약함"(88px)
+  /* [고침 2026-08-06 · 2차] 88px 는 너무 뭉개져 "무슨 창인지"조차 안 보였습니다.
+     세 단을 통째로 두 배 넘게 키웠어요.
+
+     가로 192px 이면 1920px 짜리 화면이 10분의 1로 줄어듭니다. 창 배치와
+     색, 문단 덩어리는 알아볼 수 있지만 글자는 여전히 못 읽습니다 —
+     본문 16px 글자가 1.6px 로 뭉개지기 때문입니다(획이 아예 사라짐).
+     더 키우고 싶으면 이 숫자만 올리세요. 다만 250 을 넘으면 슬슬
+     큰 제목 정도는 읽힐 수 있으니 그 아래로 두는 편이 안전합니다. */
+  const SHARE_DEFAULT_LEVEL = 0;          // 기본은 "약함"(192px)
 
   const SHARE_INTERVAL_MS = 5000;         // 5초에 한 장
-  const SHARE_MAX_BYTES   = 8 * 1024;     // 한 장 상한 8KB
-  const SHARE_QUALITIES   = [0.5, 0.4, 0.3];  // 상한을 넘으면 품질을 낮춰 다시
+  /* 그림이 커졌으니 상한도 함께 올립니다. 8KB 로 두면 대부분의 프레임이
+     상한에 걸려 통째로 버려져서, 화면이 5초가 아니라 몇십 초에 한 번씩만
+     바뀝니다. 24KB 면 5초마다 보내도 한 사람당 시간당 17MB 남짓입니다. */
+  const SHARE_MAX_BYTES   = 24 * 1024;    // 한 장 상한 24KB
+  const SHARE_QUALITIES   = [0.5, 0.4, 0.3, 0.22];  // 상한을 넘으면 품질을 낮춰 다시
   const SHARE_STALE_MS    = 20 * 1000;    // 20초 넘게 소식이 없으면 "끊김"(흐리게)
   const SHARE_DROP_MS     = 30 * 1000;    // 30초 넘으면 목록에서 뺍니다
   const SHARE_LEVEL_KEY   = "shareLevel";
@@ -68,7 +77,7 @@
   let _video      = null;    // 숨긴 <video> — 화면에는 보이지 않습니다
   let _canvas     = null;    // 뭉개는 작은 캔버스 (한 장을 계속 재사용)
   let _timer      = null;    // 5초 타이머
-  let _agoTimer   = null;    // "n초 전" 갱신 타이머 (1초)
+  let _agoTimer   = null;    // 끊김 살피는 타이머 (1초)
   let _screensRef = null;    // screens 구독 — 공유 중일 때만 삽니다
   let _screensCache = null;
   let _levelIdx   = SHARE_DEFAULT_LEVEL;
@@ -119,9 +128,9 @@
     const ctx = cv.getContext("2d");
     ctx.drawImage(_video, 0, 0, w, h);
 
-    /* 44px 폭 JPEG 0.5 품질이면 보통 1~3KB 입니다. 그림이 복잡해서
-       8KB 를 넘으면 품질을 0.4, 0.3 으로 낮춰 다시 만들고, 그래도
-       넘으면 이 프레임은 통째로 건너뜁니다. */
+    /* 192px 폭 JPEG 0.5 품질이면 보통 5~15KB 입니다. 그림이 복잡해서
+       24KB 를 넘으면 품질을 0.4 → 0.3 → 0.22 로 낮춰 다시 만들고,
+       그래도 넘으면 이 프레임은 통째로 건너뜁니다. */
     for (const q of SHARE_QUALITIES) {
       const url = cv.toDataURL("image/jpeg", q);
       if (dataUrlBytes(url) <= SHARE_MAX_BYTES) return url;
@@ -475,7 +484,7 @@
      --------------------------------------------------------------- */
   window.toggleScreenShare = toggleScreenShare;
   /* 화면에는 버튼이 없지만, 뭉갠 정도를 바꿔보고 싶으면 F12 콘솔에서
-     setShareLevel(0|1|2) — 0 약함(88px) · 1 보통(44px) · 2 강함(22px) */
+     setShareLevel(0|1|2) — 0 약함(192px) · 1 보통(96px) · 2 강함(48px) */
   window.setShareLevel = setShareLevel;
   window.stopScreenShare   = stopScreenShare;
   window.renderShareCards  = renderShareCards;
