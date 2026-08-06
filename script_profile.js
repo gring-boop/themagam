@@ -659,6 +659,22 @@ function mountGoalBlocks(host) {
 }
 window.mountGoalBlocks = mountGoalBlocks;
 
+/* [2026-08-06] 목표 덩어리만 따로 옮기기 — 🗂️ 나의 작업 창의 🎯 목표 탭용.
+   그 탭에는 오늘 목표와 [⏱️ 오늘 작업 시간 초기화] 만 있으면 되고,
+   할 일은 옆의 📌 할 일 탭이 날짜별로 따로 보여주니까요.
+   (둘 다 #status-block 한 덩어리 안에 들어 있습니다)
+
+   덩어리는 문서 전체에 하나뿐이라, 프로필 팝업을 열면 그쪽이 도로
+   가져갑니다. 값이 두 벌로 갈라지지 않으니 그래도 괜찮습니다. */
+function mountStatusBlock(host) {
+  if (!host) return;
+  const el = document.getElementById("status-block");
+  if (!el) return;
+  el.classList.add("in-profile");
+  host.appendChild(el);
+}
+window.mountStatusBlock = mountStatusBlock;
+
 /** 카드 아래칸 → 목표·투두 팝업 */
 function openGoals() {
   if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
@@ -1082,7 +1098,8 @@ window.bindCardEditDelegate = bindCardEditDelegate;
       _openTab.apply(this, arguments);
       if (name === "profile") renderProfilePanel();
       if (name === "goals")   mountGoalBlocks(document.getElementById("panel-goals"));
-      if (name === "record")  window.renderMyRecordPanel?.();
+      /* [2026-08-06] "📊 나의 작업" 탭은 설정에서 뺐습니다 —
+         머리말의 [🗂️ 나의 작업] → 📊 기록 탭이 같은 것을 그립니다. */
     };
     wrapped.__profilePatched = true;
     window.openTab = wrapped;

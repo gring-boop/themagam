@@ -546,8 +546,18 @@
      집필 시간과 글자수는 같은 하루를 다른 각도에서 본 값이라,
      나란히 두면 "오래 앉아 있었는데 덜 썼네" 같은 게 보입니다.
      --------------------------------------------------------------- */
+  /* [2026-08-06] 그릴 자리 찾기.
+
+     예전에는 설정 모달의 "📊 나의 작업" 탭(#panel-record)에 그렸습니다.
+     지금은 머리말의 [🗂️ 나의 작업] 창 안(#mywork-panel-rec)으로 옮겼어요.
+     옛 자리도 함께 봐 둡니다 — 어느 한쪽만 있어도 그려지도록. */
+  function recordPanelHost() {
+    return document.getElementById("mywork-panel-rec")
+        || document.getElementById("panel-record");
+  }
+
   async function renderMyRecordPanel(backWeeks = 0, wcBack = 0) {
-    const host = document.getElementById("panel-record");
+    const host = recordPanelHost();
     if (!host) return;
 
     if (!myNick) {

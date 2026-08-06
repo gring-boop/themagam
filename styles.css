@@ -2964,7 +2964,7 @@ body.pomo-nonpart .pomo-status-line{
    더 만들 때도 여기에 이름을 추가해야 합니다. */
 #record-modal,
 #goals-modal,
-#schedule-modal,
+#mywork-modal,
 #record-modal-legacy-unused{
   position: fixed; inset: 0;
   display: none;
@@ -2978,7 +2978,7 @@ body.pomo-nonpart .pomo-status-line{
 }
 #record-modal .modal-content,
 #goals-modal .modal-content,
-#schedule-modal .modal-content,
+#mywork-modal .modal-content,
 #panel-modal .modal-content{
   width: min(460px, 100%);
   max-height: calc(100vh - 32px);
@@ -2986,8 +2986,8 @@ body.pomo-nonpart .pomo-status-line{
   overflow: auto;
 }
 
-/* 일정은 달력과 표가 들어가서 넉넉해야 합니다 (460 → 760) */
-#schedule-modal .modal-content{ width: min(760px, 100%); }
+/* 나의 작업은 달력과 탭이 나란히 들어가서 넉넉해야 합니다 (460 → 920) */
+#mywork-modal .modal-content{ width: min(920px, 100%); }
 
 /* 목표·투두는 입력칸 몇 개뿐이라 좁아도 됩니다 (520 → 416) */
 #goals-modal .modal-content{ width: min(416px, 100%); }
@@ -5383,377 +5383,356 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .chatty-join-btn:hover{ background: var(--accent-softer); }
 
+
 /* =====================================================================
-   🗓️ 개인 일정 팝업 (.sch-*)
+   🗂️ 나의 작업 팝업 (.mw-*)
    ---------------------------------------------------------------------
-   틀(테두리·바탕·글자)은 테마 변수를 그대로 씁니다. 다만 **종류와
-   상태 색만은 고정 hex** 입니다. "마감은 늘 이 살구색"처럼 눈이
-   기억하는 색이라, 테마를 바꿨다고 함께 바뀌면 오히려 헷갈려요.
-   그 색은 script_schedule.js 의 SCHEDULE_KINDS 가 인라인 style 로
-   찍어 넣습니다 — 여기서는 모양만 잡습니다.
+   [2026-08-06] 예전의 [📅 출석부] + [🗓️ 일정] 두 창을 하나로 합쳤습니다.
+   여기 있던 .sch-* (개인 일정) 규칙은 기능과 함께 통째로 지웠습니다.
+
+   [왜 테마 변수를 이 안에서 갈아끼우는가]
+   이 창은 입장 창·관리자 페이지처럼 **늘 원고지 종이 결**이어야 합니다.
+   그런데 안으로 옮겨오는 덩어리(#status-block)와 📊 기록 화면(.set-block,
+   .rec-*)은 테마 변수를 그대로 씁니다. 어두운 테마에서는 글자가 흰색이라
+   크림색 종이 위에서 보이지 않게 돼요.
+   그래서 창 안쪽에서만 색 토큰을 종이 팔레트로 다시 정의합니다. 그러면
+   안에 들어오는 어떤 덩어리도 저절로 이 결을 따릅니다.
+   (바깥 화면의 테마는 하나도 건드리지 않습니다)
    ===================================================================== */
 
-#schedule-body{ margin-top: var(--sp-3); }
+#mywork-modal .modal-content{
+  /* ── 창 안에서만 쓰는 종이 팔레트 ── */
+  --text:          #2B2620;
+  --muted:         #8A7B68;
+  --muted-strong:  #6B5F52;
+  --sub-muted:     #8A7B68;
+  --border:        rgba(163,88,70,.28);
+  --panel:         rgba(255,253,246,.96);
+  --panel2:        #FFFDF6;
+  --surface:       rgba(255,253,246,.96);
+  --input-bg:      #FFFDF6;
+  --input-text:    #2B2620;
+  --focus-bg:      #FFFDF6;
+  --fill-1:        rgba(163,88,70,.08);
+  --fill-2:        rgba(163,88,70,.14);
+  --fill-3:        rgba(163,88,70,.20);
+  --accent:        #B3372B;
+  --accent-soft:   rgba(179,55,43,.16);
+  --accent-softer: rgba(179,55,43,.07);
+  --accent-line:   rgba(179,55,43,.28);
+  --accent-ring:   rgba(179,55,43,.45);
+  --on-accent-btn: #B3372B;
+  --me-text:       #FFFDF6;
+  --shadow:        0 2px 10px rgba(90,70,40,.10);
+  --shadow2:       0 1px 6px rgba(90,70,40,.08);
 
-/* ── 달력 머리말 (‹ 2026년 8월 › · 오늘) ───────────────────────── */
-.sch-calhead{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
+  /* ── 원고지 종이 ── */
+  background: #FAF6EC;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(163,88,70,.14) 23px 24px),
+    repeating-linear-gradient( 0deg, transparent 0 23px, rgba(163,88,70,.14) 23px 24px);
+  border: 1.5px solid #B3372B;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(90,70,40,.10);
+  color: #2B2620;
 }
-.sch-nav{
-  border: 1px solid var(--border);
-  background: var(--panel2);
-  color: var(--text);
-  border-radius: var(--r-sm);
-  width: 32px; height: 32px;
-  font-size: var(--fs-lg);
-  line-height: 1;
-  cursor: pointer;
-}
-.sch-nav:hover{ background: var(--fill-1); }
-.sch-caltitle{
-  font-weight: var(--fw-bold);
-  font-size: var(--fs-lg);
-  min-width: 8.5em;
+
+/* ── 표지식 제목 ─────────────────────────────────────────────── */
+#mywork-modal .mw-eyebrow{
   text-align: center;
-}
-.sch-todaybtn{ margin-left: var(--sp-1); }
-
-/* ── 요일 줄 ─────────────────────────────────────────────────── */
-.sch-dow{
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
   font-size: var(--fs-xs);
-  color: var(--muted);
-  text-align: center;
+  color: #B3372B;
+  letter-spacing: 1px;
+  font-weight: var(--fw-medium);
   margin-bottom: 4px;
 }
-.sch-dow .sun{ color: #C0392B; }
-.sch-dow .sat{ color: #2C4657; }
-
-/* ── 날짜 칸 ─────────────────────────────────────────────────── */
-.sch-grid{
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+#mywork-modal .modal-title{
+  font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+  text-align: center;
+  letter-spacing: 3px;
+  color: #2B2620;
+  margin-bottom: var(--sp-4);
 }
-.sch-cell{
-  min-height: 86px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: var(--panel2);
-  padding: 4px 4px 5px;
+#mywork-modal .hint{ color: #8A7B68; }
+#mywork-modal .hint b{ color: #6B5F52; }
+
+/* ── 두 칸 (왼쪽 달력 · 오른쪽 탭) ───────────────────────────── */
+.mw-cols{
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--anim-fast), border-color var(--anim-fast);
+  gap: var(--sp-4);
+  align-items: flex-start;
 }
-.sch-cell:hover{ background: var(--fill-1); }
-.sch-cell:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
-.sch-cell-blank{ border: none; background: none; cursor: default; min-height: 0; }
-.sch-cell-blank:hover{ background: none; }
-
-/* 오늘 — 붉은 테두리 */
-.sch-cell.is-today{ border-color: #C0392B; box-shadow: inset 0 0 0 1px #C0392B; }
-/* 지금 폼이 열린 칸 */
-.sch-cell.is-picked{ border-color: var(--accent); background: var(--accent-softer); }
-
-.sch-daynum{
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  color: var(--muted-strong);
-  line-height: 1;
-}
-.sch-cell.is-today .sch-daynum{ color: #C0392B; font-weight: var(--fw-bold); }
-
-.sch-pills{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-
-/* ── 종류 알약 ───────────────────────────────────────────────── */
-.sch-pill{
-  display: block;
-  width: 100%;
-  border: none;
-  border-radius: 6px;
-  padding: 2px 5px;
-  font-size: var(--fs-2xs);
-  font-weight: var(--fw-medium);
-  line-height: 1.35;
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sch-pill:hover{ filter: brightness(.96); }
-/* 완료한 일정은 옅게 */
-.sch-pill.is-done{ opacity: .5; text-decoration: line-through; }
-/* 아래 색표에 쓰는, 누를 수 없는 알약 */
-.sch-pill-static{ width: auto; cursor: default; }
-.sch-pill-static:hover{ filter: none; }
-
-.sch-more{
-  font-size: var(--fs-2xs);
-  color: var(--muted);
-  padding-left: 4px;
-}
-
-/* ── 색표 ───────────────────────────────────────────────────── */
-.sch-legend{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: var(--sp-3);
-  justify-content: center;
-}
-
-/* ── 달력 아래 인라인 폼 ─────────────────────────────────────── */
-.sch-formhint{ margin-top: var(--sp-3); text-align: center; }
-
-.sch-form{
-  margin-top: var(--sp-3);
-  border: 1px solid var(--accent-line);
-  background: var(--accent-softer);
-  border-radius: var(--r-md);
+.mw-calwrap{
+  flex: 0 0 300px;
+  min-width: 0;
+  background: rgba(255,253,246,.96);
+  border: 1px solid rgba(179,55,43,.30);
+  border-radius: 10px;
   padding: var(--sp-3);
 }
-.sch-form-head{
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  color: var(--muted-strong);
-  margin-bottom: var(--sp-2);
+.mw-side{
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.sch-form-row{
+
+/* ── 달력 머리말 (‹ 2026년 8월 › · 오늘) ───────────────────────── */
+.mw-calhead{
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  margin-bottom: var(--sp-1);
 }
-.sch-form-row + .sch-form-row{ margin-top: 6px; }
-
-/* ── 입력칸 · 드롭다운 공통 ──────────────────────────────────── */
-.sch-in,
-.sch-sel{
-  border: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--input-text);
-  border-radius: var(--r-sm);
-  padding: 6px 8px;
-  font-size: var(--fs-sm);
-  font-family: inherit;
-  min-height: 32px;
-  max-width: 100%;
-}
-.sch-in:focus,
-.sch-sel:focus{ outline: 2px solid var(--accent-ring); outline-offset: 0; }
-.sch-in-grow{ flex: 1 1 160px; min-width: 120px; }
-
-/* 표 안의 종류·상태 — 고른 색이 그대로 보이게 (색은 JS가 인라인으로) */
-.sch-sel-tag{
-  border: none;
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-xs);
-  padding: 5px 6px;
-  width: 100%;
-}
-
-/* ── 📋 일정 표 ─────────────────────────────────────────────── */
-.sch-listtop{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
-}
-.sch-monthlabel{
-  font-weight: var(--fw-bold);
-  font-size: var(--fs-md);
-}
-.sch-allchk{
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-sm);
-  color: var(--muted-strong);
-  cursor: pointer;
-}
-
-/* 좁은 화면에서 표가 찌그러지지 않게 — 가로로 밀어서 봅니다 */
-.sch-tablewrap{
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-}
-.sch-table{
-  width: 100%;
-  min-width: 620px;
-  border-collapse: collapse;
-  font-size: var(--fs-sm);
-}
-.sch-table th{
-  text-align: left;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  color: var(--muted);
-  background: var(--fill-1);
-  padding: 7px 8px;
-  white-space: nowrap;
-}
-.sch-table td{
-  padding: 5px 6px;
-  border-top: 1px solid var(--border);
-  vertical-align: middle;
-}
-.sch-table .c-date{ width: 96px; white-space: nowrap; }
-.sch-table .c-kind,
-.sch-table .c-state{ width: 92px; }
-.sch-table .c-del{ width: 40px; text-align: center; }
-
-.sch-table .sch-date{ font-weight: var(--fw-medium); }
-/* 표의 요일 표시. 달력 요일 줄(.sch-dow)과 이름이 겹치면 span 이 grid 가
-   돼버려서, 표 쪽은 .sch-dowmark 로 따로 둡니다. */
-.sch-table .sch-dowmark{ color: var(--muted); font-size: var(--fs-2xs); margin-left: 3px; }
-
-/* 표 안에서 바로 고치는 칸 — 평소엔 글자처럼, 누르면 입력칸처럼 */
-.sch-inline{
-  width: 100%;
-  border: 1px solid transparent;
+.mw-nav,
+.mw-todaybtn{
+  border: 1px solid rgba(179,55,43,.45);
   background: transparent;
-  color: var(--text);
-  border-radius: 6px;
-  padding: 5px 6px;
-  font-size: var(--fs-sm);
+  color: #6B5F52;
+  border-radius: 8px;
   font-family: inherit;
-  min-height: 30px;
-}
-.sch-inline:hover{ border-color: var(--border); background: var(--panel2); }
-.sch-inline:focus{
-  border-color: var(--accent-line);
-  background: var(--focus-bg);
-  color: var(--input-text);
-  outline: 2px solid var(--accent-ring);
-}
-.sch-inline-title{ font-weight: var(--fw-medium); }
-
-/* 완료한 줄은 흐리게 + 제목에 줄 긋기 */
-.sch-row.is-done{ opacity: .55; }
-.sch-row.is-done .sch-inline-title{ text-decoration: line-through; }
-.sch-row.is-today .sch-date{ color: #C0392B; }
-
-.sch-newrow td{ background: var(--accent-softer); border-top: none; }
-.sch-newrow .sch-in{ width: 100%; }
-.sch-addbtn{ white-space: nowrap; }
-
-.sch-del{
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--muted);
-  border-radius: 6px;
-  width: 28px; height: 28px;
   font-size: var(--fs-sm);
   line-height: 1;
   cursor: pointer;
 }
-.sch-del:hover{ background: var(--danger-soft); border-color: var(--danger-line); color: var(--on-danger-btn); }
-
-.sch-empty{
+.mw-nav{ width: 28px; height: 28px; }
+.mw-todaybtn{ padding: 5px 9px; font-size: var(--fs-2xs); margin-left: 2px; }
+.mw-nav:hover,
+.mw-todaybtn:hover{ background: rgba(179,55,43,.10); }
+.mw-caltitle{
+  font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #2B2620;
+  min-width: 7.2em;
   text-align: center;
-  color: var(--muted);
-  padding: var(--sp-5) var(--sp-3);
 }
 
-/* ── 🗓️ 날짜가 붙은 할 일 (프로필 투두에서 건너온 손님) ────────
-   일정과 헷갈리면 안 되니 모양을 일부러 다르게 둡니다.
-   알약은 점선 테두리, 표에서는 중립색 "할 일" 뱃지. */
-.sch-pill.sch-todopill{
-  border: 1px dashed #C9C0B0;
-  font-weight: var(--fw-normal);
+/* ── 달력 칸 — .att-* 는 옛 출석 달력과 같은 뼈대를 씁니다 ────── */
+#mywork-modal .att-dow{ color: #8A7B68; }
+#mywork-modal .att-day{
+  position: relative;               /* 할 일 점을 얹기 위해 */
+  background: rgba(250,246,236,.85);
+  border: 1px solid rgba(163,88,70,.16);
+  color: #6B5F52;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color var(--anim-fast), background var(--anim-fast);
 }
-.sch-pill.sch-todopill.is-done{ opacity: .5; text-decoration: line-through; }
-.sch-legend .sch-todopill{ font-weight: var(--fw-medium); }
+#mywork-modal .att-day:hover{ border-color: #B3372B; }
+#mywork-modal .att-day:focus-visible{ outline: 2px solid rgba(179,55,43,.55); outline-offset: 1px; }
+/* 출석 도장 — 붉은 칸에 흰 ✓ (.att-day.on 은 var(--accent)/var(--me-text)) */
+#mywork-modal .att-day.on{ border-color: #B3372B; }
+#mywork-modal .att-day.vac{ color: #6B5F52; }
+/* 오늘은 옅은 테두리, 고른 날은 짙은 안쪽 테두리 — 둘이 겹쳐도 구분됩니다 */
+#mywork-modal .att-day.today{ outline: 2px solid rgba(179,55,43,.40); outline-offset: 1px; }
+#mywork-modal .att-day.picked{ box-shadow: inset 0 0 0 2px #4A140D; }
 
-.sch-tag-todo{
-  display: inline-block;
-  border: 1px dashed #C9C0B0;
-  border-radius: 6px;
-  padding: 3px 7px;
+/* 그날 할 일이 있다는 표시. 미완료가 하나도 없으면 옅게. */
+.mw-dot{
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #B3372B;
+}
+#mywork-modal .att-day.on .mw-dot{ background: #FFFDF6; }
+.mw-dot.is-clear{ opacity: .3; }
+
+.mw-calfoot{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: var(--sp-3);
+  font-size: var(--fs-xs);
+  color: #6B5F52;
+}
+.mw-calfoot b{ color: #B3372B; }
+.mw-calhint{
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: var(--fs-2xs);
+  color: #8A7B68;
+  line-height: 1.55;
+}
+
+/* ── 탭 ─────────────────────────────────────────────────────── */
+.mw-tabs{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--sp-3);
+}
+.mw-tab{
+  border: 1px solid rgba(179,55,43,.50);
+  background: transparent;
+  color: #6B5F52;
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-family: inherit;
   font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
-  white-space: nowrap;
+  min-height: var(--tap-sm);
+  cursor: pointer;
+}
+.mw-tab:hover{ background: rgba(179,55,43,.09); }
+.mw-tab.is-on{ background: #4A140D; border-color: #4A140D; color: #FFFDF6; }
+
+.mw-panel{ display: none; }
+.mw-panel.is-on{
+  display: block;
+  background: rgba(255,253,246,.96);
+  border: 1px solid rgba(179,55,43,.25);
+  border-radius: 10px;
+  padding: var(--sp-3);
 }
 
-.sch-row-todo td{ background: var(--fill-1); }
-.sch-todotitle{
-  display: inline-block;
-  padding: 5px 6px;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
+/* ── 📌 할 일 ───────────────────────────────────────────────── */
+.mw-dayhead{
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--sp-2);
 }
-.sch-row-todo.is-done .sch-todotitle{ text-decoration: line-through; }
-.sch-todolate{
-  margin-left: 4px;
-  padding: 1px 5px;
+.mw-daytitle{
+  font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: #2B2620;
+}
+.mw-todaytag{
+  background: #B3372B;
+  color: #FFFDF6;
   border-radius: 999px;
-  background: var(--danger-soft);
-  color: var(--on-danger-btn);
+  padding: 1px 8px;
   font-size: var(--fs-2xs);
   font-weight: var(--fw-bold);
 }
-.sch-todostate{
-  width: 100%;
-  border: 1px dashed #C9C0B0;
-  background: transparent;
-  color: var(--muted-strong);
-  border-radius: 6px;
-  padding: 5px 6px;
+.mw-daycount{
+  margin-left: auto;
   font-size: var(--fs-xs);
-  font-family: inherit;
+  color: #8A7B68;
+}
+
+.mw-todolist{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 210px;
+  overflow: auto;
+}
+.mw-todo{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: rgba(250,246,236,.75);
+  border: 1px solid rgba(163,88,70,.14);
+}
+.mw-todo-l{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
   cursor: pointer;
-  white-space: nowrap;
 }
-.sch-todostate:hover{ background: var(--panel2); }
-.sch-todohint{ color: var(--muted); font-size: var(--fs-2xs); }
-.sch-del.is-off{
-  display: inline-block;
-  color: var(--muted);
-  opacity: .5;
-  cursor: default;
+.mw-chk{
+  flex: none;
+  width: 16px; height: 16px;
+  accent-color: #B3372B;
 }
-
-/* 달력에서 할 일을 눌렀을 때 잠깐 뜨는 쪽지 (일정 팝업보다 위) */
-.sch-toast{
-  position: fixed;
-  left: 50%;
-  bottom: 40px;
-  transform: translateX(-50%) translateY(12px);
-  z-index: 6400;
-  max-width: min(320px, 86vw);
-  padding: 9px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--text);
-  box-shadow: var(--shadow);
+.mw-todo-t{
   font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--anim-fast), transform var(--anim-fast);
+  color: #2B2620;
+  word-break: break-word;
 }
-.sch-toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+.mw-todo.is-done .mw-todo-t{ text-decoration: line-through; color: #8A7B68; }
+.mw-rbadge{ flex: none; font-size: var(--fs-2xs); }
+.mw-todo-btns{ display: flex; flex: none; gap: 2px; }
+.mw-todo-btns button{
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 5px;
+  font-size: var(--fs-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+.mw-todo-btns button:hover{ background: rgba(179,55,43,.12); }
+.mw-empty{
+  margin: 0;
+  padding: 8px 2px;
+  font-size: var(--fs-xs);
+  color: #8A7B68;
+}
 
-/* ── 좁은 화면 ──────────────────────────────────────────────── */
-@media (max-width: 560px){
-  .sch-cell{ min-height: 64px; }
-  .sch-pill{ font-size: 10px; padding: 1px 4px; }
-  .sch-caltitle{ font-size: var(--fs-md); min-width: 7em; }
-  .sch-form-row{ gap: 5px; }
-  .sch-in-grow{ flex: 1 1 100%; }
+/* 새 할 일 줄 — 종이에 줄 긋고 적는 느낌 (입장 창과 같은 결) */
+.mw-add{
+  display: flex;
+  gap: 6px;
+  margin-top: var(--sp-2);
+}
+.mw-add-in{
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(150,120,80,.5);
+  border-radius: 0;
+  color: #2B2620;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  padding: 6px 2px;
+  min-height: var(--tap-sm);
+}
+.mw-add-in:focus{ outline: none; border-bottom-color: #B3372B; }
+.mw-add-in::placeholder{ color: #A2937F; }
+.mw-add-btn{
+  flex: none;
+  width: 34px;
+  min-height: var(--tap-sm);
+  border: 1px solid #4A140D;
+  background: #4A140D;
+  color: #FFFDF6;
+  border-radius: 8px;
+  font-size: var(--fs-md);
+  line-height: 1;
+  cursor: pointer;
+}
+.mw-add-btn:hover{ background: #5C1A11; }
+
+.mw-sep{
+  border: none;
+  border-top: 1px dashed rgba(163,88,70,.35);
+  margin: var(--sp-4) 0 var(--sp-3);
+}
+.mw-hint{
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-2xs);
+  color: #8A7B68;
+  line-height: 1.6;
+}
+.mw-hint b{ color: #6B5F52; }
+
+/* 🎯 목표 탭으로 옮겨오는 #status-block — 종이 위에서는 테두리를 뺍니다 */
+#mywork-goal-slot .pane.in-profile{
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* ── 좁은 화면 — 달력이 위, 탭이 아래로 ──────────────────────── */
+@media (max-width: 720px){
+  .mw-cols{ flex-direction: column; }
+  .mw-calwrap{ flex: 1 1 auto; width: 100%; }
+  .mw-side{ width: 100%; }
+  .mw-todolist{ max-height: 40vh; }
 }

@@ -67,10 +67,10 @@
     window._todoItems = _normalizeRoutineTodos(items);
     renderTodoList();
 
-    /* 투두가 바뀌면 🗓️ 일정 팝업의 달력·목록도 함께 바뀌어야 합니다.
-       (날짜가 붙은 투두를 거기서도 보여주니까요)
-       팝업이 닫혀 있으면 script_schedule.js 쪽이 알아서 아무것도 안 합니다. */
-    try { window.renderScheduleIfOpen?.(); } catch (e) {}
+    /* 할 일이 바뀌면 🗂️ 나의 작업 창의 달력·목록도 함께 바뀌어야 합니다.
+       (날짜가 붙은 할 일을 거기서 날짜별로 보여주니까요)
+       창이 닫혀 있으면 script_mywork.js 쪽이 알아서 아무것도 안 합니다. */
+    try { window.renderMyWorkIfOpen?.(); } catch (e) {}
   }
 
   // =====================================================
@@ -151,11 +151,35 @@
     });
   }
 
+  /* [2026-08-06] 프로필 팝업의 투두 목록은 **오늘 것과 날짜 없는 것**만
+     보여줍니다.
+
+     [왜] 날짜(due)를 붙일 수 있게 되면서, 다음 달에 할 일까지 이 짧은
+     목록에 전부 쌓였습니다. 정작 오늘 할 일이 아래로 밀려 안 보였어요.
+     그래서 여기는 "오늘의 창"으로 좁힙니다.
+
+         due === 오늘   → 보임
+         due 없음       → 보임 (🔁 반복도 여기 — 반복은 날짜를 못 가집니다)
+         그 밖의 날짜   → 안 보임 (그날이 되면 저절로 뜹니다)
+
+     다른 날짜의 할 일은 🗂️ 나의 작업 창의 달력에서 날짜별로 봅니다.
+     지운 게 아니라 **가려둔 것뿐**이라, 저장·수정은 예전 그대로입니다. */
+  function todosForProfileList() {
+    const today = ymd(Date.now());
+    return getTodoItemsFromUI().filter(x => {
+      if (!x) return false;
+      if (x.routine) return true;                 // 반복은 늘 보입니다
+      if (!isTodoDue(x.due)) return true;         // 날짜 없는 것도 늘
+      return x.due === today;                     // 날짜가 있으면 오늘 것만
+    });
+  }
+  window.todosForProfileList = todosForProfileList;
+
   function renderTodoList() {
     const ul = document.getElementById("todo-list");
     if (!ul) return;
 
-    const items = getTodoItemsFromUI();
+    const items = todosForProfileList();
     ul.innerHTML = "";
 
     items.forEach(item => {
@@ -442,12 +466,40 @@
   window.toggleRoutineTodo = toggleRoutineTodo;
   window.clearCompletedTodos = clearCompletedTodos;
 
-  /* 🗓️ 일정 팝업(script_schedule.js)이 쓰는 최소한의 창구.
-     투두의 주인은 여기(script_data.js)이므로, 달력 쪽에서는 읽기와
-     "체크 토글"만 이 함수를 통해 부탁합니다. */
+  /* [2026-08-06] 🗂️ 나의 작업 창에서 날짜를 붙여 새 할 일을 넣는 창구.
+
+     addTodoFromUI 는 화면의 입력칸(#todo-input)을 읽어가는 함수라
+     다른 창에서는 쓸 수 없었습니다. 글자와 날짜를 직접 받는 문을
+     따로 열어둡니다. due 가 비어 있으면 "날짜 없는 할 일"입니다. */
+  function addTodoWithDue(text, due) {
+    const t = String(text || "").trim();
+    if (!t) return false;
+
+    const item = {
+      id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      text: t,
+      done: false,
+      createdAt: Date.now()
+    };
+    /* 날짜와 반복은 함께 쓰지 않으므로, 여기서는 날짜만 붙입니다 */
+    if (isTodoDue(due)) item.due = due;
+
+    const items = getTodoItemsFromUI();
+    items.unshift(item);
+    setTodoItemsToUI(items);
+    savePersonalData();
+    return true;
+  }
+
+  /* 🗂️ 나의 작업 창(script_mywork.js)이 쓰는 창구 모음.
+     할 일의 주인은 여기(script_data.js)이므로, 저 창에서는 읽기와
+     아래 함수 호출만 합니다 — 저장 로직은 한 곳에만 둡니다. */
   window.getTodoItems = getTodoItemsFromUI;
   window.toggleTodoDone = toggleTodo;
   window.setTodoDue = setTodoDue;
+  window.addTodoWithDue = addTodoWithDue;
+  window.editTodo = editTodo;
+  window.deleteTodo = deleteTodo;
 
   // =====================================================
   // ✅ Personal data (Firebase)

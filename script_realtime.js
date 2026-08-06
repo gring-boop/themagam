@@ -533,7 +533,12 @@
        둘 다 이미 가지고 있는 값이라 새로 입력받을 건 없습니다.
          - 오늘 할일 진척 : 내 투두 목록의 완료 수 / 전체 수
          - 오늘 뽀모 횟수 : 집중 세션을 끝낸 횟수 (script_ui.js가 세고 있음) */
-    const _todos = Array.isArray(window._todoItems) ? window._todoItems : [];
+    /* [고침 2026-08-06] 할 일에 날짜가 생긴 뒤로, 다음 달 것까지 세면
+       카드 진척이 부풀어 보였습니다. 프로필 팝업이 보여주는 것과 똑같이
+       "오늘 것 + 날짜 없는 것"만 셉니다 (script_data.js 의 같은 규칙). */
+    const _todos = (typeof window.todosForProfileList === "function")
+      ? window.todosForProfileList()
+      : (Array.isArray(window._todoItems) ? window._todoItems : []);
     const todoTotal = _todos.length;
     const todoDone = _todos.filter(t => t && t.done).length;
     const pomoCount = Number(window.getTodayFocusSessions?.() || 0);
@@ -1163,7 +1168,18 @@
 
   /* [2026-08-03] 📅 내 출석 달력 — 누구나 자기 출석만 봅니다.
      recordAttendance 가 users/{닉}/attend/days/{날짜}=true 로 찍어둔 것을
-     달력 모양으로 그립니다. ‹ › 로 지난 달도 넘겨볼 수 있어요. */
+     달력 모양으로 그립니다. ‹ › 로 지난 달도 넘겨볼 수 있어요.
+
+     [2026-08-06] 이 달력을 여는 버튼은 머리말에서 없앴습니다.
+     같은 달력이 🗂️ 나의 작업 창(script_mywork.js) 왼쪽에 통째로
+     들어갔고, 거기서는 그날 할 일까지 함께 보여주니까요.
+
+     함수는 남겨둡니다 — 지우면 콘솔에서 showMyAttendance() 로 확인하던
+     길이 막히고, 나중에 관리자 페이지에서 쓸 일이 생길 수도 있습니다.
+     쓰이지 않는 동안에는 아무 일도 하지 않으므로 무해합니다.
+     (toggleMyVacation 도 같은 이유로 남겨둡니다. 나의 작업 창은 이
+      함수를 부르지 않고 자기 것을 씁니다 — 이 함수가 끝에
+      showMyAttendance 를 불러 창을 겹쳐 띄우기 때문입니다.) */
   async function showMyAttendance(monthOffset = 0) {
     if (!myNick) { alert("입장 후에 볼 수 있어요."); return; }
     let daysMap = {};
