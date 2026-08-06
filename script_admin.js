@@ -5,14 +5,24 @@
    작게 다시 담았어요:
      · Firebase 설정 (script_core.js 와 동일 — ★ 코어와 동기 유지)
      · 닉네임→가짜 이메일 변환 (script_auth.js 와 동일한 방식)
-     · 관리자 PIN (script_realtime.js 의 ADMIN_PIN 과 동일하게 유지)
+     · 관리자 필명·PIN (script_realtime.js 의 것과 동일하게 유지)
 
-   접속 흐름: ① 닉네임+비밀번호 로그인 → ② PIN(1009) → 대시보드.
+   접속 흐름: ① 관리자 필명+비밀번호 로그인 → ② PIN → 대시보드.
+   관리자 필명이 아니면 ①에서 막혀 PIN 화면까지 가지 못합니다.
    PIN 은 진짜 잠금장치가 아닙니다 — 파괴적 동작의 실수 방지용이고,
    진짜 방어는 파이어베이스 보안 규칙이 합니다.
    ===================================================================== */
 (function () {
   "use strict";
+
+  /* =====================================================================
+     🛡️ 관리자 상수 — ★ 여기만 고치면 관리자가 바뀝니다.
+
+     ※ 메인 앱(script_realtime.js) 맨 위에 같은 값이 있습니다.
+       두 파일은 반드시 함께 고쳐야 해요 — 동기 필요!
+     ===================================================================== */
+  const ADMIN_NICK = "그링링🍄";     // ← 관리자 필명
+  const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
 
   /* ★ script_core.js 의 firebaseConfig 와 동기 유지 — 코어가 바뀌면 여기도 */
   const firebaseConfig = {
@@ -30,9 +40,6 @@
 
   const db = firebase.database();
   const auth = firebase.auth();
-
-  /* ★ script_realtime.js 의 ADMIN_PIN 과 동기 유지 */
-  const ADMIN_PIN = "1009";
 
   let myNick = "";
 
@@ -71,6 +78,14 @@
     const pw = el("adm-pw")?.value || "";
     if (!nick) { msg("adm-login-msg", "닉네임을 입력해주세요.", true); return; }
     if (pw.length < 6) { msg("adm-login-msg", "비밀번호는 6자 이상이에요.", true); return; }
+
+    /* 관리자 필명이 아니면 여기서 끝 — PIN 화면까지 가지 못합니다.
+       문구를 일부러 뭉뚱그립니다. "그 닉이 아니에요" 처럼 말해버리면
+       관리자 필명을 찾는 힌트를 주는 셈이라서요. */
+    if (nick !== ADMIN_NICK) {
+      msg("adm-login-msg", "로그인 정보가 올바르지 않아요.", true);
+      return;
+    }
 
     const btn = el("adm-login-btn");
     btn.disabled = true;
@@ -117,9 +132,33 @@
   function openDash() {
     el("adm-pin-card").style.display = "none";
     el("adm-dash").style.display = "block";
+    showMyUid();
     loadAttendance(0);
     loadNotice();
+    loadPinnedMessage();
     loadHistoryConfig();
+    loadSecretAllow();
+  }
+
+  // ------------------------------------------------- ③-0 내 계정 uid
+  /* 보안규칙에 관리자 uid 를 직접 박아 넣을 때 씁니다.
+     (닉네임은 바뀔 수 있지만 uid 는 계정이 살아 있는 한 그대로예요) */
+  function showMyUid() {
+    const box = el("adm-uid");
+    if (!box) return;
+    box.textContent = auth.currentUser?.uid || "(로그인 정보를 읽지 못했어요)";
+  }
+
+  async function copyMyUid() {
+    const uid = auth.currentUser?.uid || "";
+    if (!uid) { msg("adm-uid-msg", "uid 를 읽지 못했어요.", true); return; }
+    try {
+      await navigator.clipboard.writeText(uid);
+      msg("adm-uid-msg", "✅ 복사했어요. 보안규칙에 붙여 넣으세요.");
+    } catch (e) {
+      /* https 가 아니거나 권한이 막히면 클립보드가 안 됩니다 — 직접 긁어가도록 */
+      msg("adm-uid-msg", "복사하지 못했어요. 위 uid 를 직접 긁어서 복사해 주세요.", true);
+    }
   }
 
   // ------------------------------------------------- ③-1 출석·휴가 현황 (출근부 표)
@@ -245,6 +284,32 @@
     await saveNotice();
   }
 
+  // ------------------------------------------------- ③-2.5 채팅 핀 메시지
+  /* script_chat.js 의 setPinnedMessage / removePinnedMessage 와 같은 노드 */
+  async function loadPinnedMessage() {
+    try {
+      const v = (await db.ref("chatMeta/pinned").once("value")).val();
+      const input = el("adm-pin-msg-input");
+      if (input) input.value = v?.text || "";
+    } catch (e) {}
+  }
+  async function savePinnedMessage() {
+    const text = (el("adm-pin-msg-input")?.value || "").trim();
+    try {
+      if (text) await db.ref("chatMeta/pinned").set({ text, by: myNick, at: Date.now() });
+      else await db.ref("chatMeta/pinned").remove();
+      msg("adm-pin-msg-msg", text ? "📌 핀을 고정했어요." : "✅ 핀을 내렸어요.");
+    } catch (e) {
+      msg("adm-pin-msg-msg", "저장하지 못했어요. 연결을 확인해 주세요.", true);
+    }
+  }
+  async function clearPinnedMessage() {
+    if (!confirm("핀 메시지를 내릴까요?")) return;
+    const input = el("adm-pin-msg-input");
+    if (input) input.value = "";
+    await savePinnedMessage();
+  }
+
   // ------------------------------------------------- ③-3 채팅
   async function loadHistoryConfig() {
     try {
@@ -295,6 +360,92 @@
     }
   }
 
+  // ------------------------------------------------- ③-3.5 🔒 비밀방
+  /* 데이터 구조
+       rooms/secret/allow/{uid} = true   ← 승인 명단 (uid 는 auth uid)
+       nickOwner/{닉}          = uid     ← 닉 ↔ uid 매핑 (메인 앱이 심습니다)
+       messages3               = 방 대화
+
+     화면에는 uid 대신 닉을 보여주려고 nickOwner 를 통째로 읽어 역매핑합니다.
+     (도장이 지워진 uid 는 닉을 못 찾으니 uid 앞자리만 보여줍니다) */
+  let _secretAllow = {};   // { uid: 닉 or null }
+
+  async function loadSecretAllow() {
+    const box = el("adm-secret-list");
+    if (box) box.textContent = "불러오는 중…";
+    try {
+      const [allowSnap, nickSnap] = await Promise.all([
+        db.ref("rooms/secret/allow").once("value"),
+        db.ref("nickOwner").once("value")
+      ]);
+      const allow = allowSnap.val() || {};
+      const nickByUid = {};
+      Object.entries(nickSnap.val() || {}).forEach(([nick, uid]) => {
+        if (uid) nickByUid[uid] = nick;
+      });
+
+      _secretAllow = {};
+      Object.keys(allow).forEach(uid => {
+        if (allow[uid] === true) _secretAllow[uid] = nickByUid[uid] || null;
+      });
+
+      const uids = Object.keys(_secretAllow);
+      if (!box) return;
+      if (!uids.length) { box.textContent = "아직 승인된 사람이 없어요."; return; }
+
+      box.innerHTML = uids.map(uid => {
+        const nick = _secretAllow[uid];
+        const shown = nick ? escapeHtml(nick) : `(닉 미상 · ${escapeHtml(uid.slice(0, 8))}…)`;
+        return `<div class="adm-secret-row">🔓 ${shown}
+                  <button class="adm-btn ghost" data-secret-off="${escapeHtml(uid)}">해제</button>
+                </div>`;
+      }).join("");
+    } catch (e) {
+      console.warn("[adm secret]", e);
+      if (box) box.textContent = "불러오지 못했어요 — 보안규칙(rooms)을 확인해 주세요.";
+    }
+  }
+
+  async function addSecret() {
+    const nick = (el("adm-secret-nick")?.value || "").trim();
+    if (!nick) { msg("adm-secret-msg", "닉네임을 입력해 주세요.", true); return; }
+    try {
+      const uid = (await db.ref("nickOwner/" + nick).once("value")).val();
+      if (!uid) {
+        msg("adm-secret-msg", `'${nick}' 은(는) 등록되지 않은 닉네임이에요. 메인 방에서 먼저 입장해야 해요.`, true);
+        return;
+      }
+      await db.ref("rooms/secret/allow/" + uid).set(true);
+      el("adm-secret-nick").value = "";
+      msg("adm-secret-msg", `✅ '${nick}' 님을 비밀방에 승인했어요. (다음 입장부터 보여요)`);
+      await loadSecretAllow();
+    } catch (e) {
+      msg("adm-secret-msg", "승인하지 못했어요 — 보안규칙을 확인해 주세요.", true);
+    }
+  }
+
+  async function removeSecret(uid) {
+    const nick = _secretAllow[uid] || uid;
+    if (!confirm(`'${nick}' 님의 비밀방 승인을 해제할까요?`)) return;
+    try {
+      await db.ref("rooms/secret/allow/" + uid).remove();
+      msg("adm-secret-msg", `🔒 '${nick}' 님의 승인을 해제했어요.`);
+      await loadSecretAllow();
+    } catch (e) {
+      msg("adm-secret-msg", "해제하지 못했어요.", true);
+    }
+  }
+
+  async function clearSecret() {
+    if (!confirm("정말 비밀방 대화를 모두 삭제할까요? (되돌릴 수 없어요!)")) return;
+    try {
+      await db.ref("messages3").remove();
+      msg("adm-secret-msg", "🧹 비밀방 대화를 모두 삭제했어요.");
+    } catch (e) {
+      msg("adm-secret-msg", "삭제하지 못했어요 — 관리자 계정도 승인 명단에 있어야 지울 수 있어요.", true);
+    }
+  }
+
   // ------------------------------------------------- ③-4 글자수
   /* script_realtime.js 의 clearAllWordcount 와 같은 노드를 지웁니다 */
   async function clearWordcount() {
@@ -319,9 +470,21 @@
     el("adm-att-next")?.addEventListener("click", () => loadAttendance(Math.max(0, _attOffset - 1)));
     el("adm-notice-save")?.addEventListener("click", saveNotice);
     el("adm-notice-clear")?.addEventListener("click", clearNotice);
+    el("adm-pin-msg-save")?.addEventListener("click", savePinnedMessage);
+    el("adm-pin-msg-clear")?.addEventListener("click", clearPinnedMessage);
+    el("adm-uid-copy")?.addEventListener("click", copyMyUid);
     el("adm-hist-apply")?.addEventListener("click", applyHistory);
     el("adm-chat-clear")?.addEventListener("click", clearChat);
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
+    el("adm-secret-add")?.addEventListener("click", addSecret);
+    el("adm-secret-reload")?.addEventListener("click", loadSecretAllow);
+    el("adm-secret-clear")?.addEventListener("click", clearSecret);
+    el("adm-secret-nick")?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) addSecret(); });
+    /* 명단은 다시 그려지므로 개별 버튼 대신 목록에 위임합니다 */
+    el("adm-secret-list")?.addEventListener("click", e => {
+      const btn = e.target.closest("[data-secret-off]");
+      if (btn) removeSecret(btn.getAttribute("data-secret-off"));
+    });
   });
 })();

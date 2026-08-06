@@ -1266,69 +1266,20 @@
   });
 
   // =====================================================
-  // ✅ Admin Easter Egg (7번 클릭)
+  // Admin Easter Egg — [2026-08-06] 없앴습니다
   // =====================================================
-  let _adminClickCount = 0;
-  let _adminClickTimer = null;
-  let _adminLoggedIn = false;
+  /* 예전에는 설정 › 개인정보의 "로컬 설정 초기화" 제목을 7번 누르면
+     관리자 모드 블록(#admin-easter)이 나타났습니다. 그 블록을 통째로
+     걷어냈으므로(관리자 일은 admin.html 이 합니다) 여기도 아무것도
+     하지 않습니다.
 
-  function bindAdminEasterEgg() {
-    const titleEl = document.getElementById("reset-title");
-    if (!titleEl || titleEl._adminBound) return;
-    titleEl._adminBound = true;
+     제목에 cursor:pointer 를 씌우던 것도 함께 뺐습니다 — 그것만으로도
+     "여기 뭔가 있다"는 흔적이 되니까요.
 
-    titleEl.style.cursor = "pointer";
-    titleEl.title = "";
-
-    titleEl.addEventListener("click", () => {
-      _adminClickCount += 1;
-
-      if (_adminClickTimer) clearTimeout(_adminClickTimer);
-      _adminClickTimer = setTimeout(() => { _adminClickCount = 0; }, 2000);
-
-      if (_adminClickCount >= 7) {
-        _adminClickCount = 0;
-        clearTimeout(_adminClickTimer);
-
-        const egg = document.getElementById("admin-easter");
-        if (egg) {
-          egg.classList.remove("hidden");
-          refreshAdminUiVisibility();
-        }
-      }
-    });
-  }
-
-  function refreshAdminUiVisibility() {
-    const egg = document.getElementById("admin-easter");
-    const loginBtn = document.getElementById("admin-login-btn");
-    const clearBtn = document.getElementById("admin-clear-btn");
-    if (!egg) return;
-
-    const isLoggedIn = AppSession.getItem("adminPinOk") === "true";
-    _adminLoggedIn = isLoggedIn;
-
-    if (loginBtn) loginBtn.classList.toggle("hidden", isLoggedIn);
-    // ✅ admin-tools 전체 블록 토글 (핀 설정 + 채팅 삭제 포함)
-    const adminTools = document.getElementById("admin-tools");
-    if (adminTools) adminTools.classList.toggle("hidden", !isLoggedIn);
-
-    // 버튼 이벤트 바인딩(중복 방지)
-    if (loginBtn && !loginBtn._adminBound) {
-      loginBtn._adminBound = true;
-      loginBtn.addEventListener("click", () => {
-        const ok = window.requireAdminPin?.();
-        if (ok) refreshAdminUiVisibility();
-      });
-    }
-
-    if (clearBtn && !clearBtn._adminBound) {
-      clearBtn._adminBound = true;
-      clearBtn.addEventListener("click", () => {
-        window.clearAllChat?.();
-      });
-    }
-  }
+     함수 자체는 남겨둡니다. script_core.js 와 script_realtime.js 가
+     여러 곳에서 부르고 있어서, 이름이 사라지면 그쪽을 다 손봐야 해요. */
+  function bindAdminEasterEgg() { /* 하는 일 없음 */ }
+  function refreshAdminUiVisibility() { /* 하는 일 없음 */ }
 
   window.bindAdminEasterEgg = bindAdminEasterEgg;
   window.refreshAdminUiVisibility = refreshAdminUiVisibility;

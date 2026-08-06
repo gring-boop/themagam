@@ -1,4 +1,28 @@
 
+  /* =====================================================================
+     🛡️ 관리자 상수 — ★ 관리자를 바꾸려면 이 두 줄만 고치면 됩니다.
+
+       ADMIN_NICK : 이 필명으로 입장한 사람에게만 숨은 문이 반응합니다.
+                    여기만 고치면 관리자가 바뀝니다.
+       ADMIN_PIN  : 숨은 문을 열 때 물어보는 번호. 자릿수 제한은 없습니다.
+
+     ※ 관리자 페이지(script_admin.js) 에도 같은 값이 들어 있습니다.
+       두 파일은 반드시 함께 고쳐야 해요 — 동기 필요!
+
+     ※ 이것이 진짜 잠금장치가 아니라는 점을 분명히 해둡니다.
+       - 코드가 공개돼 있어서 누구나 이 값을 읽을 수 있습니다.
+       - 브라우저 개발자도구에서 아래 한 줄이면 검사를 건너뜁니다.
+             AppSession.setItem("adminPinOk", "true")
+
+       즉 이 PIN 은 "실수로 관리자 기능을 누르는 것"을 막아줄 뿐,
+       마음먹은 사람을 막지는 못합니다.
+
+       정말로 막으려면 파이어베이스 보안 규칙으로 서버에서 걸러야 합니다.
+       함께 넣어둔 "설치안내.md" 의 규칙 예시를 보세요.
+     ===================================================================== */
+  const ADMIN_NICK = "그링링🍄";     // ← 관리자 필명
+  const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
+
   let _statusCache = null;
   Object.defineProperty(window, '_statusCache', {
     get() { return _statusCache; },
@@ -169,11 +193,13 @@
         const t = document.getElementById("head-notice-text");
         const btn = document.getElementById("head-notice");
         if (!t || !btn) return;
-        t.textContent = _noticeText || "공지 (관리자)";
+        t.textContent = _noticeText || "공지";
         btn.classList.toggle("empty", !_noticeText);
         btn.title = _noticeText
-          ? `📌 ${_noticeText} — 관리자만 고칠 수 있어요`
-          : "공지 — 관리자만 고정할 수 있어요";
+          /* [2026-08-06] 툴팁에서 '관리자' 언급을 뺐습니다 — 관리자 흔적을
+             화면에 남기지 않기 위해서예요. 고치는 건 여전히 PIN이 필요합니다. */
+          ? `📌 ${_noticeText}`
+          : "공지";
       });
     } catch (e) { console.warn("[listenNotice]", e); }
   }
@@ -203,6 +229,7 @@
   window.bindNoticeEdit = bindNoticeEdit;
   document.addEventListener("DOMContentLoaded", () => {
     try { bindNoticeEdit(); } catch (e) {}
+    try { bindHeadCountDoor(); } catch (e) {}
     try { if (window.db) listenNotice(); } catch (e) {}
     /* 대기 상태(idle)에서는 집중 시간 입력이 곧 표시 시간입니다 */
     const wmIn = document.getElementById("pomo-work-min");
@@ -951,23 +978,11 @@
   // admin
   // =====================================================
   /* =====================================================================
-     관리자 PIN
+     관리자 PIN 확인
 
-     ★ 바꾸는 곳은 아래 ADMIN_PIN 한 줄입니다.
-
-     ※ 이것이 진짜 잠금장치가 아니라는 점을 분명히 해둡니다.
-       - 코드가 공개돼 있어서 누구나 이 숫자를 읽을 수 있습니다.
-       - 브라우저 개발자도구에서 아래 한 줄이면 검사를 건너뜁니다.
-             AppSession.setItem("adminPinOk", "true")
-
-       즉 이 PIN 은 "실수로 관리자 기능을 누르는 것"을 막아줄 뿐,
-       마음먹은 사람을 막지는 못합니다.
-
-       정말로 막으려면 파이어베이스 보안 규칙으로 서버에서 걸러야 합니다.
-       함께 넣어둔 "설치안내.md" 의 규칙 예시를 보세요.
+     ★ 값(ADMIN_PIN·ADMIN_NICK)은 이 파일 맨 위 한 곳에만 있습니다.
+       바꿀 일이 생기면 위로 올라가세요. (script_admin.js 와 동기 필요)
      ===================================================================== */
-  const ADMIN_PIN = "1009";     // ← 여기를 원하는 숫자로 바꾸세요
-
   function requireAdminPin() {
     if (AppSession.getItem("adminPinOk") === "true") return true;
     const p = prompt("관리자 PIN을 입력해 주세요");
@@ -979,6 +994,13 @@
     alert("PIN이 올바르지 않습니다.");
     return false;
   }
+
+  /* [2026-08-06] 아래 관리자 기능들(applyHistoryConfig · loadHistoryNow ·
+     clearAllChat · clearAllWordcount · showAttendanceLog)은 설정 창에서
+     버튼을 모두 걷어내 메인 화면에서는 더 이상 불리지 않습니다.
+     같은 일을 관리자 페이지(admin.html)가 하고 있어요.
+     지우지 않고 남겨둔 이유는 데이터 형태를 맞춰볼 참고용이기 때문입니다.
+     (없어진 DOM 을 읽는 자리는 모두 ?. 나 null 검사로 감싸 뒀습니다) */
 
   // ✅ 히스토리 노출 설정: 라디오 + 개수 입력 → '설정 적용' 버튼으로만 반영
   async function applyHistoryConfig() {
@@ -1221,12 +1243,37 @@
   }
   window.toggleMyVacation = toggleMyVacation;
 
-  /* [2026-08-05] 🛡️ 관리자 페이지 — 헤더 버튼. PIN을 통과해야 새 탭이 열립니다. */
+  /* [2026-08-06] 🕳️ 숨은 문 — 관리자 페이지로 가는 유일한 통로.
+
+     예전에는 머리말에 [🛡️ 관리자] 버튼이 대놓고 있었는데, 관리자
+     페이지가 있다는 사실 자체를 굳이 알릴 필요가 없어 없앴습니다.
+     대신 브랜드 줄의 빨간 박스(#head-count · "n명 집필 중")가 문이 됩니다.
+
+     · 관리자 필명이 아니면 아무 일도 일어나지 않습니다.
+       커서·색·툴팁(접속자 목록)을 하나도 건드리지 않아서, 남들 눈에는
+       그냥 접속 인원 표시입니다. 흔적이 남지 않아요.
+     · 관리자여도 한 번 누른 것만으로는 열리지 않습니다.
+       그 자리는 지나가다 스칠 수 있는 곳이라, 단일 클릭으로 열면
+       PIN 창이 불쑥 뜨는 오작동이 잦습니다. 그래서 더블클릭입니다. */
   function openAdminPage() {
+    /* 숨은 문 밖에서(콘솔 등) 불러도 같은 검사를 지납니다 */
+    if (myNick !== ADMIN_NICK) return;
     if (!requireAdminPin()) return;
     window.open("admin.html", "_blank");
   }
   window.openAdminPage = openAdminPage;
+
+  function bindHeadCountDoor() {
+    const hc = document.getElementById("head-count");
+    if (!hc || hc._doorBound) return;
+    hc._doorBound = true;
+    /* 겉모습은 그대로 둡니다 — cursor·title 을 손대면 티가 나니까요 */
+    hc.addEventListener("dblclick", () => {
+      if (myNick !== ADMIN_NICK) return;   // 관리자가 아니면 무반응
+      openAdminPage();
+    });
+  }
+  window.bindHeadCountDoor = bindHeadCountDoor;
 
   function _closeAttendanceModal() {
     document.getElementById("attendance-modal")?.remove();

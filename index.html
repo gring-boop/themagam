@@ -16,12 +16,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608052341">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608052341">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608061232">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608061232">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608052341">
+  <link rel="manifest" href="manifest.json?v=202608061232">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608052341" />
+  <link rel="stylesheet" href="styles.css?v=202608061232" />
 </head>
 
 <body>
@@ -241,105 +241,14 @@
         </div>
 
         <div class="set-block">
-          <!-- 이스터에그: 7번 클릭하면 관리자 모드 진입 -->
+          <!-- [2026-08-06] 여기 있던 운영용 항목들(7번 클릭 이스터에그 ·
+               핀 메시지 · 이전 채팅 불러오기 · 히스토리 노출 설정 ·
+               채팅 전체 삭제 · 오늘 글자수 초기화 · 출석부 보기)은
+               모두 뺐습니다. 같은 일을 하는 별도 페이지가 있어요. -->
           <div class="set-title" id="reset-title">로컬 설정 초기화</div>
           <button class="ghost-btn" onclick="resetLocalSettings()">이 기기에서 설정 초기화</button>
           <p class="hint">테마/채팅 너비/레이아웃/타이머 표시 설정만 초기화돼요.</p>
 
-          <div id="admin-easter" class="hidden" style="margin-top:12px;">
-            <p class="hint">🕵️‍♀️ 관리자 모드가 발견됐어요. 로그인 후에만 버튼이 나타나요.</p>
-            <div class="spacer-sm"></div>
-            <button id="admin-login-btn" class="ghost-btn w-full" type="button">🛡️ 관리자 모드 로그인</button>
-
-            <!-- 관리자 전용 (로그인 후 표시) -->
-            <div id="admin-tools" class="hidden stack" style="margin-top:12px; gap:16px;">
-
-              <!-- 핀 메시지 -->
-              <div class="stack">
-                <label class="set-title" for="admin-pin-input">📌 채팅 상단 핀 메시지</label>
-                <input type="text" id="admin-pin-input" class="w-full" placeholder="고정할 메시지를 입력해요">
-                <div class="set-row">
-                  <button class="ghost-btn primary" type="button"
-                    onclick="(async () => {
-                      const v = document.getElementById('admin-pin-input')?.value?.trim();
-                      if (!v) return alert('메시지를 입력해주세요!');
-                      await setPinnedMessage(v, myNick);
-                      document.getElementById('admin-pin-input').value = '';
-                      alert('핀 메시지가 설정됐어요 📌');
-                    })()">
-                    📌 핀 설정
-                  </button>
-                  <button class="ghost-btn danger" type="button" onclick="removePinnedMessage()">
-                    🗑 핀 제거
-                  </button>
-                </div>
-                <p class="hint">채팅 상단에 공지처럼 고정돼요. 모든 접속자에게 보여요.</p>
-              </div>
-
-              <!-- 이전 채팅 불러오기 -->
-              <div>
-                <div class="set-title">🕘 이전 채팅 불러오기</div>
-                <button class="ghost-btn primary w-full" type="button" onclick="loadHistoryNow()">
-                  🕘 이전 채팅 불러오기
-                </button>
-                <p class="hint">내 화면에만 과거 대화를 불러와요. 다른 작가님들 화면에는 영향이 없어요.</p>
-              </div>
-
-              <!-- 히스토리 노출 설정 -->
-              <fieldset style="border:none; padding:0; margin:0;">
-                <legend class="set-title">📡 입장 히스토리 노출 설정</legend>
-                <div class="stack">
-                  <label class="set-check">
-                    <input type="radio" name="hist-mode" value="on">
-                    🕘 전체 공개 <span class="opt-desc">— 모든 입장자에게 표시</span>
-                  </label>
-                  <label class="set-check">
-                    <input type="radio" name="hist-mode" value="admin">
-                    🛡️ 관리자만 <span class="opt-desc">— 관리자 로그인 시에만</span>
-                  </label>
-                  <label class="set-check">
-                    <input type="radio" name="hist-mode" value="off">
-                    🙈 숨김 <span class="opt-desc">— 아무에게도 표시 안 함</span>
-                  </label>
-
-                  <label class="set-check" for="hist-count-input">
-                    표시 개수
-                    <input id="hist-count-input" class="set-num" type="number"
-                           min="10" max="300" step="10" value="100" inputmode="numeric">
-                    개
-                  </label>
-
-                  <button class="ghost-btn primary w-full" type="button" onclick="applyHistoryConfig()">
-                    ✅ 설정 적용
-                  </button>
-                  <p class="hint" id="hist-current-label">현재 적용 중: 불러오는 중…</p>
-                </div>
-              </fieldset>
-
-              <!-- TheMagam — 접속 통계(접속 기록 보기)는 뺐습니다. -->
-
-              <!-- TheMagam — 업적 테스트도 뺐습니다 (업적 자체가 없어졌으므로). -->
-
-              <!-- 채팅 전체 삭제 -->
-              <div>
-                <button id="admin-clear-btn" class="ghost-btn danger w-full" type="button">🧹 채팅 전체 삭제</button>
-                <p class="hint">주의: 되돌릴 수 없어요.</p>
-              </div>
-
-              <!-- 글자수 창 초기화 -->
-              <div>
-                <button class="ghost-btn danger w-full" type="button" onclick="clearAllWordcount()">🧹 오늘 글자수 초기화</button>
-                <p class="hint">글자수 창의 오늘 기록·말풍선이 모두 지워져요. 되돌릴 수 없어요.</p>
-              </div>
-
-              <!-- 출석부 -->
-              <div>
-                <button class="ghost-btn w-full" type="button" onclick="showAttendanceLog()">📋 출석부 보기</button>
-                <p class="hint">최근 30일 작가별 출석일수 — 한 달에 한 번 인원 정리할 때 쓰세요.</p>
-              </div>
-
-            </div>
-          </div>
         </div>
       </div>
 
@@ -362,7 +271,7 @@
       <div class="brand-block">
         <span class="brand-title">TheMagam</span><span class="brand-stamp" id="head-count">집필실</span>
         <button class="head-notice empty" id="head-notice" type="button"
-                title="공지 — 관리자만 고정할 수 있어요">📌 <span id="head-notice-text">공지 (관리자)</span></button>
+                title="공지">📌 <span id="head-notice-text">공지</span></button>
       </div>
 
       <!-- 폰트 · 가이드 · 설정 · 나가기는 한 덩어리로 붙여서 오른쪽 끝에 -->
@@ -398,8 +307,7 @@
           </svg><span class="icon-btn-label">나가기</span>
         </button>
 
-        <!-- [2026-08-05] 🛡️ 관리자 — PIN(requireAdminPin)을 통과하면 admin.html 새 탭 -->
-        <button class="icon-btn labeled" type="button" onclick="openAdminPage()" aria-label="관리자" title="관리자 페이지">🛡️<span class="icon-btn-label">관리자</span></button>
+        <!-- [2026-08-06] 쓰지 않는 버튼 하나를 정리했습니다. -->
       </div>
     </div>
     
@@ -422,13 +330,18 @@
                   onclick="switchChatTab('chatty')">☕ 수다방 <span id="chatty-tab-count">(0명)</span>
             <span id="chat-tab-badge-chatty" class="chat-tab-badge hidden">0</span>
           </button>
+          <!-- 🔒 세 번째 방 — 승인받은 사람에게만 이름이 보입니다.
+               그전까지는 자물쇠 아이콘 하나 + "준비 중" 툴팁 (script_secret.js) -->
+          <button id="chat-tab-secret" class="chat-tab icon-only" type="button"
+                  title="준비 중" aria-label="준비 중"
+                  onclick="switchChatTab('secret')">🔒<span id="secret-tab-label"></span>
+            <span id="chat-tab-badge-secret" class="chat-tab-badge hidden">0</span>
+          </button>
         </div>
         <div class="mini-row">
           <button id="chatty-leave-btn" class="chatty-leave-btn hidden" type="button"
                   onclick="leaveChatty()" title="수다방 나가기">나가기</button>
-          <div id="admin-area" class="hidden">
-            <button class="admin-btn" onclick="clearAllChat()">전체 삭제 🔥</button>
-          </div>
+          <!-- [2026-08-06] 안 쓰는 칸 하나를 정리했습니다. -->
           <!-- [2026-08-03] 채팅 접기 — 접으면 왼쪽에 얇은 손잡이(레일)가 남습니다 -->
           <button id="chat-collapse-btn" class="icon-btn" type="button"
                   aria-expanded="true" aria-label="채팅 접기" title="채팅 접기">❮</button>
@@ -445,6 +358,9 @@
 
       <!-- ☕ Chatty Chat 로그 — 탭 전환으로 chat-box와 자리를 바꿉니다 -->
       <div id="chat-box2" class="hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <!-- 🔒 비밀방 로그 — 승인자만 열 수 있습니다 (messages3) -->
+      <div id="chat-box3" class="hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
 
       <button id="new-msg-float" class="new-msg-float hidden" type="button">
         새 메시지 <span id="new-msg-count">0</span>개 ↓
@@ -697,21 +613,22 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608052341"></script>
-<script src="script_core.js?v=202608052341"></script>
-<script src="script_auth.js?v=202608052341"></script>
-<script src="script_ui.js?v=202608052341"></script>
-<script src="script_chat.js?v=202608052341"></script>
-<script src="script_chatty.js?v=202608052341"></script>
-<script src="script_data.js?v=202608052341"></script>
-<script src="script_realtime.js?v=202608052341"></script>
-<script src="script_layout.js?v=202608052341"></script>
-<script src="script_wordcount.js?v=202608052341"></script>
-<script src="script_timelog.js?v=202608052341"></script>
-<script src="script_idledetect.js?v=202608052341"></script>
-<script src="script_profile.js?v=202608052341"></script>
-<script src="script_reactions.js?v=202608052341"></script>
-<script src="script_manual.js?v=202608052341"></script>
+<script src="fortune_data.js?v=202608061232"></script>
+<script src="script_core.js?v=202608061232"></script>
+<script src="script_auth.js?v=202608061232"></script>
+<script src="script_ui.js?v=202608061232"></script>
+<script src="script_chat.js?v=202608061232"></script>
+<script src="script_chatty.js?v=202608061232"></script>
+<script src="script_secret.js?v=202608061232"></script>
+<script src="script_data.js?v=202608061232"></script>
+<script src="script_realtime.js?v=202608061232"></script>
+<script src="script_layout.js?v=202608061232"></script>
+<script src="script_wordcount.js?v=202608061232"></script>
+<script src="script_timelog.js?v=202608061232"></script>
+<script src="script_idledetect.js?v=202608061232"></script>
+<script src="script_profile.js?v=202608061232"></script>
+<script src="script_reactions.js?v=202608061232"></script>
+<script src="script_manual.js?v=202608061232"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -731,6 +648,7 @@
       "script_ui.js":       "openTab",
       "script_chat.js":     "renderChatMessage",
       "script_chatty.js":   "startChatty",
+      "script_secret.js":   "startSecret",
       "script_data.js":     "loadPersonalData",
       "script_realtime.js": "listenStatus",
       "script_profile.js":  "renderProfilePanel",
