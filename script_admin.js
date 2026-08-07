@@ -135,6 +135,7 @@
     el("adm-dash").style.display = "block";
     showMyUid();
     loadAttendance(0);
+    loadTodos();
     loadNotice();
     loadPinnedMessage();
     loadHistoryConfig();
@@ -583,6 +584,109 @@
     el("adm-log-modal")?.setAttribute("hidden", "");
   }
 
+  // ------------------------------------------------- ③-3.7 📌 할 일 모아보기
+  /* 멤버들의 할 일을 **날짜로 묶어** 봅니다.
+
+     [어디서 오나]  users/{닉}/todoItems = [{ text, done, due?, routine?, archived? }]
+                    users/{닉}/todayGoalText = 오늘 한 줄 목표
+
+     [묶는 규칙]
+       due 가 있으면        → 그 날짜 칸
+       routine(매일 반복)   → "🔁 매일" 칸
+       둘 다 없으면         → "📎 날짜 없음" 칸
+       archived(치운 것)    → 기본으로 감춥니다 (완료하고 치운 건 지난 일이라)
+
+     [왜 날짜가 먼저인가]
+     사람별로 묶으면 "이 사람이 뭘 하나"를 보게 되는데, 그건 감시에 가깝습니다.
+     날짜로 묶으면 "이번 주에 방이 뭘 하나"가 보여요. 같은 데이터라도
+     묶는 축이 쓰임새를 정합니다. */
+  let _todoShowArchived = false;
+
+  function todoDayLabel(key) {
+    if (key === "routine") return "🔁 매일 반복";
+    if (key === "none")    return "📎 날짜 없음";
+    const today = dayKey();
+    const d = new Date(key + "T00:00:00");
+    const dow = ["일","월","화","수","목","금","토"][d.getDay()];
+    let tag = "";
+    if (key === today) tag = " · 오늘";
+    else if (key < today) tag = " · 지난 날";
+    return `${key} (${dow})${tag}`;
+  }
+
+  async function loadTodos() {
+    const box = el("adm-todo-list");
+    if (box) box.innerHTML = "불러오는 중…";
+    try {
+      /* 닉 목록은 nickOwner 에서 — users 를 통째로 읽으면 작업구간까지
+         딸려 와서 무겁습니다. 이름만 먼저 얻고 필요한 가지만 읽어요. */
+      const nickSnap = await db.ref("nickOwner").once("value");
+      const nicks = Object.keys(nickSnap.val() || {});
+      if (!nicks.length) { if (box) box.innerHTML = "아직 멤버가 없어요."; return; }
+
+      const byDay = {};      // { 날짜키: [ {nick, text, done} ] }
+      const goals = [];      // [ {nick, goal} ]
+
+      await Promise.all(nicks.map(async (nick) => {
+        let v = {};
+        try { v = (await db.ref(`users/${nick}`).once("value")).val() || {}; } catch (e) { return; }
+
+        const goal = String(v.todayGoalText || "").trim();
+        if (goal) goals.push({ nick, goal });
+
+        const items = Array.isArray(v.todoItems) ? v.todoItems : [];
+        items.forEach(it => {
+          if (!it || !it.text) return;
+          if (it.archived && !_todoShowArchived) return;
+          const key = it.routine ? "routine" : (it.due || "none");
+          (byDay[key] = byDay[key] || []).push({
+            nick,
+            text: String(it.text),
+            done: !!it.done,
+            archived: !!it.archived
+          });
+        });
+      }));
+
+      /* 날짜 순서 — 실제 날짜를 먼저(가까운 것부터), 그 뒤에 매일·날짜없음 */
+      const dated = Object.keys(byDay).filter(k => k !== "routine" && k !== "none").sort();
+      const order = [...dated, "routine", "none"].filter(k => byDay[k]);
+
+      if (!order.length) {
+        if (box) box.innerHTML = "등록된 할 일이 없어요.";
+      } else if (box) {
+        box.innerHTML = order.map(key => {
+          const rows = byDay[key]
+            .sort((a, b) => (a.done - b.done) || a.nick.localeCompare(b.nick))
+            .map(r => `<div class="adm-todo-row${r.done ? " is-done" : ""}${r.archived ? " is-arch" : ""}">
+                 <span class="adm-todo-chk">${r.done ? "☑" : "☐"}</span>
+                 <span class="adm-todo-nick">${escapeHtml(r.nick)}</span>
+                 <span class="adm-todo-text">${escapeHtml(r.text)}</span>
+               </div>`).join("");
+          const doneN = byDay[key].filter(r => r.done).length;
+          return `<div class="adm-todo-group">
+              <div class="adm-todo-day">${escapeHtml(todoDayLabel(key))}
+                <span class="adm-todo-cnt">${doneN}/${byDay[key].length}</span></div>
+              ${rows}
+            </div>`;
+        }).join("");
+      }
+
+      const gbox = el("adm-todo-goals");
+      if (gbox) {
+        gbox.innerHTML = goals.length
+          ? goals.map(g => `<div class="adm-todo-row">
+               <span class="adm-todo-nick">${escapeHtml(g.nick)}</span>
+               <span class="adm-todo-text">${escapeHtml(g.goal)}</span>
+             </div>`).join("")
+          : `<div class="adm-msg">적어둔 오늘 목표가 없어요.</div>`;
+      }
+    } catch (e) {
+      console.warn("[adm todos]", e);
+      if (box) box.innerHTML = "불러오지 못했어요. 보안규칙(users)을 게시했는지 확인해 주세요.";
+    }
+  }
+
   // ------------------------------------------------- ③-4 글자수
   /* script_realtime.js 의 clearAllWordcount 와 같은 노드를 지웁니다 */
   async function clearWordcount() {
@@ -708,6 +812,11 @@
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
+    el("adm-todo-reload")?.addEventListener("click", loadTodos);
+    el("adm-todo-arch")?.addEventListener("change", function () {
+      _todoShowArchived = this.checked;
+      loadTodos();
+    });
     el("adm-log-close")?.addEventListener("click", closeAttendLog);
     el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
     el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));

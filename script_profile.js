@@ -557,41 +557,96 @@ window.fileToSquareDataUrl = fileToSquareDataUrl;
 window.chatAvatarHtml = chatAvatarHtml;
 window.refreshChatAvatars = refreshChatAvatars;
 
-/** 전체 프로필 구독 — 카드 렌더가 window._profileCache를 참조합니다 */
-let _profilesRef = null;
+/* =====================================================================
+   프로필 구독 — 사람별로 따로 답니다
+
+   [예전 방식과 왜 바꿨나]
+   전에는 users 전체를 통째로 구독했습니다. 짧은 코드였지만 두 가지가
+   걸렸어요.
+
+     ① 남이 투두를 한 글자 칠 때마다 이 콜백이 돌았습니다.
+        투두·오늘 목표가 프로필과 같은 users 아래 있으니까요.
+        직전 값과 비교해 다시 그리는 것만 막아 뒀을 뿐, **받아오는 것 자체는
+        막지 못했습니다.** 사람이 많을수록 계속 오갔어요.
+     ② users 를 통째로 읽을 수 있어야 하니, 남의 할 일도 읽을 수 있는
+        상태로 열어 둘 수밖에 없었습니다.
+
+   그래서 **필요한 가지만** 봅니다 — users/{닉}/profile.
+   지금 방에 있는 사람만 달고, 나가면 뗍니다. 카드에 쓰는 값은 그대로라
+   보는 쪽(window._profileCache)은 아무것도 달라지지 않습니다.
+   ===================================================================== */
+let _profileRefs = {};        // { 닉: ref } — 지금 듣고 있는 사람들
 let _profileSignature = null;
+let _profileSyncBound = false;
+
+function _profilesChanged() {
+  const sig = JSON.stringify(window._profileCache || {});
+  if (sig === _profileSignature) return;
+  _profileSignature = sig;
+
+  window.rerenderUserCards?.();
+  try { refreshChatAvatars(); } catch (e) {}
+  try { refreshChatNickColors(); } catch (e) {}
+}
+
+/* 방에 있는 사람 목록에 맞춰 리스너를 붙이고 뗍니다.
+   status 가 바뀔 때마다 불려도 괜찮게, 이미 달린 사람은 건너뜁니다. */
+function syncProfileRefs() {
+  const cache = window._statusCache || {};
+  const want = new Set(Object.keys(cache));
+  if (myNick) want.add(myNick);          // 내 것은 늘 봅니다
+
+  /* 나간 사람 — 리스너를 뗍니다 */
+  Object.keys(_profileRefs).forEach(nick => {
+    if (want.has(nick)) return;
+    try { _profileRefs[nick].off(); } catch (e) {}
+    delete _profileRefs[nick];
+  });
+
+  /* 캐시도 함께 정리합니다.
+
+     리스너 목록을 기준으로 지우면 빈 곳이 생깁니다 — 리스너를 이미 뗀
+     뒤에 캐시에만 남아 있는 사람은 영영 안 지워져요. 그래서 "지금 방에
+     있는 사람"을 기준으로 캐시 쪽을 훑습니다. */
+  const cacheNow = window._profileCache || {};
+  Object.keys(cacheNow).forEach(nick => {
+    if (!want.has(nick)) delete cacheNow[nick];
+  });
+
+  /* 새로 들어온 사람 */
+  want.forEach(nick => {
+    if (_profileRefs[nick]) return;
+    const ref = db.ref(`users/${nick}/profile`);
+    _profileRefs[nick] = ref;
+    ref.on("value", snap => {
+      const p = snap.val();
+      window._profileCache = window._profileCache || {};
+      if (p) window._profileCache[nick] = p;
+      else delete window._profileCache[nick];
+      _profilesChanged();
+    });
+  });
+
+  _profilesChanged();
+}
 
 function listenProfiles() {
-  if (_profilesRef) return;
-  _profilesRef = db.ref("users");
-  _profilesRef.on("value", snap => {
-    const all = snap.val() || {};
-    const out = {};
-    for (const nick in all) {
-      const p = all[nick]?.profile;
-      if (p) out[nick] = p;
-    }
+  window._profileCache = window._profileCache || {};
+  syncProfileRefs();
 
-    /* ✅ [FIX] 프로필 사진 깜빡임
-
-       users 경로 전체를 구독하고 있어서, 같은 경로에 저장되는 투두·오늘 목표가
-       바뀔 때도 이 콜백이 돌았습니다. 누군가 목표를 타이핑하면 그때마다
-       카드가 통째로 다시 그려지면서 사진이 깜빡였어요.
-
-       프로필 부분만 뽑아 직전 값과 비교하고, 실제로 달라졌을 때만 다시 그립니다.
-       (구독 경로를 좁히려면 필명별로 리스너를 달아야 해서, 인원이 드나드는
-        구조상 이 방식이 더 단순합니다.) */
-    const sig = JSON.stringify(out);
-    if (sig === _profileSignature) return;
-    _profileSignature = sig;
-
-    window._profileCache = out;
-
-    // 카드·채팅 아바타에 즉시 반영 (status 리스너를 기다리지 않음)
-    window.rerenderUserCards?.();
-    try { refreshChatAvatars(); } catch (e) {}
-    try { refreshChatNickColors(); } catch (e) {}
-  });
+  /* 접속자 목록이 바뀔 때마다 따라갑니다. renderUserCards 는 status 가
+     올 때마다 불리므로 여기에 얹으면 딱 맞아요. */
+  if (_profileSyncBound) return;
+  _profileSyncBound = true;
+  const _render = window.renderUserCards;
+  if (typeof _render === "function" && !_render.__profileSynced) {
+    const wrapped = function () {
+      try { syncProfileRefs(); } catch (e) {}
+      return _render.apply(this, arguments);
+    };
+    wrapped.__profileSynced = true;
+    window.renderUserCards = wrapped;
+  }
 }
 
 async function loadMyProfile() {
@@ -1155,8 +1210,11 @@ window.bindCardEditDelegate = bindCardEditDelegate;
   const _leave = window.leaveRoom;
   if (typeof _leave === "function" && !_leave.__profilePatched) {
     const wrapped = async function () {
-      try { _profilesRef?.off(); } catch (e) {}
-      _profilesRef = null;
+      /* 사람별로 달아 둔 리스너를 모두 뗍니다 */
+      Object.values(_profileRefs).forEach(r => { try { r.off(); } catch (e) {} });
+      _profileRefs = {};
+      _profileSignature = null;
+      window._profileCache = {};
       window._myProfile = null;
       return _leave.apply(this, arguments);
     };
