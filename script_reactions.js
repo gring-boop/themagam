@@ -51,8 +51,8 @@ window.reactionAddButtonHtml = reactionAddButtonHtml;
 /* [2026-08-05] Chatty(chat-box2)에도 같은 반응을 지원합니다.
    메시지 키는 messages/messages2 각각의 push 키라 겹치지 않으므로,
    두 상자 중 그 키의 줄이 있는 쪽을 찾으면 됩니다.
-   [2026-08-06] 비밀방(chat-box3)도 마찬가지 — messages3 의 push 키도 겹치지 않습니다. */
-const _REACTION_BOX_IDS = ["chat-box", "chat-box2", "chat-box3"];
+*/
+const _REACTION_BOX_IDS = ["chat-box", "chat-box2"];
 
 function _rowFor(key) {
   if (!key) return null;

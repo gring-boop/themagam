@@ -809,7 +809,7 @@
      push 키는 방마다 고유하므로 먼저 찾히는 쪽이 정답입니다. */
   function _findChatItemByKey(key) {
     if (!key) return null;
-    for (const id of ["chat-box", "chat-box2", "chat-box3"]) {
+    for (const id of ["chat-box", "chat-box2"]) {
       const el = document.getElementById(id)
         ?.querySelector(`.chat-item[data-key="${CSS.escape(key)}"]`);
       if (el) return el;
@@ -869,8 +869,8 @@
 
   function bindReplyInteractions() {
     /* [2026-08-05] Chatty(chat-box2)에서도 같은 3연속 클릭 답장을 지원
-       [2026-08-06] 비밀방(chat-box3)도 같은 줄에 합류 */
-    ["chat-box", "chat-box2", "chat-box3"].forEach(id => {
+*/
+    ["chat-box", "chat-box2"].forEach(id => {
       const box = document.getElementById(id);
       if (!box || box.dataset.replyBound === "true") return;
       box.dataset.replyBound = "true";
@@ -1053,6 +1053,18 @@
     // [FIX] 기존: 키 순서로 삭제 → push 키("-O...")가 sys_* 보다 앞이라
     // 실제 대화만 먼저 지워지고 시스템 메시지는 무한히 쌓이는 버그가 있었음.
     // 변경: (1) 오래된 시스템/이펙트 메시지부터 삭제 (2) 그래도 넘치면 시간순으로 삭제
+    //
+    /* [고침 2026-08-07] 입장·퇴장 알림을 "먼저 지우는 것"에서 뺐습니다.
+
+       이 규칙은 뽀모도로 알림이 채팅에 쏟아지던 시절에 만든 것입니다.
+       그때는 시스템 메시지가 곧 소음이라 제일 먼저 치우는 게 맞았어요.
+       그런데 뽀모 알림이 글자수 창으로 옮겨간 뒤로 채팅에 남는 시스템
+       메시지는 사실상 입장·퇴장뿐입니다. 그 결과 대화가 250개를 넘길
+       때마다 **지난 입장·퇴장 기록이 통째로 먼저 사라졌어요** —
+       히스토리에 함께 보여주기로 해 놓고 정작 데이터를 지우고 있었던 셈입니다.
+
+       이제 먼저 치우는 것은 이펙트(fx)와 옛 뽀모 알림뿐이고,
+       입장·퇴장은 보통 대화와 똑같이 오래된 순으로만 밀려납니다. */
     try {
       const chatRef  = db.ref("messages");
       const snapshot = await chatRef.once("value");
@@ -1062,23 +1074,23 @@
       const items = [];
       snapshot.forEach(child => {
         const v = child.val() || {};
-        items.push({
-          key: child.key,
-          time: Number(v.time || 0),
-          sys: (v.type === "system" || v.type === "fx")
-        });
+        /* 먼저 치워도 되는 것 — 화면 효과와, 옛 방식으로 남은 뽀모 알림.
+           입장·퇴장(joinOf·leaveOf)은 여기에 넣지 않습니다. */
+        const throwaway = (v.type === "fx")
+          || (v.type === "system" && !v.joinOf && !v.leaveOf);
+        items.push({ key: child.key, time: Number(v.time || 0), throwaway });
       });
       items.sort((a, b) => a.time - b.time); // 오래된 순
 
       const updates = {};
       let toDelete = total - 250;
 
-      // 1순위: 오래된 시스템/이펙트 메시지
+      // 1순위: 이펙트와 옛 뽀모 알림 (읽을 값이 없는 것들)
       for (const it of items) {
         if (toDelete <= 0) break;
-        if (it.sys) { updates[it.key] = null; toDelete--; }
+        if (it.throwaway) { updates[it.key] = null; toDelete--; }
       }
-      // 2순위: 그래도 넘치면 가장 오래된 메시지부터
+      // 2순위: 그래도 넘치면 가장 오래된 것부터 (입장·퇴장도 여기서 같이)
       for (const it of items) {
         if (toDelete <= 0) break;
         if (!(it.key in updates)) { updates[it.key] = null; toDelete--; }
@@ -1095,27 +1107,20 @@
      window.isChattyActive 는 script_chatty.js 가 나중에 export 하므로
      호출 시점에 window 에서 찾습니다 (없으면 늘 메인). */
   function _chattyActive() { return window.isChattyActive?.() === true; }
-  /* [2026-08-06] 세 번째 방(비밀방 · messages3)도 같은 자리를 씁니다.
-     window.isSecretActive 는 script_secret.js 가 나중에 export 합니다.
-
-     [고침 2026-08-07] 이름을 _secretActive 에서 _secretRoomOn 으로 바꿨습니다.
-     이 파일들은 모듈이 아니라 그냥 <script> 라서, 맨 바깥 이름은 전부 한 자리에
-     모입니다. script_secret.js 에 이미 `let _secretActive` 가 있어서 이름이 부딪혔고,
-     그 순간 SyntaxError 로 script_secret.js 가 통째로 죽고 있었습니다. */
-  function _secretRoomOn() { return window.isSecretActive?.() === true; }
+  /* [뺌 2026-08-07] 세 번째 방(비밀방 · messages3)은 없앴습니다.
+     쓰는 사람이 없는 채로 코드만 남아 있었고, 이름이 부딪혀 파일 하나를
+     통째로 죽이는 사고까지 냈어요. 되살릴 일이 생기면 git 기록에 있습니다. */
   function _activeMsgRef() {
-    if (_secretRoomOn()) return db.ref("messages3");
     return db.ref(_chattyActive() ? "messages2" : "messages");
   }
   function _scrollActiveChat() {
-    if (_secretRoomOn()) window.scrollSecretToBottom?.(true);
-    else if (_chattyActive()) window.scrollChattyToBottom?.();
+    if (_chattyActive()) window.scrollChattyToBottom?.();
     else scrollChatToBottom(true);
   }
-  /* Chatty/비밀방 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라
+  /* 수다방 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라
      어느 노드를 게시해야 하는지 콕 집어줍니다 */
   function _chattySendFail(e) {
-    const node = _secretRoomOn() ? "messages3" : (_chattyActive() ? "messages2" : null);
+    const node = _chattyActive() ? "messages2" : null;
     if (!node) return;
     const c = String(e && (e.code || e.message) || "");
     showCommandToast(/permission/i.test(c)
@@ -1128,9 +1133,6 @@
     //    true 를 돌려주면(미참여·빈 입력 등) 여기서 멈추고,
     //    false 면 chatty 모드로 이어서 처리합니다 (_activeMsgRef 가 messages2 로 갈라줌).
     if (window.chattySend?.()) return;
-    /* ✅ [2026-08-06] 비밀방(messages3)도 같은 문지기 구조.
-       미승인자는 여기서 막히고, 승인자는 아래 흐름을 그대로 탑니다. */
-    if (window.secretSend?.()) return;
 
     const el = document.getElementById("message");
     if (!el || !myNick) return;
@@ -1237,7 +1239,7 @@
       el.value = ""; el.style.height = "42px";
       _cancelReply();
       _scrollActiveChat();
-      if (!_chattyActive() && !_secretRoomOn()) checkAndTrimChat();   // 트림은 메인 전용
+      if (!_chattyActive()) checkAndTrimChat();   // 트림은 메인 전용
     } catch(e) {
       console.error("전송 실패", e);
       _chattySendFail(e);

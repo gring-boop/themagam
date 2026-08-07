@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608071206">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608071206">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608071222">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608071222">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608071206">
+  <link rel="manifest" href="manifest.json?v=202608071222">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608071206" />
+  <link rel="stylesheet" href="styles.css?v=202608071222" />
 </head>
 
 <body>
@@ -437,13 +437,6 @@
                   onclick="switchChatTab('chatty')">☕ 수다방 <span id="chatty-tab-count">(0명)</span>
             <span id="chat-tab-badge-chatty" class="chat-tab-badge hidden">0</span>
           </button>
-          <!-- [2026-08-06] 세 번째 방 버튼은 당분간 감춰둡니다(보류).
-               hidden 만 떼면 그대로 되살아나요 — 관련 코드·데이터는 그대로 둡니다. -->
-          <button id="chat-tab-secret" class="chat-tab icon-only hidden" type="button"
-                  title="준비 중" aria-label="준비 중"
-                  onclick="switchChatTab('secret')">🔒<span id="secret-tab-label"></span>
-            <span id="chat-tab-badge-secret" class="chat-tab-badge hidden">0</span>
-          </button>
         </div>
         <div class="mini-row">
           <button id="chatty-leave-btn" class="chatty-leave-btn hidden" type="button"
@@ -466,8 +459,6 @@
       <!-- ☕ Chatty Chat 로그 — 탭 전환으로 chat-box와 자리를 바꿉니다 -->
       <div id="chat-box2" class="hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
 
-      <!-- 🔒 비밀방 로그 — 승인자만 열 수 있습니다 (messages3) -->
-      <div id="chat-box3" class="hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
 
       <button id="new-msg-float" class="new-msg-float hidden" type="button">
         새 메시지 <span id="new-msg-count">0</span>개 ↓
@@ -729,25 +720,24 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608071206"></script>
-<script src="script_core.js?v=202608071206"></script>
-<script src="script_auth.js?v=202608071206"></script>
-<script src="script_ui.js?v=202608071206"></script>
-<script src="script_chat.js?v=202608071206"></script>
-<script src="script_chatty.js?v=202608071206"></script>
-<script src="script_secret.js?v=202608071206"></script>
-<script src="script_data.js?v=202608071206"></script>
-<script src="script_realtime.js?v=202608071206"></script>
-<script src="script_layout.js?v=202608071206"></script>
-<script src="script_wordcount.js?v=202608071206"></script>
-<script src="script_timelog.js?v=202608071206"></script>
-<script src="script_idledetect.js?v=202608071206"></script>
-<script src="script_profile.js?v=202608071206"></script>
-<script src="script_mywork.js?v=202608071206"></script>
-<script src="script_forest.js?v=202608071206"></script>
-<script src="script_reactions.js?v=202608071206"></script>
-<script src="script_share.js?v=202608071206"></script>
-<script src="script_manual.js?v=202608071206"></script>
+<script src="fortune_data.js?v=202608071222"></script>
+<script src="script_core.js?v=202608071222"></script>
+<script src="script_auth.js?v=202608071222"></script>
+<script src="script_ui.js?v=202608071222"></script>
+<script src="script_chat.js?v=202608071222"></script>
+<script src="script_chatty.js?v=202608071222"></script>
+<script src="script_data.js?v=202608071222"></script>
+<script src="script_realtime.js?v=202608071222"></script>
+<script src="script_layout.js?v=202608071222"></script>
+<script src="script_wordcount.js?v=202608071222"></script>
+<script src="script_timelog.js?v=202608071222"></script>
+<script src="script_idledetect.js?v=202608071222"></script>
+<script src="script_profile.js?v=202608071222"></script>
+<script src="script_mywork.js?v=202608071222"></script>
+<script src="script_forest.js?v=202608071222"></script>
+<script src="script_reactions.js?v=202608071222"></script>
+<script src="script_share.js?v=202608071222"></script>
+<script src="script_manual.js?v=202608071222"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -767,7 +757,6 @@
       "script_ui.js":       "openTab",
       "script_chat.js":     "renderChatMessage",
       "script_chatty.js":   "startChatty",
-      "script_secret.js":   "startSecret",
       "script_data.js":     "loadPersonalData",
       "script_realtime.js": "listenStatus",
       "script_profile.js":  "renderProfilePanel",

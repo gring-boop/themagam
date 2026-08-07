@@ -138,7 +138,6 @@
     loadNotice();
     loadPinnedMessage();
     loadHistoryConfig();
-    loadSecretAllow();
     loadForest();
   }
 
@@ -305,10 +304,9 @@
        nickOwner/{닉}             닉 도장 — 이걸 지워야 그 닉을 다시 쓸 수 있어요
        attendance/{모든 날짜}/{닉} 출근 기록
        wordlog/{모든 날짜}/{닉}    글자수 기록
-       rooms/secret/allow/{uid}   비밀방 승인
 
      남기는 곳
-       messages / messages2 / messages3 — 지난 발언은 지우지 않습니다.
+       messages / messages2 — 지난 발언은 지우지 않습니다.
          한 사람의 말만 빼면 대화 맥락이 끊겨 읽을 수 없게 되니까요.
        wordfeed — push 키라 닉 필드로 하나하나 걸러야 하는데, 그날치만 남고
          금방 사라지는 구조라 굳이 손대지 않습니다.
@@ -330,9 +328,10 @@
 
     msg("adm-att-msg", "지우는 중…");
     try {
-      /* ★ 순서 주의 — nickOwner 를 지우기 전에 uid 를 먼저 확보해야
-         비밀방 승인(rooms/secret/allow/{uid})을 찾아 지울 수 있어요. */
+      /* nickOwner 를 지우기 전에 uid 를 먼저 읽어 둡니다 —
+         지운 뒤에는 이 닉이 누구였는지 알 방법이 없어져요. */
       const uid = (await db.ref("nickOwner/" + nick).once("value")).val();
+      void uid;
 
       /* attendance·wordlog 은 날짜별로 흩어져 있어 통째로 읽어 해당 닉만 골라
          multi-path update 로 한 번에 지웁니다. (날짜마다 remove 하면 요청이 너무 많아요) */
@@ -355,12 +354,10 @@
 
       await db.ref("users/" + nick).remove();
       await db.ref("status/" + nick).remove();
-      if (uid) { try { await db.ref("rooms/secret/allow/" + uid).remove(); } catch (e) {} }
       await db.ref("nickOwner/" + nick).remove();     // 맨 마지막 — 도장 반납
 
       await loadAttendance(_attOffset);
       msg("adm-att-msg", `🗑️ ${nick}님을 지웠어요.`);
-      try { await loadSecretAllow(); } catch (e) {}
     } catch (e) {
       console.warn("[adm removeMember]", e);
       msg("adm-att-msg", "지우지 못했어요 — 보안규칙에 관리자 예외가 들어갔는지 확인해 주세요.", true);
@@ -463,92 +460,6 @@
       msg("adm-chat-msg", "☕ Chatty를 모두 삭제했어요.");
     } catch (e) {
       msg("adm-chat-msg", "삭제하지 못했어요.", true);
-    }
-  }
-
-  // ------------------------------------------------- ③-3.5 🔒 비밀방
-  /* 데이터 구조
-       rooms/secret/allow/{uid} = true   ← 승인 명단 (uid 는 auth uid)
-       nickOwner/{닉}          = uid     ← 닉 ↔ uid 매핑 (메인 앱이 심습니다)
-       messages3               = 방 대화
-
-     화면에는 uid 대신 닉을 보여주려고 nickOwner 를 통째로 읽어 역매핑합니다.
-     (도장이 지워진 uid 는 닉을 못 찾으니 uid 앞자리만 보여줍니다) */
-  let _secretAllow = {};   // { uid: 닉 or null }
-
-  async function loadSecretAllow() {
-    const box = el("adm-secret-list");
-    if (box) box.textContent = "불러오는 중…";
-    try {
-      const [allowSnap, nickSnap] = await Promise.all([
-        db.ref("rooms/secret/allow").once("value"),
-        db.ref("nickOwner").once("value")
-      ]);
-      const allow = allowSnap.val() || {};
-      const nickByUid = {};
-      Object.entries(nickSnap.val() || {}).forEach(([nick, uid]) => {
-        if (uid) nickByUid[uid] = nick;
-      });
-
-      _secretAllow = {};
-      Object.keys(allow).forEach(uid => {
-        if (allow[uid] === true) _secretAllow[uid] = nickByUid[uid] || null;
-      });
-
-      const uids = Object.keys(_secretAllow);
-      if (!box) return;
-      if (!uids.length) { box.textContent = "아직 승인된 사람이 없어요."; return; }
-
-      box.innerHTML = uids.map(uid => {
-        const nick = _secretAllow[uid];
-        const shown = nick ? escapeHtml(nick) : `(닉 미상 · ${escapeHtml(uid.slice(0, 8))}…)`;
-        return `<div class="adm-secret-row">🔓 ${shown}
-                  <button class="adm-btn ghost" data-secret-off="${escapeHtml(uid)}">해제</button>
-                </div>`;
-      }).join("");
-    } catch (e) {
-      console.warn("[adm secret]", e);
-      if (box) box.textContent = "불러오지 못했어요 — 보안규칙(rooms)을 확인해 주세요.";
-    }
-  }
-
-  async function addSecret() {
-    const nick = (el("adm-secret-nick")?.value || "").trim();
-    if (!nick) { msg("adm-secret-msg", "닉네임을 입력해 주세요.", true); return; }
-    try {
-      const uid = (await db.ref("nickOwner/" + nick).once("value")).val();
-      if (!uid) {
-        msg("adm-secret-msg", `'${nick}' 은(는) 등록되지 않은 닉네임이에요. 메인 방에서 먼저 입장해야 해요.`, true);
-        return;
-      }
-      await db.ref("rooms/secret/allow/" + uid).set(true);
-      el("adm-secret-nick").value = "";
-      msg("adm-secret-msg", `✅ '${nick}' 님을 비밀방에 승인했어요. (다음 입장부터 보여요)`);
-      await loadSecretAllow();
-    } catch (e) {
-      msg("adm-secret-msg", "승인하지 못했어요 — 보안규칙을 확인해 주세요.", true);
-    }
-  }
-
-  async function removeSecret(uid) {
-    const nick = _secretAllow[uid] || uid;
-    if (!confirm(`'${nick}' 님의 비밀방 승인을 해제할까요?`)) return;
-    try {
-      await db.ref("rooms/secret/allow/" + uid).remove();
-      msg("adm-secret-msg", `🔒 '${nick}' 님의 승인을 해제했어요.`);
-      await loadSecretAllow();
-    } catch (e) {
-      msg("adm-secret-msg", "해제하지 못했어요.", true);
-    }
-  }
-
-  async function clearSecret() {
-    if (!confirm("정말 비밀방 대화를 모두 삭제할까요? (되돌릴 수 없어요!)")) return;
-    try {
-      await db.ref("messages3").remove();
-      msg("adm-secret-msg", "🧹 비밀방 대화를 모두 삭제했어요.");
-    } catch (e) {
-      msg("adm-secret-msg", "삭제하지 못했어요 — 관리자 계정도 승인 명단에 있어야 지울 수 있어요.", true);
     }
   }
 
@@ -676,15 +587,6 @@
     el("adm-chat-clear")?.addEventListener("click", clearChat);
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
-    el("adm-secret-add")?.addEventListener("click", addSecret);
-    el("adm-secret-reload")?.addEventListener("click", loadSecretAllow);
-    el("adm-secret-clear")?.addEventListener("click", clearSecret);
-    el("adm-secret-nick")?.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) addSecret(); });
-    /* 명단은 다시 그려지므로 개별 버튼 대신 목록에 위임합니다 */
-    el("adm-secret-list")?.addEventListener("click", e => {
-      const btn = e.target.closest("[data-secret-off]");
-      if (btn) removeSecret(btn.getAttribute("data-secret-off"));
-    });
     el("adm-forest-reload")?.addEventListener("click", loadForest);
     el("adm-forest-sweep")?.addEventListener("click", sweepForest);
     el("adm-forest-clear")?.addEventListener("click", clearForest);
