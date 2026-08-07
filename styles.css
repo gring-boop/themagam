@@ -2998,8 +2998,11 @@ body.pomo-nonpart .pomo-status-line{
 /* 나의 작업은 달력과 탭이 나란히 들어가서 넉넉해야 합니다 (460 → 920) */
 #mywork-modal .modal-content{ width: min(920px, 100%); }
 
-/* 🎋 대숲은 쪽지를 널찍하게 붙여야 해서 나의 작업과 같은 폭 (460 → 920) */
-#forest-modal .modal-content{ width: min(920px, 100%); }
+/* 🎋 대숲은 쪽지를 널찍하게 붙여야 해서 나의 작업보다도 넓게 (460 → 920 → 1196).
+   [고침 2026-08-07] 좁다는 얘기가 있어 폭을 3할 늘렸습니다. 대신 세로는
+   한 뼘 줄여서(430 → 387) 화면을 덜 잡아먹게 했어요 — 쪽지는 옆으로
+   퍼지는 편이 읽기 좋고, 세로로 길면 스크롤이 생깁니다. */
+#forest-modal .modal-content{ width: min(1196px, 100%); }
 
 /* 목표·투두는 입력칸 몇 개뿐이라 좁아도 됩니다 (520 → 416) */
 #goals-modal .modal-content{ width: min(416px, 100%); }
@@ -5863,8 +5866,8 @@ body.split-dragging #chat-box3{ user-select: none; }
    사용자 지정 속성으로 받습니다. */
 .fr-board{
   position: relative;
-  height: var(--fr-h, 430px);
-  min-height: 430px;
+  height: var(--fr-h, 387px);
+  min-height: 387px;
   border-radius: 10px;
   background-color: #DED6C6;
   background-image: radial-gradient(rgba(120,100,72,.20) 1px, transparent 1px);
@@ -6100,11 +6103,17 @@ body.split-dragging #chat-box3{ user-select: none; }
    "저기 볼 게 있다"는 정도로만 눈에 들어오게 했어요.
    color-mix 를 쓰면 테마 여덟 개에 각각 색을 적지 않아도 됩니다. */
 .icon-btn.share-others{
+  /* 먼저 적는 두 줄은 대비책입니다. color-mix 를 모르는 브라우저에서는
+     아래 줄이 통째로 버려지는데, 그러면 아무 변화가 없어서 "고장인가?"
+     싶어집니다. 글씨와 테두리만이라도 붉게 남도록 이렇게 둡니다. */
   color: var(--danger);
+  border-color: var(--danger-line);
+  background: var(--panel2);
   border-color: color-mix(in srgb, var(--danger-line) 55%, transparent);
   background: color-mix(in srgb, var(--danger-soft) 38%, transparent);
 }
 .icon-btn.share-others:hover{
+  background: var(--danger-soft);
   background: color-mix(in srgb, var(--danger-soft) 60%, transparent);
 }
 
