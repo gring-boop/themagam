@@ -268,6 +268,8 @@
       detectJoins(data);
       updateChatHeader();
       renderUserCards(data);
+      /* 남이 공유를 켜고 끄면 머리말 버튼 색이 따라 바뀝니다 */
+      window.renderShareButton?.();
     });
   }
 
@@ -551,6 +553,15 @@
        개인 타이머라 남은 시간은 보내지 않습니다. "달리는 중"만 알립니다. */
     const pomoRunning = (typeof isPomodoroRunning === "function") ? isPomodoroRunning() : false;
     const pomoPhaseNow = pomoRunning ? pomodoroPhase() : "";
+    /* [2026-08-07] 지금 화면을 공유 중인지 — 참/거짓 한 칸뿐입니다.
+
+       머리말의 [🖥️ 화면 공유] 버튼을, 남이 공유 중일 때도 옅은 붉은색으로
+       물들이려고 둡니다. 그림은 여기 싣지 않아요. screens 를 늘 구독하면
+       공유하지도 않는 사람이 5초마다 남의 그림을 내려받게 되고, 그건
+       "공유 중인 사람끼리만 본다"는 약속과도 어긋납니다.
+       접속자 정보는 어차피 모두가 이미 구독 중이라 통신량도 늘지 않습니다. */
+    const shareOn = (typeof window.isScreenSharing === "function")
+      ? window.isScreenSharing() === true : false;
 
     if (force) {
       window.saveDailyLog?.();
@@ -569,6 +580,7 @@
       pomoCount,
       pomoRunning,
       pomoPhase: pomoPhaseNow,
+      shareOn,
       /* 펫 요약 — 남들 카드에도 보이게 */
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,

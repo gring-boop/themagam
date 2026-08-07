@@ -244,6 +244,7 @@
     _timer    = setInterval(pushFrame, SHARE_INTERVAL_MS);
     _agoTimer = setInterval(tickShare, 1000);
     renderShareButton();
+    window.updateStatus?.();           // 남들 버튼에도 "공유 중"이 뜨게
     noticeOnce();
     pushFrame();                       // 첫 장은 기다리지 않고 바로
   }
@@ -267,6 +268,7 @@
     _lastShareHtml = null;
     renderShareCards();                // 공유를 끄면 남의 화면도 치웁니다
     renderShareButton();
+    if (wasSharing) window.updateStatus?.();   // 남들 버튼에서도 표시를 뗍니다
 
     if (wasSharing && myNick) {
       try { await db.ref("screens/" + myNick).onDisconnect().cancel(); } catch (e) {}
@@ -327,11 +329,42 @@
       if (label) label.textContent = "화면 공유";
       return;
     }
-    btn.classList.toggle("share-on", _sharing);   // 공유 중에는 붉게
+    /* [2026-08-07] 세 가지 모습이 있습니다.
+         내가 공유 중        → 꽉 찬 붉은색 (예전 그대로)
+         남이 공유 중        → 옅은 붉은색  ← 새로 생긴 것
+         아무도 공유 안 함   → 평소 회색
+       "지금 볼 게 있다"는 신호가 없으면, 켜 놓고도 아무도 안 보는 일이
+       생깁니다. 눌러야 비로소 보이는 기능이라 더 그래요. */
+    const others = othersSharing();
+    btn.classList.toggle("share-on", _sharing);
+    btn.classList.toggle("share-others", !_sharing && others > 0);
+
     if (label) label.textContent = _sharing ? "공유 중" : "화면 공유";
     btn.title = _sharing
       ? "화면 공유 끄기"
-      : "내 창 하나를 뭉갠 그림으로 공유합니다 (원본은 나가지 않아요)";
+      : (others > 0
+          ? `${others}명이 화면을 공유하고 있어요 — 나도 켜면 볼 수 있어요`
+          : "내 창 하나를 뭉갠 그림으로 공유합니다 (원본은 나가지 않아요)");
+  }
+
+  /* 나 말고 몇 명이 공유 중인가.
+
+     접속자 정보(status)에 각자 적어 보내는 shareOn 만 셉니다 — 그림은
+     보지 않아요. 끊긴 사람의 낡은 기록까지 세면 아무도 없는데 버튼이
+     붉어지므로, 접속 중인 사람만 셉니다. */
+  function othersSharing() {
+    const cache = window._statusCache;
+    if (!cache) return 0;
+    const t = Date.now();
+    let n = 0;
+    for (const nick in cache) {
+      if (nick === myNick) continue;
+      const row = cache[nick];
+      if (!row || row.shareOn !== true) continue;
+      if (typeof window.isOnline === "function" && !window.isOnline(row, t)) continue;
+      n++;
+    }
+    return n;
   }
 
   /* ---------------------------------------------------------------
@@ -470,6 +503,8 @@
   window.setShareLevel = setShareLevel;
   window.stopScreenShare   = stopScreenShare;
   window.switchShareWindow = switchShareWindow;
+  /* 접속자 정보가 바뀔 때 script_realtime.js 가 다시 칠해 줍니다 */
+  window.renderShareButton = renderShareButton;
   window.renderShareCards  = renderShareCards;
   window.isScreenSharing   = () => _sharing;
   window.SHARE_LEVELS      = SHARE_LEVELS;
