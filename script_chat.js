@@ -1096,21 +1096,26 @@
      호출 시점에 window 에서 찾습니다 (없으면 늘 메인). */
   function _chattyActive() { return window.isChattyActive?.() === true; }
   /* [2026-08-06] 세 번째 방(비밀방 · messages3)도 같은 자리를 씁니다.
-     window.isSecretActive 는 script_secret.js 가 나중에 export 합니다. */
-  function _secretActive() { return window.isSecretActive?.() === true; }
+     window.isSecretActive 는 script_secret.js 가 나중에 export 합니다.
+
+     [고침 2026-08-07] 이름을 _secretActive 에서 _secretRoomOn 으로 바꿨습니다.
+     이 파일들은 모듈이 아니라 그냥 <script> 라서, 맨 바깥 이름은 전부 한 자리에
+     모입니다. script_secret.js 에 이미 `let _secretActive` 가 있어서 이름이 부딪혔고,
+     그 순간 SyntaxError 로 script_secret.js 가 통째로 죽고 있었습니다. */
+  function _secretRoomOn() { return window.isSecretActive?.() === true; }
   function _activeMsgRef() {
-    if (_secretActive()) return db.ref("messages3");
+    if (_secretRoomOn()) return db.ref("messages3");
     return db.ref(_chattyActive() ? "messages2" : "messages");
   }
   function _scrollActiveChat() {
-    if (_secretActive()) window.scrollSecretToBottom?.(true);
+    if (_secretRoomOn()) window.scrollSecretToBottom?.(true);
     else if (_chattyActive()) window.scrollChattyToBottom?.();
     else scrollChatToBottom(true);
   }
   /* Chatty/비밀방 전송 실패 안내 — 가장 흔한 원인은 보안규칙 미게시라
      어느 노드를 게시해야 하는지 콕 집어줍니다 */
   function _chattySendFail(e) {
-    const node = _secretActive() ? "messages3" : (_chattyActive() ? "messages2" : null);
+    const node = _secretRoomOn() ? "messages3" : (_chattyActive() ? "messages2" : null);
     if (!node) return;
     const c = String(e && (e.code || e.message) || "");
     showCommandToast(/permission/i.test(c)
@@ -1232,7 +1237,7 @@
       el.value = ""; el.style.height = "42px";
       _cancelReply();
       _scrollActiveChat();
-      if (!_chattyActive() && !_secretActive()) checkAndTrimChat();   // 트림은 메인 전용
+      if (!_chattyActive() && !_secretRoomOn()) checkAndTrimChat();   // 트림은 메인 전용
     } catch(e) {
       console.error("전송 실패", e);
       _chattySendFail(e);

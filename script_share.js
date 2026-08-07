@@ -172,18 +172,26 @@
   /* ---------------------------------------------------------------
      켜기 · 끄기
      --------------------------------------------------------------- */
-  async function startScreenShare() {
-    if (!supported()) { alert(SHARE_UNSUPPORTED); return; }
-    if (!myNick) { alert("먼저 입장한 뒤에 쓸 수 있어요."); return; }
-    if (_sharing) return;
-
-    let stream = null;
+  /* 창 고르기 판을 띄웁니다. 취소하거나 막히면 null 을 돌려줍니다. */
+  async function _pickWindow() {
     try {
-      stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 1 } });
+      return await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 1 } });
     } catch (e) {
-      // 창 고르기를 취소했거나 권한이 막혔습니다 — 조용히 없던 일로
-      return;
+      return null;
     }
+  }
+
+  /* 고른 화면을 숨긴 <video> 에 물립니다.
+     이미 물려 있던 것이 있으면 먼저 떼어 냅니다 — 창 바꾸기가 이 함수 하나로
+     끝나게 하려고 시작과 바꾸기가 같은 길을 씁니다. */
+  function _attachStream(stream) {
+    /* 옛 것 정리 — 새 것을 받은 뒤에 하는 이유는, 고르기를 취소했을 때
+       지금 나가던 화면이 끊기면 안 되기 때문입니다. */
+    try {
+      _stream && _stream.getTracks().forEach(t => { t.onended = null; t.stop(); });
+    } catch (e) {}
+    try { _video && _video.remove(); } catch (e) {}
+
     _stream = stream;
 
     /* 숨긴 <video>. 화면 밖에 두되 문서에는 붙여 둡니다
@@ -195,11 +203,37 @@
     _video.playsInline = true;
     _video.srcObject = stream;
     document.body.appendChild(_video);
-    try { await _video.play(); } catch (e) {}
+    _video.play().catch(() => {});
 
-    /* 브라우저가 띄우는 "공유 중지" 막대를 직접 누른 경우에도 정리 */
+    /* 브라우저가 띄우는 "공유 중지" 막대를 직접 누른 경우에도 정리.
+       단, 창을 바꾸느라 방금 우리가 끈 것은 위에서 onended 를 떼어 뒀으므로
+       여기 걸리지 않습니다. */
     const track = stream.getVideoTracks()[0];
     if (track) track.onended = () => { stopScreenShare(); };
+  }
+
+  /* [2026-08-07] 공유 중에 보여줄 창을 바꿉니다.
+     카드 아래 "○○의 화면" 글씨를 누르면 여기로 옵니다.
+
+     끄고 다시 켜도 되지만 그러면 남들 화면에서 내 카드가 잠깐 사라졌다
+     다시 생기고, 서버에 지웠다 쓰는 일이 한 번씩 더 붙습니다.
+     공유 상태는 그대로 두고 물려 있는 화면만 갈아 끼웁니다. */
+  async function switchShareWindow() {
+    if (!_sharing) return;
+    const stream = await _pickWindow();
+    if (!stream) return;      // 취소 — 보던 화면 그대로 계속 나갑니다
+    _attachStream(stream);
+    pushFrame();              // 바뀐 창을 기다리지 않고 바로 한 장
+  }
+
+  async function startScreenShare() {
+    if (!supported()) { alert(SHARE_UNSUPPORTED); return; }
+    if (!myNick) { alert("먼저 입장한 뒤에 쓸 수 있어요."); return; }
+    if (_sharing) return;
+
+    const stream = await _pickWindow();
+    if (!stream) return;      // 고르기를 취소했거나 권한이 막혔습니다
+    _attachStream(stream);
 
     _sharing = true;
 
@@ -352,7 +386,10 @@
           <span class="share-live">● 공유 중</span>
         </div>
         <div class="card-foot share-foot">
-          <span class="share-who">${esc(row.nick)}의 화면</span>
+          ${mine
+            ? `<button type="button" class="share-who is-mine" data-share-switch="1"
+                       title="누르면 보여줄 창을 바꿀 수 있어요">${esc(row.nick)}의 화면</button>`
+            : `<span class="share-who">${esc(row.nick)}의 화면</span>`}
           ${off}
         </div>
       </div>`;
@@ -417,6 +454,10 @@
     list.addEventListener("click", (e) => {
       const off = e.target.closest("[data-share-stop]");
       if (off) { e.stopPropagation(); stopScreenShare(); return; }
+
+      /* 내 카드의 "○○의 화면" — 보여줄 창 바꾸기 */
+      const sw = e.target.closest("[data-share-switch]");
+      if (sw) { e.stopPropagation(); switchShareWindow(); return; }
     });
   }
 
@@ -428,6 +469,7 @@
      setShareLevel(0|1|2) — 0 약함(210px) · 1 보통(105px) · 2 강함(52px) */
   window.setShareLevel = setShareLevel;
   window.stopScreenShare   = stopScreenShare;
+  window.switchShareWindow = switchShareWindow;
   window.renderShareCards  = renderShareCards;
   window.isScreenSharing   = () => _sharing;
   window.SHARE_LEVELS      = SHARE_LEVELS;

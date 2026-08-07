@@ -6170,6 +6170,30 @@ body.split-dragging #chat-box3{ user-select: none; }
   font-weight: var(--fw-bold);
   color: var(--text);
 }
+
+/* [2026-08-07] 내 카드의 이름은 단추입니다 — 누르면 보여줄 창을 바꿔요.
+   생김새는 옆 카드의 이름과 똑같이 두되, 마우스를 올렸을 때만
+   "눌러도 되는구나" 하고 알아볼 수 있게 밑줄이 옅게 뜹니다.
+   평소에도 밑줄을 그으면 카드 아랫줄이 어수선해져요. */
+.share-who.is-mine{
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: underline dotted transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color .12s ease;
+}
+.share-who.is-mine:hover{ text-decoration-color: var(--muted); }
+.share-who.is-mine:focus-visible{
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
 .share-off{
   flex: 0 0 auto;
   font-size: var(--fs-2xs);
