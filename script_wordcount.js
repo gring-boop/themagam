@@ -537,6 +537,9 @@
       if (e.key === "Enter") { e.preventDefault(); send(); }
     });
 
+    /* [전체 기록] 은 탭이 아니라 창을 엽니다 — 눌러도 오늘/내 기록 선택은 그대로 */
+    el("wc-all-btn")?.addEventListener("click", openWcAll);
+
     host.querySelectorAll("[data-wc-tab]").forEach(b => {
       b.addEventListener("click", () => {
         _tab = b.dataset.wcTab;
@@ -614,6 +617,158 @@
         ? `<p class="hint">아직 출발선을 안 잡았어요. 글자수 칸에서 지금 원고의 전체 글자수를 적어주세요.</p>`
         : ""}`;
   }
+
+  /* =====================================================================
+     📓 전체 기록 — 방 전체를 달 단위 달력으로
+
+     [어디서 끌어오나]
+       글자수 : wordlog/{날짜}/{닉} = { total } — 그날 사람들이 쓴 양.
+                한 달치를 키 범위로 한 번에 읽습니다.
+       🍅     : users/{닉}/pomoSessions/{날짜} = { count }
+                이건 사람별로 흩어져 있어서, 그 달에 흔적이 있는 닉만
+                골라 한 명씩 읽습니다. 방 인원이 열댓이라 부담이 없어요.
+                (users 를 통째로 읽으면 투두·작업구간까지 딸려 와 무겁습니다)
+
+     [왜 캐시를 두는가]
+     달을 앞뒤로 넘길 때마다 같은 달을 다시 받아오면 느립니다.
+     한 번 받은 달은 창을 닫기 전까지 들고 있습니다.
+     ===================================================================== */
+  const _wcAllCache = {};      // { "2026-08": { days:{일:{chars,pomo,byNick}}, total, pomo } }
+  let _wcAllOffset = 0;        // 0 = 이번 달, 1 = 지난 달 …
+
+  function monthKeyOf(offset) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - offset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  async function loadMonthAll(mKey) {
+    if (_wcAllCache[mKey]) return _wcAllCache[mKey];
+
+    const from = `${mKey}-01`, to = `${mKey}-31`;
+    const days = {};
+
+    /* ── 글자수 — 한 달치 한 번에 ── */
+    const wSnap = await window.db.ref("wordlog").orderByKey()
+      .startAt(from).endAt(to).once("value");
+    const nicks = new Set();
+    wSnap.forEach(dayNode => {
+      const day = dayNode.key;
+      const byNick = {};
+      let sum = 0;
+      dayNode.forEach(nickNode => {
+        const n = nickNode.key;
+        const t = Math.max(0, Number(nickNode.val()?.total || 0));
+        if (t > 0) { byNick[n] = t; sum += t; nicks.add(n); }
+      });
+      days[day] = { chars: sum, pomo: 0, byNick };
+    });
+
+    /* ── 🍅 — 그 달에 흔적이 있는 사람 + 지금 접속 중인 사람 ── */
+    Object.keys(window._statusCache || {}).forEach(n => nicks.add(n));
+    await Promise.all([...nicks].map(async (n) => {
+      try {
+        const s = await window.db.ref(`users/${n}/pomoSessions`).once("value");
+        const v = s.val() || {};
+        Object.entries(v).forEach(([day, o]) => {
+          if (!day.startsWith(mKey)) return;
+          const c = Math.max(0, Number(o?.count || 0));
+          if (!c) return;
+          (days[day] = days[day] || { chars: 0, pomo: 0, byNick: {} }).pomo += c;
+        });
+      } catch (e) {}
+    }));
+
+    const total = Object.values(days).reduce((a, v) => a + v.chars, 0);
+    const pomo  = Object.values(days).reduce((a, v) => a + v.pomo, 0);
+    const wrote = Object.values(days).filter(v => v.chars > 0).length;
+    const out = { days, total, pomo, wrote };
+    _wcAllCache[mKey] = out;
+    return out;
+  }
+
+  function wcAllHtml(mKey, data) {
+    const [y, m] = mKey.split("-").map(Number);
+    const first = new Date(y, m - 1, 1);
+    const last  = new Date(y, m, 0).getDate();
+    const lead  = first.getDay();                 // 0=일
+    const today = dayKey();
+    const isThisMonth = mKey === monthKeyOf(0);
+
+    let cells = "";
+    for (let i = 0; i < lead; i++) cells += `<div class="wcal-cell is-blank"></div>`;
+    for (let d = 1; d <= last; d++) {
+      const key = `${mKey}-${String(d).padStart(2, "0")}`;
+      const v = data.days[key] || { chars: 0, pomo: 0, byNick: {} };
+      const has = v.chars > 0 || v.pomo > 0;
+      const who = Object.entries(v.byNick)
+        .sort((a, b) => b[1] - a[1])
+        .map(([n, t]) => `${n} ${fmt(t)}자`).join(" · ");
+      const tip = has ? `${key}\n${who || "글자수 기록 없음"}${v.pomo ? `\n🍅 ${v.pomo}회` : ""}` : key;
+      cells += `<div class="wcal-cell${has ? " has" : ""}${key === today ? " is-today" : ""}"
+                     title="${esc(tip)}">
+        <span class="wcal-d">${d}</span>
+        ${v.pomo ? `<span class="wcal-p">🍅${v.pomo}</span>` : ""}
+        ${v.chars ? `<span class="wcal-c">${short(v.chars)}</span>` : ""}
+      </div>`;
+    }
+
+    return `
+      <div class="wcal-head">
+        <button type="button" class="wcal-nav" data-wcall-move="1" title="지난 달">‹</button>
+        <span class="wcal-title">${y}년 ${m}월</span>
+        <button type="button" class="wcal-nav" data-wcall-move="-1" title="다음 달"
+                ${isThisMonth ? "disabled" : ""}>›</button>
+      </div>
+      <div class="wcal-sum">이 달 <b>${fmt(data.total)}자</b> · 🍅 <b>${data.pomo}</b>회 · ${data.wrote}일 썼어요</div>
+      <div class="wcal-dow">${["일","월","화","수","목","금","토"].map(s => `<span>${s}</span>`).join("")}</div>
+      <div class="wcal-grid">${cells}</div>`;
+  }
+
+  /* 1,234 → 1.2k — 칸이 좁아서 네 자리가 넘으면 줄입니다 */
+  function short(n) {
+    n = Number(n) || 0;
+    if (n < 1000) return String(n);
+    const k = n / 1000;
+    return (k >= 10 ? Math.round(k) : Math.round(k * 10) / 10) + "k";
+  }
+
+  async function renderWcAll() {
+    const body = el("wcall-body");
+    if (!body) return;
+    const mKey = monthKeyOf(_wcAllOffset);
+    body.innerHTML = `<div class="wc-empty">불러오는 중…</div>`;
+    try {
+      body.innerHTML = wcAllHtml(mKey, await loadMonthAll(mKey));
+    } catch (e) {
+      console.warn("[전체 기록]", e);
+      body.innerHTML = `<div class="wc-empty">기록을 불러오지 못했어요.</div>`;
+      return;
+    }
+    body.querySelectorAll("[data-wcall-move]").forEach(b => {
+      b.addEventListener("click", () => {
+        const next = _wcAllOffset + Number(b.dataset.wcallMove);
+        if (next < 0) return;
+        _wcAllOffset = next;
+        renderWcAll();
+      });
+    });
+  }
+
+  function openWcAll() {
+    const m = el("wcall-modal");
+    if (!m) return;
+    m.style.display = "flex";
+    _wcAllOffset = 0;
+    renderWcAll();
+  }
+  function closeWcAll() {
+    const m = el("wcall-modal");
+    if (m) m.style.display = "none";
+  }
+  window.openWcAll = openWcAll;
+  window.closeWcAll = closeWcAll;
 
   window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
                        _state: () => ({ today: _today, week: _week, feed: _feed,

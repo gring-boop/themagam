@@ -137,14 +137,19 @@
       display: flex; align-items: center; justify-content: center;
       gap: 12px; margin-bottom: 8px; font-weight: 700;
     }
-    .adm-nav button{
+    /* 날짜 넘기기 ‹ › 만 정사각형입니다. :not() 을 빼먹으면 옆에 붙인
+       [출입 기록] 버튼까지 28px 상자에 갇혀 글자가 세로로 흘러요. */
+    .adm-nav button:not(.adm-btn){
       cursor: pointer; background: transparent; border: 1px solid rgba(150,120,80,.5);
       border-radius: 6px; width: 28px; height: 28px; color: #4A140D; font-size: 15px;
     }
     .adm-nav button:disabled{ opacity: .35; cursor: default; }
     .adm-radio{ display: block; font-size: 13.5px; padding: 4px 0; cursor: pointer; }
     /* ---- 🕘 출입 기록 ---- */
-    .adm-nav-side{ margin-left: 14px; font-size: 12.5px; padding: 3px 10px; }
+    .adm-nav-side{
+      margin-left: 14px; font-size: 12.5px; padding: 4px 12px;
+      width: auto; height: auto; white-space: nowrap; font-weight: 600;
+    }
     .adm-modal{
       position: fixed; inset: 0; z-index: 900;
       background: rgba(40,30,20,.42);

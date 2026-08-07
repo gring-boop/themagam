@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608072322">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608072322">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608072358">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608072358">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608072322">
+  <link rel="manifest" href="manifest.json?v=202608072358">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608072322" />
+  <link rel="stylesheet" href="styles.css?v=202608072358" />
 </head>
 
 <body>
@@ -240,6 +240,22 @@
     </p>
 
     <button class="ghost-btn w-full" type="button" onclick="closeForest()" style="margin-top:14px;">닫기</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     📓 전체 기록 — 방 전체의 달력
+
+     하루 칸에 그날 방이 함께 쓴 글자수와, 모두가 끝낸 🍅 집중 횟수를 얹습니다.
+     안쪽은 script_wordcount.js 가 그립니다.
+     ===================================================================== -->
+<div id="wcall-modal" onclick="closeWcAll()" role="dialog" aria-modal="true" aria-labelledby="wcall-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 class="modal-title" id="wcall-title">📓 전체 기록</h2>
+    <div id="wcall-body"></div>
+    <p class="hint">칸에 마우스를 올리면 그날 누가 얼마나 썼는지 보여요.
+      🍅 는 그날 방 전체가 끝낸 집중 세션 수입니다.</p>
+    <button class="ghost-btn w-full" type="button" onclick="closeWcAll()" style="margin-top:14px;">닫기</button>
   </div>
 </div>
 
@@ -605,6 +621,10 @@
         <div class="wc-tabs" role="tablist" aria-label="글자수 보기">
           <button class="wc-tab on" type="button" data-wc-tab="today" role="tab" aria-selected="true">오늘</button>
           <button class="wc-tab" type="button" data-wc-tab="me"    role="tab" aria-selected="false">내 기록</button>
+          <!-- [2026-08-07] 탭이 아니라 창을 여는 버튼입니다 — 달력은 좁은 칸에
+               넣기엔 커서, 눌러서 큰 창으로 봅니다. -->
+          <button class="wc-tab wc-tab-open" type="button" id="wc-all-btn"
+                  title="방 전체의 달력 기록 보기">전체 기록</button>
         </div>
       </div>
 
@@ -720,25 +740,25 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608072322"></script>
-<script src="script_core.js?v=202608072322"></script>
-<script src="script_auth.js?v=202608072322"></script>
-<script src="script_ui.js?v=202608072322"></script>
-<script src="script_chat.js?v=202608072322"></script>
-<script src="script_chatty.js?v=202608072322"></script>
-<script src="script_data.js?v=202608072322"></script>
-<script src="script_realtime.js?v=202608072322"></script>
-<script src="script_layout.js?v=202608072322"></script>
-<script src="script_wordcount.js?v=202608072322"></script>
-<script src="script_timelog.js?v=202608072322"></script>
-<script src="script_idledetect.js?v=202608072322"></script>
-<script src="script_profile.js?v=202608072322"></script>
-<script src="script_mywork.js?v=202608072322"></script>
-<script src="script_forest.js?v=202608072322"></script>
-<script src="script_reactions.js?v=202608072322"></script>
-<script src="script_share.js?v=202608072322"></script>
-<script src="script_manual.js?v=202608072322"></script>
-<script src="script_guard.js?v=202608072322"></script>
+<script src="fortune_data.js?v=202608072358"></script>
+<script src="script_core.js?v=202608072358"></script>
+<script src="script_auth.js?v=202608072358"></script>
+<script src="script_ui.js?v=202608072358"></script>
+<script src="script_chat.js?v=202608072358"></script>
+<script src="script_chatty.js?v=202608072358"></script>
+<script src="script_data.js?v=202608072358"></script>
+<script src="script_realtime.js?v=202608072358"></script>
+<script src="script_layout.js?v=202608072358"></script>
+<script src="script_wordcount.js?v=202608072358"></script>
+<script src="script_timelog.js?v=202608072358"></script>
+<script src="script_idledetect.js?v=202608072358"></script>
+<script src="script_profile.js?v=202608072358"></script>
+<script src="script_mywork.js?v=202608072358"></script>
+<script src="script_forest.js?v=202608072358"></script>
+<script src="script_reactions.js?v=202608072358"></script>
+<script src="script_share.js?v=202608072358"></script>
+<script src="script_manual.js?v=202608072358"></script>
+<script src="script_guard.js?v=202608072358"></script>
 
 <script>
   window.addEventListener("load", () => {
