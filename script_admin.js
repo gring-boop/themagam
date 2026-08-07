@@ -463,6 +463,126 @@
     }
   }
 
+  // ------------------------------------------------- ③-3.6 🕘 출입 기록
+  /* 하루치 입·퇴장을 일어난 순서대로 펼쳐 봅니다.
+
+     [두 곳에서 끌어옵니다 — 정확도가 다릅니다]
+       ① attendlog/{날짜}/{pushId} = { n:닉, t:시각, k:"in"|"out" }
+          2026-08-07 부터 쌓이는 정밀 기록. 하루에 여러 번 들락거려도
+          전부 남고, 창을 그냥 닫아도 서버가 대신 퇴장을 적어 줍니다.
+       ② attendance/{날짜}/{닉} = { firstAt, at, leftAt? }
+          예전부터 있던 하루 한 줄짜리 기록. 첫 입장과, [나가기] 를
+          눌렀을 때의 퇴장만 있습니다.
+
+     ①이 있는 날은 ①만 씁니다. 없는 날(=기능을 넣기 전 날짜)에만 ②로
+     대신 그리고, 그 줄은 옅게(is-rough) 칠해 "이건 대략치"라고 알립니다.
+     둘을 섞으면 같은 입장이 두 번 나와서 오히려 헷갈립니다. */
+  let _logOffset = 0;   // 0 = 오늘, 1 = 어제 …
+
+  function logDayKey(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() - offset);
+    return dayKey(d);
+  }
+
+  function stayText(ms) {
+    const m = Math.round(ms / 60000);
+    if (m < 1) return "";
+    if (m < 60) return `${m}분`;
+    const h = Math.floor(m / 60);
+    return `${h}시간${m % 60 ? " " + (m % 60) + "분" : ""}`;
+  }
+
+  /* 사건 목록 → 화면. 머문 시간은 같은 사람의 in 과 그 뒤 첫 out 을 짝지어 냅니다. */
+  function logRowsHtml(events, rough) {
+    if (!events.length) {
+      return `<div class="adm-msg">이 날은 기록이 없어요.</div>`;
+    }
+    events.sort((a, b) => a.t - b.t);
+
+    /* 짝짓기 — 같은 닉의 in 을 담아 뒀다가 out 이 오면 꺼내 씁니다 */
+    const open = {};
+    events.forEach(e => {
+      if (e.k === "in") { (open[e.n] = open[e.n] || []).push(e); return; }
+      const q = open[e.n];
+      if (q && q.length) {
+        const start = q.shift();
+        e.stay = e.t - start.t;
+      }
+    });
+
+    const rows = events.map(e => {
+      const isIn = e.k === "in";
+      return `<div class="adm-log-row${rough ? " is-rough" : ""}">
+        <span class="adm-log-t">${hhmm(e.t)}</span>
+        <span class="adm-log-k ${isIn ? "in" : "out"}">${isIn ? "→" : "←"}</span>
+        <span class="adm-log-n">${escapeHtml(e.n)}</span>
+        <span class="adm-log-stay">${isIn ? "" : (e.stay ? stayText(e.stay) + " 머묾" : "")}</span>
+      </div>`;
+    }).join("");
+
+    const people = new Set(events.map(e => e.n));
+    const ins = events.filter(e => e.k === "in").length;
+    const outs = events.length - ins;
+    return `<div class="adm-log-sum">${people.size}명 · 입장 ${ins}회 · 퇴장 ${outs}회</div>` + rows;
+  }
+
+  async function loadAttendLog(offset) {
+    _logOffset = Math.max(0, offset);
+    const day = logDayKey(_logOffset);
+    const body = el("adm-log-body");
+    const note = el("adm-log-note");
+    const label = el("adm-log-day");
+    if (label) label.textContent = day + (_logOffset === 0 ? " (오늘)" : "");
+    const nextBtn = el("adm-log-next");
+    if (nextBtn) nextBtn.disabled = (_logOffset === 0);
+    if (body) body.innerHTML = `<div class="adm-msg">불러오는 중…</div>`;
+
+    try {
+      const snap = await db.ref(`attendlog/${day}`).once("value");
+      const raw = snap.val() || {};
+      const events = Object.values(raw)
+        .filter(v => v && v.n && v.t && (v.k === "in" || v.k === "out"))
+        .map(v => ({ n: String(v.n), t: Number(v.t), k: v.k }));
+
+      if (events.length) {
+        if (body) body.innerHTML = logRowsHtml(events, false);
+        if (note) note.textContent =
+          "정밀 기록이에요 — 하루에 여러 번 드나든 것도 모두 남고, 창을 그냥 닫아도 퇴장이 찍힙니다.";
+        return;
+      }
+
+      /* 정밀 기록이 없는 날 — 옛 출석 기록으로 대략만 그립니다 */
+      const aSnap = await db.ref(`attendance/${day}`).once("value");
+      const att = aSnap.val() || {};
+      const rough = [];
+      Object.entries(att).forEach(([nick, v]) => {
+        const inAt = Number(v?.firstAt || v?.at || 0);
+        if (inAt) rough.push({ n: nick, t: inAt, k: "in" });
+        const outAt = Number(v?.leftAt || 0);
+        if (outAt) rough.push({ n: nick, t: outAt, k: "out" });
+      });
+
+      if (body) body.innerHTML = logRowsHtml(rough, true);
+      if (note) note.textContent = rough.length
+        ? "옛 기록이라 대략치예요 — 하루의 첫 입장과, [나가기] 를 누른 퇴장만 있습니다."
+        : "";
+    } catch (e) {
+      console.warn("[adm attendlog]", e);
+      if (body) body.innerHTML =
+        `<div class="adm-msg">불러오지 못했어요. Firebase 콘솔에 새 보안규칙(attendlog)을 게시했는지 확인해 주세요.</div>`;
+      if (note) note.textContent = "";
+    }
+  }
+
+  function openAttendLog() {
+    el("adm-log-modal")?.removeAttribute("hidden");
+    loadAttendLog(0);
+  }
+  function closeAttendLog() {
+    el("adm-log-modal")?.setAttribute("hidden", "");
+  }
+
   // ------------------------------------------------- ③-4 글자수
   /* script_realtime.js 의 clearAllWordcount 와 같은 노드를 지웁니다 */
   async function clearWordcount() {
@@ -587,6 +707,17 @@
     el("adm-chat-clear")?.addEventListener("click", clearChat);
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
+    el("adm-log-open")?.addEventListener("click", openAttendLog);
+    el("adm-log-close")?.addEventListener("click", closeAttendLog);
+    el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
+    el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));
+    /* 바깥을 누르거나 ESC 로도 닫힙니다 */
+    el("adm-log-modal")?.addEventListener("click", e => {
+      if (e.target === el("adm-log-modal")) closeAttendLog();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && !el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
+    });
     el("adm-forest-reload")?.addEventListener("click", loadForest);
     el("adm-forest-sweep")?.addEventListener("click", sweepForest);
     el("adm-forest-clear")?.addEventListener("click", clearForest);

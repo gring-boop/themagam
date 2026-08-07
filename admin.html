@@ -143,6 +143,42 @@
     }
     .adm-nav button:disabled{ opacity: .35; cursor: default; }
     .adm-radio{ display: block; font-size: 13.5px; padding: 4px 0; cursor: pointer; }
+    /* ---- 🕘 출입 기록 ---- */
+    .adm-nav-side{ margin-left: 14px; font-size: 12.5px; padding: 3px 10px; }
+    .adm-modal{
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(40,30,20,.42);
+      display: flex; align-items: center; justify-content: center; padding: 18px;
+    }
+    .adm-modal[hidden]{ display: none; }
+    .adm-modal-in{
+      background: #FAF6EC; border: 1px solid rgba(150,120,80,.45);
+      border-radius: 14px; padding: 18px 20px;
+      width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto;
+    }
+    .adm-modal-head{ display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .adm-modal-head h2{ margin: 0; }
+    /* 한 줄 = 한 사건. 시각은 폭이 고르게, 이름은 남는 자리를 씁니다 */
+    .adm-log-row{
+      display: grid; grid-template-columns: 62px 20px 1fr auto;
+      align-items: center; gap: 8px;
+      padding: 7px 2px; border-bottom: 1px solid rgba(150,120,80,.18);
+      font-size: 13.5px;
+    }
+    .adm-log-row:last-child{ border-bottom: none; }
+    .adm-log-t{ font-variant-numeric: tabular-nums; color: #6B5F52; }
+    .adm-log-k{ text-align: center; }
+    .adm-log-k.in{ color: #2E7D57; }
+    .adm-log-k.out{ color: #B3372B; }
+    .adm-log-n{ font-weight: 600; color: #2B2620; }
+    .adm-log-stay{ color: #8A7B68; font-size: 12px; }
+    /* 옛 기록(attendance)에서 끌어온 줄은 옅게 — 정확도가 다르니까요 */
+    .adm-log-row.is-rough .adm-log-t,
+    .adm-log-row.is-rough .adm-log-n{ opacity: .72; }
+    .adm-log-sum{
+      margin: 10px 0 2px; padding: 8px 10px; border-radius: 8px;
+      background: #F1EADA; font-size: 13px; color: #4A4034;
+    }
     /* ---- 출근부 표 ---- */
     .adm-att-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table.adm-att-table{
@@ -248,6 +284,9 @@
           <button type="button" id="adm-att-prev" title="지난 달">‹</button>
           <span id="adm-att-month"></span>
           <button type="button" id="adm-att-next" title="다음 달">›</button>
+          <!-- [2026-08-07] 하루치 출입을 시간순으로 훑어보는 창 -->
+          <button type="button" id="adm-log-open" class="adm-btn ghost adm-nav-side"
+                  title="하루치 입·퇴장을 시간순으로 봅니다">🕘 출입 기록</button>
         </div>
         <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
         <div class="adm-att-legend">
@@ -337,5 +376,29 @@
   </div>
 
   <script src="script_admin.js"></script>
+
+<!-- =====================================================================
+     🕘 출입 기록 — 하루치 입·퇴장을 일어난 순서대로
+
+     출석부는 "그날 왔는가"를 한 칸으로 보여주는 표라, 하루 안의 흐름은
+     안 보입니다. 이 창은 그 하루를 시간순으로 펼쳐 봅니다.
+     내용은 script_admin.js 가 채웁니다.
+     ===================================================================== -->
+<div id="adm-log-modal" class="adm-modal" hidden>
+  <div class="adm-modal-in">
+    <div class="adm-modal-head">
+      <h2>🕘 출입 기록</h2>
+      <button type="button" id="adm-log-close" class="adm-btn ghost" aria-label="닫기">✕</button>
+    </div>
+    <div class="adm-nav">
+      <button type="button" id="adm-log-prev" title="전날">‹</button>
+      <span id="adm-log-day"></span>
+      <button type="button" id="adm-log-next" title="다음 날">›</button>
+    </div>
+    <div id="adm-log-body" class="adm-msg">불러오는 중…</div>
+    <p class="adm-sub" id="adm-log-note"></p>
+  </div>
+</div>
+
 </body>
 </html>

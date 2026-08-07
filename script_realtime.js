@@ -1015,6 +1015,89 @@
   const ATTEND_BACKFILL_DAYS = 60; // 예전 공용 로그에서 끌어올 범위
   const DAY_MS = 86400000;
 
+  /* ===================================================================
+     [2026-08-07] 정밀 출입 기록 — attendlog/{날짜}/{pushId}
+
+     기존 attendance 는 하루당 한 줄입니다.
+       attendance/{날짜}/{닉} = { firstAt, at, leftAt? }
+     그래서 하루에 여러 번 들락거려도 **첫 입장 하나만** 남고, 퇴장은
+     [나가기] 를 눌렀을 때만 찍혔습니다. "9시에 왔다가 11시에 나가고
+     2시에 다시 왔다" 같은 걸 알 방법이 없었어요.
+
+     그래서 사건을 일어난 순서대로 한 줄씩 쌓는 자리를 따로 뒀습니다.
+       attendlog/{날짜}/{pushId} = { n: 닉, t: 시각, k: "in" | "out" }
+
+     [왜 이렇게 가볍게 적는가]
+     열쇠 이름을 한 글자로 줄인 건 멋이 아니라 양 때문입니다. 사람이
+     늘고 날짜가 쌓이면 이 목록이 가장 빨리 자라요. 그래도 한 줄이
+     50바이트 남짓이라, 열 명이 하루 세 번씩 드나들어도 하루 3KB 정도입니다.
+
+     [기존 attendance 를 대체하지 않습니다]
+     출석부·업적·휴가는 계속 attendance 를 봅니다. 이건 "그날 무슨 일이
+     있었나"를 시간순으로 되짚어 보기 위한 별도의 기록이에요.
+     =================================================================== */
+  const ATTENDLOG_KEEP_DAYS = 180;   // 보관 — 출석부(1000일)보다 짧게 둡니다
+
+  /* 창을 그냥 닫았을 때 대신 찍어 줄 자리를 미리 잡아 둡니다.
+     [나가기] 를 누르면 이 예약을 취소하고 직접 적습니다 (두 줄 방지). */
+  let _attendOutRef = null;
+
+  async function writeAttendLog(kind) {
+    if (!myNick) return;
+    if (kind !== "in" && kind !== "out") return;
+    try {
+      const day = ymd(Date.now());
+      await db.ref(`attendlog/${day}`).push({
+        n: myNick,
+        t: firebase.database.ServerValue.TIMESTAMP,   // 각자 시계가 아니라 서버 시각으로
+        k: kind
+      });
+    } catch (e) {
+      /* 기록이 하나 빠져도 방은 그대로 돌아가야 합니다 — 조용히 넘깁니다 */
+      console.warn("[attendlog]", e);
+    }
+  }
+
+  /* [핵심] 퇴장을 놓치지 않기 위한 예약.
+
+     사람들은 [나가기] 를 잘 안 누릅니다. 그냥 탭을 닫거나, 노트북을
+     덮거나, 인터넷이 끊기죠. 그때마다 퇴장 기록이 비면 이 목록은
+     "들어온 줄"만 잔뜩 쌓인 반쪽짜리가 됩니다.
+
+     그래서 입장할 때 미리 자리를 하나 잡아 두고, "연결이 끊기면 여기에
+     이 내용을 적어라" 하고 **서버에** 부탁해 둡니다(onDisconnect).
+     브라우저가 죽어도 서버가 대신 적어 주므로 놓치지 않아요.
+
+     ※ 자정을 넘겨 접속해 있다가 끊기면 그 줄은 '들어온 날'쪽에 적힙니다.
+        날짜를 미리 정해 두고 부탁하는 방식이라 어쩔 수 없어요.
+        읽는 쪽에서 크게 문제되지 않아 그대로 둡니다. */
+  async function reserveOutOnDisconnect(day) {
+    if (!myNick) return;
+    try {
+      /* 예전 예약이 남아 있으면 먼저 거둡니다 (재접속 등) */
+      try { await _attendOutRef?.onDisconnect().cancel(); } catch (e) {}
+      _attendOutRef = db.ref(`attendlog/${day}`).push();
+      await _attendOutRef.onDisconnect().set({
+        n: myNick,
+        t: firebase.database.ServerValue.TIMESTAMP,
+        k: "out"
+      });
+    } catch (e) {
+      _attendOutRef = null;
+    }
+  }
+
+  /* 오래된 날짜를 지웁니다. 입장할 때 한 번만 훑어요. */
+  async function sweepAttendLog() {
+    try {
+      const cutoff = ymd(Date.now() - (ATTENDLOG_KEEP_DAYS - 1) * DAY_MS);
+      const old = await db.ref("attendlog").orderByKey().endAt(cutoff).once("value");
+      const updates = {};
+      old.forEach(child => { if (child.key < cutoff) updates[child.key] = null; });
+      if (Object.keys(updates).length) await db.ref("attendlog").update(updates);
+    } catch (e) {}
+  }
+
   async function recordAttendance() {
     if (!myNick) return;
     const day = ymd(Date.now());
@@ -1028,6 +1111,11 @@
         firstAt: prev?.firstAt || prev?.at || Date.now(),
         at: Date.now()
       });
+
+      /* 정밀 기록에도 한 줄 — 이쪽은 들어올 때마다 쌓입니다 */
+      writeAttendLog("in");
+      reserveOutOnDisconnect(day);
+      sweepAttendLog();
 
       /* 보관 기간이 지난 것만 골라 지웁니다.
          예전에는 attendance 전체를 내려받아 훑었는데, 1000일치가 쌓이면
@@ -1102,6 +1190,11 @@
     try {
       const day = ymd(Date.now());
       await db.ref(`attendance/${day}/${myNick}`).update({ leftAt: Date.now(), at: Date.now() });
+      /* 예약을 먼저 거두고 직접 적습니다 — 안 그러면 창이 닫힐 때
+         서버가 한 줄 더 적어서 퇴장이 두 번 찍힙니다. */
+      try { await _attendOutRef?.onDisconnect().cancel(); } catch (e) {}
+      _attendOutRef = null;
+      await writeAttendLog("out");
     } catch (e) { console.warn("[recordLeaveAttendance]", e); }
   }
   window.recordLeaveAttendance = recordLeaveAttendance;
