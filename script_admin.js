@@ -135,7 +135,6 @@
     el("adm-dash").style.display = "block";
     showMyUid();
     loadAttendance(0);
-    loadTodos();
     loadNotice();
     loadPinnedMessage();
     loadHistoryConfig();
@@ -588,7 +587,6 @@
   /* 멤버들의 할 일을 **날짜로 묶어** 봅니다.
 
      [어디서 오나]  users/{닉}/todoItems = [{ text, done, due?, routine?, archived? }]
-                    users/{닉}/todayGoalText = 오늘 한 줄 목표
 
      [묶는 규칙]
        due 가 있으면        → 그 날짜 칸
@@ -601,6 +599,7 @@
      날짜로 묶으면 "이번 주에 방이 뭘 하나"가 보여요. 같은 데이터라도
      묶는 축이 쓰임새를 정합니다. */
   let _todoShowArchived = false;
+  let _todoLoaded = false;      // 펼쳐서 한 번이라도 읽었는가
 
   function todoDayLabel(key) {
     if (key === "routine") return "🔁 매일 반복";
@@ -625,14 +624,10 @@
       if (!nicks.length) { if (box) box.innerHTML = "아직 멤버가 없어요."; return; }
 
       const byDay = {};      // { 날짜키: [ {nick, text, done} ] }
-      const goals = [];      // [ {nick, goal} ]
 
       await Promise.all(nicks.map(async (nick) => {
         let v = {};
         try { v = (await db.ref(`users/${nick}`).once("value")).val() || {}; } catch (e) { return; }
-
-        const goal = String(v.todayGoalText || "").trim();
-        if (goal) goals.push({ nick, goal });
 
         const items = Array.isArray(v.todoItems) ? v.todoItems : [];
         items.forEach(it => {
@@ -670,16 +665,6 @@
               ${rows}
             </div>`;
         }).join("");
-      }
-
-      const gbox = el("adm-todo-goals");
-      if (gbox) {
-        gbox.innerHTML = goals.length
-          ? goals.map(g => `<div class="adm-todo-row">
-               <span class="adm-todo-nick">${escapeHtml(g.nick)}</span>
-               <span class="adm-todo-text">${escapeHtml(g.goal)}</span>
-             </div>`).join("")
-          : `<div class="adm-msg">적어둔 오늘 목표가 없어요.</div>`;
       }
     } catch (e) {
       console.warn("[adm todos]", e);
@@ -812,6 +797,12 @@
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
+    /* [2026-08-08] 접혀 있는 동안에는 읽지 않습니다 — 펼칠 때 처음 불러오고,
+       그 뒤로는 [새로고침] 을 눌러야 다시 읽어요. 남의 할 일을 필요도 없이
+       계속 내려받지 않게 하려는 것입니다. */
+    el("adm-todo-card")?.addEventListener("toggle", function () {
+      if (this.open && !_todoLoaded) { _todoLoaded = true; loadTodos(); }
+    });
     el("adm-todo-reload")?.addEventListener("click", loadTodos);
     el("adm-todo-arch")?.addEventListener("change", function () {
       _todoShowArchived = this.checked;

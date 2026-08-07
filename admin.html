@@ -181,6 +181,16 @@
     .adm-log-row.is-rough .adm-log-t,
     .adm-log-row.is-rough .adm-log-n{ opacity: .72; }
     /* ---- 📌 할 일 모아보기 ---- */
+    /* 접히는 카드 — <details> 그대로 쓰되 기본 삼각형은 감춥니다 */
+    .adm-fold summary{
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .adm-fold summary::-webkit-details-marker{ display: none; }
+    .adm-fold summary h2{ margin: 0; }
+    .adm-fold-mark{ margin-left: auto; color: #8A7B68; font-size: 13px; transition: transform .15s; }
+    .adm-fold[open] .adm-fold-mark{ transform: rotate(180deg); }
+    .adm-fold-body{ margin-top: 10px; }
     .adm-todo-sub{ font-weight: 700; font-size: 13px; color: #4A140D; margin: 4px 0 6px; }
     .adm-todo-group{ margin-bottom: 12px; }
     .adm-todo-group:last-child{ margin-bottom: 0; }
@@ -350,22 +360,21 @@
         <div class="adm-msg" id="adm-chat-msg"></div>
       </div>
 
-      <!-- 📌 할 일 모아보기 — 날짜로 묶어서 봅니다 -->
-      <div class="adm-card" id="adm-todo-card">
-        <h2>📌 할 일 모아보기</h2>
-        <p class="adm-sub">멤버들의 할 일을 <b>날짜로 묶어</b> 봅니다. 여기서는 보기만 해요 — 고치거나 지울 수 없습니다.</p>
+      <!-- 📌 할 일 모아보기 — 평소에는 접어 둡니다.
 
-        <div class="adm-todo-sub">🎯 오늘 목표</div>
-        <div id="adm-todo-goals" class="adm-msg">불러오는 중…</div>
-
-        <div class="adm-gap"></div>
-        <div class="adm-todo-sub">📌 할 일</div>
-        <div id="adm-todo-list" class="adm-msg">불러오는 중…</div>
-
-        <div class="adm-gap"></div>
-        <label class="adm-radio"><input type="checkbox" id="adm-todo-arch"> 치운 것도 보기</label>
-        <button class="adm-btn ghost" id="adm-todo-reload">새로고침</button>
-      </div>
+           남의 할 일은 필요할 때만 보는 게 맞아서, 관리자 화면을 열자마자
+           눈에 들어오지 않도록 접어 두었습니다. 접혀 있는 동안에는 서버에서
+           읽어오지도 않아요 — 펼칠 때 처음 불러옵니다. -->
+      <details class="adm-card adm-fold" id="adm-todo-card">
+        <summary><h2>📌 할 일 모아보기</h2><span class="adm-fold-mark" aria-hidden="true">▾</span></summary>
+        <div class="adm-fold-body">
+          <p class="adm-sub">멤버들의 할 일을 <b>날짜로 묶어</b> 봅니다. 여기서는 보기만 해요 — 고치거나 지울 수 없습니다.</p>
+          <div id="adm-todo-list" class="adm-msg">불러오는 중…</div>
+          <div class="adm-gap"></div>
+          <label class="adm-radio"><input type="checkbox" id="adm-todo-arch"> 치운 것도 보기</label>
+          <button class="adm-btn ghost" id="adm-todo-reload">새로고침</button>
+        </div>
+      </details>
 
       <div class="adm-card">
         <h2>✍️ 글자수 관리</h2>
