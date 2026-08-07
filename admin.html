@@ -332,7 +332,8 @@
         <div class="adm-msg" id="adm-att-msg"></div>
       </div>
 
-      <!-- 출석부 아래 세 카드는 나란히 — 공간 절약 (좁은 창에선 자동으로 세로) -->
+      <!-- 출석부 아래 카드들 — 좁은 창에서는 자동으로 세로로 흐릅니다.
+           순서: 공지 · 핀 메시지 · 글자수 · 할 일 · 대숲 · 채팅 · uid -->
       <div class="adm-grid">
       <div class="adm-card">
         <h2>📌 공지 관리</h2>
@@ -344,20 +345,23 @@
         <div class="adm-msg" id="adm-notice-msg"></div>
       </div>
 
+      <!-- [2026-08-06] 📌 채팅 상단 핀 — 예전에 메인 설정 창에 있던 것을
+           이리로 옮겼습니다. 채팅 머리말 아래에 배너로 고정돼요. -->
       <div class="adm-card">
-        <h2>💬 채팅 관리</h2>
-        <p class="adm-sub">히스토리 노출 설정과 전체 삭제예요.</p>
-        <label class="adm-radio"><input type="radio" name="adm-hist" value="on"> 🕘 전체 공개 — 모두에게 이전 대화가 보여요</label>
-        <label class="adm-radio"><input type="radio" name="adm-hist" value="admin"> 🛡️ 관리자만 — 관리자만 볼 수 있어요</label>
-        <label class="adm-radio"><input type="radio" name="adm-hist" value="off"> 🙈 숨김 — 아무에게도 보이지 않아요</label>
+        <h2>📌 채팅 핀 메시지</h2>
+        <p class="adm-sub">채팅 위에 배너로 고정돼요. 비우고 저장하면 내려갑니다.</p>
+        <input type="text" id="adm-pin-msg-input" placeholder="고정할 메시지" />
         <div class="adm-gap"></div>
-        <input type="number" id="adm-hist-count" min="10" max="300" placeholder="표시 개수 (10~300)" />
-        <div class="adm-gap"></div>
-        <button class="adm-btn" id="adm-hist-apply">히스토리 설정 적용</button>
-        <div class="adm-gap"></div>
-        <button class="adm-btn danger" id="adm-chat-clear">🧹 채팅 전체 삭제</button>
-        <button class="adm-btn danger" id="adm-chatty-clear">☕ 수다방 전체 삭제</button>
-        <div class="adm-msg" id="adm-chat-msg"></div>
+        <button class="adm-btn" id="adm-pin-msg-save">핀 설정</button>
+        <button class="adm-btn ghost" id="adm-pin-msg-clear">핀 제거</button>
+        <div class="adm-msg" id="adm-pin-msg-msg"></div>
+      </div>
+
+      <div class="adm-card">
+        <h2>✍️ 글자수 관리</h2>
+        <p class="adm-sub">오늘 날짜의 글자수 기록·말풍선을 모두 지워요.</p>
+        <button class="adm-btn danger" id="adm-wc-clear">오늘 글자수 전체 초기화</button>
+        <div class="adm-msg" id="adm-wc-msg"></div>
       </div>
 
       <!-- 📌 할 일 모아보기 — 평소에는 접어 둡니다.
@@ -376,25 +380,6 @@
         </div>
       </details>
 
-      <div class="adm-card">
-        <h2>✍️ 글자수 관리</h2>
-        <p class="adm-sub">오늘 날짜의 글자수 기록·말풍선을 모두 지워요.</p>
-        <button class="adm-btn danger" id="adm-wc-clear">오늘 글자수 전체 초기화</button>
-        <div class="adm-msg" id="adm-wc-msg"></div>
-      </div>
-
-      <!-- [2026-08-06] 📌 채팅 상단 핀 — 예전에 메인 설정 창에 있던 것을
-           이리로 옮겼습니다. 채팅 머리말 아래에 배너로 고정돼요. -->
-      <div class="adm-card">
-        <h2>📌 채팅 핀 메시지</h2>
-        <p class="adm-sub">채팅 위에 배너로 고정돼요. 비우고 저장하면 내려갑니다.</p>
-        <input type="text" id="adm-pin-msg-input" placeholder="고정할 메시지" />
-        <div class="adm-gap"></div>
-        <button class="adm-btn" id="adm-pin-msg-save">핀 설정</button>
-        <button class="adm-btn ghost" id="adm-pin-msg-clear">핀 제거</button>
-        <div class="adm-msg" id="adm-pin-msg-msg"></div>
-      </div>
-
       <!-- [2026-08-06] 🎋 대숲 — 완전 익명 게시판(forest).
            쪽지에는 글쓴이 정보가 아예 없어서, 여기서도 "누가 썼는지"는
            볼 수 없습니다. 내용과 시각만 보고 지웁니다. -->
@@ -410,6 +395,22 @@
         <div class="adm-gap"></div>
         <button class="adm-btn danger" id="adm-forest-clear">🧹 대숲 전체 비우기</button>
         <div class="adm-msg" id="adm-forest-msg"></div>
+      </div>
+
+      <div class="adm-card">
+        <h2>💬 채팅 관리</h2>
+        <p class="adm-sub">히스토리 노출 설정과 전체 삭제예요.</p>
+        <label class="adm-radio"><input type="radio" name="adm-hist" value="on"> 🕘 전체 공개 — 모두에게 이전 대화가 보여요</label>
+        <label class="adm-radio"><input type="radio" name="adm-hist" value="admin"> 🛡️ 관리자만 — 관리자만 볼 수 있어요</label>
+        <label class="adm-radio"><input type="radio" name="adm-hist" value="off"> 🙈 숨김 — 아무에게도 보이지 않아요</label>
+        <div class="adm-gap"></div>
+        <input type="number" id="adm-hist-count" min="10" max="300" placeholder="표시 개수 (10~300)" />
+        <div class="adm-gap"></div>
+        <button class="adm-btn" id="adm-hist-apply">히스토리 설정 적용</button>
+        <div class="adm-gap"></div>
+        <button class="adm-btn danger" id="adm-chat-clear">🧹 채팅 전체 삭제</button>
+        <button class="adm-btn danger" id="adm-chatty-clear">☕ 수다방 전체 삭제</button>
+        <div class="adm-msg" id="adm-chat-msg"></div>
       </div>
 
       <!-- [2026-08-06] 🆔 내 계정 uid — 보안규칙에 관리자를 박아 넣을 때 씁니다. -->
