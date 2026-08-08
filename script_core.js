@@ -647,7 +647,6 @@ window.AppSession = AppSession;
     // ✅ core에서 바인딩 보장
     try { window.bindSendHandlers?.(); } catch (e) { console.warn("[bindSendHandlers failed]", e); }
     try { window.bindChatScrollGuard?.(); } catch (e) { console.warn("[bindChatScrollGuard failed]", e); }
-    try { window.bindTodoInputEnter?.(); } catch (e) { console.warn("[bindTodoInputEnter failed]", e); }
   }
 
   window.join = join;

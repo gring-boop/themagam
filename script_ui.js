@@ -380,7 +380,8 @@
 
         btn.addEventListener("click", async () => {
           applyTheme(name);
-          await saveThemeForNick(name);
+          /* 저장은 script_data.js 가 맡습니다 (이 파일보다 나중에 읽혀요) */
+          await window.saveThemeForNick?.(name);
         });
 
         grid.appendChild(btn);
@@ -405,46 +406,22 @@
     });
   }
 
-  async function saveThemeForNick(themeName) {
-    try {
-      AppStore.setItem(_nickKey("writerTheme"), themeName);
-      AppStore.setItem("writerTheme", themeName);
-    } catch(e) {}
+  /* [뺌 2026-08-09] saveThemeForNick · loadThemeForNick 는 여기서 걷어냈습니다.
 
-    if (!myNick || !window.db) return;
+     같은 이름의 함수가 script_data.js 에도 있었습니다. 두 파일 모두 모듈이
+     아니라 그냥 <script> 라, 나중에 읽히는 script_data.js 것이 이쪽을
+     조용히 덮어쓰고 있었어요 — 여기 있던 서른 몇 줄은 한 번도 돌지 않았습니다.
+     (let/const 였다면 문법 오류로 바로 걸렸을 텐데, function 끼리는 아무 말
+      없이 덮어쓰기만 합니다. 그래서 몇 달을 몰랐습니다.)
 
-    try {
-      await db.ref(`users/${myNick}/theme`).set({
-        name: themeName,
-        updatedAt: Date.now()
-      });
-    } catch (e) {
-      console.warn("[saveThemeForNick failed]", e);
-    }
-  }
+     남긴 쪽은 script_data.js 판입니다. 이유가 둘 있어요.
+       · 저장 자리가 users/{닉}/prefs/themeName 로, 지금 모두의 테마가
+         실제로 들어 있는 곳입니다. 이쪽을 지우면 다들 테마를 잃습니다.
+       · 서버를 먼저 보고 없을 때 이 기기 값을 씁니다. 다른 기기에서
+         테마를 바꿔도 따라옵니다 (여기 있던 판은 이 기기 값이 먼저라
+         기기끼리 어긋났습니다).
 
-  async function loadThemeForNick() {
-    try {
-      const localNick = AppStore.getItem(_nickKey("writerTheme"));
-      if (localNick) return localNick;
-    } catch(e) {}
-
-    if (myNick && window.db) {
-      try {
-        const snap = await db.ref(`users/${myNick}/theme`).once("value");
-        const v = snap.val();
-        if (v && v.name) return String(v.name);
-      } catch(e) {
-        console.warn("[loadThemeForNick failed]", e);
-      }
-    }
-
-    try {
-      return AppStore.getItem("writerTheme") || "📜 원고와 잉크";
-    } catch(e) {
-      return "📜 원고와 잉크";
-    }
-  }
+     users/{닉}/theme 노드는 이제 아무도 쓰지 않습니다. */
 
   // =====================================================
   // Settings modal
@@ -1224,10 +1201,18 @@
     renderPomodoroSoundMini();
   };
 
+  /* [고침 2026-08-09] 입장 직후 테마 적용.
+
+     예전에는 `applyTheme(await loadThemeForNick())` 였습니다. 그런데 남은
+     쪽(script_data.js) 은 스스로 테마를 칠하고 **아무것도 돌려주지 않습니다.**
+     그래서 undefined 가 applyTheme 로 들어가 기본 테마로 되돌아갔고,
+     곧이어 loadPersonalData 가 제 테마를 다시 칠했습니다.
+     입장할 때마다 [내 테마 → 기본 → 내 테마] 로 한 번 번쩍인 이유예요.
+     게다가 그 undefined 가 "undefined" 라는 글자로 저장까지 됐습니다.
+
+     이제 부르기만 합니다. 칠하는 일은 그쪽이 알아서 해요. */
   window.afterJoinLoadNickTheme = async function() {
-    const theme = await loadThemeForNick();
-    applyTheme(theme);
-    try { AppStore.setItem("writerTheme", theme); } catch(e) {}
+    await window.loadThemeForNick?.();
   };
 
   // =====================================================
@@ -1309,5 +1294,3 @@
   window.loadSoundPrefsFromFirebase = loadSoundPrefsFromFirebase;
   window.loadPomoParticipationFromFirebase = loadPomoParticipationFromFirebase;
 
-  window.saveThemeForNick = saveThemeForNick;
-  window.loadThemeForNick = loadThemeForNick;

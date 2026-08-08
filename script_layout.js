@@ -551,7 +551,7 @@
          뿌리를 비우기 때문에, 보관함으로 피신시키지 않으면 통째로
          삭제됩니다. 그러면 설정을 열어도 목표·투두 칸이 텅 비고,
          투두를 적어도 저장이 되지 않습니다. */
-      ["status-block", "todo-block"].forEach(id => {
+      ["status-block"].forEach(id => {
         const el = document.getElementById(id);
         if (el) attic.appendChild(el);
       });

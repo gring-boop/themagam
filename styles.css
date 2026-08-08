@@ -166,7 +166,6 @@
   --cards-gap: 12px;
   --cards-pad: 12px;
 
-
   color-scheme: light;
 }
 
@@ -578,20 +577,6 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   transition: opacity var(--anim-fast), border-color var(--anim-fast);
 }
 .hidden-chip:hover{ opacity: 1; border-color: var(--accent-ring); }
-.hidden-chip-badge{
-  position: absolute;
-  top: -5px; right: -5px;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 3px;
-  border-radius: var(--r-full);
-  background: var(--danger, #E5484D);
-  color: #fff;
-  font-size: 9.5px;
-  font-weight: 700;
-  line-height: 15px;
-  text-align: center;
-}
 
 /* 설정 — 자리 그림 (실제 배치를 그대로 축소한 모양) */
 .slot-map{
@@ -838,13 +823,6 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   color: var(--sub-muted);
 }
 
-.pomo-status-line .pomo-mega-session{
-  font-size: calc(var(--fs-xs) * .85);
-  font-weight: var(--fw-normal);
-  color: var(--time-muted);
-  letter-spacing: .2px;
-}
-
 .pomo-status-line .pomo-mega-digits{
   /* 뷰포트 반응형: 사이드바 폭이 좁아져도 숫자가 넘치지 않음 */
   font-size: clamp(41px, 9.35vw, 75px);   /* 기존의 85% */
@@ -1000,18 +978,6 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   transition: width 900ms linear;
 }
 
-.pomo-session-pill{
-  flex: 0 0 auto;
-  padding: 7px 12px;
-  border-radius: var(--r-full);
-  border: 1px solid var(--border);
-  background: var(--panel2);
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-xs);
-  color: var(--muted-strong);
-  user-select: none;
-}
-
 #pomo-opt-btn{
   border-radius: var(--r-full);
   padding: 8px 14px;
@@ -1081,13 +1047,6 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
 .pomo-line #timer-pill{ flex: 0 1 auto; min-width: 0; max-width: max-content; }
 .pomo-line #timer-pill span{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pomo-line .pomo-progress{ flex: 1 1 auto; min-width: 60px; }
-
-/* 25분 / 5분 사이 구분 */
-.pomo-setup-sep{
-  color: var(--time-muted);
-  font-weight: var(--fw-medium);
-  padding: 0 2px;
-}
 
 /* 시작(파랑 재생) · 정지(빨강 일시정지) */
 .pomo-run-btn{
@@ -1218,13 +1177,6 @@ body.pomo-nonpart .pomo-status-line{
   gap: var(--sp-2);
 }
 .todo-foot > .ghost-btn{ flex: 0 0 auto; }
-.todo-foot-hint{
-  margin: 0;
-  flex: 1 1 auto;
-  min-width: 0;
-  line-height: 1.3;
-}
-
 
 /* -------- 모양 무늬 --------
    해·달·별 같은 그림은 그라데이션으로 못 그리므로 작은 SVG를 씁니다.
@@ -1418,8 +1370,6 @@ body.pomo-nonpart .pomo-status-line{
 .color-chip.selected{
   box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
 }
-
-
 
 /* =====================================================================
    [9] 공동 집필 현황 카드
@@ -1690,33 +1640,7 @@ body.pomo-nonpart .pomo-status-line{
   object-fit: cover;
   display: block;
 }
-
-/* 편집 버튼 — 내 카드에 마우스를 올리면 프사 위에 */
-.card-edit-btn{
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--sub-muted);
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  opacity: 0;
-  transform: scale(.9);
-  transition: opacity var(--anim-fast), transform var(--anim-fast), background var(--anim-fast);
-}
-.card-edit-btn svg{ width: 14px; height: 14px; display: block; }
-.user-card.is-me:hover .card-edit-btn,
-.card-edit-btn:focus-visible{ opacity: 1; transform: scale(1); }
-.card-edit-btn:hover{ background: var(--fill-2); color: var(--text); }
 @media (hover: none){
-  .card-edit-btn{ opacity: 1; transform: scale(1); }
 }
 
 /* -------- 이름 · 목표 -------- */
@@ -1749,31 +1673,6 @@ body.pomo-nonpart .pomo-status-line{
 /* -------- 카드 아래 지표 --------
    진척 바 한 줄 + 그 아래 [3 / 5 완료] ······ [🍅 4] 한 줄. */
 .card-meta{ margin-top: 7px; }
-.card-prog-track{
-  height: 4px;
-  border-radius: var(--r-full);
-  background: var(--fill-2);
-  overflow: hidden;
-}
-.card-prog-track > i{
-  display: block;
-  height: 100%;
-  border-radius: var(--r-full);
-  background: var(--card-prog);
-  transition: width var(--anim-fast);
-}
-.card-meta-line{
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
-  margin-top: 4px;
-  font-size: calc(var(--fs-2xs) + 0.5px);
-  line-height: 1.3;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.card-todo-count{ flex: 0 1 auto; min-width: 0; }
 .card-pomo-count{
   flex: 0 0 auto;
   font-weight: var(--fw-medium);
@@ -1916,22 +1815,6 @@ body.pomo-nonpart .pomo-status-line{
   margin-bottom: var(--sp-3);
 }
 
-.todo-plus{
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-md);
-  border: 1px solid var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--on-accent-btn);
-  font-size: var(--fs-lg);
-  font-weight: var(--fw-bold);
-  cursor: pointer;
-  user-select: none;
-  flex: 0 0 auto;
-  transition: transform var(--anim-fast), background var(--anim-fast);
-}
-.todo-plus:active{ transform: scale(.97); }
-
 .todo-input{
   flex: 1;
   height: 40px;
@@ -1992,106 +1875,6 @@ body.pomo-nonpart .pomo-status-line{
   text-decoration: line-through;
   opacity: .5;
 }
-
-.todo-routine-badge{
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  color: var(--on-accent-btn);
-  flex: 0 0 auto;
-  margin-left: var(--sp-1);
-}
-
-/* 날짜 배지 — 🔁 반복 배지와 나란히 섭니다.
-   평소엔 중립색, 오늘은 강조색, 지났는데 아직 안 끝냈으면 붉게. */
-.todo-due-badge{
-  flex: 0 0 auto;
-  margin-left: var(--sp-1);
-  padding: 1px 6px;
-  border-radius: 999px;
-  border: 1px dashed var(--border);
-  background: var(--fill-1);
-  color: var(--muted-strong);
-  font-size: var(--fs-2xs);
-  font-weight: var(--fw-medium);
-  line-height: 1.5;
-  white-space: nowrap;
-}
-.todo-due-badge.is-today{
-  border-style: solid;
-  border-color: var(--accent-line);
-  background: var(--accent-softer);
-  color: var(--on-accent-btn);
-  font-weight: var(--fw-bold);
-}
-.todo-due-badge.is-late{
-  border-style: solid;
-  border-color: var(--danger-line);
-  background: var(--danger-soft);
-  color: var(--on-danger-btn);
-  font-weight: var(--fw-bold);
-}
-.todo-item.done .todo-due-badge{ opacity: .5; }
-
-/* 항목 아래에 잠깐 열리는 날짜 고르는 줄 */
-.todo-duepick{
-  list-style: none;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px var(--sp-3);
-  margin-top: -4px;
-  border: 1px dashed var(--accent-line);
-  border-radius: var(--r-lg);
-  background: var(--accent-softer);
-}
-.todo-duepick-label{
-  font-size: var(--fs-xs);
-  color: var(--muted-strong);
-  font-weight: var(--fw-medium);
-}
-.todo-duepick-input{
-  border: 1px solid var(--border);
-  background: var(--input-bg);
-  color: var(--input-text);
-  border-radius: var(--r-sm);
-  padding: 5px 7px;
-  font-size: var(--fs-sm);
-  font-family: inherit;
-  min-height: 32px;
-  max-width: 100%;
-}
-.todo-duepick-btn{
-  border: 1px solid var(--border);
-  background: var(--fill-1);
-  color: var(--text);
-  border-radius: var(--r-sm);
-  padding: 5px 9px;
-  font-size: var(--fs-xs);
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.todo-duepick-btn:hover{ background: var(--fill-2); }
-.todo-duepick-btn.clear{ color: var(--on-danger-btn); }
-
-.todo-more{
-  width: var(--tap-sm);
-  height: var(--tap-sm);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--fill-1);
-  color: var(--text);
-  font-size: var(--fs-xl);
-  line-height: 1;
-  font-weight: var(--fw-bold);
-  cursor: pointer;
-  user-select: none;
-  flex: 0 0 auto;
-  transition: transform var(--anim-fast), background var(--anim-fast);
-}
-.todo-more:hover{ background: var(--fill-2); }
-.todo-more:active{ transform: scale(.97); }
 
 /* 드롭다운 메뉴 — 기존엔 !important 6개로 덮어쓰던 것을 단일 정의로 정리 */
 .todo-menu{
@@ -2198,7 +1981,6 @@ body.pomo-nonpart .pomo-status-line{
   background: var(--success);
   box-shadow: 0 0 0 3px var(--success-soft);
 }
-.online-more{ border-style: dashed; opacity: .9; }
 
 /* 헤더의 글씨 +/− 버튼(--font-size)이 여기 안쪽에만 적용됩니다.
    아래 자식들의 em은 모두 이 값을 기준으로 계산돼요. */
@@ -3696,20 +3478,6 @@ body.narrow-chat-focus .row-grip{ display: none !important; }
   align-items: center;
   gap: var(--sp-3);
 }
-.profile-emoji-preview{
-  width: 52px;
-  height: 52px;
-  flex: 0 0 auto;
-  border-radius: var(--r-lg);
-  border: 1px solid var(--border);
-  background: var(--fill-1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  line-height: 1;
-  user-select: none;
-}
 .profile-emoji-meta{ min-width: 0; }
 /* 좁은 패널에서 "사진 올리기"가 두 줄로 꺾이던 것 방지 */
 .profile-emoji-meta .ghost-btn{ white-space: nowrap; flex: 0 0 auto; }
@@ -3986,7 +3754,6 @@ body.narrow-chat-focus .narrow-tabs{
   .container{ flex-direction: column; height: auto; }
 }
 
-
 /* =====================================================================
    TheMagam — 목표·상태·투두가 프로필 편집 안으로 들어왔습니다.
 
@@ -4088,19 +3855,6 @@ body.narrow-chat-focus .narrow-tabs{
 /* 손가락 화면에는 아예 안 띄웁니다 — 실수로 누르기 쉽습니다 */
 @media (hover: none){ .panel-close{ display: none; } }
 
-/* 창을 자리에 붙이는 대신 팝업으로 띄웠을 때 */
-.panel-pop-host{ display: flex; min-height: 0; }
-.in-popup{
-  flex: 1 1 auto !important;
-  width: auto !important;
-  height: auto !important;
-  max-height: 60vh;
-  min-width: 0 !important;
-  overflow: auto;
-}
-.in-popup .panel-close{ display: none; }
-
-
 /* =====================================================================
    오른쪽 줄 접기
 
@@ -4123,7 +3877,6 @@ body.side-collapsed .side-rail{
 .panel-close,
 .chat-collapse-btn,
 .hidden-panels{ display: none !important; }
-
 
 /* ---------------------------------------------------------------
    입장 모달의 안내/오류 한 줄
@@ -4704,7 +4457,6 @@ html[data-theme-style="night"] #timer-pill[data-phase] #timer-text{
   width: 34px;
   font-size: var(--fs-sm);
 }
-.pomo-setup-sep{ opacity: .4; }
 
 /* ── 뽀모 버튼 — 시작은 인주색 원, 정지·알림음은 베이지 원 ── */
 .pomo-run-btn{
@@ -4984,9 +4736,7 @@ html[data-theme-style="ink"] .card-state{ font-family: var(--font); }
 .card-foot{ padding-left: 11px; }
 .card-name{ padding-left: 22px; }   /* 왼쪽 점과 겹치지 않게 이름 줄만 */
 .card-goal,
-.card-meta,
-.card-meta .card-prog-track{ width: 100%; }
-.card-meta-line{ width: 100%; }
+.card-meta{ width: 100%; }
 
 /* =====================================================================
    [2026-08-03·15차] 설정창 리스킨 — 대시보드와 같은 결
@@ -5481,7 +5231,6 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .chatty-join-btn:hover{ background: var(--accent-softer); }
 
-
 /* =====================================================================
    🗂️ 나의 작업 팝업 (.mw-*)
    ---------------------------------------------------------------------
@@ -5820,6 +5569,27 @@ body.split-dragging #chat-box3{ user-select: none; }
   line-height: 1.6;
 }
 .mw-hint b{ color: #6B5F52; }
+
+/* [2026-08-09] 📌 할 일 탭 맨 아래 — 🧹 치우기.
+   카드 아래칸 팝업이 없어지면서 이 자리로 옮겨왔습니다. */
+.mw-foot{
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid rgba(150,120,80,.22);
+  display: flex;
+  justify-content: flex-end;
+}
+.mw-btn{
+  font-family: inherit;
+  font-size: var(--fs-2xs);
+  padding: 5px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(150,120,80,.42);
+  background: transparent;
+  color: #6B5F52;
+  cursor: pointer;
+}
+.mw-btn:hover{ background: rgba(150,120,80,.10); }
 
 /* 🎯 목표 탭으로 옮겨오는 #status-block — 종이 위에서는 테두리를 뺍니다 */
 #mywork-goal-slot .pane.in-profile{

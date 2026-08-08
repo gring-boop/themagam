@@ -146,18 +146,12 @@
         await db.ref(`users/${myNick}/timeSegs/${ymd(a)}`).push(seg);
       } catch (e) { /* 저장 실패는 조용히 넘깁니다 */ }
 
-      /* 펫 밥 — WORK 와 초집중만 누적합니다.
+      /* [뺌 2026-08-09] users/{닉}/workMsTotal 누적 — 없앴습니다.
 
-         날짜별 기록(timeSegs)을 매번 전부 더해서 누적을 구하면 기록이
-         쌓일수록 무거워집니다. 그래서 닫을 때마다 한 값에 더해 둡니다.
-         트랜잭션으로 올려서 여러 창을 열어둬도 어긋나지 않습니다. */
-      if (seg.s === "writing" || seg.s === "focus") {
-        const len = end - a;
-        try {
-          await db.ref(`users/${myNick}/workMsTotal`)
-                  .transaction(v => (Number(v) || 0) + len);
-        } catch (e) {}
-      }
+         삭제된 펫 기능이 밥으로 쓰던 값입니다. 펫이 사라진 뒤로는
+         **아무도 읽지 않으면서 구간이 닫힐 때마다 트랜잭션만 한 번씩**
+         돌고 있었어요. 쓰기만 하고 읽지 않는 값은 늘어나기만 합니다.
+         작업 시간이 필요하면 timeSegs 를 더해 쓰면 됩니다. */
       a = end;
     }
   }
@@ -351,8 +345,9 @@
 
        예전엔 pagehide 에서 timeSegs 에 한 줄 적고 timeCur 를 지웠는데,
        두 가지 문제가 있었습니다.
-         ① 기록장에는 적으면서 펫 누적(workMsTotal)에는 안 더해서,
-            곱게 닫을 때마다 마지막 집필 구간이 펫에게만 누락됐습니다.
+         ① 기록장에는 적으면서 따로 세던 누적값에는 안 더해서, 곱게
+            닫을 때마다 마지막 집필 구간이 한쪽에서만 누락됐습니다.
+            (그 누적값은 2026-08-09 에 없앴습니다)
          ② 닫히는 순간의 전송은 어디까지 도착할지 알 수 없어서, 절반만
             성공하면 같은 구간이 안 잡히거나 두 번 잡힐 수 있었습니다.
 
@@ -454,24 +449,14 @@
   }
   const DOW = ["일","월","화","수","목","금","토"];
 
-  async function openRecord(nick) {
-    const modal = document.getElementById("record-modal");
-    const body  = document.getElementById("record-body");
-    const title = document.getElementById("record-title");
-    if (!modal || !body) return;
-
-    title.textContent = `📊 ${nick} 님의 기록`;
-    body.innerHTML = `<p class="hint">불러오는 중…</p>`;
-    modal.style.display = "flex";
-
-    body.innerHTML = recordHtml(await loadSummary(nick, 7));
-  }
-  window.openRecord = openRecord;
+  /* [뺌 2026-08-09] openRecord — 옛 기록 팝업(#record-modal).
+     내 카드 아래칸이 🗂️ 나의 작업을 열게 되면서 여는 길이 사라졌습니다.
+     같은 내용은 나의 작업 창의 ⏱️ 작업 시간 탭에 있어요. */
 
   /* ---------------------------------------------------------------
      기록 화면 만들기 — 팝업과 설정 탭이 **같은 것**을 씁니다.
 
-     예전에는 openRecord 안에 HTML 이 통째로 박혀 있었습니다. 설정에도
+     예전에는 기록 팝업 안에 HTML 이 통째로 박혀 있었습니다. 설정에도
      같은 걸 띄우려면 복사해야 했는데, 그러면 한쪽만 고치는 사고가
      반드시 납니다. 함수로 떼어내 한 곳에서만 만듭니다.
      --------------------------------------------------------------- */
@@ -549,7 +534,7 @@
      --------------------------------------------------------------- */
   /* [2026-08-06] 그릴 자리 찾기.
 
-     예전에는 설정 모달의 "📊 나의 작업" 탭(#panel-record)에 그렸습니다.
+     예전에는 설정 모달의 "📊 나의 작업" 탭에 그렸습니다.
      지금은 머리말의 [🗂️ 나의 작업] 창 안(#mywork-panel-rec)으로 옮겼어요.
      옛 자리도 함께 봐 둡니다 — 어느 한쪽만 있어도 그려지도록. */
   /* [2026-08-08] 기록을 두 탭으로 나눴습니다 — ⏱️ 작업 시간 · ✍️ 글자수.
@@ -557,8 +542,7 @@
      내보내기는 두 주를 함께 담으므로 양쪽 탭 아래에 똑같이 둡니다. */
   function timePanelHost() {
     return document.getElementById("mywork-panel-time")
-        || document.getElementById("mywork-panel-rec")     // 옛 이름 대비
-        || document.getElementById("panel-record");
+        || document.getElementById("mywork-panel-rec");    // 옛 이름 대비
   }
   function wcPanelHost() {
     return document.getElementById("mywork-panel-wc");
@@ -613,11 +597,6 @@
   }
   window.renderMyRecordPanel = renderMyRecordPanel;
 
-  function closeRecord() {
-    const m = document.getElementById("record-modal");
-    if (m) m.style.display = "none";
-  }
-  window.closeRecord = closeRecord;
 
   /** 카드 아래쪽 상자를 누르면 그 사람의 기록을 엽니다 */
   function bindRecordOpen() {
@@ -650,11 +629,6 @@
       return;
     });
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-      const m = document.getElementById("record-modal");
-      if (m && m.style.display === "flex") closeRecord();
-    });
   }
   window.bindRecordOpen = bindRecordOpen;
 

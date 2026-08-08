@@ -48,6 +48,21 @@
   window.loadThemeForNick = loadThemeForNick;
   window.saveThemeForNick = saveThemeForNick;
 
+  /* [뺌 2026-08-09] 화면에 안 보이던 할 일 칸(#todo-block) 을 걷어내면서,
+     그 DOM 만 그리던 함수 여덟도 함께 없앴습니다.
+       todoDueBadgeInfo · _closeAllTodoMenus · _openTodoMenuSmart ·
+       renderTodoList · _closeTodoDuePicker · openTodoDuePicker ·
+       bindTodoInputEnter · addTodoFromUI
+
+     그 칸은 화면 배치 목록(PANELS)에 없어서 보관함으로 치워진 뒤 다시
+     나오지 않았습니다. 카드 아래칸 팝업이 잠깐 꺼내 쓰던 것이 마지막
+     쓰임이었는데, 그 팝업마저 없어지면서 완전히 죽어 있었어요.
+     할 일을 그리는 일은 이제 script_mywork.js 한 곳이 맡습니다.
+
+     자료를 다루는 함수(addTodoWithDue · toggleTodo · editTodo · deleteTodo ·
+     clearCompletedTodos · todosForProfileList …)는 그대로 남습니다 —
+     화면과 상관없이 값을 만지는 쪽이라 여전히 쓰입니다. */
+
   // =====================================================
   // ✅ Todo state in UI memory
   // =====================================================
@@ -66,7 +81,6 @@
 
   function setTodoItemsToUI(items) {
     window._todoItems = _normalizeRoutineTodos(items);
-    renderTodoList();
 
     /* 할 일이 바뀌면 🗂️ 나의 작업 창의 달력·목록도 함께 바뀌어야 합니다.
        (날짜가 붙은 할 일을 거기서 날짜별로 보여주니까요)
@@ -99,58 +113,8 @@
     return Math.round((a.getTime() - t.getTime()) / 86400000);
   }
 
-  /** 날짜 배지에 쓸 글자·모양. 날짜가 없으면 null */
-  function todoDueBadgeInfo(item) {
-    /* 반복 항목에 날짜가 함께 남아 있는 옛 자료라면 날짜는 없는 셈 칩니다
-       (저장할 때 실제로 털어냅니다 — _todosForSave 참고) */
-    if (!item || item.routine || !isTodoDue(item.due)) return null;
-
-    const [, mm, dd] = item.due.split("-");
-    const short = `${Number(mm)}/${dd}`;
-    const diff = _todoDueDiff(item.due);
-
-    if (diff === 0) {
-      return { text: "오늘", cls: "is-today", title: `오늘(${short})까지 하는 일이에요` };
-    }
-    if (diff < 0 && !item.done) {
-      return { text: `D+${-diff}`, cls: "is-late", title: `${short}에 하기로 했는데 ${-diff}일 지났어요` };
-    }
-    return { text: short, cls: "", title: `${item.due} 에 하는 일이에요` };
-  }
 
   window.isTodoDue = isTodoDue;
-  window.todoDueBadgeInfo = todoDueBadgeInfo;
-
-  // =====================================================
-  // ✅ Todo render: “... 버튼 → 메뉴(수정/삭제)” + 한 줄 1개
-  // =====================================================
-  function _closeAllTodoMenus(except) {
-    document.querySelectorAll(".todo-menu").forEach(m => {
-      if (except && m === except) return;
-      m.classList.remove("open");
-    });
-  }
-
-  function _openTodoMenuSmart(li, menu, moreBtn) {
-    if (!li || !menu || !moreBtn) return;
-
-    menu.classList.add("open");
-    menu.classList.remove("open-up");
-
-    requestAnimationFrame(() => {
-      const menuRect = menu.getBoundingClientRect();
-      const btnRect = moreBtn.getBoundingClientRect();
-
-      const spaceBelow = window.innerHeight - btnRect.bottom;
-      const spaceAbove = btnRect.top;
-
-      if (spaceBelow < menuRect.height + 12 && spaceAbove > menuRect.height + 12) {
-        menu.classList.add("open-up");
-      } else {
-        menu.classList.remove("open-up");
-      }
-    });
-  }
 
   /* [2026-08-06] 프로필 팝업의 투두 목록은 **오늘 것과 날짜 없는 것**만
      보여줍니다.
@@ -176,178 +140,12 @@
     });
   }
   window.todosForProfileList = todosForProfileList;
-  /* [고침 2026-08-06] 여기에 `window.renderTodoList = () => renderTodoList()`
-     를 두었다가 목록이 통째로 사라졌습니다.
-
-     이 파일은 IIFE 로 감싸여 있지 않아서, 최상위 `function renderTodoList`
-     가 곧 `window.renderTodoList` 입니다. 거기에 화살표 함수를 덮어쓰면
-     화살표 안의 이름도 그 화살표를 가리켜 자기를 끝없이 부릅니다.
-     이미 전역에 있으니 따로 내보낼 필요가 없었어요. */
-
-  function renderTodoList() {
-    const ul = document.getElementById("todo-list");
-    if (!ul) return;
-
-    const items = todosForProfileList();
-    ul.innerHTML = "";
-
-    items.forEach(item => {
-      const dueInfo = todoDueBadgeInfo(item);
-      const hasDue = !!dueInfo;
-      const dueShort = hasDue
-        ? `${Number(item.due.slice(5, 7))}/${item.due.slice(8, 10)}`
-        : "";
-
-      const li = document.createElement("li");
-      li.className = "todo-item" + (item.done ? " done" : "") + (hasDue ? " has-due" : "");
-      li.dataset.id = item.id;
-
-      li.innerHTML = `
-        <label class="todo-left">
-          <input class="todo-check" type="checkbox" ${item.done ? "checked" : ""} />
-          <span class="todo-text"></span>
-        </label>
-
-        <button class="todo-more" type="button" aria-label="todo menu">⋯</button>
-
-        <div class="todo-menu" role="menu">
-          <button type="button" class="edit" role="menuitem">✏️ 수정</button>
-          <button type="button" class="due" role="menuitem">${hasDue ? `🗓️ 날짜 바꾸기 (${dueShort})` : "🗓️ 날짜 정하기"}</button>
-          ${hasDue ? `<button type="button" class="due-clear" role="menuitem">🚫 날짜 지우기</button>` : ""}
-          <button type="button" class="routine" role="menuitem">${item.routine ? "🔁 반복 해제" : "🔁 매일 반복"}</button>
-          <button type="button" class="danger delete" role="menuitem">🗑 삭제</button>
-        </div>
-      `;
-
-      li.querySelector(".todo-text").textContent = item.text || "";
-
-      /* 날짜 배지 — 🔁 반복 배지와 나란히 텍스트 옆에 붙습니다 */
-      if (dueInfo) {
-        const dbadge = document.createElement("span");
-        dbadge.className = "todo-due-badge " + dueInfo.cls;
-        dbadge.textContent = dueInfo.text;
-        dbadge.title = dueInfo.title;
-        li.querySelector(".todo-left")?.appendChild(dbadge);
-      }
-
-      if (item.routine) {
-        const badge = document.createElement("span");
-        badge.className = "todo-routine-badge";
-        badge.textContent = "🔁";
-        badge.title = "매일 반복되는 투두예요 (자정에 체크가 풀려요)";
-        li.querySelector(".todo-left")?.appendChild(badge);
-      }
-
-      li.querySelector(".todo-check").addEventListener("change", (e) => {
-        toggleTodo(item.id, e.target.checked);
-      });
-
-      const moreBtn = li.querySelector(".todo-more");
-      const menu = li.querySelector(".todo-menu");
-
-      moreBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-
-        const willOpen = !menu.classList.contains("open");
-        _closeAllTodoMenus(menu);
-
-        if (!willOpen) {
-          menu.classList.remove("open", "open-up");
-          return;
-        }
-
-        _openTodoMenuSmart(li, menu, moreBtn);
-      });
-
-      li.querySelector(".todo-menu .edit").addEventListener("click", (e) => {
-        e.stopPropagation();
-        menu.classList.remove("open");
-        editTodo(item.id);
-      });
-
-      li.querySelector(".todo-menu .due").addEventListener("click", (e) => {
-        e.stopPropagation();
-        menu.classList.remove("open");
-        openTodoDuePicker(li, item);
-      });
-
-      li.querySelector(".todo-menu .due-clear")?.addEventListener("click", (e) => {
-        e.stopPropagation();
-        menu.classList.remove("open");
-        setTodoDue(item.id, "");
-      });
-
-      li.querySelector(".todo-menu .routine").addEventListener("click", (e) => {
-        e.stopPropagation();
-        menu.classList.remove("open");
-        toggleRoutineTodo(item.id);
-      });
-
-      li.querySelector(".todo-menu .delete").addEventListener("click", (e) => {
-        e.stopPropagation();
-        menu.classList.remove("open");
-        deleteTodo(item.id);
-      });
-
-      // 바깥 클릭 시 닫기
-      li.addEventListener("click", () => _closeAllTodoMenus());
-      ul.appendChild(li);
-    });
-  }
-
-  // 문서 어디든 클릭하면 메뉴 닫기
-  document.addEventListener("click", () => _closeAllTodoMenus());
-
   // =====================================================
   // ✅ 날짜 고르는 줄 (항목 바로 아래에 잠깐 열리는 <input type="date">)
   // =====================================================
   /* prompt("2026-08-07 처럼 적어주세요") 는 휴대폰에서 특히 괴롭습니다.
      달력이 뜨는 <input type="date"> 를 항목 아래에 끼워 넣고, 고르는
      즉시 저장한 뒤 줄을 걷습니다. 취소도 됩니다. */
-  function _closeTodoDuePicker() {
-    document.querySelectorAll(".todo-duepick").forEach(n => n.remove());
-  }
-
-  function openTodoDuePicker(li, item) {
-    _closeTodoDuePicker();
-    if (!li || !li.parentNode) return;
-
-    const row = document.createElement("li");
-    row.className = "todo-duepick";
-    row.innerHTML = `
-      <span class="todo-duepick-label">🗓️ 언제 할까요?</span>
-      <input type="date" class="todo-duepick-input" aria-label="투두 날짜">
-      <button type="button" class="todo-duepick-btn today">오늘</button>
-      ${isTodoDue(item.due) ? `<button type="button" class="todo-duepick-btn clear">지우기</button>` : ""}
-      <button type="button" class="todo-duepick-btn cancel">취소</button>
-    `;
-
-    const inp = row.querySelector(".todo-duepick-input");
-    inp.value = isTodoDue(item.due) ? item.due : ymd(Date.now());
-
-    /* 고르는 즉시 저장 — 저장하면 목록을 다시 그리므로 줄은 저절로 사라집니다 */
-    inp.addEventListener("change", () => {
-      const v = String(inp.value || "");
-      if (!v) return;                 // 입력칸을 비운 것은 취소로 봅니다
-      setTodoDue(item.id, v);
-    });
-
-    row.querySelector(".todo-duepick-btn.today").addEventListener("click", () => {
-      setTodoDue(item.id, ymd(Date.now()));
-    });
-    row.querySelector(".todo-duepick-btn.clear")?.addEventListener("click", () => {
-      setTodoDue(item.id, "");
-    });
-    row.querySelector(".todo-duepick-btn.cancel").addEventListener("click", () => {
-      _closeTodoDuePicker();
-    });
-
-    li.parentNode.insertBefore(row, li.nextSibling);
-
-    /* 크롬·엣지는 showPicker() 로 달력을 바로 펼칠 수 있습니다.
-       지원하지 않는 브라우저에서는 그냥 입력칸에 초점만 갑니다. */
-    try { inp.focus(); inp.showPicker?.(); } catch (e) {}
-  }
 
   /** 날짜 붙이기 / 떼기 ("" 를 주면 뗍니다) */
   function setTodoDue(id, due) {
@@ -368,47 +166,6 @@
     });
 
     _closeTodoDuePicker();
-    setTodoItemsToUI(items);
-    savePersonalData();
-  }
-
-
-  function bindTodoInputEnter() {
-    const inp = document.getElementById("todo-input");
-    if (!inp) return;
-
-    inp.addEventListener("keydown", (e) => {
-      /* ✅ [FIX] 맥·윈도우 한글 입력에서 마지막 글자가 따로 추가되던 문제
-
-         한글은 조합이 끝날 때 Enter가 한 번 더 들어옵니다. 그 Enter를 그대로
-         받으면 아직 확정되지 않은 글자 상태로 저장돼, 마지막 자모가 별개의
-         할 일로 남았습니다. 채팅 입력창에는 이미 같은 방어가 있었는데
-         투두 입력창에는 빠져 있었어요. */
-      if (e.isComposing || e.keyCode === 229) return;
-
-      if (e.key === "Enter") {
-        e.preventDefault();
-        addTodoFromUI();
-      }
-    });
-  }
-
-  function addTodoFromUI() {
-    const inp = document.getElementById("todo-input");
-    if (!inp) return;
-
-    const text = (inp.value || "").trim();
-    if (!text) return;
-
-    const items = getTodoItemsFromUI();
-    items.unshift({
-      id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
-      text,
-      done: false,
-      createdAt: Date.now()
-    });
-
-    inp.value = "";
     setTodoItemsToUI(items);
     savePersonalData();
   }
@@ -494,16 +251,13 @@
     savePersonalData();
   }
 
-  window.bindTodoInputEnter = bindTodoInputEnter;
-  window.addTodoFromUI = addTodoFromUI;
   window.toggleRoutineTodo = toggleRoutineTodo;
   window.clearCompletedTodos = clearCompletedTodos;
 
   /* [2026-08-06] 🗂️ 나의 작업 창에서 날짜를 붙여 새 할 일을 넣는 창구.
 
-     addTodoFromUI 는 화면의 입력칸(#todo-input)을 읽어가는 함수라
-     다른 창에서는 쓸 수 없었습니다. 글자와 날짜를 직접 받는 문을
-     따로 열어둡니다. due 가 비어 있으면 "날짜 없는 할 일"입니다. */
+     글자와 날짜를 직접 받습니다. due 가 비어 있으면 "날짜 없는 할 일"이에요.
+     (예전에는 화면의 입력칸을 읽어가는 함수뿐이라 다른 창에서 못 썼습니다) */
   function addTodoWithDue(text, due) {
     const t = String(text || "").trim();
     if (!t) return false;

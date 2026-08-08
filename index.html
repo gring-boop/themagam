@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608090106">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608090106">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608090137">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608090137">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608090106">
+  <link rel="manifest" href="manifest.json?v=202608090137">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -40,7 +40,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608090106" />
+  <link rel="stylesheet" href="styles.css?v=202608090137" />
 </head>
 
 <body>
@@ -126,17 +126,6 @@
     <div class="tab-panels" id="manual-panels"></div>
 
     <button class="ghost-btn w-full" id="manual-close-btn" type="button" onclick="closeManual()">닫기</button>
-  </div>
-</div>
-
-<!-- =====================================================================
-     기록 팝업 — 카드 아래쪽 상자를 누르면 열립니다
-     ===================================================================== -->
-<div id="record-modal" onclick="closeRecord()" role="dialog" aria-modal="true" aria-labelledby="record-title">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <h2 class="modal-title" id="record-title">📊 기록</h2>
-    <div id="record-body"></div>
-    <button class="ghost-btn w-full" type="button" onclick="closeRecord()" style="margin-top:14px;">닫기</button>
   </div>
 </div>
 
@@ -683,32 +672,6 @@
     </div>
   </section>
 
-  <!-- 나의 할일 -->
-  <section class="pane pane-todo" id="todo-block" aria-label="나의 할일">
-    <div class="todo-wrap">
-      <h4 class="personal-title">📌 What to do</h4>
-      <div class="todo-add">
-        <label class="sr-only" for="todo-input">할 일 입력</label>
-        <input id="todo-input" class="todo-input" type="text" placeholder="할 일 추가…" enterkeyhint="done" />
-        <button class="todo-plus" type="button" onclick="addTodoFromUI()" aria-label="할 일 추가">＋</button>
-      </div>
-      <ul id="todo-list" class="todo-list"></ul>
-      <!-- [2026-08-06] 여기에는 오늘 것과 날짜 없는 것만 나옵니다.
-           다른 날짜로 적어둔 일은 그날이 되면 저절로 여기에 떠요. -->
-      <p class="hint todo-scope-hint">
-        여기엔 <b>오늘 할 일</b>과 <b>날짜 없는 할 일</b>만 보여요.
-        다른 날짜는 🗂️ 나의 작업에서 · 그날이 되면 여기에도 뜹니다.
-      </p>
-      <div class="mini-row todo-foot" style="margin-top:8px;">
-        <!-- [2026-08-06] "삭제" → "치우기". 실제로 지우지 않고 이 목록에서만
-             감추고, 🗂️ 나의 작업에는 완료로 남습니다. -->
-        <button class="ghost-btn compact" type="button" onclick="clearCompletedTodos()"
-                title="이 목록에서만 감춰요 — 나의 작업에는 완료로 남습니다">🧹 완료한 것 치우기</button>
-      </div>
-    </div>
-    
-  </section>
-
   </div><!-- /split-root -->
 
   <!-- 치워둔 창을 잠시 넣어두는 곳 (화면에는 안 보입니다) -->
@@ -723,25 +686,25 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608090106"></script>
-<script src="script_core.js?v=202608090106"></script>
-<script src="script_auth.js?v=202608090106"></script>
-<script src="script_ui.js?v=202608090106"></script>
-<script src="script_chat.js?v=202608090106"></script>
-<script src="script_chatty.js?v=202608090106"></script>
-<script src="script_data.js?v=202608090106"></script>
-<script src="script_realtime.js?v=202608090106"></script>
-<script src="script_layout.js?v=202608090106"></script>
-<script src="script_wordcount.js?v=202608090106"></script>
-<script src="script_timelog.js?v=202608090106"></script>
-<script src="script_idledetect.js?v=202608090106"></script>
-<script src="script_profile.js?v=202608090106"></script>
-<script src="script_mywork.js?v=202608090106"></script>
-<script src="script_forest.js?v=202608090106"></script>
-<script src="script_reactions.js?v=202608090106"></script>
-<script src="script_share.js?v=202608090106"></script>
-<script src="script_manual.js?v=202608090106"></script>
-<script src="script_guard.js?v=202608090106"></script>
+<script src="fortune_data.js?v=202608090137"></script>
+<script src="script_core.js?v=202608090137"></script>
+<script src="script_auth.js?v=202608090137"></script>
+<script src="script_ui.js?v=202608090137"></script>
+<script src="script_chat.js?v=202608090137"></script>
+<script src="script_chatty.js?v=202608090137"></script>
+<script src="script_data.js?v=202608090137"></script>
+<script src="script_realtime.js?v=202608090137"></script>
+<script src="script_layout.js?v=202608090137"></script>
+<script src="script_wordcount.js?v=202608090137"></script>
+<script src="script_timelog.js?v=202608090137"></script>
+<script src="script_idledetect.js?v=202608090137"></script>
+<script src="script_profile.js?v=202608090137"></script>
+<script src="script_mywork.js?v=202608090137"></script>
+<script src="script_forest.js?v=202608090137"></script>
+<script src="script_reactions.js?v=202608090137"></script>
+<script src="script_share.js?v=202608090137"></script>
+<script src="script_manual.js?v=202608090137"></script>
+<script src="script_guard.js?v=202608090137"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -770,7 +733,7 @@
       "script_share.js":   "toggleScreenShare",
       "script_manual.js":   "openManual",
       "script_layout.js":   "applyLayout",
-      "script_timelog.js":  "openRecord",
+      "script_timelog.js":  "renderMyRecordPanel",
       "script_idledetect.js": "toggleIdleDetect"
     };
     const missing = Object.entries(required)

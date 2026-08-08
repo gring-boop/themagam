@@ -323,10 +323,17 @@
       </div>
 
       <p class="mw-hint">
-        프로필 팝업의 투두에는 <b>오늘 것과 날짜 없는 것</b>만 보여요.
-        다른 날짜로 적어둔 일은 <b>그날이 되면 저절로</b> 거기에도 뜹니다.
-        🔁 반복은 날짜와 함께 쓸 수 없어서 늘 이 아래 칸에 있어요.
-      </p>`;
+        🔁 반복은 날짜와 함께 쓸 수 없어서 늘 아래 칸에 있어요.
+      </p>
+
+      <!-- [옮김 2026-08-09] 🧹 치우기.
+           예전에는 카드 아래칸 팝업(#todo-block)에 있었는데, 그 팝업이
+           없어지면서 누를 데가 사라졌습니다. 기능은 그대로예요 —
+           지우는 게 아니라 완료한 것을 이 목록에서만 감춥니다. -->
+      <div class="mw-foot">
+        <button type="button" class="mw-btn" data-mw-clear="1"
+                title="완료한 것을 이 목록에서만 감춰요 — 기록은 남습니다">🧹 완료한 것 치우기</button>
+      </div>`;
   }
 
   function renderTodoPanel() {
@@ -442,11 +449,19 @@
       return;
     }
 
-    /* 2) 버튼들 */
+    /* 2) 🧹 치우기 */
+    if (e.target.closest("[data-mw-clear]")) {
+      window.clearCompletedTodos?.();
+      renderTodoPanel();
+      renderCal();
+      return;
+    }
+
+    /* 3) 버튼들 */
     const act = e.target.closest("[data-act]");
     if (act) { handleAct(act.dataset.act, act); return; }
 
-    /* 3) 날짜 칸 — 단일 클릭은 잠깐 기다렸다가 "고르기" */
+    /* 4) 날짜 칸 — 단일 클릭은 잠깐 기다렸다가 "고르기" */
     const cell = e.target.closest(".att-day[data-d]");
     if (cell) {
       const ds = cell.dataset.d;
