@@ -693,27 +693,9 @@ window.afterJoinLoadProfile = afterJoinLoadProfile;
    [3] 설정 모달 — 프로필 탭
    ===================================================================== */
 
-/* TheMagam — 오늘 목표와 나의 투두는 창이 아니라 "옮겨 다니는 덩어리"입니다.
-
-   이 둘을 보여줄 곳이 두 군데예요.
-     · 카드 아래칸을 눌렀을 때 뜨는 팝업 (#goals-body)
-     · 설정 → 🎯 목표 · 투두 탭        (#panel-goals)
-
-   같은 것을 두 벌 만들면 한쪽에 적은 게 다른 쪽에 안 보이고, 저장도
-   엉킵니다. 그래서 실제 덩어리는 하나만 두고 필요한 곳으로 옮깁니다.
-   안에 걸린 이벤트와 저장 로직이 그대로 따라오니까요.
-   (다시 그리면 조용히 저장이 끊깁니다 — 예전에 겪은 적이 있습니다.) */
-function mountGoalBlocks(host) {
-  if (!host) return;
-  /* 목표를 위, 투두를 아래로. 역순으로 넣습니다. */
-  ["todo-block", "status-block"].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add("in-profile");
-    host.insertBefore(el, host.firstChild);
-  });
-}
-window.mountGoalBlocks = mountGoalBlocks;
+/* [뺌 2026-08-08] mountGoalBlocks — 카드 아래칸 팝업(#goals-modal)이
+   없어지면서 함께 걷어냈습니다. 목표·할 일은 이제 🗂️ 나의 작업 창
+   한 곳에서만 봅니다. 창이 두 벌이면 어느 쪽이 진짜인지 헷갈려요. */
 
 /* [2026-08-06] 목표 덩어리만 따로 옮기기 — 🗂️ 나의 작업 창의 🎯 목표 탭용.
    그 탭에는 오늘 목표와 [⏱️ 오늘 작업 시간 초기화] 만 있으면 되고,
@@ -731,24 +713,8 @@ function mountStatusBlock(host) {
 }
 window.mountStatusBlock = mountStatusBlock;
 
-/** 카드 아래칸 → 목표·투두 팝업 */
-function openGoals() {
-  if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
-  const modal = document.getElementById("goals-modal");
-  if (!modal) return;
-  mountGoalBlocks(document.getElementById("goals-body"));
-  /* [추가 2026-08-06] 열 때마다 목록을 다시 그립니다.
-     🗂️ 나의 작업에서 넣은 할 일이 곧바로 보이도록 하는 안전장치예요
-     (덩어리를 옮겨 오는 과정에서 낡은 화면이 남는 일을 막습니다). */
-  try { window.renderTodoList?.(); } catch (e) {}
-  modal.style.display = "flex";
-}
-function closeGoals() {
-  const modal = document.getElementById("goals-modal");
-  if (modal) modal.style.display = "none";
-}
-window.openGoals = openGoals;
-window.closeGoals = closeGoals;
+/* [뺌 2026-08-08] openGoals · closeGoals — 카드 아래칸을 누르면 이제
+   🗂️ 나의 작업 창이 열립니다 (script_timelog.js 의 카드 클릭 처리). */
 
 function renderProfilePanel() {
   const host = document.getElementById("panel-profile");

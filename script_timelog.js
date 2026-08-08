@@ -552,41 +552,64 @@
      예전에는 설정 모달의 "📊 나의 작업" 탭(#panel-record)에 그렸습니다.
      지금은 머리말의 [🗂️ 나의 작업] 창 안(#mywork-panel-rec)으로 옮겼어요.
      옛 자리도 함께 봐 둡니다 — 어느 한쪽만 있어도 그려지도록. */
-  function recordPanelHost() {
-    return document.getElementById("mywork-panel-rec")
+  /* [2026-08-08] 기록을 두 탭으로 나눴습니다 — ⏱️ 작업 시간 · ✍️ 글자수.
+     예전에는 한 화면에 그래프가 둘이라 지금 뭘 보는 건지 헷갈렸어요.
+     내보내기는 두 주를 함께 담으므로 양쪽 탭 아래에 똑같이 둡니다. */
+  function timePanelHost() {
+    return document.getElementById("mywork-panel-time")
+        || document.getElementById("mywork-panel-rec")     // 옛 이름 대비
         || document.getElementById("panel-record");
   }
+  function wcPanelHost() {
+    return document.getElementById("mywork-panel-wc");
+  }
 
-  async function renderMyRecordPanel(backWeeks = 0, wcBack = 0) {
-    const host = recordPanelHost();
-    if (!host) return;
-
-    if (!myNick) {
-      host.innerHTML = `<div class="set-block"><p class="hint">입장 후에 볼 수 있어요.</p></div>`;
-      return;
-    }
-
-    host.innerHTML = `<div class="set-block"><p class="hint">불러오는 중…</p></div>`;
-
-    let timeHtml = "";
-    try { timeHtml = recordHtml(await loadSummary(myNick, 7, backWeeks), backWeeks, wcBack); }
-    catch (e) { timeHtml = `<p class="hint">기록을 불러오지 못했어요.</p>`; }
-
-    host.innerHTML = `
-      <div class="set-block">
-        <div class="set-title">⏱️ Working hours</div>
-        ${timeHtml}
-      </div>
+  function exportBlock(backWeeks, wcBack) {
+    return `
       <div class="set-block">
         <button class="ghost-btn w-full" type="button"
                 onclick="exportMyRecord(${backWeeks}, ${wcBack})">📤 보고 있는 주를 텍스트로 내보내기</button>
-        <p class="hint">위의 Working hours 주와 아래 Letters 주를 .txt 파일로 저장해요.</p>
-      </div>
-      <div class="set-block">
-        <div class="set-title">✍️ Letters</div>
-        ${(window.Wordcount?.myWeekHtml ? await window.Wordcount.myWeekHtml(wcBack, backWeeks) : null)
-          || `<p class="hint">글자수 기록을 불러오지 못했어요.</p>`}
+        <p class="hint">작업 시간과 글자수를 한 파일(.txt)에 함께 담아요.</p>
       </div>`;
+  }
+
+  async function renderMyRecordPanel(backWeeks = 0, wcBack = 0) {
+    if (!myNick) {
+      [timePanelHost(), wcPanelHost()].forEach(h => {
+        if (h) h.innerHTML = `<div class="set-block"><p class="hint">입장 후에 볼 수 있어요.</p></div>`;
+      });
+      return;
+    }
+
+    /* ⏱️ 작업 시간 */
+    const tHost = timePanelHost();
+    if (tHost) {
+      tHost.innerHTML = `<div class="set-block"><p class="hint">불러오는 중…</p></div>`;
+      let timeHtml = "";
+      try { timeHtml = recordHtml(await loadSummary(myNick, 7, backWeeks), backWeeks, wcBack); }
+      catch (e) { timeHtml = `<p class="hint">기록을 불러오지 못했어요.</p>`; }
+      tHost.innerHTML = `
+        <div class="set-block">
+          <div class="set-title">⏱️ Working hours</div>
+          ${timeHtml}
+        </div>
+        ${exportBlock(backWeeks, wcBack)}`;
+    }
+
+    /* ✍️ 글자수 */
+    const wHost = wcPanelHost();
+    if (wHost) {
+      wHost.innerHTML = `<div class="set-block"><p class="hint">불러오는 중…</p></div>`;
+      const wcHtml = (window.Wordcount?.myWeekHtml
+        ? await window.Wordcount.myWeekHtml(wcBack, backWeeks) : null)
+        || `<p class="hint">글자수 기록을 불러오지 못했어요.</p>`;
+      wHost.innerHTML = `
+        <div class="set-block">
+          <div class="set-title">✍️ Letters</div>
+          ${wcHtml}
+        </div>
+        ${exportBlock(backWeeks, wcBack)}`;
+    }
   }
   window.renderMyRecordPanel = renderMyRecordPanel;
 
@@ -609,12 +632,16 @@
       if (!foot) return;
       e.preventDefault();
 
-      /* TheMagam — 내 카드 아래칸은 "오늘 목표 · 나의 투두" 입구입니다.
-         프사는 프로필 설정, 상태표는 상태 고르기로 각각 갈라져 있습니다.
-         남의 카드 아래칸은 그대로 기록 보기입니다. */
+      /* [2026-08-08] 내 카드 아래칸은 이제 🗂️ 나의 작업 창을 엽니다.
+
+         예전에는 여기서 "오늘 목표 · 나의 투두" 팝업이 따로 떴는데,
+         나의 작업 창에 같은 내용이 더 넓게 들어 있어서 창이 두 벌이었어요.
+         하나로 합치면서 머리말의 [🗂️ 나의 작업] 버튼도 없앴습니다 —
+         이제 이 자리가 유일한 입구입니다.
+         프사는 프로필 설정, 상태표는 상태 고르기로 각각 갈라져 있습니다. */
       const who = foot.dataset.recordOf;
       if (who && who === myNick) {
-        window.openGoals?.();
+        window.openMyWork?.();
         return;
       }
       /* [2026-08-03] 남의 카드는 눌리지 않습니다 — 작업시간은 본인만
