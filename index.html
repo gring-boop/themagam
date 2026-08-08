@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608090220">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608090220">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608090228">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608090228">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608090220">
+  <link rel="manifest" href="manifest.json?v=202608090228">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608090220" />
+  <link rel="stylesheet" href="styles.css?v=202608090228" />
 </head>
 
 <body>
@@ -689,25 +689,25 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608090220"></script>
-<script src="script_core.js?v=202608090220"></script>
-<script src="script_auth.js?v=202608090220"></script>
-<script src="script_ui.js?v=202608090220"></script>
-<script src="script_chat.js?v=202608090220"></script>
-<script src="script_chatty.js?v=202608090220"></script>
-<script src="script_data.js?v=202608090220"></script>
-<script src="script_realtime.js?v=202608090220"></script>
-<script src="script_layout.js?v=202608090220"></script>
-<script src="script_wordcount.js?v=202608090220"></script>
-<script src="script_timelog.js?v=202608090220"></script>
-<script src="script_idledetect.js?v=202608090220"></script>
-<script src="script_profile.js?v=202608090220"></script>
-<script src="script_mywork.js?v=202608090220"></script>
-<script src="script_forest.js?v=202608090220"></script>
-<script src="script_reactions.js?v=202608090220"></script>
-<script src="script_share.js?v=202608090220"></script>
-<script src="script_manual.js?v=202608090220"></script>
-<script src="script_guard.js?v=202608090220"></script>
+<script src="fortune_data.js?v=202608090228"></script>
+<script src="script_core.js?v=202608090228"></script>
+<script src="script_auth.js?v=202608090228"></script>
+<script src="script_ui.js?v=202608090228"></script>
+<script src="script_chat.js?v=202608090228"></script>
+<script src="script_chatty.js?v=202608090228"></script>
+<script src="script_data.js?v=202608090228"></script>
+<script src="script_realtime.js?v=202608090228"></script>
+<script src="script_layout.js?v=202608090228"></script>
+<script src="script_wordcount.js?v=202608090228"></script>
+<script src="script_timelog.js?v=202608090228"></script>
+<script src="script_idledetect.js?v=202608090228"></script>
+<script src="script_profile.js?v=202608090228"></script>
+<script src="script_mywork.js?v=202608090228"></script>
+<script src="script_forest.js?v=202608090228"></script>
+<script src="script_reactions.js?v=202608090228"></script>
+<script src="script_share.js?v=202608090228"></script>
+<script src="script_manual.js?v=202608090228"></script>
+<script src="script_guard.js?v=202608090228"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -766,16 +766,27 @@
 </script>
 
 <!-- =====================================================================
-     서비스 워커 등록 — 독립 창으로 설치할 수 있게 하는 용도뿐입니다.
-     캐시를 하지 않으므로 배포한 파일이 곧바로 반영됩니다.
-     실패해도 작업방은 그대로 돌아갑니다.
+     서비스 워커 정리 — 예전에 등록해 둔 것을 걷어냅니다.
+
+     [왜 있었고, 왜 없앴나]
+     앱처럼 설치되려면 "fetch 처리기가 있는 서비스 워커"가 필요하던 시절이
+     있었습니다. 그래서 아무 일도 하지 않는 빈 처리기를 하나 두었어요.
+     그런데 크롬이 그 조건을 없앴습니다 — 휴대폰은 108, 데스크톱은 112
+     버전부터 **manifest 와 HTTPS 만 있으면 설치됩니다.** 오히려 빈 처리기가
+     페이지를 열 때마다 군더더기가 된다고 크롬이 경고를 띄우기 시작했고요.
+     ("Fetch event handler is recognized as no-op…")
+
+     그래서 서비스 워커를 아예 없앴습니다. 설치 기능은 그대로예요.
+     다만 예전에 방문한 사람의 브라우저에는 등록이 남아 있어서, 스스로
+     정리되도록 여기서 한 번 지웁니다. 나중에 오프라인 기능을 만들게 되면
+     그때 제대로 된 워커를 새로 두면 됩니다.
      ===================================================================== -->
 <script>
-  if ("serviceWorker" in navigator && location.protocol === "https:") {
+  if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(err => {
-        console.warn("[서비스 워커 등록 실패 — 설치 기능만 빠지고 나머지는 정상]", err);
-      });
+      navigator.serviceWorker.getRegistrations?.()
+        .then(rs => rs.forEach(r => r.unregister()))
+        .catch(() => {});
     });
   }
 </script>
