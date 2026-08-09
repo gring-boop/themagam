@@ -502,6 +502,10 @@
       if (html !== _lastCardsHtml) {
         list.innerHTML = html;
         _lastCardsHtml = html;
+        /* [2026-08-10] 여기서 innerHTML 을 통째로 갈면 공유 카드도 함께
+           지워집니다. 다시 끼우고, 프로필 카드 높이에 맞춰 줍니다 —
+           목표 글이 길어져 카드가 커지는 일이 있으니까요. */
+        window.renderShareCards?.();
       }
 
       startHeaderTicker();

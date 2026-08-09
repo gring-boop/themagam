@@ -6291,7 +6291,11 @@ body.split-dragging #chat-box3{ user-select: none; }
   border-color: var(--danger-line);
   display: flex;
   flex-direction: column;
-  height: 100%;          /* 옆 프로필 카드와 같은 높이 */
+  /* [고침 2026-08-10] 예전엔 height:100% 였습니다. 100% 의 기준은
+     **그 줄의 높이**라, 같은 줄에 프로필 카드가 있을 때만 맞았어요.
+     줄 끝에서 밀려 혼자 다음 줄로 내려가면 제 내용만큼 쪼그라들었습니다.
+     이제 script_share.js 의 syncShareCardHeights() 가 프로필 카드를
+     실제로 재서 px 로 입혀 줍니다. */
   min-height: 0;
   overflow: hidden;
   padding: var(--sp-2);

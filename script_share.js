@@ -464,7 +464,59 @@
     _lastShareHtml = html;
 
     tickShare();
+    syncShareHeights();
   }
+
+  /* =====================================================================
+     공유 카드 높이 맞추기 (2026-08-10)
+     ---------------------------------------------------------------------
+     [무엇이 문제였나]
+     카드 목록은 그리드인데 `align-items: start` 라, 카드가 줄 높이에
+     끌려가지 않고 각자 내용만큼만 차지합니다(프로필 카드끼리 높이가
+     들쭉날쭉하지 않게 하려고 일부러 그렇게 뒀어요).
+
+     공유 카드는 `height: 100%` 로 "옆 프로필 카드와 같은 높이"를
+     노렸는데, 100% 의 기준은 **그 줄의 높이**입니다. 그래서 같은 줄에
+     프로필 카드가 있을 때만 맞고, 줄 끝에서 밀려 **혼자 다음 줄로
+     내려가면 그 줄에는 자기밖에 없어서** 제 내용만큼으로 쪼그라들었죠.
+
+     [왜 CSS 로 안 되나]
+     grid-auto-rows: 1fr 로 모든 줄 높이를 같게 만들 수는 있지만,
+     그러면 align-items: start 인 프로필 카드 아래로 빈 자리가 크게
+     남습니다. 지금 배치를 해치지 않으면서 공유 카드만 맞추려면
+     프로필 카드의 실제 높이를 재는 수밖에 없습니다.
+
+     [어떻게]
+     프로필 카드 중 가장 큰 높이를 재서 공유 카드에 그대로 입힙니다.
+     창 크기가 바뀌면 다시 잽니다.
+     ===================================================================== */
+  let _syncTimer = 0;
+
+  function syncShareHeights() {
+    const list = document.getElementById("user-cards");
+    if (!list) return;
+    const shares = list.querySelectorAll(".share-card");
+    if (!shares.length) return;
+
+    /* 먼저 지난번에 입힌 높이를 걷어내고 잽니다 —
+       안 그러면 한 번 커진 값이 계속 눌러앉습니다. */
+    shares.forEach(el => { el.style.height = ""; });
+
+    let h = 0;
+    list.querySelectorAll(".user-card:not(.share-card)").forEach(el => {
+      h = Math.max(h, el.getBoundingClientRect().height);
+    });
+    if (!h) return;                       // 프로필 카드가 아직 없으면 그대로 둡니다
+    shares.forEach(el => { el.style.height = Math.round(h) + "px"; });
+  }
+  window.syncShareCardHeights = syncShareHeights;
+
+  /* 창 크기가 바뀌면 카드 폭이 달라져 높이도 달라집니다.
+     연달아 들어오는 resize 는 한 번으로 묶습니다. */
+  window.addEventListener("resize", () => {
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(syncShareHeights, 120);
+  });
 
   /* 1초마다 끊김만 살핍니다 — 카드를 다시 만들지 않으므로 깜빡이지 않아요.
      20초가 넘으면 흐리게, 30초가 넘으면 카드를 뺍니다.
