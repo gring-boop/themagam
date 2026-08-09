@@ -5581,22 +5581,19 @@ body.split-dragging #chat-box3{ user-select: none; }
   padding-bottom: var(--sp-3);
   height: auto;
 }
-/* [2026-08-09] "다시 세는 중" 알림 줄 — 기록이 남아 있음을 눈에 보이게 */
-.rec-reset{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 0 0 var(--sp-3);
+/* [2026-08-09] "언제부터 다시 세는 중" — [타이머 리셋] 버튼 바로 아래 */
+.timer-reset-note{
+  margin-top: var(--sp-2);
   padding: 8px 11px;
   border-radius: var(--r-sm);
   background: var(--fill-1);
   border: 1px solid var(--border);
-  font-size: var(--fs-2xs);
+  line-height: 1.6;
 }
-.rec-reset-t{ font-weight: var(--fw-bold); color: var(--text); }
-.rec-reset-b{ color: var(--muted); }
+.timer-reset-note[hidden]{ display: none; }
+.timer-reset-note b{ color: var(--text); }
 .rec-reset-undo{
+  margin-left: 6px;
   margin-left: auto;
   font-family: inherit;
   font-size: var(--fs-2xs);

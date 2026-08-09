@@ -381,7 +381,15 @@
   /* ---------------------------------------------------------------
      [4] 합계 계산
      --------------------------------------------------------------- */
-  async function loadSummary(nick, days, backWeeks = 0) {
+  /* [고침 2026-08-09] 다시 세기 표시를 **부르는 쪽이 고르게** 했습니다.
+
+     타이머 리셋은 **카드의 타이머만** 0으로 되돌리는 기능입니다.
+     나의 작업의 기록은 그날 실제로 얼마나 했는지 보는 자리라 손대면 안 돼요.
+     그래서 기본은 "있는 그대로"이고, 카드 값을 구할 때만 표시를 반영합니다.
+       loadSummary(닉, 7)                      → 기록 그대로 (나의 작업)
+       loadSummary(닉, 1, 0, { applyReset:true }) → 표시 반영 (카드 타이머) */
+  async function loadSummary(nick, days, backWeeks = 0, opts = {}) {
+    const applyReset = opts.applyReset === true;
     const out = [];               // [{ date, totals:{status:ms}, pomo }]
     const t = nowMs();
 
@@ -408,7 +416,8 @@
          "이 시각부터만 센다"는 표시 하나만 남깁니다.
          기록은 그대로 있으니 나중에 되짚어 볼 수도 있고, 표시를 지우면
          원래 숫자가 그대로 돌아옵니다. */
-      const resetAt = Number(resetAll[key] || 0);
+      const resetAt = applyReset ? Number(resetAll[key] || 0) : 0;
+      const resetAtRaw = Number(resetAll[key] || 0);   // 안내 문구용 (자르지는 않음)
 
       const bucket = segsAll[key] || {};
       for (const k in bucket) {
@@ -419,10 +428,9 @@
         const len = Number(seg.b || 0) - a;
         if (len > 0) totals[s] += len;
 
-        /* 잘려나간 앞부분도 세어 둡니다 — 화면에 "그 전 n분" 으로 알려주려고요.
-           남아 있는데 볼 수 없으면 사라진 것과 다름없으니까요. */
-        if (resetAt && (s === "writing" || s === "focus")) {
-          const cut = Math.min(Number(seg.b || 0), resetAt) - Number(seg.a || 0);
+        /* 리셋 이전에 쌓여 있던 만큼 — 안내 문구에 씁니다 */
+        if (resetAtRaw && (s === "writing" || s === "focus")) {
+          const cut = Math.min(Number(seg.b || 0), resetAtRaw) - Number(seg.a || 0);
           if (cut > 0) beforeReset += cut;
         }
       }
@@ -451,7 +459,7 @@
         date: key,
         totals,
         pomo: Number(pomoAll?.[key]?.count || 0),
-        resetAt,
+        resetAt: resetAtRaw,
         beforeReset
       });
     }
@@ -492,23 +500,12 @@
     const weekLabel = isThisWeek ? "지난 7일" : `${backWeeks}주 전`;
 
     /* 지난 주를 보는 동안에는 "오늘" 요약은 접어둡니다 — 그 주의 값이 아니니까요 */
-    /* [2026-08-09] "지금부터 다시 세기" 를 눌렀으면 그 사실과, 그 전에
-       쌓여 있던 시간을 함께 보여줍니다. 기록이 서버에 남아 있어도 화면에
-       안 보이면 사라진 것과 다름없어서요. 되돌리는 길도 같이 둡니다. */
-    const resetNote = (!isThisWeek || !today.resetAt) ? "" : `
-      <div class="rec-reset">
-        <span class="rec-reset-t">${new Date(today.resetAt).toLocaleTimeString("ko-KR",
-          { hour: "2-digit", minute: "2-digit" })}부터 다시 세는 중</span>
-        <span class="rec-reset-b">그 전 ${fmtDur(today.beforeReset)}은 기록에 남아 있어요</span>
-        <button type="button" class="rec-reset-undo" onclick="undoWorkReset()">되돌리기</button>
-      </div>`;
-
     const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
-        <div class="rec-sub">오늘 작업 시간 — Write(집필)와 Job(다른 일)을 더한 합계예요</div>
+        <div class="rec-sub">오늘 작업 시간 — Write(집필)와 Job(다른 일)을 더한 합계예요<br>
+          <b>카드의 타이머를 리셋해도 이 기록은 그대로예요.</b></div>
       </div>
-      ${resetNote}
 
       <div class="rec-bars">
         ${["writing", "rest", "away", "focus"].map(id => {
@@ -674,9 +671,11 @@
   async function _refreshTodayWork() {
     if (!myNick) return;
     try {
-      const rows = await loadSummary(myNick, 1);
+      /* 카드의 타이머만 표시를 반영합니다 (나의 작업 기록은 그대로) */
+      const rows = await loadSummary(myNick, 1, 0, { applyReset: true });
       _todayWork = { ms: rows[0].totals.writing + rows[0].totals.focus, at: nowMs() };
       window.updateStatus?.(true);   // 새 값을 카드에 반영
+      renderTimerResetNote(rows[0]);
     } catch (e) {}
   }
   window.refreshTodayWork = _refreshTodayWork;
@@ -758,19 +757,35 @@
         보여줍니다. 그쪽은 "정말 얼마나 있었나"를 봐야 하는 자리라서요. */
   window.resetTodayWorkTime = async function () {
     if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
-    if (!confirm("지금부터 다시 셀까요?\n화면의 오늘 작업 시간이 0분이 되고, 이 순간부터 새로 쌓입니다.\n(지금까지의 기록은 지워지지 않아요)")) return;
+    if (!confirm("카드의 타이머를 0으로 되돌릴까요?\n이 순간부터 다시 셉니다.\n\n나의 작업 → ⏱️ 작업 시간의 기록은 그대로예요.")) return;
     try {
       const t = nowMs();
       await db.ref(`users/${myNick}/workReset/${ymd(t)}`).set(t);
 
       _todayWork = { ms: 0, at: t };
       await _refreshTodayWork();   // 재계산 → updateStatus(true) → 카드 갱신
-      alert("지금부터 다시 셉니다. 지금까지의 기록은 그대로 남아 있어요.");
+      alert("타이머를 리셋했어요. 작업 시간 기록은 그대로 남아 있습니다.");
     } catch (e) {
       console.warn("[resetTodayWorkTime]", e);
       alert("바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
+
+  /* [2026-08-09] 타이머를 언제부터 다시 세고 있는지, 버튼 바로 아래에.
+
+     이 자리(#timer-reset-note)는 #status-block 안이라 🎯 목표 탭으로
+     덩어리째 따라다닙니다. 리셋했다는 사실과 되돌리는 길을 여기 둡니다. */
+  function renderTimerResetNote(row) {
+    const el = document.getElementById("timer-reset-note");
+    if (!el) return;
+    if (!row || !row.resetAt) { el.innerHTML = ""; el.hidden = true; return; }
+    el.hidden = false;
+    const t = new Date(row.resetAt).toLocaleTimeString("ko-KR",
+      { hour: "2-digit", minute: "2-digit" });
+    el.innerHTML = `<b>${t}부터 다시 세는 중</b> · 그 전 ${fmtDur(row.beforeReset)}은
+      나의 작업 → ⏱️ 작업 시간에 그대로 있어요
+      <button type="button" class="rec-reset-undo" onclick="undoWorkReset()">되돌리기</button>`;
+  }
 
   /* [2026-08-09] 다시 세기를 되돌립니다 — 표시만 지우면 원래 숫자가 돌아옵니다.
      기록을 건드린 적이 없으니 되돌리는 것도 표시 하나를 지우는 일이에요. */
@@ -779,8 +794,7 @@
     try {
       await db.ref(`users/${myNick}/workReset/${ymd(nowMs())}`).remove();
       await _refreshTodayWork();
-      renderMyRecordPanel();
-      alert("되돌렸어요. 오늘 시간이 원래대로 돌아왔습니다.");
+      alert("되돌렸어요. 카드의 타이머가 원래 값으로 돌아왔습니다.");
     } catch (e) {
       console.warn("[undoWorkReset]", e);
       alert("되돌리지 못했어요. 잠시 후 다시 시도해 주세요.");
