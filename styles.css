@@ -2756,7 +2756,9 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
    [고침 2026-08-07] 좁다는 얘기가 있어 폭을 3할 늘렸습니다. 대신 세로는
    한 뼘 줄여서(430 → 387) 화면을 덜 잡아먹게 했어요 — 쪽지는 옆으로
    퍼지는 편이 읽기 좋고, 세로로 길면 스크롤이 생깁니다. */
-#forest-modal .modal-content{ width: min(1196px, 100%); }
+/* [2026-08-09] 대숲 창을 130% 로 넓혔습니다 (1196 → 1555).
+   min(…, 100%) 이라 좁은 화면에서는 여전히 화면 폭까지만 커집니다. */
+#forest-modal .modal-content{ width: min(1555px, 100%); }
 
 /* 목표·투두는 입력칸 몇 개뿐이라 좁아도 됩니다 (520 → 416) */
 #goals-modal .modal-content{ width: min(416px, 100%); }

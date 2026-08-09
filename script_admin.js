@@ -598,7 +598,10 @@
     :host { all: initial; }
     .wrap{
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+      /* [넓힘 2026-08-09] 오른쪽 닉네임 박스가 **지금 작업방의 닉네임
+         박스와 같은 폭**(약 216px)이 되도록 카드를 늘렸습니다.
+         96(프사) + 10(사이) + 216(닉네임 박스) + 16(카드 안쪽 여백) ≈ 338 */
+      grid-template-columns: repeat(auto-fill, minmax(338px, 1fr));
       gap: 14px;
       padding: 4px 2px 2px;
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -607,7 +610,7 @@
     .user-card.side-lay{ display: flex; flex-direction: column; }
     .user-card.side-lay .card-body{
       display: grid;
-      grid-template-columns: 96px minmax(0, 1fr);
+      grid-template-columns: 96px minmax(216px, 1fr);
       gap: 10px;
       align-items: start;
     }
