@@ -5581,6 +5581,33 @@ body.split-dragging #chat-box3{ user-select: none; }
   padding-bottom: var(--sp-3);
   height: auto;
 }
+/* [2026-08-09] "다시 세는 중" 알림 줄 — 기록이 남아 있음을 눈에 보이게 */
+.rec-reset{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 var(--sp-3);
+  padding: 8px 11px;
+  border-radius: var(--r-sm);
+  background: var(--fill-1);
+  border: 1px solid var(--border);
+  font-size: var(--fs-2xs);
+}
+.rec-reset-t{ font-weight: var(--fw-bold); color: var(--text); }
+.rec-reset-b{ color: var(--muted); }
+.rec-reset-undo{
+  margin-left: auto;
+  font-family: inherit;
+  font-size: var(--fs-2xs);
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--on-accent-btn);
+  cursor: pointer;
+}
+
 .btn-2line-main{ font-weight: var(--fw-medium); }
 .btn-2line-sub{
   font-size: var(--fs-2xs);

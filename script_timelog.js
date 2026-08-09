@@ -399,6 +399,7 @@
       const dayMs = dayStart(t) - (i + backWeeks * 7) * 24 * 60 * 60 * 1000;
       const key = ymd(dayMs);
       const totals = {}; STATUS_IDS.forEach(s => totals[s] = 0);
+      let beforeReset = 0;          // 다시 세기 표시 이전에 쌓여 있던 Write+Job
 
       /* [2026-08-09] "지금부터 다시 세기" 표시.
 
@@ -417,6 +418,13 @@
         const a = Math.max(Number(seg.a || 0), resetAt);
         const len = Number(seg.b || 0) - a;
         if (len > 0) totals[s] += len;
+
+        /* 잘려나간 앞부분도 세어 둡니다 — 화면에 "그 전 n분" 으로 알려주려고요.
+           남아 있는데 볼 수 없으면 사라진 것과 다름없으니까요. */
+        if (resetAt && (s === "writing" || s === "focus")) {
+          const cut = Math.min(Number(seg.b || 0), resetAt) - Number(seg.a || 0);
+          if (cut > 0) beforeReset += cut;
+        }
       }
 
       /* 아직 열려 있는 구간은 지금까지로 계산해 더합니다.
@@ -442,7 +450,9 @@
       out.push({
         date: key,
         totals,
-        pomo: Number(pomoAll?.[key]?.count || 0)
+        pomo: Number(pomoAll?.[key]?.count || 0),
+        resetAt,
+        beforeReset
       });
     }
     return out;
@@ -482,11 +492,23 @@
     const weekLabel = isThisWeek ? "지난 7일" : `${backWeeks}주 전`;
 
     /* 지난 주를 보는 동안에는 "오늘" 요약은 접어둡니다 — 그 주의 값이 아니니까요 */
+    /* [2026-08-09] "지금부터 다시 세기" 를 눌렀으면 그 사실과, 그 전에
+       쌓여 있던 시간을 함께 보여줍니다. 기록이 서버에 남아 있어도 화면에
+       안 보이면 사라진 것과 다름없어서요. 되돌리는 길도 같이 둡니다. */
+    const resetNote = (!isThisWeek || !today.resetAt) ? "" : `
+      <div class="rec-reset">
+        <span class="rec-reset-t">${new Date(today.resetAt).toLocaleTimeString("ko-KR",
+          { hour: "2-digit", minute: "2-digit" })}부터 다시 세는 중</span>
+        <span class="rec-reset-b">그 전 ${fmtDur(today.beforeReset)}은 기록에 남아 있어요</span>
+        <button type="button" class="rec-reset-undo" onclick="undoWorkReset()">되돌리기</button>
+      </div>`;
+
     const todayHtml = !isThisWeek ? "" : `
       <div class="rec-today">
         <div class="rec-big">${fmtDur(sumWork)}</div>
         <div class="rec-sub">오늘 작업 시간 — Write(집필)와 Job(다른 일)을 더한 합계예요</div>
       </div>
+      ${resetNote}
 
       <div class="rec-bars">
         ${["writing", "rest", "away", "focus"].map(id => {
@@ -747,6 +769,21 @@
     } catch (e) {
       console.warn("[resetTodayWorkTime]", e);
       alert("바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
+  /* [2026-08-09] 다시 세기를 되돌립니다 — 표시만 지우면 원래 숫자가 돌아옵니다.
+     기록을 건드린 적이 없으니 되돌리는 것도 표시 하나를 지우는 일이에요. */
+  window.undoWorkReset = async function () {
+    if (!myNick) return;
+    try {
+      await db.ref(`users/${myNick}/workReset/${ymd(nowMs())}`).remove();
+      await _refreshTodayWork();
+      renderMyRecordPanel();
+      alert("되돌렸어요. 오늘 시간이 원래대로 돌아왔습니다.");
+    } catch (e) {
+      console.warn("[undoWorkReset]", e);
+      alert("되돌리지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
 
