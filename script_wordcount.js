@@ -449,6 +449,138 @@
     say("오늘 누적을 0으로 되돌렸어요");
   }
 
+  /* =====================================================================
+     🕛 어제 채우기 (2026-08-10)
+     ---------------------------------------------------------------------
+     밤 11시부터 자정 사이에 쓴 만큼을 못 적고 날짜가 넘어가는 일이
+     자주 생깁니다. 그 한 칸만 뒤늦게 메우는 자리예요.
+
+     [왜 '덮어쓰기'가 아니라 '더하기'인가]
+     여기 적는 숫자는 오늘과 똑같이 **원고의 전체 글자수**입니다.
+     그날 쓴 양은 늘 `전체 글자수 − 그날의 기준` 으로 계산되고, 기준은
+     그대로 두므로 결과는 이미 적힌 것에 **이어붙는** 셈이 됩니다.
+     그래서 어제 칸이 비어 있는지 아닌지 따질 필요가 없습니다.
+
+     [새 편은 계산이 다릅니다]
+     10시에 한 회차를 끝내고 새 파일로 다음 회차를 쓰다가 놓친 경우,
+     새 파일의 글자수(예: 800)는 어제 기준(12,500)보다 작습니다. 빼면
+     음수가 되니 아무것도 안 더해져요. 그래서 [🆕 새 편이었어요] 를
+     체크하면 뺄셈 없이 **적은 숫자를 통째로** 더합니다.
+
+     [저장 전에 결과를 보여줍니다]
+     체크 하나로 결과가 크게 달라지므로, 누르기 전에 한 줄로 미리
+     보여줍니다 — "어제 2,500자 → 3,300자 (+800)".
+     ===================================================================== */
+  let _ydayRow = null;                    // 어제 { total, base }
+
+  function ydayKey() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return dayKey(d);
+  }
+
+  /* 지금 적힌 값으로 결과를 계산합니다. 화면에도, 저장할 때도 이 하나만
+     씁니다 — 미리보기와 실제 저장이 어긋나면 안 되니까요. */
+  function ydayCalc() {
+    const prev = Number(_ydayRow?.total || 0);
+    const base = _ydayRow?.base;
+    const raw  = el("wc-yday-input")?.value ?? "";
+    const v    = parseInt(raw, 10);
+    const isNew = !!el("wc-yday-new")?.checked;
+
+    if (!Number.isFinite(v) || v < 0)
+      return { ok: false, prev, msg: `어제 ${fmt(prev)}자 — 마지막 글자수를 적어주세요` };
+
+    if (isNew) {
+      if (v <= 0) return { ok: false, prev, msg: "0자는 더할 게 없어요" };
+      return { ok: true, prev, v, add: v, next: prev + v };
+    }
+    if (base === null || base === undefined)
+      return { ok: false, prev, msg: "어제 출발선이 없어요. 새 편이었다면 아래를 체크해 주세요" };
+
+    const add = v - Number(base);
+    if (add <= 0)
+      return { ok: false, prev,
+               msg: `어제 마지막 기준(${fmt(base)}자)보다 커야 해요. 새 편이었다면 체크해 주세요` };
+    return { ok: true, prev, v, add, next: prev + add };
+  }
+
+  function renderYdayPreview() {
+    const p = el("wc-yday-pre");
+    if (!p) return;
+    const r = ydayCalc();
+    p.textContent = r.ok
+      ? `어제 ${fmt(r.prev)}자 → ${fmt(r.next)}자 (+${fmt(r.add)})`
+      : r.msg;
+    p.classList.toggle("is-warn", !r.ok);
+  }
+
+  async function toggleYdayBox() {
+    const box = el("wc-yday");
+    const btn = el("wc-yday-btn");
+    if (!box) return;
+    if (!box.hasAttribute("hidden")) {
+      box.setAttribute("hidden", "");
+      btn?.setAttribute("aria-expanded", "false");
+      return;
+    }
+    if (!me()) { say("잠시만요, 아직 준비 중이에요."); return; }
+
+    /* 열 때 어제 값을 한 번 읽어옵니다. 어제는 늘 듣고 있는 날이 아니라
+       (월요일에는 지난주라서) 캐시를 믿을 수 없습니다. */
+    _ydayRow = {};
+    try {
+      const s = await window.db.ref(`wordlog/${ydayKey()}/${me()}`).once("value");
+      _ydayRow = s.val() || {};
+    } catch (e) { say(denyMsg(e)); return; }
+
+    const key = ydayKey();
+    const t = el("wc-yday-title");
+    if (t) t.textContent = `🕛 어제(${Number(key.slice(5, 7))}/${Number(key.slice(8, 10))}) 채우기`;
+    const inp = el("wc-yday-input");
+    if (inp) inp.value = "";
+    const chk = el("wc-yday-new");
+    if (chk) chk.checked = false;
+
+    box.removeAttribute("hidden");
+    btn?.setAttribute("aria-expanded", "true");
+    renderYdayPreview();
+    inp?.focus();
+  }
+
+  async function saveYday() {
+    const r = ydayCalc();
+    if (!r.ok) { say(r.msg); return; }
+    const nick = me();
+    const day  = ydayKey();
+    try {
+      await window.db.ref(`wordlog/${day}/${nick}`)
+        .update({ total: r.next, base: r.v, at: Date.now() });
+      /* 흐르는 기록에도 한 줄. late 표시를 남기는 이유는, 시각이
+         '지금'으로 찍히기 때문입니다 — 나중에 봐도 헷갈리지 않게. */
+      await window.db.ref(`wordfeed/${day}`)
+        .push({ nick, add: r.add, snap: r.v, at: Date.now(), late: true });
+    } catch (e) { say(denyMsg(e)); return; }
+
+    _ydayRow = { total: r.next, base: r.v };
+
+    /* 오늘 출발선이 아직 없으면 이어서 잡아 줍니다.
+       어제 마지막 상태에서 오늘도 계속 쓰는 게 보통이니까요.
+       이미 잡아 둔 사람의 값은 건드리지 않습니다. */
+    const mine = myRow();
+    let alsoBase = false;
+    if (mine.base === null || mine.base === undefined) {
+      await save({ base: r.v, total: Number(mine.total || 0) });
+      alsoBase = true;
+    }
+
+    el("wc-yday")?.setAttribute("hidden", "");
+    el("wc-yday-btn")?.setAttribute("aria-expanded", "false");
+    say(`어제에 +${fmt(r.add)}자 · 어제 누적 ${fmt(r.next)}자`
+        + (alsoBase ? ` · 오늘 출발선도 ${fmt(r.v)}자로 잡았어요` : ""));
+    render();
+  }
+
   async function freshStart() {
     rolloverIfNeeded();
     await save({ base: 0 });
@@ -567,6 +699,17 @@
     el("wc-base")?.addEventListener("click", setBase);
     el("wc-reset")?.addEventListener("click", resetTotal);
     el("wc-fresh")?.addEventListener("click", freshStart);
+
+    /* 🕛 어제 채우기 */
+    el("wc-yday-btn")?.addEventListener("click", toggleYdayBox);
+    el("wc-yday-save")?.addEventListener("click", saveYday);
+    el("wc-yday-input")?.addEventListener("input", renderYdayPreview);
+    el("wc-yday-new")?.addEventListener("change", renderYdayPreview);
+    el("wc-yday-input")?.addEventListener("keydown", (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === "Enter") { e.preventDefault(); saveYday(); }
+      if (e.key === "Escape") { el("wc-yday")?.setAttribute("hidden", ""); }
+    });
 
     el("wc-input")?.addEventListener("keydown", (e) => {
       /* 한글 조합 중의 Enter 는 무시 — 숫자 칸이지만 습관대로 둡니다 */

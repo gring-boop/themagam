@@ -6508,3 +6508,52 @@ body.split-dragging #chat-box3{ user-select: none; }
 .worktag-item.tag-rework{ background: rgba(133,183,235,.16); }
 .worktag-item.tag-input { background: rgba(151,196,89,.16); }
 .worktag-item.tag-etc   { background: rgba(237,147,177,.16); }
+
+/* =====================================================================
+   🕛 어제 채우기 (2026-08-10)
+   ---------------------------------------------------------------------
+   자정을 놓쳐 못 적은 글자수를 어제 칸에 뒤늦게 넣는 자리입니다.
+   평소에는 접혀 있고, [기록] 옆 🕛 을 누르면 펼쳐집니다.
+   ===================================================================== */
+.wc-yday-btn{ padding-left: 9px; padding-right: 9px; }
+.wc-yday-btn[aria-expanded="true"]{
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--on-accent-btn);
+}
+.wc-yday{
+  margin-top: var(--sp-2);
+  padding: 9px;
+  border-radius: var(--r-sm);
+  /* 점선 — "지금 하는 일"이 아니라 "뒤늦게 메우는 일"이라는 결 */
+  border: 1px dashed var(--accent-line);
+  background: var(--accent-softer);
+}
+.wc-yday[hidden]{ display: none; }
+.wc-yday-t{
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--on-accent-btn);
+  margin-bottom: 7px;
+}
+.wc-yday .wc-inputline{ margin-bottom: 6px; }
+.wc-yday-new{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--muted-strong);
+  cursor: pointer;
+  user-select: none;
+}
+.wc-yday-new input{ width: auto; margin: 0; cursor: pointer; }
+.wc-yday-new small{ color: var(--muted); }
+/* 미리보기 한 줄 — 저장하면 어떻게 되는지 누르기 전에 보여줍니다 */
+.wc-yday-pre{
+  margin: 7px 0 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--on-accent-btn);
+  line-height: 1.5;
+}
+.wc-yday-pre.is-warn{ color: var(--muted); font-weight: var(--fw-medium); }

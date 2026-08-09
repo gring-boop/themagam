@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091929">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091929">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608100036">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608100036">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608091929">
+  <link rel="manifest" href="manifest.json?v=202608100036">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608091929" />
+  <link rel="stylesheet" href="styles.css?v=202608100036" />
 </head>
 
 <body>
@@ -667,12 +667,36 @@
         <label class="sr-only" for="wc-input">지금 원고의 전체 글자수</label>
         <input type="number" id="wc-input" placeholder="지금 전체 글자수" inputmode="numeric" min="0" step="1">
         <button class="ghost-btn compact primary" type="button" id="wc-send">기록</button>
+        <!-- [2026-08-10] 자정을 놓쳤을 때 어제 칸을 메웁니다.
+             아래 작은 버튼 줄이 아니라 여기 붙인 이유는, 그 줄이 이미
+             빠듯해서 좁은 칸에서 두 줄로 접히기 때문입니다. -->
+        <button class="ghost-btn compact wc-yday-btn" type="button" id="wc-yday-btn"
+                aria-expanded="false" aria-controls="wc-yday"
+                title="어제 기록 채우기 — 자정 넘겨 못 적은 만큼">🕛</button>
       </div>
 
       <div class="wc-minirow">
         <button class="ghost-btn compact" type="button" id="wc-base"  title="지금 글자수를 출발선으로 삼아요">▶ 기준</button>
         <button class="ghost-btn compact" type="button" id="wc-reset" title="오늘 누적을 0으로 되돌려요">🧹 초기화</button>
         <button class="ghost-btn compact" type="button" id="wc-fresh" title="빈 문서에서 새로 시작해요">🆕 새 편</button>
+      </div>
+
+      <!-- 🕛 어제 채우기 — 평소에는 접혀 있습니다.
+           저장 전에 결과를 한 줄로 미리 보여주는 게 핵심이에요.
+           체크를 잘못 눌러도 숫자가 눈에 먼저 보이니까요. -->
+      <div class="wc-yday" id="wc-yday" hidden>
+        <div class="wc-yday-t" id="wc-yday-title">🕛 어제 채우기</div>
+        <div class="wc-inputline">
+          <label class="sr-only" for="wc-yday-input">어제 마지막 전체 글자수</label>
+          <input type="number" id="wc-yday-input" placeholder="어제 마지막 글자수"
+                 inputmode="numeric" min="0" step="1">
+          <button class="ghost-btn compact primary" type="button" id="wc-yday-save">저장</button>
+        </div>
+        <label class="wc-yday-new" for="wc-yday-new">
+          <input type="checkbox" id="wc-yday-new">
+          <span>🆕 새 편이었어요 <small>(적은 숫자를 통째로 더해요)</small></span>
+        </label>
+        <p class="wc-yday-pre" id="wc-yday-pre" role="status" aria-live="polite"></p>
       </div>
 
       <p class="hint" id="wc-hint"></p>
@@ -748,30 +772,30 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608091929"></script>
-<script src="script_core.js?v=202608091929"></script>
-<script src="script_auth.js?v=202608091929"></script>
-<script src="script_ui.js?v=202608091929"></script>
-<script src="script_chat.js?v=202608091929"></script>
-<script src="script_chatty.js?v=202608091929"></script>
-<script src="script_data.js?v=202608091929"></script>
-<script src="script_realtime.js?v=202608091929"></script>
-<script src="script_layout.js?v=202608091929"></script>
-<script src="script_wordcount.js?v=202608091929"></script>
-<script src="script_timelog.js?v=202608091929"></script>
-<script src="script_idledetect.js?v=202608091929"></script>
-<script src="script_profile.js?v=202608091929"></script>
-<script src="script_mywork.js?v=202608091929"></script>
-<script src="script_forest.js?v=202608091929"></script>
-<script src="script_reactions.js?v=202608091929"></script>
-<script src="script_note.js?v=202608091929"></script>
+<script src="fortune_data.js?v=202608100036"></script>
+<script src="script_core.js?v=202608100036"></script>
+<script src="script_auth.js?v=202608100036"></script>
+<script src="script_ui.js?v=202608100036"></script>
+<script src="script_chat.js?v=202608100036"></script>
+<script src="script_chatty.js?v=202608100036"></script>
+<script src="script_data.js?v=202608100036"></script>
+<script src="script_realtime.js?v=202608100036"></script>
+<script src="script_layout.js?v=202608100036"></script>
+<script src="script_wordcount.js?v=202608100036"></script>
+<script src="script_timelog.js?v=202608100036"></script>
+<script src="script_idledetect.js?v=202608100036"></script>
+<script src="script_profile.js?v=202608100036"></script>
+<script src="script_mywork.js?v=202608100036"></script>
+<script src="script_forest.js?v=202608100036"></script>
+<script src="script_reactions.js?v=202608100036"></script>
+<script src="script_note.js?v=202608100036"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608091929"></script>
-<script src="script_share.js?v=202608091929"></script>
-<script src="script_manual.js?v=202608091929"></script>
-<script src="script_guard.js?v=202608091929"></script>
+<script src="script_worktag.js?v=202608100036"></script>
+<script src="script_share.js?v=202608100036"></script>
+<script src="script_manual.js?v=202608100036"></script>
+<script src="script_guard.js?v=202608100036"></script>
 
 <script>
   window.addEventListener("load", () => {
