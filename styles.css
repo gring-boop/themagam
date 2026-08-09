@@ -4492,7 +4492,9 @@ html[data-theme-style="night"] #timer-pill[data-phase] #timer-text{
 }
 :root[data-is-dark="true"] .pomo-run-btn.start{ color: var(--me-text); }
 :root[data-is-dark="true"] .pomo-run-btn.stop{ color: var(--muted-strong); }
-#pomo-detail-toggle{
+/* [옮김 2026-08-09] 동그란 음표 — 예전에는 설정 여는 단추였지만
+   이제 소리를 켜고 끄는 스위치입니다. 생김새는 그대로 물려받습니다. */
+#pomo-sound-btn{
   width: 44px;
   height: 44px;
   flex: 0 0 auto;
@@ -5727,22 +5729,19 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* =====================================================================
    [2026-08-09] 뽀모 아래 두 줄
 
-     3줄  [🍅 25] [☕ 5] [⚙️ 설정]   ← 셋이 폭을 똑같이 나눠 갖습니다
-     4줄  [▶/⏸]  [■]    [♪]        ← 조작과 소리
+     3줄  🍅 25   ☕ 5   ⚙️ 설정      ← 테두리 없이, 셋이 같은 폭
+     4줄     [▶/⏸]  [■]  [♪]         ← 동그란 단추 셋, 가운데 정렬
 
-   예전에는 시간 설정 · 시작/정지 · 소리 알림이 세 줄로 흩어져 있었고,
-   맨 아래 [🔔 소리·알림] 버튼이 폭 전체를 써서 뽀모 칸만 세로로
-   길었습니다. 설정 셋을 한 줄로 묶고 아래 버튼을 없애 한 줄 줄였어요.
+   4줄은 원래 있던 동그란 단추 생김새(44px · 테두리 없음)를 그대로
+   씁니다. 3줄은 값을 보여주는 자리라 테두리를 없애고 옅은 바탕만
+   깔았습니다 — 조작 단추와 같은 무게로 보이면 시선이 분산돼요.
    ===================================================================== */
-.pomo-setrow,
-.pomo-bar{
+.pomo-setrow{
   display: flex;
-  align-items: stretch;
-  gap: 5px;
+  align-items: center;
+  gap: 4px;
   margin-top: var(--sp-2);
 }
-
-/* ── 3줄 — 셋이 똑같은 폭 ── */
 .pomo-setrow .pomo-setup-field{
   flex: 1 1 0;
   min-width: 0;
@@ -5750,43 +5749,39 @@ body.split-dragging #chat-box3{ user-select: none; }
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 0 4px;
-  height: 34px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--fill-1);
+  padding: 5px 4px;
+  border: 0;                       /* 테두리 없이 */
+  border-radius: var(--r-full);
+  background: transparent;
   color: var(--sub-muted);
   font-family: inherit;
   cursor: pointer;
+  transition: background var(--anim-fast), color var(--anim-fast);
 }
+.pomo-setrow .pomo-setup-field:hover{ background: var(--fill-1); color: var(--text); }
 .pomo-setrow .pomo-setup-field input{
-  width: 100%;
+  width: 2.2em;
   min-width: 0;
   border: 0;
   background: none;
   padding: 0;
-  text-align: center;
+  text-align: left;
   font-family: inherit;
   font-size: var(--fs-sm);
   font-weight: var(--fw-bold);
   color: var(--text);
   font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
+  cursor: text;
 }
 .pomo-setrow input::-webkit-outer-spin-button,
 .pomo-setrow input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
-.pomo-setrow .pomo-setup-label{ font-size: var(--fs-xs); line-height: 1; }
+.pomo-setrow .pomo-setup-label{ font-size: var(--fs-sm); line-height: 1; }
 
 /* ⚙️ 설정 — 톱니와 글자를 나란히 */
-.pomo-gear{ color: var(--sub-muted); }
 .pomo-gear svg{ width: 15px; height: 15px; flex: 0 0 auto; }
-.pomo-gear-label{ font-size: var(--fs-2xs); font-weight: var(--fw-medium); }
-.pomo-gear:hover{ background: var(--fill-2); color: var(--text); }
-.pomo-gear[aria-expanded="true"]{
-  background: var(--accent-soft);
-  border-color: var(--accent-line);
-  color: var(--on-accent-btn);
-}
+.pomo-gear-label{ font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+.pomo-gear[aria-expanded="true"]{ background: var(--fill-2); color: var(--text); }
 
 /* 도는 중에는 시간을 못 바꿉니다 — 지금 세션에 반영되지 않으니까요.
    (⚙️ 설정은 그대로 열립니다) */
@@ -5794,11 +5789,16 @@ body.split-dragging #chat-box3{ user-select: none; }
 .pomo-setrow[data-state="running"] label.pomo-setup-field,
 .pomo-setrow[data-state="paused"]  label.pomo-setup-field{ opacity: .5; }
 
-/* ── 4줄 — 조작 ── */
-.pomo-bar .pomo-run-btn{ flex: 1 1 0; height: 36px; }
-.pomo-bar #pomo-sound-btn{ flex: 0 0 auto; width: 36px; }
+/* ── 4줄 — 동그란 단추 셋 ── */
+.pomo-bar{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: var(--sp-2);
+}
 
-/* 시작 ↔ 일시정지 — 한 버튼이 두 얼굴 */
+/* 시작 ↔ 일시정지 — 한 단추가 두 얼굴 */
 #pomo-run-btn .ic-pause{ display: none; }
 #pomo-run-btn.is-pause .ic-play{ display: none; }
 #pomo-run-btn.is-pause .ic-pause{ display: block; }
@@ -5806,28 +5806,12 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* [■ 정지] 는 도는 중에만 */
 .pomo-bar[data-state="idle"] #pomo-stop-btn{ display: none; }
 
-/* ♪ — 소리만 켜고 끕니다 */
-.pomo-mini{
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--fill-1);
-  color: var(--sub-muted);
-  font-family: inherit;
-  font-size: var(--fs-md);
-  line-height: 1;
-  cursor: pointer;
-  transition: background var(--anim-fast), color var(--anim-fast);
-}
-.pomo-mini:hover{ background: var(--fill-2); color: var(--text); }
-.pomo-mini:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+/* ♪ 를 끄면 — 취소선으로 "소리 없음" */
 #pomo-sound-btn[aria-pressed="false"]{
   color: var(--muted);
   text-decoration: line-through;
   background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 
 /* 멈춰 있을 때는 숫자를 옅게 — 흐르지 않는다는 표시 */
