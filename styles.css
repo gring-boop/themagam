@@ -5742,7 +5742,13 @@ body.split-dragging #chat-box3{ user-select: none; }
   display: flex;
   align-items: center;
   justify-content: center;   /* 가운데 모으기 — 폭을 채우지 않습니다 */
-  gap: 6px;                  /* 세 개가 한 세트로 보일 만큼만 */
+  gap: 5px;                  /* 세 개가 한 세트로 보일 만큼만 */
+  /* [고침 2026-08-09] 넘치면 잘리지 말고 줄을 바꾸게.
+     .pane 이 overflow-y:auto 라서 가로도 auto 가 되고, 칸보다 넓어지면
+     오른쪽이 **잘립니다**. 실제로 [⚙️ 알림음]의 '음' 이 잘려 나갔어요.
+     아주 좁은 칸에서는 한 줄을 포기하더라도 글자는 다 보이게 둡니다. */
+  flex-wrap: wrap;
+  row-gap: 5px;
   margin-top: var(--sp-2);
 }
 /* [고침 2026-08-09] 예전에는 flex:1 1 0 이라 셋이 진행 바 폭을 삼등분해
@@ -5758,7 +5764,8 @@ body.split-dragging #chat-box3{ user-select: none; }
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 5px 11px;
+  padding: 5px 8px;
+  white-space: nowrap;
   /* [고침 2026-08-09] 높이를 못 박습니다.
      🍅 ☕ 안에는 <input> 이 들어 있고, 입력칸의 기본 줄높이(normal)는
      글자 크기보다 큽니다. 그래서 두 칸만 3px 쯤 높았고, ⚙️ 칩은 혼자
@@ -6471,6 +6478,7 @@ body.split-dragging #chat-box3{ user-select: none; }
    글자색은 각 색을 아주 진하게 낮춘 것이라, 밝은 바탕에서도 읽힙니다. */
 .card-tag[data-tag-val="idea"]  { background: rgba(175,169,236,.74); border-color: rgba(175,169,236,.86); color: #26215C; }
 .card-tag[data-tag-val="draft"] { background: rgba(255,59,48,.74);   border-color: rgba(255,59,48,.86);   color: #8E2420; }
+.card-tag[data-tag-val="polish"]{ background: rgba(240,153,123,.74); border-color: rgba(240,153,123,.86); color: #4A1B0C; }
 .card-tag[data-tag-val="proof"] { background: rgba(93,202,165,.74);  border-color: rgba(93,202,165,.86);  color: #04342C; }
 .card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.74);  border-color: rgba(255,159,10,.86);  color: #7A4406; }
 .card-tag[data-tag-val="rework"]{ background: rgba(133,183,235,.74); border-color: rgba(133,183,235,.86); color: #042C53; }
@@ -6479,6 +6487,7 @@ body.split-dragging #chat-box3{ user-select: none; }
 
 :root[data-is-dark="true"] .card-tag[data-tag-val="idea"]  { color: #CECBF6; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="draft"] { color: #FFA59E; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="polish"]{ color: #F5C4B3; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="proof"] { color: #9FE1CB; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="revise"]{ color: #FFCE85; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ color: #B5D4F4; }
@@ -6493,6 +6502,7 @@ body.split-dragging #chat-box3{ user-select: none; }
 .worktag-none{ color: var(--muted); }
 .worktag-item.tag-idea  { background: rgba(175,169,236,.16); }
 .worktag-item.tag-draft { background: rgba(255,59,48,.16); }
+.worktag-item.tag-polish{ background: rgba(240,153,123,.16); }
 .worktag-item.tag-proof { background: rgba(93,202,165,.16); }
 .worktag-item.tag-revise{ background: rgba(255,159,10,.16); }
 .worktag-item.tag-rework{ background: rgba(133,183,235,.16); }

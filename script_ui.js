@@ -258,6 +258,11 @@
     "🔩 인더스트리":     { isDark:false, style:"default", bg:"#E4E6EA", text:"#2A2E33", me:"#3A6EA5", other:"#FFFFFF", header:"#D6D9DE", meText:"#FFFFFF", otherText:"#2A2E33", accent:"#CF4141" },
     "🌿 허브티":         { isDark:false, style:"default", bg:"#EFF3EA", text:"#33402B", me:"#6E8F5E", other:"#FFFFFF", header:"#E2EAD8", meText:"#FFFFFF", otherText:"#33402B", accent:"#C6754A" },
     "🌌 오로라":         { isDark:true,  style:"default", bg:"#141B2A", text:"#D9E2F2", me:"#57D9C0", other:"#243049", header:"#1C2537", meText:"#0B2B24", otherText:"#D9E2F2", accent:"#9D8BE8" },
+    /* [추가 2026-08-09] 칠판 같은 짙은 녹색에 금빛 포인트.
+       미리보기의 B안을 골랐고, "녹색 느낌을 더" 라는 말에 맞춰
+       회색기를 걷어내고 채도를 올렸습니다 (#1E2E22 → #16321F).
+       금빛은 그대로 뒀어요 — 녹색을 진하게 할수록 금이 더 살아납니다. */
+    "🌲 포레스트 그린":   { isDark:true,  style:"default", bg:"#16321F", text:"#E7EFE4", me:"#E2C074", other:"#234630", header:"#1B3B25", meText:"#1C3320", otherText:"#E7EFE4", accent:"#E2C074" },
   };
 
   function hexToRgba(hex, alpha) {
