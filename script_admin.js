@@ -583,6 +583,168 @@
     el("adm-log-modal")?.setAttribute("hidden", "");
   }
 
+  // ------------------------------------------------- ③-3.8 👥 접속자 명단 미리보기
+  /* 지금 접속자 카드를 **새 배치**로 그려 봅니다.
+
+     [무엇이 달라지나]
+       지금  : 프사가 위, 상태표가 그 옆, 이름·목표·시간이 아래 한 덩어리
+       새 것 : 왼쪽에 프사 + 상태표, 오른쪽에 닉네임 박스(이름·목표·시간)
+
+     [작업방에는 영향이 없습니다]
+     styles.css 와 새 배치용 CSS 를 모두 **그림자 뿌리 안**에 넣습니다.
+     스타일이 그 안에만 머물러서, 관리자 화면도 작업방도 그대로예요.
+     마음에 안 들면 이 함수와 카드를 지우면 끝입니다. */
+  const CARD_PREVIEW_CSS = `
+    :host { all: initial; }
+    .wrap{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+      gap: 14px;
+      padding: 4px 2px 2px;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+    /* ── 새 배치 ── 왼쪽 프사+상태, 오른쪽 닉네임 박스 */
+    .user-card.side-lay{ display: flex; flex-direction: column; }
+    .user-card.side-lay .card-body{
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+    }
+    .user-card.side-lay .card-avatar-wrap{ width: 100%; max-width: none; }
+    .user-card.side-lay .card-state-row{ justify-content: center; margin-top: 6px; }
+    .user-card.side-lay .card-state-ghost{ display: none; }
+    /* 오른쪽 — 닉네임 박스가 아래로 내려가지 않고 프사 옆에 섭니다 */
+    .user-card.side-lay .card-foot{
+      margin: 0;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 100%;
+    }
+    .user-card.side-lay .card-name{ justify-content: flex-start; }
+    .user-card.side-lay .card-goal .goal-line{ text-align: left; }
+    .user-card.side-lay .card-meta{ margin-top: auto; }
+    .empty{ padding: 20px 4px; color: #6B5F52; font-size: 13.5px; }
+  `;
+
+  const ST_LABEL = { idle:"☕BREAK☕", writing:"🔥WRITE🔥", focus:"💻JOB💻",
+                     rest:"☕BREAK☕", away:"💤AWAY💤" };
+  const ST_CLASS = { writing:"writing", focus:"focus", rest:"rest", away:"away" };
+
+  /* 필명으로 눈사람 배경색을 만듭니다 (작업방 script_profile.js 와 같은 방식) */
+  function snowBg(nick) {
+    let h = 0;
+    for (const ch of String(nick)) h = (h * 31 + ch.codePointAt(0)) % 360;
+    return `hsl(${h} 52% 72%)`;
+  }
+
+  function fmtWork(ms) {
+    const m = Math.round(Math.max(0, Number(ms) || 0) / 60000);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`;
+  }
+
+  function previewCardHtml(nick, row, prof) {
+    const st  = String(row.status || "rest");
+    const cls = ST_CLASS[st] || "rest";
+    const label = row.statusLabel || ST_LABEL[st] || "휴식";
+
+    const photo = String(prof.photo || "");
+    const avatar = photo
+      ? `<div class="card-avatar has-photo"><img src="${escapeHtml(photo)}" alt="" loading="lazy"></div>`
+      : `<div class="card-avatar has-snow"><svg class="snowman" viewBox="0 0 100 100">
+           <rect width="100" height="100" fill="${snowBg(nick)}"/>
+           <circle cx="50" cy="31" r="13.5" fill="#fff" opacity=".85"/>
+           <circle cx="50" cy="56" r="24" fill="#fff" opacity=".85"/></svg></div>`;
+
+    const bg  = /^#[0-9a-f]{6}$/i.test(prof.cardBg || "") ? prof.cardBg : "";
+    const pat = String(prof.cardPattern || "none");
+    const patCol = /^#[0-9a-f]{6}$/i.test(prof.patColor || "") ? prof.patColor : "#D8DEE8";
+    const style = (bg || pat !== "none")
+      ? ` style="${bg ? `--cbg:${bg};` : ""}--cpat:${patCol};"` : "";
+    const ink = ["cardNickColor","cardGoalColor","cardWhColor"]
+      .map((k, i) => (/^#[0-9a-f]{6}$/i.test(prof[k] || "")
+        ? `${["--ink-nick","--ink-goal","--ink-wh"][i]}:${prof[k]};` : "")).join("");
+
+    const pCount = Math.max(0, Number(row.pomoCount || 0));
+    const goal = row.todayGoalText ? escapeHtml(row.todayGoalText) : "오늘의 한줄 목표 없음";
+
+    return `
+      <div class="user-card side-lay ${cls}${pat !== "none" ? ` pat-${pat}` : ""}${bg ? " has-cardbg" : ""}"${style}>
+        <div class="card-body">
+          <div class="card-avatar-wrap">
+            ${avatar}
+            <div class="card-state-row">
+              <span class="card-state ${cls}">${escapeHtml(label)}</span>
+            </div>
+          </div>
+          <div class="card-foot"${ink ? ` style="${ink}"` : ""}>
+            <span class="card-conn" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <div class="card-name">${escapeHtml(nick)}</div>
+            <div class="card-goal"><div class="goal-line">🎯 ${goal}</div></div>
+            <div class="card-meta card-wh">
+              <span class="card-wh-t"><small>⏱</small><b>${fmtWork(row.workMs)}</b></span>
+              ${pCount > 0 ? `<span class="card-pomo-count">🍅 ${pCount}</span>` : ""}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  let _cardsShadow = null;
+
+  async function openMemberPreview() {
+    el("adm-cards-modal")?.removeAttribute("hidden");
+    const host = el("adm-cards-host");
+    if (!host) return;
+
+    if (!_cardsShadow) {
+      _cardsShadow = host.attachShadow({ mode: "open" });
+      _cardsShadow.innerHTML =
+        `<link rel="stylesheet" href="styles.css">
+         <style>${CARD_PREVIEW_CSS}</style>
+         <div class="wrap"></div>`;
+    }
+    const wrap = _cardsShadow.querySelector(".wrap");
+    wrap.innerHTML = `<div class="empty">불러오는 중…</div>`;
+    msg("adm-cards-msg", "");
+
+    try {
+      const stSnap = await db.ref("status").once("value");
+      const all = stSnap.val() || {};
+      const now = Date.now();
+
+      /* 접속 중인 사람만 — 15분 넘게 소식이 없으면 뺍니다 */
+      const nicks = Object.keys(all).filter(n => {
+        const r = all[n] || {};
+        const seen = Number(r.lastSeen || 0);
+        return !seen || (now - seen) < 15 * 60 * 1000;
+      });
+
+      if (!nicks.length) { wrap.innerHTML = `<div class="empty">지금 접속한 사람이 없어요.</div>`; return; }
+
+      /* 프로필은 사람별로 — users 를 통째로 읽지 않습니다 */
+      const profs = {};
+      await Promise.all(nicks.map(async n => {
+        try { profs[n] = (await db.ref(`users/${n}/profile`).once("value")).val() || {}; }
+        catch (e) { profs[n] = {}; }
+      }));
+
+      wrap.innerHTML = nicks.map(n => previewCardHtml(n, all[n] || {}, profs[n])).join("");
+      msg("adm-cards-msg", `${nicks.length}명을 새 배치로 그렸어요.`);
+    } catch (e) {
+      console.warn("[adm cards]", e);
+      wrap.innerHTML = `<div class="empty">불러오지 못했어요.</div>`;
+    }
+  }
+
+  function closeMemberPreview() {
+    el("adm-cards-modal")?.setAttribute("hidden", "");
+  }
+
   // ------------------------------------------------- ③-4 글자수
   /* script_realtime.js 의 clearAllWordcount 와 같은 노드를 지웁니다 */
   async function clearWordcount() {
@@ -708,6 +870,11 @@
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
+    el("adm-cards-open")?.addEventListener("click", openMemberPreview);
+    el("adm-cards-close")?.addEventListener("click", closeMemberPreview);
+    el("adm-cards-modal")?.addEventListener("click", e => {
+      if (e.target === el("adm-cards-modal")) closeMemberPreview();
+    });
     el("adm-log-close")?.addEventListener("click", closeAttendLog);
     el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
     el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));
@@ -716,7 +883,9 @@
       if (e.target === el("adm-log-modal")) closeAttendLog();
     });
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape" && !el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
+      if (e.key !== "Escape") return;
+      if (!el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
+      if (!el("adm-cards-modal")?.hasAttribute("hidden")) closeMemberPreview();
     });
     el("adm-forest-reload")?.addEventListener("click", loadForest);
     el("adm-forest-sweep")?.addEventListener("click", sweepForest);

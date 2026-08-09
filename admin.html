@@ -161,6 +161,7 @@
       border-radius: 14px; padding: 18px 20px;
       width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto;
     }
+    .adm-modal-in.wide{ width: min(1100px, 100%); }
     .adm-modal-head{ display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .adm-modal-head h2{ margin: 0; }
     /* 한 줄 = 한 사건. 시각은 폭이 고르게, 이름은 남는 자리를 씁니다 */
@@ -370,6 +371,14 @@
       </div>
 
       <!-- [2026-08-06] 🆔 내 계정 uid — 보안규칙에 관리자를 박아 넣을 때 씁니다. -->
+      <!-- 👥 접속자 명단 미리보기 — 카드 배치를 바꿔보는 자리 -->
+      <div class="adm-card">
+        <h2>👥 접속자 명단 (미리보기)</h2>
+        <p class="adm-sub">지금 접속자 카드를 <b>새 배치</b>로 그려 봅니다.
+          여기서만 보이고 <b>작업방에는 영향이 없어요.</b></p>
+        <button class="adm-btn" id="adm-cards-open">명단 열기</button>
+      </div>
+
       <div class="adm-card">
         <h2>🆔 내 계정 uid</h2>
         <p class="adm-sub">보안규칙에 관리자 uid 를 직접 적을 때 쓰는 값이에요.</p>
@@ -404,6 +413,29 @@
     </div>
     <div id="adm-log-body" class="adm-msg">불러오는 중…</div>
     <p class="adm-sub" id="adm-log-note"></p>
+  </div>
+</div>
+
+<!-- =====================================================================
+     👥 접속자 명단 미리보기
+
+     [왜 그림자 뿌리(Shadow DOM)를 쓰나]
+     진짜 카드처럼 보이려면 작업방의 styles.css 가 필요합니다. 그런데
+     그걸 이 페이지에 그냥 붙이면 관리자 화면 전체가 그 스타일로 덮여요.
+     그림자 뿌리 안에 넣으면 스타일이 그 안에만 머뭅니다 — 바깥은 그대로.
+
+     새 배치용 CSS 도 그 안에만 넣습니다. **작업방 파일은 한 줄도 건드리지
+     않으므로**, 마음에 안 들면 이 카드를 지우면 그만입니다.
+     ===================================================================== -->
+<div id="adm-cards-modal" class="adm-modal" hidden>
+  <div class="adm-modal-in wide">
+    <div class="adm-modal-head">
+      <h2>👥 접속자 명단 — 새 배치 미리보기</h2>
+      <button type="button" id="adm-cards-close" class="adm-btn ghost" aria-label="닫기">✕</button>
+    </div>
+    <p class="adm-sub">왼쪽에 프사와 상태표, 오른쪽에 닉네임 박스. 실제 접속자 자료로 그렸어요.</p>
+    <div id="adm-cards-host"></div>
+    <div class="adm-msg" id="adm-cards-msg"></div>
   </div>
 </div>
 
