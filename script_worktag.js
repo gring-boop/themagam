@@ -9,15 +9,19 @@
 
      구상 · 원고 · 퇴고 · 교정 · 수정 · 개정 · 인풋 · 기타
 
-   [왜 자정에 떨어지는가]
-   '그날 업무' 라서요. 어제 교정이었다고 오늘 아침에도 교정이라고 붙어
-   있으면, 보는 사람은 사실이라고 믿습니다. 잘못된 정보가 남아 있는 것보다
-   아무것도 없는 편이 정직합니다. 그래서 날짜를 함께 실어 보내고, 날이
-   바뀌면 그냥 "없음" 으로 읽습니다 — 지우는 처리가 따로 필요 없고,
-   자정에 접속해 있지 않아도 저절로 맞습니다.
+   [자정에 떨어지지 않습니다 — 2026-08-09 에 뒤집었습니다]
+   처음에는 '그날 업무' 라고 보고 자정마다 떼어 냈습니다. 어제 교정이
+   오늘도 붙어 있으면 거짓이 된다고 봤거든요.
+
+   그런데 작업은 하루로 끊기지 않습니다. 퇴고는 보름씩 이어지고, 인풋
+   기간은 몇 주씩 갑니다. 그런 사람에게는 매일 아침 다시 붙이는 일이
+   생기고, 깜빡하면 오히려 아무 표시도 없는 채로 하루가 지나갑니다.
+   손이 더 가는 쪽이 정확하지도 않았어요.
+
+   그래서 **바꿀 때까지 그대로 둡니다.** 떼고 싶으면 [✕ 떼기] 로.
 
    [어디에 저장하나]
-   status/{닉} 에 tag 와 tagDay 두 칸. users 아래가 아니라 status 인 이유는,
+   status/{닉} 의 tag 한 칸. users 아래가 아니라 status 인 이유는,
    남의 카드에도 보여야 하는데 users 는 본인만 읽도록 잠가 두었기 때문입니다.
    status 는 원래 모두가 구독 중이라 통신이 늘지도 않습니다.
    ===================================================================== */
@@ -42,22 +46,12 @@
      ✍️ 원고가 붙습니다. 본인이 그렇게 말한 적이 없는데 방 전체가 사실로
      읽게 되죠. 붙인 사람의 카드에만 붙어 있는 편이 정직합니다. */
   const NONE = "";                      // 아무것도 안 붙인 상태
-  const SAVE_KEY = "workTag";           // 내 기기에 남겨 두는 오늘의 선택
+  const SAVE_KEY = "workTag";           // 내 기기에 남겨 두는 선택
 
   window.WORKTAGS = TAGS;
 
-  /* ★ 반드시 **내 시계 기준** 날짜여야 합니다.
-     toISOString() 은 UTC 라, 한국에서 쓰면 자정이 아니라 **오전 9시**에
-     날짜가 바뀝니다 — 아침에 멀쩡히 붙여 둔 스티커가 9시에 원고로
-     돌아가 버려요. 방 전체가 이미 쓰고 있는 Wordcount.dayKey 를 그대로
-     빌려 씁니다(같은 날짜 계산을 두 벌 두지 않으려고요). */
-  function todayKey() {
-    if (typeof window.Wordcount?.dayKey === "function") return window.Wordcount.dayKey();
-    const d = new Date();
-    return d.getFullYear() + "-"
-      + String(d.getMonth() + 1).padStart(2, "0") + "-"
-      + String(d.getDate()).padStart(2, "0");
-  }
+  /* [2026-08-09] 날짜 계산(todayKey)은 지웠습니다 —
+     자정 초기화를 그만두면서 쓸 곳이 없어졌어요. */
 
   /* 모르는 값이 오면 "없음" 으로 읽습니다 (없는 걸 지어내지 않기) */
   function find(v) {
@@ -65,15 +59,16 @@
   }
 
   /* ── 내 선택 ──────────────────────────────────────────────
-     새로고침해도 남아 있게 기기에도 적어 둡니다. 날짜가 다르면
-     읽는 순간 "없음" 으로 돌아갑니다(자정 초기화). */
+     기기에 적어 두고, **바꿀 때까지** 그대로 씁니다.
+     (예전에는 날짜가 다르면 버렸습니다 — 위 머리말 참고) */
   function myTag() {
     try {
       const raw = window.AppStore?.getItem(SAVE_KEY);
       if (!raw) return NONE;
-      const o = JSON.parse(raw);
-      if (!o || o.day !== todayKey()) return NONE;
-      return find(o.v)?.v || NONE;
+      /* 옛 저장값은 {v, day} 였습니다. day 는 이제 안 봅니다.
+         그냥 문자열로 적어 둔 것도 읽어 줍니다. */
+      const o = raw.trim().startsWith("{") ? JSON.parse(raw) : { v: raw };
+      return find(o && o.v)?.v || NONE;
     } catch (e) { return NONE; }
   }
   window.myWorkTag = myTag;
@@ -81,8 +76,7 @@
   function setMyTag(v) {
     const t = find(v);
     try {
-      window.AppStore?.setItem(SAVE_KEY,
-        JSON.stringify({ v: t ? t.v : NONE, day: todayKey() }));
+      window.AppStore?.setItem(SAVE_KEY, JSON.stringify({ v: t ? t.v : NONE }));
     } catch (e) {}
     /* 남들 카드에도 곧바로 반영되도록 상태를 한 번 밀어 올립니다 */
     window.updateStatus?.(true);
@@ -90,11 +84,10 @@
   }
 
   /* ── 카드에 그릴 조각 ────────────────────────────────────
-     row 는 status/{닉} 에 실려 온 값입니다. 날짜가 오늘이 아니면
-     무엇이 적혀 있든 "없음" 으로 읽습니다. */
+     row 는 status/{닉} 에 실려 온 값입니다. status 는 나가면 통째로
+     지워지므로, 여기 값이 있다는 건 지금 접속 중이라는 뜻입니다. */
   window.workTagOf = function (row) {
-    const same = row && row.tagDay === todayKey();
-    return same ? find(row.tag) : null;
+    return row ? find(row.tag) : null;
   };
 
   /* 카드 왼쪽 위 구석 자리.
@@ -111,10 +104,10 @@
       ? `<span class="card-tag" data-tag-val="${t.v}"
          ><span class="card-tag-emoji" aria-hidden="true">${t.emoji}</span>${esc(t.label)}</span>`
       : "";
-    if (!isMine) return `<span class="card-tag-slot" title="오늘 ${esc(t.label)}">${inner}</span>`;
+    if (!isMine) return `<span class="card-tag-slot" title="${esc(t.label)} 중">${inner}</span>`;
     return `<span class="card-tag-slot is-mine${t ? "" : " is-empty"}"
                   data-pick-worktag="1" role="button" tabindex="0"
-                  title="더블클릭 — 오늘 무슨 작업인지 붙이기">${inner}</span>`;
+                  title="더블클릭 — 무슨 작업인지 붙이기">${inner}</span>`;
   };
 
   /* ── 고르기 판 ───────────────────────────────────────────
