@@ -398,7 +398,8 @@ function openManual() {
   const modal = document.getElementById("manual-modal");
   if (!modal) return;
   modal.style.display = "flex";
-  document.getElementById("manual-close-btn")?.focus();
+  /* 열자마자 닫기 단추에 초점을 둡니다 — 키보드만 쓰는 분이 바로 닫을 수 있게 */
+  modal.querySelector(".modal-x")?.focus();
 }
 
 function closeManual() {

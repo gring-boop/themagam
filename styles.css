@@ -3012,6 +3012,57 @@ body.pomo-nonpart .pomo-status-line{
   padding: var(--sp-4);
 }
 
+/* [2026-08-09] 팝업 닫기 — 오른쪽 위 ✕.
+
+   예전에는 팝업마다 아래에 폭 전체를 쓰는 [닫기] 버튼이 있었습니다.
+   내용이 긴 창(설명서·나의 작업·대숲)에서는 그 버튼이 자리를 크게
+   차지해서, 정작 봐야 할 것이 밀렸어요.
+
+   [왜 sticky 인가]
+   그냥 absolute 로 두면 내용을 스크롤할 때 ✕ 가 위로 사라집니다.
+   sticky 로 두고 높이를 0으로 만들면, 자리는 차지하지 않으면서
+   스크롤해도 늘 오른쪽 위에 붙어 있습니다. */
+.modal-x{
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 3;
+  width: 30px;
+  height: 30px;
+  margin: -6px -6px 0 8px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--panel2);
+  color: var(--sub-muted);
+  font-size: var(--fs-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--anim-fast), color var(--anim-fast);
+}
+.modal-x:hover{ background: var(--fill-2); color: var(--text); }
+.modal-x:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+
+/* 세로로 쌓는 팝업(설정·나의 작업)에서는 float 이 듣지 않아
+   자리를 차지해 버립니다. 그럴 땐 떠 있게 둡니다. */
+#settings-modal .modal-x,
+#mywork-modal .modal-x{
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  float: none;
+  margin: 0;
+}
+#settings-modal .modal-content,
+#mywork-modal .modal-content{ position: relative; }
+/* 제목이 길어도 ✕ 밑으로 파고들지 않게 오른쪽을 비워 둡니다 */
+#settings-modal .modal-title,
+#mywork-modal .modal-title,
+#mywork-modal .mw-eyebrow{ padding-right: 34px; }
+
 .modal-content{
   width: 400px;
   max-width: 100%;

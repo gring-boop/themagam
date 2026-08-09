@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091211">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091211">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091422">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091422">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608091211">
+  <link rel="manifest" href="manifest.json?v=202608091422">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608091211" />
+  <link rel="stylesheet" href="styles.css?v=202608091422" />
 </head>
 
 <body>
@@ -122,13 +122,16 @@
      ===================================================================== -->
 <div id="manual-modal" onclick="closeManual()" role="dialog" aria-modal="true" aria-labelledby="manual-title">
   <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeManual()" aria-label="설명서 닫기" title="닫기">✕</button>
+
     <h2 class="modal-title" id="manual-title">📖 TheMagam 설명서</h2>
     <p class="modal-sub">처음이신가요? 위 탭을 눌러 필요한 것만 골라 보셔도 좋아요.</p>
 
     <div class="tabs" id="manual-tabs" role="tablist" aria-label="설명서 탭"></div>
     <div class="tab-panels" id="manual-panels"></div>
 
-    <button class="ghost-btn w-full" id="manual-close-btn" type="button" onclick="closeManual()">닫기</button>
   </div>
 </div>
 
@@ -142,6 +145,10 @@
      ===================================================================== -->
 <div id="mywork-modal" onclick="closeMyWork()" role="dialog" aria-modal="true" aria-labelledby="mywork-title">
   <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeMyWork()" aria-label="나의 작업 닫기" title="닫기">✕</button>
+
     <div class="mw-eyebrow">— MY DESK —</div>
     <h2 class="modal-title" id="mywork-title">나의 작업</h2>
 
@@ -187,7 +194,6 @@
       할 일은 <b>본인만 편집 및 열람할 수 있습니다.</b>
     </p>
 
-    <button class="ghost-btn w-full" type="button" onclick="closeMyWork()" style="margin-top:14px;">닫기</button>
   </div>
 </div>
 
@@ -199,6 +205,10 @@
      ===================================================================== -->
 <div id="forest-modal" onclick="closeForest()" role="dialog" aria-modal="true" aria-labelledby="forest-title">
   <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeForest()" aria-label="대숲 닫기" title="닫기">✕</button>
+
     <div class="fr-eyebrow">— WHISPER —</div>
     <h2 class="modal-title" id="forest-title">대 숲</h2>
     <p class="fr-lead">빈 곳을 클릭해서 아무 말이나 붙여요 · 누가 썼는지는 아무도 몰라요</p>
@@ -218,7 +228,6 @@
       ♥ 도 같은 이유로 <b>기기마다 한 번씩</b>입니다.
     </p>
 
-    <button class="ghost-btn w-full" type="button" onclick="closeForest()" style="margin-top:14px;">닫기</button>
   </div>
 </div>
 
@@ -230,11 +239,14 @@
      ===================================================================== -->
 <div id="wcall-modal" onclick="closeWcAll()" role="dialog" aria-modal="true" aria-labelledby="wcall-title">
   <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeWcAll()" aria-label="전체 기록 닫기" title="닫기">✕</button>
+
     <h2 class="modal-title" id="wcall-title">📓 전체 기록</h2>
     <div id="wcall-body"></div>
     <p class="hint">칸에 마우스를 올리면 그날 누가 얼마나 썼는지 보여요.
       🍅 는 그날 방 전체가 끝낸 집중 세션 수입니다.</p>
-    <button class="ghost-btn w-full" type="button" onclick="closeWcAll()" style="margin-top:14px;">닫기</button>
   </div>
 </div>
 
@@ -243,6 +255,10 @@
      ===================================================================== -->
 <div id="settings-modal" onclick="closeSettings()" role="dialog" aria-modal="true" aria-labelledby="settings-title">
   <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeSettings()" aria-label="설정 닫기" title="닫기">✕</button>
+
     <h2 class="modal-title" id="settings-title">⚙️ 대시보드 설정</h2>
 
     <div class="tabs" role="tablist" aria-label="설정 탭">
@@ -343,7 +359,6 @@
 
     </div>
 
-    <button class="ghost-btn w-full" onclick="closeSettings()">닫기</button>
   </div>
 </div>
 
@@ -697,25 +712,25 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608091211"></script>
-<script src="script_core.js?v=202608091211"></script>
-<script src="script_auth.js?v=202608091211"></script>
-<script src="script_ui.js?v=202608091211"></script>
-<script src="script_chat.js?v=202608091211"></script>
-<script src="script_chatty.js?v=202608091211"></script>
-<script src="script_data.js?v=202608091211"></script>
-<script src="script_realtime.js?v=202608091211"></script>
-<script src="script_layout.js?v=202608091211"></script>
-<script src="script_wordcount.js?v=202608091211"></script>
-<script src="script_timelog.js?v=202608091211"></script>
-<script src="script_idledetect.js?v=202608091211"></script>
-<script src="script_profile.js?v=202608091211"></script>
-<script src="script_mywork.js?v=202608091211"></script>
-<script src="script_forest.js?v=202608091211"></script>
-<script src="script_reactions.js?v=202608091211"></script>
-<script src="script_share.js?v=202608091211"></script>
-<script src="script_manual.js?v=202608091211"></script>
-<script src="script_guard.js?v=202608091211"></script>
+<script src="fortune_data.js?v=202608091422"></script>
+<script src="script_core.js?v=202608091422"></script>
+<script src="script_auth.js?v=202608091422"></script>
+<script src="script_ui.js?v=202608091422"></script>
+<script src="script_chat.js?v=202608091422"></script>
+<script src="script_chatty.js?v=202608091422"></script>
+<script src="script_data.js?v=202608091422"></script>
+<script src="script_realtime.js?v=202608091422"></script>
+<script src="script_layout.js?v=202608091422"></script>
+<script src="script_wordcount.js?v=202608091422"></script>
+<script src="script_timelog.js?v=202608091422"></script>
+<script src="script_idledetect.js?v=202608091422"></script>
+<script src="script_profile.js?v=202608091422"></script>
+<script src="script_mywork.js?v=202608091422"></script>
+<script src="script_forest.js?v=202608091422"></script>
+<script src="script_reactions.js?v=202608091422"></script>
+<script src="script_share.js?v=202608091422"></script>
+<script src="script_manual.js?v=202608091422"></script>
+<script src="script_guard.js?v=202608091422"></script>
 
 <script>
   window.addEventListener("load", () => {
