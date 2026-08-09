@@ -5770,12 +5770,12 @@ body.split-dragging #chat-box3{ user-select: none; }
    오른쪽에 빈 공간이 남아 휴식 칸만 길어 보였습니다.
 
    field-sizing:content 는 적힌 글자만큼만 칸을 잡아 줍니다(크롬·엣지).
-   아직 모르는 브라우저를 위해 width 를 2ch 로 남겨 둡니다 — ch 는
-   숫자 한 글자 폭이라 "25" 가 딱 맞습니다. */
+
+   ★ 처음에 width:2ch 를 같이 적었는데, 그러면 아무 소용이 없습니다.
+     field-sizing 은 width 가 auto 일 때만 동작하거든요. 그래서 휴식
+     칸이 그대로였습니다. 이제 폭은 @supports 안에서만 풀어 줍니다. */
 .pomo-setrow .pomo-setup-field input{
-  field-sizing: content;
-  width: 2ch;
-  min-width: 1ch;
+  width: 2ch;                      /* 모르는 브라우저용 — ch = 숫자 한 글자 */
   border: 0;
   background: none;
   padding: 0;
@@ -5790,17 +5790,25 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .pomo-setrow input::-webkit-outer-spin-button,
 .pomo-setrow input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+@supports (field-sizing: content){
+  .pomo-setrow .pomo-setup-field input{ field-sizing: content; width: auto; min-width: 1ch; }
+}
 .pomo-setrow .pomo-setup-label{ font-size: var(--fs-sm); line-height: 1; }
 
 /* ⚙️ 설정 — 🍅 ☕ 와 같은 결로.
 
-   예전에는 톱니를 선으로 그려 넣었는데(SVG), 옆의 두 개가 이모지라
-   혼자만 결이 달라 튀었습니다. 같은 이모지로 맞추고, 글자 크기도
-   숫자와 똑같이 둡니다. */
-.pomo-gear-label{
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-bold);
-  color: var(--text);
+   [2026-08-09] 두 번 손봤습니다.
+   ① 예전엔 톱니를 선으로 그려 넣었는데(SVG), 옆의 두 개가 이모지라
+      혼자만 결이 달라 튀었습니다 → 같은 이모지로.
+   ② 그래도 겉돌았습니다. 이유가 둘이었어요 —
+      '설정' 이라는 두 글자 때문에 혼자 길었고, 톱니 이모지가
+      파란색이라 🍅 ☕ 의 따뜻한 색 사이에서 홀로 차가웠습니다.
+      글자를 빼고(이름은 aria-label 로 남깁니다), 색을 빼서
+      회색 톱니로 맞췄습니다. */
+.pomo-setrow .pomo-gear{ padding: 5px 9px; }
+.pomo-gear .pomo-setup-label{
+  filter: grayscale(1);   /* 파란 톱니 → 회색 */
+  opacity: .7;
 }
 .pomo-gear[aria-expanded="true"]{ background: var(--fill-3); color: var(--text); }
 
