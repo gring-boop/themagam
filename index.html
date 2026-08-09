@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091523">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091523">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091545">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091545">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608091523">
+  <link rel="manifest" href="manifest.json?v=202608091545">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608091523" />
+  <link rel="stylesheet" href="styles.css?v=202608091545" />
 </head>
 
 <body>
@@ -569,45 +569,60 @@
 
            [변경] 예전에는 시간 설정과 버튼이 한 줄에 있었습니다.
            칸 폭이 좁아지면서 서로 밀려 답답해져서, 줄을 나눴어요. -->
-      <div class="pomo-row pomo-row-setup">
-        <div id="pomo-setup" class="pomo-setup">
-          <label class="pomo-setup-field" for="pomo-work-min">
-            <span class="pomo-setup-label" aria-hidden="true">🍅</span>
-            <input id="pomo-work-min" type="number" min="1" max="180" step="1" value="25" inputmode="numeric" aria-label="집중 시간(분)">
-            <span class="pomo-setup-unit">분</span>
-          </label>
-          <label class="pomo-setup-field" for="pomo-rest-min">
-            <span class="pomo-setup-label" aria-hidden="true">☕</span>
-            <input id="pomo-rest-min" type="number" min="1" max="60" step="1" value="5" inputmode="numeric" aria-label="휴식 시간(분)">
-            <span class="pomo-setup-unit">분</span>
-          </label>
-        </div>
-      </div>
+      <!-- [2026-08-09] 한 줄로 모았습니다.
 
-      <!-- [4줄] 시작 · 정지 · 알림음 -->
-      <div class="pomo-row pomo-row-4 timer-controls">
-        <button class="pomo-run-btn start" onclick="startPomodoro()"
-                aria-label="뽀모도로 시작" title="내 타이머를 시작해요 (남에게는 영향 없어요)">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
-        </button>
+           [🍅분] [☕분] [⚙️]  [▶ 또는 ⏸] [■]  [♪]
+             설정 셋            조작            소리
 
-        <button class="pomo-run-btn stop" onclick="stopPomodoro()"
-                aria-label="뽀모도로 정지" title="내 타이머만 멈춰요">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>
-        </button>
+           예전에는 시간 설정 · 조작 · 소리·알림이 세 줄로 흩어져 있어서
+           좁은 칸에서 세로로 길었습니다. 한 줄로 모으되, 왼쪽 셋은 폭을
+           똑같이 나눠 갖고 오른쪽 조작 버튼은 고정 크기로 둡니다.
+           [■ 정지] 는 도는 중에만 나타나요 (data-state 로 갈라집니다). -->
+      <div class="pomo-row pomo-bar" id="pomo-controls" data-state="idle">
+        <label class="pomo-setup-field" for="pomo-work-min" title="집중 시간(분)">
+          <span class="pomo-setup-label" aria-hidden="true">🍅</span>
+          <input id="pomo-work-min" type="number" min="1" max="180" step="1" value="25"
+                 inputmode="numeric" aria-label="집중 시간(분)">
+        </label>
+        <label class="pomo-setup-field" for="pomo-rest-min" title="휴식 시간(분)">
+          <span class="pomo-setup-label" aria-hidden="true">☕</span>
+          <input id="pomo-rest-min" type="number" min="1" max="60" step="1" value="5"
+                 inputmode="numeric" aria-label="휴식 시간(분)">
+        </label>
 
-        <button id="pomo-detail-toggle" class="ghost-btn compact"
+        <button id="pomo-detail-toggle" class="pomo-mini" type="button"
                 onclick="togglePomoDetail()"
                 aria-expanded="false" aria-controls="pomo-detail"
-                aria-label="알림음 설정">♪</button>
-      </div>
+                aria-label="알림음 설정" title="알림음 종류와 볼륨">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2"/>
+            <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.2H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 8.9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>
+          </svg>
+        </button>
 
-      <!-- [4줄] 참여/알림 토글 — 가장 아랫줄 -->
-      <div class="pomo-row pomo-row-2">
-        <button id="pomo-opt-btn" class="ghost-btn compact" data-state="on"
+        <span class="pomo-bar-gap" aria-hidden="true"></span>
+
+        <!-- 시작 ↔ 일시정지 를 한 버튼이 맡습니다 -->
+        <button id="pomo-run-btn" class="pomo-run-btn start" type="button"
+                onclick="togglePomoRun()"
+                aria-label="뽀모도로 시작" title="내 타이머를 시작해요 (남에게는 영향 없어요)">
+          <svg class="ic-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M8 5.5v13l11-6.5z"/></svg>
+          <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="7" y="6" width="3.6" height="12" rx="1.2"/>
+            <rect x="13.4" y="6" width="3.6" height="12" rx="1.2"/></svg>
+        </button>
+
+        <button id="pomo-stop-btn" class="pomo-run-btn stop" type="button" onclick="stopPomodoro()"
+                aria-label="뽀모도로 정지" title="내 타이머만 멈춰요">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>
+        </button>
+
+        <button id="pomo-sound-btn" class="pomo-mini" type="button"
                 onclick="togglePomodoroParticipation()" aria-pressed="true"
-                title="세션이 바뀔 때 소리와 알림을 받아요">🔔 소리·알림 ON</button>
-
+                aria-label="알림음 켜고 끄기" title="세션이 바뀔 때 소리를 낼지 정해요">♪</button>
       </div>
 
       <div id="pomo-detail" class="pomo-detail collapsed">
@@ -739,26 +754,26 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608091523"></script>
-<script src="script_core.js?v=202608091523"></script>
-<script src="script_auth.js?v=202608091523"></script>
-<script src="script_ui.js?v=202608091523"></script>
-<script src="script_chat.js?v=202608091523"></script>
-<script src="script_chatty.js?v=202608091523"></script>
-<script src="script_data.js?v=202608091523"></script>
-<script src="script_realtime.js?v=202608091523"></script>
-<script src="script_layout.js?v=202608091523"></script>
-<script src="script_wordcount.js?v=202608091523"></script>
-<script src="script_timelog.js?v=202608091523"></script>
-<script src="script_idledetect.js?v=202608091523"></script>
-<script src="script_profile.js?v=202608091523"></script>
-<script src="script_mywork.js?v=202608091523"></script>
-<script src="script_forest.js?v=202608091523"></script>
-<script src="script_reactions.js?v=202608091523"></script>
-<script src="script_note.js?v=202608091523"></script>
-<script src="script_share.js?v=202608091523"></script>
-<script src="script_manual.js?v=202608091523"></script>
-<script src="script_guard.js?v=202608091523"></script>
+<script src="fortune_data.js?v=202608091545"></script>
+<script src="script_core.js?v=202608091545"></script>
+<script src="script_auth.js?v=202608091545"></script>
+<script src="script_ui.js?v=202608091545"></script>
+<script src="script_chat.js?v=202608091545"></script>
+<script src="script_chatty.js?v=202608091545"></script>
+<script src="script_data.js?v=202608091545"></script>
+<script src="script_realtime.js?v=202608091545"></script>
+<script src="script_layout.js?v=202608091545"></script>
+<script src="script_wordcount.js?v=202608091545"></script>
+<script src="script_timelog.js?v=202608091545"></script>
+<script src="script_idledetect.js?v=202608091545"></script>
+<script src="script_profile.js?v=202608091545"></script>
+<script src="script_mywork.js?v=202608091545"></script>
+<script src="script_forest.js?v=202608091545"></script>
+<script src="script_reactions.js?v=202608091545"></script>
+<script src="script_note.js?v=202608091545"></script>
+<script src="script_share.js?v=202608091545"></script>
+<script src="script_manual.js?v=202608091545"></script>
+<script src="script_guard.js?v=202608091545"></script>
 
 <script>
   window.addEventListener("load", () => {

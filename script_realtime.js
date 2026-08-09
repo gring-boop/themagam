@@ -618,15 +618,27 @@
 
   const POMO_SAVE_KEY = "pomoLocal";   // 이 기기에 저장하는 열쇠
 
-  /* 지금 도는 세션. status 가 "running" 일 때만 값이 찹니다. */
-  let _pomo = null;   // { phase:"work"|"rest", endAt, workMin, restMin }
+  /* 지금 도는 세션.
+       { phase:"work"|"rest", endAt, workMin, restMin, pausedLeft? }
+
+     [일시정지를 어떻게 담는가]
+     끝나는 시각(endAt)만으로는 멈춤을 표현할 수 없습니다. 시계는 계속
+     흐르니까요. 그래서 멈출 때 **남은 밀리초(pausedLeft)** 를 적어 두고
+     endAt 은 버립니다. 다시 이어갈 때 endAt = 지금 + 남은 시간 으로
+     되살리고 pausedLeft 를 지웁니다. 이러면 몇 시간을 멈춰 두었다가
+     이어가도, 창을 닫았다 열어도 남은 시간이 그대로예요. */
+  let _pomo = null;
+
+  function _isPaused() { return !!(_pomo && _pomo.pausedLeft > 0); }
 
   /* 내 화면에만 뜨는 알림 줄 — 서버로 나가지 않습니다 */
   function _showMyPomoLine(kind) {
     let msg = "";
-    if (kind === "stop")      msg = "⏹️ 뽀모도로를 멈췄어요.";
-    else if (kind === "work") msg = "🍅 집중 세션을 시작했어요!";
-    else                      msg = "☁️ 휴식을 시작했어요!";
+    if (kind === "stop")       msg = "⏹️ 뽀모도로를 멈췄어요.";
+    else if (kind === "pause") msg = "⏸️ 잠깐 멈췄어요.";
+    else if (kind === "resume")msg = "▶️ 다시 이어갑니다.";
+    else if (kind === "work")  msg = "🍅 집중 세션을 시작했어요!";
+    else                       msg = "☁️ 휴식을 시작했어요!";
     window.addMyPomoLine?.(msg);
   }
 
@@ -645,13 +657,18 @@
       const raw = AppStore.getItem(POMO_SAVE_KEY);
       if (!raw) return null;
       const v = JSON.parse(raw);
-      if (!v || !v.endAt || Number(v.endAt) <= Date.now()) return null;
-      return {
+      if (!v) return null;
+      const base = {
         phase:   v.phase === "rest" ? "rest" : "work",
-        endAt:   Number(v.endAt),
         workMin: Math.max(1, Math.min(180, Number(v.workMin) || 25)),
         restMin: Math.max(1, Math.min(60,  Number(v.restMin) || 5))
       };
+      /* 멈춰 둔 채 나갔으면 남은 시간 그대로 되살립니다 —
+         시계가 흐른 것과 무관하니 시간이 지나도 사라지지 않습니다. */
+      const left = Number(v.pausedLeft || 0);
+      if (left > 0) return { ...base, endAt: 0, pausedLeft: left };
+      if (!v.endAt || Number(v.endAt) <= Date.now()) return null;
+      return { ...base, endAt: Number(v.endAt) };
     } catch (e) { return null; }
   }
 
@@ -676,22 +693,23 @@
     const text = document.getElementById("timer-text");
     if (!pill || !text) return;
 
-    const remainMs = _pomo.endAt - Date.now();
+    /* 멈춰 있으면 시계가 흘러도 숫자는 그대로입니다 */
+    const remainMs = _isPaused() ? _pomo.pausedLeft : (_pomo.endAt - Date.now());
     const totalSec = (_pomo.phase === "work" ? _pomo.workMin : _pomo.restMin) * 60;
     const remainingSec = Math.max(0, Math.ceil(remainMs / 1000));
 
     window.updatePomoProgressBar?.(totalSec, remainingSec);
     window.updatePomoHeaderStatus?.({ running: true, mode: _pomo.phase, remainingSec });
 
-    if (remainMs <= 0) { _pomoNextPhase(); return; }
+    if (!_isPaused() && remainMs <= 0) { _pomoNextPhase(); return; }
 
     const mm = Math.floor(remainMs / 60000);
     const ss = Math.floor((remainMs % 60000) / 1000);
-    pill.dataset.phase = _pomo.phase;
+    pill.dataset.phase = _isPaused() ? "paused" : _pomo.phase;
     text.textContent = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
 
     const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
-    pill.classList.toggle("timer-warn", remainMs <= warnMin * 60000);
+    pill.classList.toggle("timer-warn", !_isPaused() && remainMs <= warnMin * 60000);
   }
 
   /* 집중 ↔ 휴식 전환. 소리·알림·오늘 집중 횟수도 여기서 처리합니다. */
@@ -720,6 +738,64 @@
     _pomoTick();
   }
 
+  /* [2026-08-09] ⏸ 일시정지 / ▶ 이어가기
+
+     멈출 때 남은 시간을 적어 두고 끝나는 시각을 버립니다. 이어갈 때
+     그 반대로 합니다. 상태(WORK/BREAK)는 건드리지 않습니다 —
+     잠깐 자리를 뜨는 것까지 상태로 옮기면 작업 기록이 지저분해져요. */
+  function pausePomodoro() {
+    if (!_pomo || _isPaused()) return;
+    const left = Math.max(0, _pomo.endAt - Date.now());
+    if (left <= 0) return;
+    _pomo = { ..._pomo, endAt: 0, pausedLeft: left };
+    _pomoSave();
+    _showMyPomoLine("pause");
+    renderPomoButtons();
+    _pomoTick();
+  }
+
+  function resumePomodoro() {
+    if (!_isPaused()) return;
+    _pomo = { phase: _pomo.phase, workMin: _pomo.workMin, restMin: _pomo.restMin,
+              endAt: Date.now() + _pomo.pausedLeft };
+    _pomoSave();
+    _showMyPomoLine("resume");
+    renderPomoButtons();
+    _pomoStartLoop();
+  }
+
+  /* 시작 ↔ 일시정지 를 한 버튼이 맡습니다 */
+  function togglePomoRun() {
+    if (!_pomo) { startPomodoro(); return; }
+    if (_isPaused()) resumePomodoro();
+    else pausePomodoro();
+  }
+
+  /* 버튼 줄 다시 그리기 — 도는 중에만 [정지] 가 나옵니다 */
+  function renderPomoButtons() {
+    const row = document.getElementById("pomo-controls");
+    if (!row) return;
+    const running = !!_pomo;
+    const paused  = _isPaused();
+    row.dataset.state = !running ? "idle" : (paused ? "paused" : "running");
+
+    const run = document.getElementById("pomo-run-btn");
+    if (run) {
+      run.classList.toggle("is-pause", running && !paused);
+      run.title = !running ? "내 타이머를 시작해요 (남에게는 영향 없어요)"
+                : paused   ? "이어서 다시 셉니다"
+                           : "잠깐 멈춰요 (남은 시간은 그대로)";
+      run.setAttribute("aria-label", !running ? "뽀모도로 시작"
+                                   : paused   ? "뽀모도로 이어가기" : "뽀모도로 일시정지");
+    }
+    /* 도는 동안에는 시간 설정을 잠급니다 — 지금 세션에는 반영되지 않으니까요 */
+    ["pomo-work-min", "pomo-rest-min"].forEach(id => {
+      const i = document.getElementById(id);
+      if (i) i.disabled = running;
+    });
+  }
+  window.renderPomoButtons = renderPomoButtons;
+
   function _pomoStartLoop() {
     if (window.pomodoroTick) { clearInterval(window.pomodoroTick); }
     window.pomodoroTick = setInterval(_pomoTick, 1000);
@@ -740,6 +816,7 @@
     } else {
       _paintIdle();
     }
+    renderPomoButtons();
   }
 
   function startPomodoro() {
@@ -764,6 +841,7 @@
     _pomoSave();
 
     window.updatePomoSetupUI?.({ running: true, workMin, restMin });
+    renderPomoButtons();
     window.playPomodoroSound?.("work_start");
     _showMyPomoLine("work");
     updateStatus();                 // 카드에 🍅 붙이기
@@ -776,6 +854,7 @@
     _pomoSave();
     if (window.pomodoroTick) { clearInterval(window.pomodoroTick); window.pomodoroTick = null; }
     _paintIdle();
+    renderPomoButtons();
     if (wasRunning) {
       _showMyPomoLine("stop");
       updateStatus();               // 카드에서 🍅 떼기
@@ -783,7 +862,7 @@
   }
 
   /* 카드에 실어 보낼 값 — 지금 집중 중인가 */
-  function isPomodoroRunning() { return !!_pomo; }
+  function isPomodoroRunning() { return !!_pomo && !_isPaused(); }
   function pomodoroPhase() { return _pomo ? _pomo.phase : ""; }
 
   // =====================================================
@@ -1435,6 +1514,10 @@
   window.renderUserCards = renderUserCards;   // ✅ [프로필] 프로필 변경 시 재렌더용
   window.startPomodoro = startPomodoro;
   window.stopPomodoro = stopPomodoro;
+  window.togglePomoRun = togglePomoRun;
+  window.pausePomodoro = pausePomodoro;
+  window.resumePomodoro = resumePomodoro;
+  window.isPomodoroPaused = _isPaused;
   window.isPomodoroRunning = isPomodoroRunning;
   window.pomodoroPhase = pomodoroPhase;
   window.requireAdminPin = requireAdminPin;

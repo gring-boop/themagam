@@ -648,7 +648,12 @@
   window.askNotifyPermissionOnce = askNotifyPermissionOnce;
 
   function notifyPomodoro(kind) {
-    if (!_pomoParticipating) return;         // 미참여면 알림도 없음
+    /* [고침 2026-08-09] ♪ 는 **소리만** 끕니다.
+
+       예전에는 이 스위치 하나가 소리와 브라우저 알림을 함께 껐습니다.
+       그런데 소리를 끄는 이유는 대개 "옆에 사람이 있어서" 이지, 세션이
+       끝난 걸 모르고 싶어서가 아니에요. 다른 창을 보고 있을 때 조용히
+       알려주는 알림은 그대로 두는 편이 맞습니다. */
     if (!canNotify()) return;
     if (document.visibilityState === "visible") return;  // 보고 있으면 불필요
 
@@ -792,37 +797,28 @@
     /* 같은 스위치가 두 곳에 있습니다 — 뽀모도로 창과 설정 → 🍅 뽀모도로.
        둘이 다른 모습을 보이면 어느 쪽이 진짜인지 알 수 없으니
        한 함수에서 같이 칠합니다. */
+    /* [고침 2026-08-09] 조작 줄의 ♪ 하나로 모았습니다.
+       예전에는 맨 아랫줄에 폭 전체를 쓰는 [🔔 소리·알림] 버튼이 따로
+       있었는데, 뽀모 칸만 세로로 길어지는 원인이었어요. */
     const btns = [
-      document.getElementById("pomo-opt-btn"),
+      document.getElementById("pomo-sound-btn"),
       document.getElementById("set-pomo-part")
     ].filter(Boolean);
 
     btns.forEach(btn => {
-      /* [2026-08-03] B+C 혼합 — 단어는 "누르면 일어날 동작"(Join/Leave),
-         켜짐·꺼짐은 스위치 그림이 보여줍니다. */
-      /* [고침 2026-08-06] 타이머가 각자 것이 되면서 "참여/미참여"라는 말이
-         뜻을 잃었습니다. 이제 이 스위치가 하는 일은 딱 하나 —
-         세션이 바뀔 때 소리와 알림을 받을지 말지입니다. */
-      if (_pomoParticipating) {
-        btn.dataset.state = "on";
-        btn.innerHTML = `소리·알림 <span class="pomo-sw on"><i></i></span>`;
-        btn.title = "세션이 바뀔 때 소리와 알림을 받아요 — 누르면 꺼집니다";
-        btn.classList.remove("danger");
-        btn.classList.add("primary");
-        btn.setAttribute("aria-pressed", "true");
-      } else {
-        btn.dataset.state = "off";
-        btn.innerHTML = `소리·알림 <span class="pomo-sw off"><i></i></span>`;
-        btn.title = "지금은 조용히 돌아갑니다 — 누르면 켜집니다";
-        btn.classList.remove("primary");
-        btn.classList.add("danger");
-        btn.setAttribute("aria-pressed", "false");
-      }
+      const isMini = btn.id === "pomo-sound-btn";
+      btn.dataset.state = _pomoParticipating ? "on" : "off";
+      btn.setAttribute("aria-pressed", _pomoParticipating ? "true" : "false");
+      btn.title = _pomoParticipating
+        ? "세션이 바뀔 때 소리가 나요 — 누르면 조용해집니다"
+        : "지금은 소리가 나지 않아요 — 누르면 켜집니다 (알림은 그대로)";
+      if (isMini) return;                    // ♪ 는 글자를 바꾸지 않습니다
+      btn.innerHTML = `알림음 <span class="pomo-sw ${_pomoParticipating ? "on" : "off"}"><i></i></span>`;
+      btn.classList.toggle("primary", _pomoParticipating);
+      btn.classList.toggle("danger", !_pomoParticipating);
     });
-    {
-    }
-    // ✅ 미참가 시 뽀모 UI 전체를 은은한 회색으로
-    document.body.classList.toggle("pomo-nonpart", !_pomoParticipating);
+    /* 소리를 껐다고 뽀모 화면 전체를 흐리게 하지는 않습니다 —
+       타이머는 멀쩡히 돌고 있으니까요. (옛 pomo-nonpart 칠은 없앴습니다) */
   }
   window.syncPomoSettingBtn = _renderParticipationButton;
 
