@@ -5621,6 +5621,115 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .mw-hint b{ color: #6B5F52; }
 
+/* =====================================================================
+   📮 쪽지 (2026-08-09)
+   ===================================================================== */
+#note-modal{
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  z-index: 6400; background: rgba(0,0,0,.28); padding: var(--sp-4);
+}
+#note-modal .modal-content{ width: min(420px, 100%); position: relative; }
+.note-text{
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--fill-1);
+  color: var(--text);
+}
+.note-foot{
+  display: flex; align-items: center; gap: 10px;
+  margin-top: var(--sp-2);
+}
+.note-foot .hint{ margin: 0; }
+.note-foot .ghost-btn{ margin-left: auto; }
+
+/* 받은 것 / 보낸 것 */
+.note-boxtabs{ display: flex; gap: 6px; margin-bottom: var(--sp-3); }
+.note-boxtab{
+  font-family: inherit;
+  font-size: var(--fs-2xs);
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.note-boxtab.is-on{
+  background: var(--text); color: var(--bg);
+  border-color: transparent; font-weight: var(--fw-medium);
+}
+.note-dot{
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 15px; height: 15px; padding: 0 4px; margin-left: 3px;
+  border-radius: 999px; background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: var(--fw-bold);
+}
+
+.note-list{ display: flex; flex-direction: column; gap: 8px; }
+.note-item{
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--fill-1);
+}
+/* 안 읽은 것만 왼쪽에 붉은 줄 — 목록이 길어도 눈에 먼저 들어오게 */
+.note-item.is-new{
+  border-left: 2px solid var(--danger-line);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: var(--danger-soft);
+}
+.note-head{ display: flex; align-items: baseline; gap: 7px; }
+.note-who{ font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--text); }
+.note-at{ font-size: var(--fs-2xs); color: var(--muted); }
+.note-new{ font-size: var(--fs-2xs); color: var(--danger); font-weight: var(--fw-bold); }
+.note-reply{
+  margin-left: auto;
+  font-family: inherit;
+  font-size: var(--fs-2xs);
+  padding: 2px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--on-accent-btn);
+  cursor: pointer;
+}
+.note-body{
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  line-height: 1.65;
+  color: var(--text);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* 내 카드에 붙는 안 읽음 표시 */
+.note-badge{
+  position: absolute;
+  top: 6px; right: 8px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  letter-spacing: -.2px;
+}
+.user-card .card-foot{ position: relative; }
+
+/* 남의 카드도 이제 눌립니다 — 눌러도 되는 곳이라고 알려줍니다 */
+.user-card[data-card-nick]:not(.is-me):not(.share-card){ cursor: pointer; }
+.user-card[data-card-nick]:not(.is-me):not(.share-card):hover{
+  border-color: var(--accent-line);
+}
+
 /* [2026-08-09] 두 줄짜리 버튼 — 높이가 그만큼 커집니다 */
 .btn-2line{
   display: flex;

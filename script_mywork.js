@@ -387,29 +387,38 @@
 
   /* ---------------------------------------------------------------
      탭
+
+     [2026-08-08] 넷으로 나눴습니다 — 할 일 · 목표 · 작업 시간 · 글자수.
+     예전 "기록" 한 탭에 그래프가 둘이라 뭘 보는지 헷갈렸어요.
+     [2026-08-09] 📮 쪽지가 붙어 다섯이 됐습니다.
+
+     ※ 이 목록은 쓰는 곳(syncTabs)보다 **위에** 있어야 합니다.
+        const 는 끌어올려지지 않아서, 아래에 두면 먼저 부를 때 터집니다.
      --------------------------------------------------------------- */
+  const MW_TABS = ["todo", "goal", "time", "wc", "note"];
+
   function syncTabs() {
     document.querySelectorAll("#mywork-tabs [data-mw-tab]").forEach(b => {
       const on = b.dataset.mwTab === _tab;
       b.classList.toggle("is-on", on);
       b.setAttribute("aria-selected", on ? "true" : "false");
     });
-    ["todo", "goal", "time", "wc"].forEach(k => {
+    MW_TABS.forEach(k => {
       const p = el("mywork-panel-" + k);
       if (p) p.classList.toggle("is-on", k === _tab);
     });
   }
-
-  /* [2026-08-08] 탭이 넷이 됐습니다 — 할 일 · 목표 · 작업 시간 · 글자수.
-     예전 "rec"(기록) 한 탭에 시간 그래프와 글자수 그래프가 함께 있었는데,
-     한 화면에 그래프가 둘이면 지금 뭘 보는 건지 헷갈립니다. */
-  const MW_TABS = ["todo", "goal", "time", "wc"];
 
   function switchMyWorkTab(name) {
     _tab = MW_TABS.includes(name) ? name : "todo";
     syncTabs();
     if (_tab === "todo") renderTodoPanel();
     else if (_tab === "goal") renderGoalPanel();
+    else if (_tab === "note") {
+      /* 📮 쪽지 — 열면 받은 것을 읽음으로 바꿉니다 */
+      window.renderNotePanel?.();
+      window.markNotesRead?.();
+    }
     else renderRecPanel();          // 작업 시간·글자수 둘 다 여기서 갈라집니다
   }
 

@@ -445,6 +445,7 @@ window.AppSession = AppSession;
       callIfFn("listenStatus");
       callIfFn("listenPomodoro");
       callIfFn("listenNotice");
+      callIfFn("listenNotes");
 
       _statusIntervalId = setInterval(() => callIfFn("updateStatus", false), PRESENCE_POLL_MS);
 
