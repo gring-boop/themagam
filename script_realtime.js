@@ -773,11 +773,16 @@
 
   /* 버튼 줄 다시 그리기 — 도는 중에만 [정지] 가 나옵니다 */
   function renderPomoButtons() {
-    const row = document.getElementById("pomo-controls");
-    if (!row) return;
     const running = !!_pomo;
     const paused  = _isPaused();
-    row.dataset.state = !running ? "idle" : (paused ? "paused" : "running");
+    const state   = !running ? "idle" : (paused ? "paused" : "running");
+    /* 조작 줄과 설정 줄 둘 다에 상태를 적습니다 — 서로 다른 줄이라 */
+    ["pomo-controls", "pomo-setrow"].forEach(id => {
+      const r = document.getElementById(id);
+      if (r) r.dataset.state = state;
+    });
+    const row = document.getElementById("pomo-controls");
+    if (!row) return;
 
     const run = document.getElementById("pomo-run-btn");
     if (run) {
