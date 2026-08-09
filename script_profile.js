@@ -1084,6 +1084,14 @@ function bindCardEditDelegate() {
   host._editDelegateBound = true;
 
   host.addEventListener("click", (e) => {
+    /* [2026-08-09] 스티커 자리는 한 번 눌러서는 아무 일도 없습니다.
+       카드 구석의 빈 자리라, 지나가다 스치듯 눌리기 쉬워요. 고르기 판은
+       아래 dblclick 에서만 엽니다. 여기서는 다른 손잡이로 새어 나가지
+       않게 막기만 합니다. */
+    if (e.target?.closest?.("[data-pick-worktag]")) {
+      e.preventDefault(); e.stopPropagation();
+      return;
+    }
     /* 프사 → 프로필 설정 */
     if (e.target?.closest?.("[data-edit-profile]")) {
       e.preventDefault(); e.stopPropagation();
@@ -1098,11 +1106,20 @@ function bindCardEditDelegate() {
     }
   });
 
+  /* [2026-08-09] 오늘의 작업 스티커 — **더블클릭**으로만 열립니다. */
+  host.addEventListener("dblclick", (e) => {
+    const slot = e.target?.closest?.("[data-pick-worktag]");
+    if (!slot) return;
+    e.preventDefault(); e.stopPropagation();
+    window.openWorkTagPicker?.(slot);
+  });
+
   /* 키보드로도 열 수 있게 (Enter · Space) */
   host.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     const t = e.target;
-    if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
+    if (t?.closest?.("[data-pick-worktag]")) { e.preventDefault(); window.openWorkTagPicker?.(t); }
+    else if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
     else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.openStatusPicker?.(t); }
   });
 }

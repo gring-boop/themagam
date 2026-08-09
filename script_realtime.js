@@ -453,6 +453,10 @@
           parts.push(`
             <div class="user-card ${cls}${goldCls}${patCls}${bgCls}${isMine ? " is-me" : ""}"
                  data-card-nick="${escapeHtml(u)}"${cardStyle}>
+              <!-- [2026-08-09] 오늘의 작업 스티커 — 프사가 아니라 **카드**
+                   왼쪽 위 구석입니다. 그래서 .card-body 바깥, 카드 바로
+                   아래에 둡니다 (프사 칸 안에 있으면 프사를 따라다녀요). -->
+              ${window.workTagChipHtml?.(row, isMine) || ""}
               <div class="card-body">
                 <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0"'
@@ -581,6 +585,15 @@
       pomoRunning,
       pomoPhase: pomoPhaseNow,
       shareOn,
+      /* [2026-08-09] 오늘의 작업 스티커. 날짜를 함께 보내는 이유는
+         script_worktag.js 맨 위에 적어 두었습니다 — 한 줄로 줄이면,
+         날이 바뀌면 지우는 대신 "기본값으로 읽어" 저절로 맞습니다. */
+      /* ★ 여기에 || "draft" 를 쓰면 안 됩니다.
+         [떼기]를 누르면 값이 빈 문자열이 되는데, 빈 문자열은 거짓이라
+         그 자리에서 다시 '원고'로 바뀌어 나갑니다. 실제로 그랬어요 —
+         떼도 안 떼지고 원고가 붙었습니다. 없으면 없는 채로 보냅니다. */
+      tag: (typeof window.myWorkTag === "function") ? window.myWorkTag() : "",
+      tagDay: window.Wordcount?.dayKey?.() || "",
       /* 펫 요약 — 남들 카드에도 보이게 */
       // ✅ 서버 시각으로 기록 — 각자 PC 시계가 달라도 판정이 흔들리지 않음
       lastSeen: firebase.database.ServerValue.TIMESTAMP,

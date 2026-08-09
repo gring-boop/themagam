@@ -6395,3 +6395,102 @@ body.split-dragging #chat-box3{ user-select: none; }
 .share-off:hover{ background: rgba(255,59,48,.95); }
 
 /* [뺌 2026-08-06] 크게 보기(라이트박스)는 없앴습니다 — 카드 안에서만 봅니다 */
+
+/* =====================================================================
+   🏷️ 오늘의 작업 스티커 — 카드 왼쪽 위 구석 (2026-08-09)
+   ---------------------------------------------------------------------
+   상태표(WORK·휴식…)가 "지금 자리에 있는가" 라면, 이건 "오늘 무슨 일을
+   하는가" 입니다. 같은 WORK 라도 초고를 미는 날과 교정지를 보는 날은
+   전혀 다르니까요.
+
+   [자리]
+   프사가 아니라 **카드** 왼쪽 위 구석입니다. 카드 모서리에 살짝 걸쳐서,
+   책 표지에 붙인 인덱스처럼 보이게 했습니다.
+
+   [비어 있을 때]
+   기본은 아무것도 없음입니다. 그래도 내 카드에는 **더블클릭할 자리**가
+   남아 있어야 해서, 눈에 안 보이는 빈 칸을 둡니다. 마우스를 올리면
+   옅은 점선으로 "여기를 두 번 누르면 됩니다" 하고 살짝 알려 줍니다.
+   ===================================================================== */
+.card-tag-slot{
+  position: absolute;
+  top: -4px;        /* [2026-08-09] 모서리에 너무 붙어 있어서 5px 내렸습니다 */
+  left: -6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  min-width: 34px;
+  min-height: 20px;
+}
+.card-tag-slot.is-mine{ cursor: pointer; }
+/* 비었을 때 — 평소엔 아무것도 안 보이고, 올렸을 때만 자리를 알려 줍니다 */
+.card-tag-slot.is-empty::before{
+  content: "";
+  width: 34px;
+  height: 20px;
+  border-radius: 8px;
+  border: 1px dashed transparent;
+  transition: border-color var(--anim-fast), background var(--anim-fast);
+}
+.card-tag-slot.is-empty:hover::before{
+  border-color: var(--border);
+  background: var(--fill-1);
+}
+.card-tag-slot.is-empty:focus-visible::before{ border-color: var(--accent); }
+
+/* 붙어 있을 때 — 상태 알약과 같은 규칙(꽉 찬 색 .60, 테두리 .73)을
+   씁니다. 카드 안에 알약이 둘인데 하나만 결이 다르면 덧붙인 티가 나요.
+   대신 살짝(-7도) 기울여서, 인쇄가 아니라 **손으로 붙인 것** 처럼. */
+.card-tag{
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3.5px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: calc(var(--fs-sm) * .88);
+  font-weight: var(--fw-bold);
+  line-height: 1.25;
+  white-space: nowrap;
+  transform: rotate(-7deg);
+  transform-origin: left center;
+  box-shadow: 0 1px 3px rgba(40,30,20,.18);
+  user-select: none;
+  background: var(--fill-2);
+  color: var(--muted-strong);
+}
+.card-tag-emoji{ font-size: 1em; line-height: 1; }
+.card-tag-slot.is-mine:hover .card-tag{ transform: rotate(-7deg) scale(1.06); }
+.card-tag-slot.is-mine:active .card-tag{ transform: rotate(-7deg) scale(.97); }
+
+/* 일곱 가지 — 상태 알약과 같은 불투명도(.60 / 테두리 .73).
+   글자색은 각 색을 아주 진하게 낮춘 것이라, 밝은 바탕에서도 읽힙니다. */
+.card-tag[data-tag-val="idea"]  { background: rgba(175,169,236,.60); border-color: rgba(175,169,236,.73); color: #26215C; }
+.card-tag[data-tag-val="draft"] { background: rgba(255,59,48,.60);   border-color: rgba(255,59,48,.73);   color: #8E2420; }
+.card-tag[data-tag-val="proof"] { background: rgba(93,202,165,.60);  border-color: rgba(93,202,165,.73);  color: #04342C; }
+.card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.60);  border-color: rgba(255,159,10,.73);  color: #7A4406; }
+.card-tag[data-tag-val="rework"]{ background: rgba(133,183,235,.60); border-color: rgba(133,183,235,.73); color: #042C53; }
+.card-tag[data-tag-val="input"] { background: rgba(151,196,89,.60);  border-color: rgba(151,196,89,.73);  color: #173404; }
+.card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.60); border-color: rgba(237,147,177,.73); color: #4B1528; }
+
+:root[data-is-dark="true"] .card-tag[data-tag-val="idea"]  { color: #CECBF6; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="draft"] { color: #FFA59E; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="proof"] { color: #9FE1CB; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="revise"]{ color: #FFCE85; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ color: #B5D4F4; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="input"] { color: #C0DD97; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="etc"]   { color: #F4C0D1; }
+
+/* 고르기 판 — 상태 고르기와 같은 판(.status-pop)을 씁니다.
+   항목마다 색을 살짝 깔았어요. 여덟 개나 되면 글자만으로는 찾는 데
+   시간이 걸립니다. */
+.worktag-pop{ min-width: 118px; }
+.worktag-item{ display: flex; align-items: center; gap: 6px; padding: 7px 9px; }
+.worktag-none{ color: var(--muted); }
+.worktag-item.tag-idea  { background: rgba(175,169,236,.16); }
+.worktag-item.tag-draft { background: rgba(255,59,48,.16); }
+.worktag-item.tag-proof { background: rgba(93,202,165,.16); }
+.worktag-item.tag-revise{ background: rgba(255,159,10,.16); }
+.worktag-item.tag-rework{ background: rgba(133,183,235,.16); }
+.worktag-item.tag-input { background: rgba(151,196,89,.16); }
+.worktag-item.tag-etc   { background: rgba(237,147,177,.16); }
