@@ -5570,6 +5570,25 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .mw-hint b{ color: #6B5F52; }
 
+/* [2026-08-09] 두 줄짜리 버튼 — 높이가 그만큼 커집니다 */
+.btn-2line{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.25;
+  padding-top: var(--sp-3);
+  padding-bottom: var(--sp-3);
+  height: auto;
+}
+.btn-2line-main{ font-weight: var(--fw-medium); }
+.btn-2line-sub{
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+  font-weight: var(--fw-regular, 400);
+}
+.btn-2line:hover .btn-2line-sub{ color: var(--text); }
+
 /* [2026-08-09] 📌 할 일 탭 맨 아래 — 🧹 치우기.
    카드 아래칸 팝업이 없어지면서 이 자리로 옮겨왔습니다. */
 .mw-foot{
@@ -5959,8 +5978,6 @@ body.split-dragging #chat-box3{ user-select: none; }
   overflow: hidden;
   padding: var(--sp-2);
 }
-.share-card .card-foot{ margin-top: var(--sp-2); }
-
 .share-shot{
   position: relative;
   flex: 1 1 auto;        /* 아래 한 줄을 뺀 나머지를 전부 차지 */
@@ -6004,13 +6021,23 @@ body.split-dragging #chat-box3{ user-select: none; }
 
 /* [고침 2026-08-06] 강도 버튼·안내 문구는 화면에서 뺐습니다.
    아래 한 줄에 "닉네임의 화면"과 [off] 만 나란히 둡니다. */
+/* [고침 2026-08-09] 이름 줄을 그림 위로 올렸습니다.
+
+   예전에는 그림 아래 별도의 줄이라, 그 높이만큼 화면이 짧아졌어요.
+   이 카드의 주인공은 화면이니 위에 얹는 편이 낫습니다.
+   프로필 카드의 이름 칸처럼 살짝 비치게 두어, 글씨는 읽히면서
+   뒤 화면도 어렴풋이 보입니다. */
 .share-foot{
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 6px 10px !important;
-  flex: 0 0 auto;
+  padding: 6px 9px;
+  background: rgba(20,16,12,.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 .share-who{
   min-width: 0;
@@ -6019,7 +6046,7 @@ body.split-dragging #chat-box3{ user-select: none; }
   white-space: nowrap;
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
-  color: var(--text);
+  color: rgba(255,255,255,.95);
 }
 
 /* [2026-08-07] 내 카드의 이름은 단추입니다 — 누르면 보여줄 창을 바꿔요.
@@ -6033,13 +6060,13 @@ body.split-dragging #chat-box3{ user-select: none; }
   font: inherit;
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
-  color: var(--text);
+  color: rgba(255,255,255,.95);
   cursor: pointer;
   text-decoration: underline dotted transparent;
   text-underline-offset: 3px;
   transition: text-decoration-color .12s ease;
 }
-.share-who.is-mine:hover{ text-decoration-color: var(--muted); }
+.share-who.is-mine:hover{ text-decoration-color: rgba(255,255,255,.75); }
 .share-who.is-mine:focus-visible{
   outline: 2px solid var(--accent-ring);
   outline-offset: 2px;
@@ -6051,10 +6078,11 @@ body.split-dragging #chat-box3{ user-select: none; }
   line-height: 1;
   padding: 4px 9px;
   border-radius: var(--r-full);
-  border: 1px solid var(--danger-line);
-  background: var(--danger-soft);
-  color: var(--on-danger-btn);
+  border: 1px solid rgba(255,255,255,.34);
+  background: rgba(255,59,48,.82);
+  color: #fff;
   cursor: pointer;
 }
+.share-off:hover{ background: rgba(255,59,48,.95); }
 
 /* [뺌 2026-08-06] 크게 보기(라이트박스)는 없앴습니다 — 카드 안에서만 봅니다 */

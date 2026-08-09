@@ -385,13 +385,14 @@
     const out = [];               // [{ date, totals:{status:ms}, pomo }]
     const t = nowMs();
 
-    let segsAll = {}, pomoAll = {}, cur = null;
+    let segsAll = {}, pomoAll = {}, cur = null, resetAll = {};
     try {
       const snap = await db.ref(`users/${nick}`).once("value");
       const v = snap.val() || {};
       segsAll = v.timeSegs || {};
       pomoAll = v.pomoSessions || {};
       cur = v.timeCur || null;
+      resetAll = v.workReset || {};
     } catch (e) {}
 
     for (let i = days - 1; i >= 0; i--) {
@@ -399,11 +400,22 @@
       const key = ymd(dayMs);
       const totals = {}; STATUS_IDS.forEach(s => totals[s] = 0);
 
+      /* [2026-08-09] "지금부터 다시 세기" 표시.
+
+         예전 [초기화] 는 그날 기록을 통째로 지웠습니다. 숫자는 0이 됐지만
+         정말로 사라져서 되돌릴 수가 없었어요. 이제는 **지우지 않고**
+         "이 시각부터만 센다"는 표시 하나만 남깁니다.
+         기록은 그대로 있으니 나중에 되짚어 볼 수도 있고, 표시를 지우면
+         원래 숫자가 그대로 돌아옵니다. */
+      const resetAt = Number(resetAll[key] || 0);
+
       const bucket = segsAll[key] || {};
       for (const k in bucket) {
         const seg = bucket[k] || {};
         const s = normStatus(seg.s);
-        const len = Number(seg.b || 0) - Number(seg.a || 0);
+        /* 표시보다 앞선 부분은 잘라냅니다. 표시를 걸친 구간은 뒤쪽만 셉니다 */
+        const a = Math.max(Number(seg.a || 0), resetAt);
+        const len = Number(seg.b || 0) - a;
         if (len > 0) totals[s] += len;
       }
 
@@ -422,7 +434,7 @@
         const alive    = Number(cur.alive) || 0;
         const hardEnd  = (disc > 0 && disc >= alive) ? Math.min(t, disc) : t;
         const curEnd   = Math.min(hardEnd, curStart + SEG_CAP_MS);   // ← 상한
-        const a = Math.max(curStart, dayMs);
+        const a = Math.max(curStart, dayMs, resetAt);   // 다시 세기 표시도 함께
         const b = Math.min(curEnd, dayMs + 24 * 60 * 60 * 1000);
         if (b > a) totals[normStatus(cur.s)] += (b - a);
       }
@@ -710,33 +722,31 @@
      열린 구간을 닫아서 저장하면 그게 다시 오늘 기록이 되므로, 닫지 않고
      시작점만 옮깁니다. 상태는 그대로라 흐름이 끊기지 않습니다.
      본인 것만 지웁니다 (myNick 경로만 만짐). */
+  /* [바꿈 2026-08-09] "지우기" 에서 "여기서부터 다시 세기" 로.
+
+     예전에는 users/{닉}/timeSegs/{오늘} 을 통째로 지웠습니다. 숫자는 0이
+     됐지만 그날 무엇을 얼마나 했는지가 정말로 사라져서, 잘못 눌러도
+     되돌릴 방법이 없었어요.
+
+     이제는 아무것도 지우지 않습니다. users/{닉}/workReset/{오늘} 에
+     "이 시각부터만 센다"는 표시 하나만 남기고, 합계를 낼 때 그보다 앞선
+     부분을 빼고 셉니다. 기록은 서버에 그대로 있어요.
+
+     ※ 관리자 화면의 출석부는 이 표시를 보지 않고 실제 기록을 그대로
+        보여줍니다. 그쪽은 "정말 얼마나 있었나"를 봐야 하는 자리라서요. */
   window.resetTodayWorkTime = async function () {
     if (!myNick) { alert("입장 후에 쓸 수 있어요."); return; }
-    if (!confirm("오늘 작업 시간을 0으로 되돌릴까요?\n오늘의 상태별 시간 기록이 모두 지워지고, 되돌릴 수 없어요.")) return;
+    if (!confirm("지금부터 다시 셀까요?\n화면의 오늘 작업 시간이 0분이 되고, 이 순간부터 새로 쌓입니다.\n(지금까지의 기록은 지워지지 않아요)")) return;
     try {
       const t = nowMs();
-      await db.ref(`users/${myNick}/timeSegs/${ymd(t)}`).remove();
-
-      if (_cur) {
-        _cur = { s: _cur.s, a: t, sid: SID };
-        await curRef().set(_cur);
-        markAlive();
-        armDisc();
-      } else {
-        /* 다른 탭·기기가 열어둔 구간이 있으면 그것도 지금부터 다시 시작 */
-        const snap = await curRef().once("value");
-        const v = snap.val();
-        if (v && Number(v.a) > 0) {
-          await curRef().set({ s: normStatus(v.s), a: t, sid: v.sid || SID });
-        }
-      }
+      await db.ref(`users/${myNick}/workReset/${ymd(t)}`).set(t);
 
       _todayWork = { ms: 0, at: t };
       await _refreshTodayWork();   // 재계산 → updateStatus(true) → 카드 갱신
-      alert("오늘 작업 시간을 초기화했어요.");
+      alert("지금부터 다시 셉니다. 지금까지의 기록은 그대로 남아 있어요.");
     } catch (e) {
       console.warn("[resetTodayWorkTime]", e);
-      alert("초기화에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      alert("바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
     }
   };
 

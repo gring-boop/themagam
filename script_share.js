@@ -417,13 +417,16 @@
         <div class="share-shot">
           <img class="share-img" src="${row.img}" alt="${esc(row.nick)} 님이 공유 중인 화면 (모자이크)">
           <span class="share-live">● 공유 중</span>
-        </div>
-        <div class="card-foot share-foot">
-          ${mine
-            ? `<button type="button" class="share-who is-mine" data-share-switch="1"
-                       title="누르면 보여줄 창을 바꿀 수 있어요">${esc(row.nick)}의 화면</button>`
-            : `<span class="share-who">${esc(row.nick)}의 화면</span>`}
-          ${off}
+          <!-- [2026-08-09] 이름 줄을 그림 아래가 아니라 **그림 위**에 얹습니다.
+               아래에 두면 그만큼 그림이 짧아지는데, 이 카드의 주인공은
+               화면이니까요. 반투명이라 뒤가 비쳐 보입니다. -->
+          <div class="share-foot">
+            ${mine
+              ? `<button type="button" class="share-who is-mine" data-share-switch="1"
+                         title="누르면 보여줄 창을 바꿀 수 있어요">${esc(row.nick)}의 화면</button>`
+              : `<span class="share-who">${esc(row.nick)}의 화면</span>`}
+            ${off}
+          </div>
         </div>
       </div>`;
   }
