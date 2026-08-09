@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091753">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091753">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608091815">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608091815">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608091753">
+  <link rel="manifest" href="manifest.json?v=202608091815">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608091753" />
+  <link rel="stylesheet" href="styles.css?v=202608091815" />
 </head>
 
 <body>
@@ -569,7 +569,7 @@
 
            [변경] 예전에는 시간 설정과 버튼이 한 줄에 있었습니다.
            칸 폭이 좁아지면서 서로 밀려 답답해져서, 줄을 나눴어요. -->
-      <!-- [3줄] 설정 — 🍅 집중 / ☕ 휴식 / ⚙️ 설정 -->
+      <!-- [3줄] 설정 — 🍅 집중 / ☕ 휴식 / ⚙️ 알림음 -->
       <div class="pomo-row pomo-setrow" id="pomo-setrow" data-state="idle">
         <label class="pomo-setup-field" for="pomo-work-min" title="집중 시간(분)">
           <span class="pomo-setup-label" aria-hidden="true">🍅</span>
@@ -581,15 +581,17 @@
           <input id="pomo-rest-min" type="number" min="1" max="60" step="1" value="5"
                  inputmode="numeric" aria-label="휴식 시간(분)">
         </label>
-        <!-- [2026-08-09] 톱니 하나만. '설정' 글자를 빼서 🍅 ☕ 와 같은
-             "아이콘 + 짧은 값" 리듬에 맞췄습니다. 글자가 사라지는 대신
-             aria-label 로 이름을 남겨 둡니다 — 화면 낭독기에서는 그대로
-             "설정" 으로 읽힙니다. -->
+        <!-- [2026-08-09] 아이콘만 두었다가 글자를 되살렸습니다 — 톱니 하나만
+             있으면 무엇을 여는 단추인지 알 수 없었어요.
+
+             이름은 '설정' 대신 '알림음' 입니다. 머리말의 [⚙️ 설정](채팅·
+             프로필·테마·개인정보)과 이름이 겹쳐 헷갈렸고, 이 단추가 여는
+             건 알림음 종류와 볼륨뿐이라 그쪽이 정확합니다. -->
         <button id="pomo-detail-toggle" class="pomo-setup-field pomo-gear" type="button"
                 onclick="togglePomoDetail()"
                 aria-expanded="false" aria-controls="pomo-detail"
-                aria-label="설정" title="설정 — 알림음 종류와 볼륨">
-          <span class="pomo-setup-label" aria-hidden="true">⚙️</span>
+                title="알림음 종류와 볼륨">
+          <span class="pomo-setup-label" aria-hidden="true">⚙️</span><span class="pomo-gear-label">알림음</span>
         </button>
       </div>
 
@@ -746,26 +748,26 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608091753"></script>
-<script src="script_core.js?v=202608091753"></script>
-<script src="script_auth.js?v=202608091753"></script>
-<script src="script_ui.js?v=202608091753"></script>
-<script src="script_chat.js?v=202608091753"></script>
-<script src="script_chatty.js?v=202608091753"></script>
-<script src="script_data.js?v=202608091753"></script>
-<script src="script_realtime.js?v=202608091753"></script>
-<script src="script_layout.js?v=202608091753"></script>
-<script src="script_wordcount.js?v=202608091753"></script>
-<script src="script_timelog.js?v=202608091753"></script>
-<script src="script_idledetect.js?v=202608091753"></script>
-<script src="script_profile.js?v=202608091753"></script>
-<script src="script_mywork.js?v=202608091753"></script>
-<script src="script_forest.js?v=202608091753"></script>
-<script src="script_reactions.js?v=202608091753"></script>
-<script src="script_note.js?v=202608091753"></script>
-<script src="script_share.js?v=202608091753"></script>
-<script src="script_manual.js?v=202608091753"></script>
-<script src="script_guard.js?v=202608091753"></script>
+<script src="fortune_data.js?v=202608091815"></script>
+<script src="script_core.js?v=202608091815"></script>
+<script src="script_auth.js?v=202608091815"></script>
+<script src="script_ui.js?v=202608091815"></script>
+<script src="script_chat.js?v=202608091815"></script>
+<script src="script_chatty.js?v=202608091815"></script>
+<script src="script_data.js?v=202608091815"></script>
+<script src="script_realtime.js?v=202608091815"></script>
+<script src="script_layout.js?v=202608091815"></script>
+<script src="script_wordcount.js?v=202608091815"></script>
+<script src="script_timelog.js?v=202608091815"></script>
+<script src="script_idledetect.js?v=202608091815"></script>
+<script src="script_profile.js?v=202608091815"></script>
+<script src="script_mywork.js?v=202608091815"></script>
+<script src="script_forest.js?v=202608091815"></script>
+<script src="script_reactions.js?v=202608091815"></script>
+<script src="script_note.js?v=202608091815"></script>
+<script src="script_share.js?v=202608091815"></script>
+<script src="script_manual.js?v=202608091815"></script>
+<script src="script_guard.js?v=202608091815"></script>
 
 <script>
   window.addEventListener("load", () => {
