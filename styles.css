@@ -5710,19 +5710,50 @@ body.split-dragging #chat-box3{ user-select: none; }
   white-space: pre-wrap;
 }
 
-/* 내 카드에 붙는 안 읽음 표시 */
-.note-badge{
+/* 내 카드 이름 오른편의 쪽지 자리 — 안테나와 짝을 이룹니다.
+   왼쪽 위에 접속 점, 오른쪽 위에 쪽지. 평소에는 옅은 윤곽만. */
+.card-note{
   position: absolute;
-  top: 6px; right: 8px;
-  font-size: var(--fs-2xs);
-  font-weight: var(--fw-bold);
-  padding: 2px 7px;
+  top: 4px;
+  right: 6px;
+  z-index: 2;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: transparent;
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--anim-fast), border-color var(--anim-fast), color var(--anim-fast);
+}
+/* 윤곽 안의 작은 점 — "여기가 쪽지 자리" 라는 표시 */
+.card-note::before{
+  content: "";
+  width: 5px; height: 5px;
+  border-radius: 999px;
+  background: var(--border-strong, var(--border));
+}
+.card-note:hover{ border-color: var(--accent-line); }
+
+/* 새 쪽지가 오면 색이 차오릅니다 */
+.card-note.has{
+  border-color: var(--danger-line);
   background: var(--danger);
   color: #fff;
-  letter-spacing: -.2px;
 }
+.card-note.has::before{ display: none; }
+.card-note:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+
 .user-card .card-foot{ position: relative; }
+/* 이름이 쪽지 자리를 밀고 들어오지 않게 — 내 카드에서만 비웁니다 */
+.user-card.is-me .card-name{ padding-right: 22px; }
 
 /* 남의 카드도 이제 눌립니다 — 눌러도 되는 곳이라고 알려줍니다 */
 .user-card[data-card-nick]:not(.is-me):not(.share-card){ cursor: pointer; }

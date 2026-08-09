@@ -219,19 +219,36 @@
     try { await db.ref(`notes/${myNick}`).update(upd); } catch (e) {}
   }
 
-  /* 안 읽은 쪽지가 있으면 내 카드에 작은 표시 —
-     🗂️ 나의 작업은 내 카드에서 여니까, 알림도 그 자리에 둡니다. */
+  /* 내 카드 이름 오른편의 쪽지 표시 — 안테나처럼 **늘 있는 자리**입니다.
+
+     [왜 늘 두는가]
+     새 쪽지가 왔을 때만 나타나면, 그 자리가 원래 무엇인지 모르는 채로
+     갑자기 뭔가 생깁니다. 안테나처럼 평소에는 옅은 윤곽으로 자리를
+     지키다가, 쪽지가 오면 색이 차오르는 편이 알아보기 쉬워요.
+     자리도 흔들리지 않고요.
+
+     내 카드에만 붙습니다 — 남의 안 읽은 쪽지 수는 알 이유가 없으니까요. */
   function renderNoteBadge() {
+    if (!myNick) return;
+    const foot = document.querySelector(
+      `.user-card[data-card-nick="${CSS.escape(myNick)}"] .card-foot`);
+    if (!foot) return;
+
+    let b = foot.querySelector(".card-note");
+    if (!b) {
+      b = document.createElement("button");
+      b.type = "button";
+      b.className = "card-note";
+      b.setAttribute("data-note-open", "1");
+      foot.appendChild(b);
+    }
     const n = unreadCount();
-    document.querySelectorAll(".note-badge").forEach(b => b.remove());
-    if (!n || !myNick) return;
-    const mine = document.querySelector(`.user-card[data-card-nick="${CSS.escape(myNick)}"] .card-foot`);
-    if (!mine) return;
-    const b = document.createElement("span");
-    b.className = "note-badge";
-    b.textContent = `📮 ${n}`;
-    b.title = `안 읽은 쪽지 ${n}통 — 카드를 눌러 🗂️ 나의 작업 → 📮 쪽지에서 봐요`;
-    mine.appendChild(b);
+    b.classList.toggle("has", n > 0);
+    b.textContent = n > 0 ? (n > 9 ? "9+" : String(n)) : "";
+    b.title = n > 0
+      ? `안 읽은 쪽지 ${n}통 — 눌러서 봐요`
+      : "쪽지함 — 받은 쪽지가 없어요";
+    b.setAttribute("aria-label", b.title);
   }
 
   /* ---------------------------------------------------------------
@@ -247,6 +264,13 @@
         if (e.target.closest("[data-edit-profile]")) return;
         if (e.target.closest("[data-pick-status]")) return;
         if (e.target.closest(".share-card")) return;
+
+        /* 내 카드의 쪽지 아이콘 — 바로 📮 쪽지 탭으로 */
+        if (e.target.closest("[data-note-open]")) {
+          window.openMyWork?.();
+          window.switchMyWorkTab?.("note");
+          return;
+        }
         const card = e.target.closest(".user-card[data-card-nick]");
         if (!card) return;
         const nick = card.getAttribute("data-card-nick");
