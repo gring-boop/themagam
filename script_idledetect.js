@@ -119,6 +119,10 @@
   function _restoreIfAutoAway() {
     if (!myNick) return;
     if (!_autoAway) return;                // 사람이 직접 고른 AWAY — 건드리지 않음
+    /* 상태 칸이 비어 있으면 아직 안 불러온 것입니다 — 판단을 미룹니다.
+       (여기서 꼬리표를 지우면 되돌릴 근거가 사라집니다) */
+    const raw = document.getElementById("db-status")?.value || "";
+    if (!raw) return;
     if (_curStatus() !== "away") { _autoAway = false; _saveTag(); return; }
     const back = _prevStatus || "writing";
     _autoAway = false;
@@ -155,8 +159,7 @@
          화면은 AWAY 인 채로 굳어 버립니다.
          그래서 시작하자마자 한 번 직접 물어봅니다. */
       _loadTag();
-      if (_idleDetector.userState === "idle") _demoteToAway();
-      else _restoreIfAutoAway();
+      _firstCheckWhenReady();
 
       return true;
     } catch (e) {
@@ -165,6 +168,29 @@
       _stopDetector();
       return false;
     }
+  }
+
+  /* [고침 2026-08-09 · 2차] 상태를 **다 불러온 뒤에** 판단합니다.
+
+     이 검출기는 script_core.js 에서 loadPersonalData 보다 **먼저** 시작됩니다.
+     그때는 상태 칸(#db-status)이 아직 비어 있어요. 그 상태로 판단하면
+     "지금 AWAY 아니네" 로 읽고 꼬리표를 지워 버립니다. 그 직후 서버에서
+     away 가 들어오는데, 되돌릴 근거는 이미 사라진 뒤죠.
+     → 자동감지를 켜 두어도 접속할 때마다 AWAY 에 갇히던 이유입니다.
+
+     그래서 상태 칸에 값이 들어올 때까지 기다렸다가 판단합니다.
+     (최대 10초. 그 안에 안 들어오면 그냥 넘어갑니다 — 억지로 바꾸는 것보다
+      가만히 두는 쪽이 안전해요) */
+  function _firstCheckWhenReady(tries = 0) {
+    if (!_idleDetector) return;                       // 그새 꺼졌으면 그만
+    const loaded = !!document.getElementById("db-status")?.value;
+    if (!loaded && tries < 40) {
+      setTimeout(() => _firstCheckWhenReady(tries + 1), 250);
+      return;
+    }
+    if (!loaded) return;
+    if (_idleDetector.userState === "idle") _demoteToAway();
+    else _restoreIfAutoAway();
   }
 
   function _stopDetector() {

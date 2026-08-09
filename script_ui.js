@@ -842,7 +842,17 @@
     const nextCollapsed = (typeof forceState === "boolean") ? !forceState : !collapsed;
 
     detail.classList.toggle("collapsed", nextCollapsed);
-    btn.textContent = "🎵";
+    /* [고침 2026-08-09] 여기서 btn.textContent = "🎵" 로 덮어쓰고 있었습니다.
+
+       이 버튼은 이제 [⚙️ 설정] 이라 안에 두 조각(아이콘·글자)이 들어 있는데,
+       textContent 를 넣는 순간 그 둘이 통째로 지워지고 음표만 남았습니다.
+       HTML 을 아무리 고쳐도 화면에는 음표가 뜨던 이유예요 —
+       **저장된 pomoDetailCollapsed 값이 있는 사람에게만** 일어나서
+       (아래 초기화 코드에서도 같은 줄이 돌았습니다) 새 브라우저로 열면
+       멀쩡해 보였습니다. 그래서 찾는 데 오래 걸렸습니다.
+
+       내용은 HTML 이 정하게 두고, 여기서는 열림·닫힘만 표시합니다. */
+    btn.setAttribute("aria-expanded", nextCollapsed ? "false" : "true");
 
     try { AppStore.setItem(_nickKey("pomoDetailCollapsed"), nextCollapsed ? "true" : "false"); } catch(e) {}
   }
@@ -1184,7 +1194,7 @@
         const btn = document.getElementById("pomo-detail-toggle");
         if (detail && btn) {
           detail.classList.toggle("collapsed", c === "true");
-          btn.textContent = "🎵";
+          btn.setAttribute("aria-expanded", c === "true" ? "false" : "true");
         }
       }
     } catch(e) {}
