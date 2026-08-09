@@ -5713,10 +5713,8 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* 내 카드 이름 오른편의 쪽지 자리 — 안테나와 짝을 이룹니다.
    왼쪽 위에 접속 점, 오른쪽 위에 쪽지. 평소에는 옅은 윤곽만. */
 .card-note{
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  z-index: 2;
+  flex: 0 0 auto;
+  margin-right: 5px;
   width: 17px;
   height: 17px;
   padding: 0;
@@ -5752,8 +5750,8 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-note:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
 
 .user-card .card-foot{ position: relative; }
-/* 이름이 쪽지 자리를 밀고 들어오지 않게 — 내 카드에서만 비웁니다 */
-.user-card.is-me .card-name{ padding-right: 22px; }
+/* 이름 줄 안에서 [쪽지] [닉네임] 으로 나란히 — 둘 다 오른쪽에 붙습니다 */
+.user-card.is-me .card-name{ display: flex; align-items: center; justify-content: flex-end; }
 
 /* 남의 카드도 이제 눌립니다 — 눌러도 되는 곳이라고 알려줍니다 */
 .user-card[data-card-nick]:not(.is-me):not(.share-card){ cursor: pointer; }

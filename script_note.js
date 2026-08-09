@@ -230,17 +230,23 @@
      내 카드에만 붙습니다 — 남의 안 읽은 쪽지 수는 알 이유가 없으니까요. */
   function renderNoteBadge() {
     if (!myNick) return;
-    const foot = document.querySelector(
-      `.user-card[data-card-nick="${CSS.escape(myNick)}"] .card-foot`);
-    if (!foot) return;
+    /* [고침 2026-08-09] 이름 줄 **안쪽 왼편**에 둡니다.
 
-    let b = foot.querySelector(".card-note");
+       예전에는 카드 오른쪽 끝에 띄워 두었는데, 이름이 오른쪽 정렬이라
+       긴 닉네임과 부딪혔습니다. 이름 줄은 이미 flex 라 그 안에 넣으면
+       [쪽지] [닉네임] 순서로 나란히 서고, 이름 길이에 따라 자리도
+       알아서 밀립니다. */
+    const nameEl = document.querySelector(
+      `.user-card[data-card-nick="${CSS.escape(myNick)}"] .card-name`);
+    if (!nameEl) return;
+
+    let b = nameEl.querySelector(".card-note");
     if (!b) {
       b = document.createElement("button");
       b.type = "button";
       b.className = "card-note";
       b.setAttribute("data-note-open", "1");
-      foot.appendChild(b);
+      nameEl.insertBefore(b, nameEl.firstChild);   // 이름보다 앞
     }
     const n = unreadCount();
     b.classList.toggle("has", n > 0);
