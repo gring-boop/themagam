@@ -104,6 +104,41 @@
     return out;
   }
 
+  /* =====================================================================
+     [고침 2026-08-10] 주(週) 단위로 날짜 뽑기
+
+     ★ 실제로 터진 버그입니다 — 월요일 아침에 "지난 주 기록이 싹 날아갔다".
+
+     화면을 그리는 쪽(myWeekHtml)이 **오늘부터 거꾸로 7일**을 그렸는데,
+     값을 받아오는 쪽(attach)은 **월요일부터 오늘까지**만 듣고 있었습니다.
+     일요일에는 둘이 딱 맞아떨어져서 멀쩡했지만, 월요일이 되는 순간
+     듣는 날짜가 하루로 줄어드는 바람에 나머지 여섯 칸이 전부 0 이 됐어요.
+     서버에는 멀쩡히 있는데 화면에서만 사라진 겁니다.
+
+     게다가 [‹ 1주 전]도 "7~13일 전"이라 요일이 어긋나 있었습니다.
+     월요일에 보면 지난주 화요일~월요일이 나와서, 정작 지난 주말이
+     어느 화면에도 안 나왔어요.
+
+     이제 양쪽 모두 이 함수 하나만 씁니다. 기준이 하나면 어긋날 수가 없습니다.
+
+       back = 0  이번 주 → 월요일부터 **오늘까지** (아직 오지 않은 날은 빼고)
+       back ≥ 1  지난 주 → 월요일부터 일요일까지 **일곱 날 모두**
+     ===================================================================== */
+  function weekKeys(back = 0) {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;          // 월=0 … 일=6
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - dow - back * 7); // 그 주의 월요일
+    const last = back === 0 ? dow : 6;
+    const out = [];
+    for (let i = 0; i <= last; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      out.push(dayKey(d));
+    }
+    return out;
+  }
+
   const DOW_LABEL = ["월", "화", "수", "목", "금", "토", "일"];
 
   function fmt(n) { return Number(n || 0).toLocaleString(); }
@@ -491,8 +526,10 @@
       render();
     });
 
-    /* 주간은 날짜마다 따로 붙습니다. 하루치씩이라 양이 적어요. */
-    weekDays().forEach(k => {
+    /* 주간은 날짜마다 따로 붙습니다. 하루치씩이라 양이 적어요.
+       [고침 2026-08-10] weekDays() 대신 weekKeys(0) — 같은 값이지만
+       화면과 같은 함수를 써야 어긋나지 않습니다(위 주석 참고). */
+    weekKeys(0).forEach(k => {
       const r = window.db.ref(`wordlog/${k}`);
       r.on("value", snap => { _week[k] = snap.val() || {}; render(); });
       _weekRefs.push(r);
@@ -576,10 +613,11 @@
        캐시(_week)를 그대로 쓰고, 지난 주는 그때 노드를 한 번 읽어옵니다. */
     const isThisWeek = wcBack === 0;
     const vals = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - (i + wcBack * 7));
-      const key = dayKey(d);
+    /* [고침 2026-08-10] "오늘부터 거꾸로 7일"이 아니라 **그 주의 월~일**.
+       예전 방식은 요일이 어긋나서, 월요일에 보면 지난 주말이 이번 주에도
+       지난 주에도 안 나왔습니다 (weekKeys 주석 참고). */
+    const keys = weekKeys(wcBack);
+    for (const key of keys) {
       let total = 0;
       if (isThisWeek) {
         total = Number(_week[key]?.[me()]?.total || 0);
@@ -589,6 +627,7 @@
           total = Number(snap.val()?.total || 0);
         } catch (e) {}
       }
+      const d = new Date(key + "T12:00:00");
       vals.push([DOW_LABEL[(d.getDay() + 6) % 7], total]);
     }
     const week = vals.reduce((a, b) => a + b[1], 0);
@@ -770,7 +809,7 @@
   window.openWcAll = openWcAll;
   window.closeWcAll = closeWcAll;
 
-  window.Wordcount = { dayKey, weekDays, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
+  window.Wordcount = { dayKey, weekDays, weekKeys, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
                        _state: () => ({ today: _today, week: _week, feed: _feed,
                                         pomoLines: _pomoLines, tab: _tab }) };
 })();
