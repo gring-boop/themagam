@@ -37,6 +37,35 @@
 
   function _supported() { return typeof IdleDetector !== "undefined"; }
 
+  /* ---------------------------------------------------------------
+     "이 AWAY 는 자동이었다" 꼬리표를 기기에 남깁니다
+
+     [왜 필요한가]
+     _autoAway 는 그냥 변수라, 새로고침하거나 창을 닫았다 열면 false 로
+     돌아갑니다. 그런데 상태(away)는 서버에 남아 있어요. 그래서
+     "자동으로 AWAY 가 된 채 나갔다가 다시 들어오면" 둘이 어긋납니다 —
+     화면은 AWAY 인데 꼬리표는 없으니, 마우스를 아무리 움직여도
+     복귀 함수가 첫 줄에서 그냥 돌아섭니다. 영영 안 풀려요.
+
+     꼬리표를 필명별로 적어 두면 다시 들어와도 이어집니다.
+     (기기별로 두는 게 맞습니다 — 집 컴퓨터에서 자동으로 자리비움이 된 것을
+      회사 컴퓨터에서 풀어 줄 이유는 없으니까요) */
+  function _tagKey() { return `idleAutoAway_${myNick || "게스트"}`; }
+
+  function _saveTag() {
+    try {
+      if (_autoAway) AppStore.setItem(_tagKey(), _prevStatus || "writing");
+      else AppStore.removeItem(_tagKey());
+    } catch (e) {}
+  }
+
+  function _loadTag() {
+    try {
+      const v = AppStore.getItem(_tagKey());
+      if (v) { _autoAway = true; _prevStatus = v; }
+    } catch (e) {}
+  }
+
   function _curStatus() {
     return document.getElementById("db-status")?.value || "rest";
   }
@@ -69,6 +98,7 @@
       /* 사람이 손으로 골랐습니다. 자동 복귀는 없던 일로. */
       _autoAway = false;
       _prevStatus = null;
+      _saveTag();
     });
   }
 
@@ -81,6 +111,7 @@
     if (cur === "away") return;            // 이미 자리비움 — 할 일 없음
     _prevStatus = cur;                     // 돌아올 곳을 기억
     _autoAway = true;
+    _saveTag();
     _setStatus("away");
     console.log("[자동감지] 무입력 20분 →", cur, "→ away 자동 전환");
   }
@@ -88,10 +119,11 @@
   function _restoreIfAutoAway() {
     if (!myNick) return;
     if (!_autoAway) return;                // 사람이 직접 고른 AWAY — 건드리지 않음
-    if (_curStatus() !== "away") { _autoAway = false; return; }
+    if (_curStatus() !== "away") { _autoAway = false; _saveTag(); return; }
     const back = _prevStatus || "writing";
     _autoAway = false;
     _prevStatus = null;
+    _saveTag();
     _setStatus(back);
     console.log("[자동감지] 입력 재감지 → away →", back, "자동 복귀");
   }
@@ -114,6 +146,18 @@
         threshold: IDLE_THRESHOLD_MS,
         signal: _idleAbort.signal
       });
+
+      /* [고침 2026-08-09] 켠 직후 지금 상태를 한 번 봅니다.
+
+         IdleDetector 는 **바뀔 때만** 알려줍니다. 접속한 사람은 방금
+         버튼을 눌렀으니 당연히 활동 중인데, 그러면 change 이벤트가
+         아예 오지 않아요. 지난번에 자동으로 AWAY 가 된 채 나갔다면
+         화면은 AWAY 인 채로 굳어 버립니다.
+         그래서 시작하자마자 한 번 직접 물어봅니다. */
+      _loadTag();
+      if (_idleDetector.userState === "idle") _demoteToAway();
+      else _restoreIfAutoAway();
+
       return true;
     } catch (e) {
       console.warn("[IdleDetector start failed]", e);
