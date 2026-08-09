@@ -1090,7 +1090,9 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   gap: var(--sp-2);
   border-bottom: none;
   height: auto;
-  padding: var(--sp-3);
+  /* [고침 2026-08-10] 좌우 여백을 12px → 8px 로. 뽀모 칸은 원래 좁은데
+     양옆으로 24px 을 먹고 있어서, 설정 줄이 들어갈 자리가 모자랐습니다. */
+  padding: var(--sp-3) var(--sp-2);
   border-radius: var(--radius2);
 }
 
@@ -5742,7 +5744,7 @@ body.split-dragging #chat-box3{ user-select: none; }
   display: flex;
   align-items: center;
   justify-content: center;   /* 가운데 모으기 — 폭을 채우지 않습니다 */
-  gap: 5px;                  /* 세 개가 한 세트로 보일 만큼만 */
+  gap: 4px;                  /* 세 개가 한 세트로 보일 만큼만 */
   /* [고침 2026-08-09] 넘치면 잘리지 말고 줄을 바꾸게.
      .pane 이 overflow-y:auto 라서 가로도 auto 가 되고, 칸보다 넓어지면
      오른쪽이 **잘립니다**. 실제로 [⚙️ 알림음]의 '음' 이 잘려 나갔어요.
@@ -5763,8 +5765,8 @@ body.split-dragging #chat-box3{ user-select: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 5px 8px;
+  gap: 4px;
+  padding: 5px 7px;
   white-space: nowrap;
   /* [고침 2026-08-09] 높이를 못 박습니다.
      🍅 ☕ 안에는 <input> 이 들어 있고, 입력칸의 기본 줄높이(normal)는
@@ -5828,6 +5830,10 @@ body.split-dragging #chat-box3{ user-select: none; }
   font-weight: var(--fw-bold);
   color: var(--text);
 }
+/* [2026-08-10] 알림음만 좌우를 조금 더. 글자가 셋이라 숫자 칩과 똑같은
+   여백이면 답답해 보입니다 — 다만 예전에 11px 까지 줬다가 줄이 칸을
+   넘어서서 '음' 이 잘려 나갔어요. 9px 이 그 사이입니다. */
+.pomo-setrow .pomo-gear{ padding: 5px 9px; }
 .pomo-gear[aria-expanded="true"]{ background: var(--fill-3); color: var(--text); }
 
 /* 도는 중에는 시간을 못 바꿉니다 — 지금 세션에 반영되지 않으니까요.
@@ -6476,18 +6482,24 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-tag-slot.is-mine:hover .card-tag{ transform: rotate(-7deg) scale(1.06); }
 .card-tag-slot.is-mine:active .card-tag{ transform: rotate(-7deg) scale(.97); }
 
-/* 일곱 가지 — 상태 알약(.60)보다 조금 진하게 .74 로 올렸습니다.
-   알약은 카드 안쪽이라 배경이 잔잔한데, 스티커는 카드 모서리에 걸쳐
-   있어서 뒤로 바깥 배경까지 비칩니다. 같은 값이면 스티커만 흐려 보여요.
-   글자색은 각 색을 아주 진하게 낮춘 것이라, 밝은 바탕에서도 읽힙니다. */
-.card-tag[data-tag-val="idea"]  { background: rgba(175,169,236,.74); border-color: rgba(175,169,236,.86); color: #26215C; }
-.card-tag[data-tag-val="draft"] { background: rgba(255,59,48,.74);   border-color: rgba(255,59,48,.86);   color: #8E2420; }
-.card-tag[data-tag-val="polish"]{ background: rgba(240,153,123,.74); border-color: rgba(240,153,123,.86); color: #4A1B0C; }
-.card-tag[data-tag-val="proof"] { background: rgba(93,202,165,.74);  border-color: rgba(93,202,165,.86);  color: #04342C; }
-.card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.74);  border-color: rgba(255,159,10,.86);  color: #7A4406; }
-.card-tag[data-tag-val="rework"]{ background: rgba(133,183,235,.74); border-color: rgba(133,183,235,.86); color: #042C53; }
-.card-tag[data-tag-val="input"] { background: rgba(151,196,89,.74);  border-color: rgba(151,196,89,.86);  color: #173404; }
-.card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.74); border-color: rgba(237,147,177,.86); color: #4B1528; }
+/* 일곱 가지 — 불투명도 .88.
+
+   [왜 두 번 올렸나]
+   상태 알약과 같은 .60 으로 시작했다가 .74 로, 다시 .88 로 올렸습니다.
+   알약은 카드 안쪽이라 뒤가 잔잔하지만, 스티커는 **카드 모서리에 걸쳐**
+   있어서 카드 배경과 바깥 배경이 동시에 비칩니다. 게다가 카드 배경은
+   각자 고르는 값이라 짙은 색을 쓰는 분도 있어요 — 그런 카드에서는
+   반투명 스티커가 배경에 먹혀서 잘 안 보였습니다.
+   거의 불투명하게 두면 어떤 카드 위에서도 같게 읽힙니다.
+   글자색은 각 색을 아주 진하게 낮춘 것이라, 밝은 바탕에서도 읽혀요. */
+.card-tag[data-tag-val="idea"]  { background: rgba(175,169,236,.88); border-color: rgba(175,169,236,.95); color: #26215C; }
+.card-tag[data-tag-val="draft"] { background: rgba(255,59,48,.88);   border-color: rgba(255,59,48,.95);   color: #8E2420; }
+.card-tag[data-tag-val="polish"]{ background: rgba(240,153,123,.88); border-color: rgba(240,153,123,.95); color: #4A1B0C; }
+.card-tag[data-tag-val="proof"] { background: rgba(93,202,165,.88);  border-color: rgba(93,202,165,.95);  color: #04342C; }
+.card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.88);  border-color: rgba(255,159,10,.95);  color: #7A4406; }
+.card-tag[data-tag-val="rework"]{ background: rgba(133,183,235,.88); border-color: rgba(133,183,235,.95); color: #042C53; }
+.card-tag[data-tag-val="input"] { background: rgba(151,196,89,.88);  border-color: rgba(151,196,89,.95);  color: #173404; }
+.card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.88); border-color: rgba(237,147,177,.95); color: #4B1528; }
 
 :root[data-is-dark="true"] .card-tag[data-tag-val="idea"]  { color: #CECBF6; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="draft"] { color: #FFA59E; }
