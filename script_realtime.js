@@ -144,9 +144,9 @@
     } catch(e){}
   };
 
-  function isPresenceSystemMsg(data) {
-    return !!(data && data.type === "system" && (data.joinOf || data.leaveOf));
-  }
+  /* [2026-08-09] isPresenceSystemMsg 는 지웠습니다.
+     지난 대화에서 입장·퇴장을 빼면서 부르는 곳이 없어졌어요.
+     (지금 접속 중의 입장·퇴장 표시는 script_ui.js 쪽이 맡습니다) */
 
 
   // =====================================================
@@ -927,10 +927,18 @@
       if (!data) return;
       const t = data.type;
       const isRealChat = !t || t === "declaration" || t === "fortune";
-      /* [변경 2026-08-04] 입장/퇴장 알림도 히스토리에 함께 보여줍니다.
-         표시 개수(histCount) 안에 들어 있으면 대화 사이에 그대로 끼어
-         나오게요. 이펙트(fx)·옛 뽀모 시스템 메시지는 여전히 제외. */
-      if (isRealChat || isPresenceSystemMsg(data)) histItems.push([key, data]);
+      /* [변경 2026-08-09] 지난 대화에서 입장·퇴장 알림을 뺍니다.
+
+         2026-08-04 에는 넣는 쪽이 맞다고 봤습니다 — 누가 다녀갔는지
+         알 수 있으니까요. 그런데 그 뒤로 관리자 창에 [🚪 출입 기록]이
+         생겨서, 누가 언제 들고 났는지는 그쪽에서 날짜별로 훨씬 정확히
+         볼 수 있습니다. 남은 건 손해뿐이었어요 — 30개를 불러오면 그중
+         절반 넘게가 "○○님이 입장했습니다" 로 채워져서, 정작 지난 대화가
+         밀려났습니다.
+
+         지금 접속 중에 들어오고 나가는 알림은 그대로 뜹니다. 여기서
+         빠지는 건 "예전 것을 되짚어 보여줄 때" 뿐입니다. */
+      if (isRealChat) histItems.push([key, data]);
     });
     if (showHist) {
       const toRender = histItems.slice(-histCount);
