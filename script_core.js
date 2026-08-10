@@ -473,10 +473,24 @@ window.AppSession = AppSession;
     /* [2026-08-03] 나가기 전 마무리 —
        ① 열려 있는 작업 구간을 지금까지로 저장 (워크 타임이 날아가지 않게)
        ② users/{닉}/timeCur 를 지워서 묵은 구간이 남지 않게
-       ③ 상태를 AWAY 로 저장해 두어 다음 입장 때 AWAY 로 시작 */
+       ③ 작업 상태를 닫아 두어, 다음 입장 때 시간이 이어서 세지 않게
+
+       [고침 2026-08-10] 예전에는 여기서 **away** 로 저장했습니다.
+       그런데 그 값이 다음 입장 때 그대로 되살아나서, 들어오자마자
+       💤AWAY 로 뜨고 풀리지 않았어요.
+
+       자동감지 탓으로 보였지만 아니었습니다. 자동감지는 "제가 내린
+       AWAY"만 되돌립니다 — 사람이 고른 AWAY 를 마음대로 푸는 건
+       그 기능의 원칙에 어긋나니까요. 여기서 찍은 away 에는 꼬리표가
+       없으니 손대지 않은 게 맞습니다. 고칠 곳은 감지기가 아니라
+       **무엇으로 저장해 두느냐** 였어요.
+
+       ☕BREAK 로 바꿉니다. 자리에는 있지만 아직 작업 선언은 안 한 상태라,
+       작업 시간이 저절로 불어나지도 않고 "자리에 없다"는 거짓말도
+       하지 않습니다. 쓰기 시작할 때 WORK 를 한 번 누르면 됩니다. */
     try {
       const sel = document.getElementById("db-status");
-      if (sel) sel.value = "away";
+      if (sel) sel.value = "rest";
       window.savePersonalData?.();
     } catch (e) {}
     try { await window.finalizeTimelogOnLeave?.(); } catch (e) {}

@@ -361,6 +361,36 @@
     saveTimeout = setTimeout(() => savePersonalData(), 700);
   }
 
+  /* =====================================================================
+     들어올 때 어떤 상태로 시작하는가 (2026-08-10)
+     ---------------------------------------------------------------------
+     저장된 값을 그대로 쓰지 않고 한 번 걸러 냅니다.
+
+       away · idle · rest · (빈값) → focus (💻JOB💻)
+       writing · focus            → 저장된 그대로
+
+     [왜 JOB 인가]
+     처음에는 ☕BREAK 로 시작하게 했습니다. "자리에는 있지만 작업 선언은
+     아직" 이라는 뜻이라 정직해 보였거든요. 그런데 실제로는 들어오자마자
+     바로 쓰기 시작하는 분이 많습니다. 그분들에게는 매번 WORK 를 한 번
+     눌러야 하는 일이 생기고, 깜빡하면 **쓴 시간이 통째로 안 쌓입니다.**
+     기록이 비는 쪽이 조금 넉넉히 잡히는 쪽보다 훨씬 아파요.
+
+     JOB 은 작업 시간에 포함됩니다(카드의 ⏱ 은 Write + Job 합계).
+     그래서 들어온 순간부터 시간이 흐르고, 집필을 시작하면 WORK 로
+     바꾸면 됩니다. 정말 자리를 비울 거면 20분 뒤 자동감지가 내려주고요.
+
+     [왜 away 를 그대로 두지 않는가]
+     예전 나가기 코드가 away 를 찍어 두어서, 다시 들어와도 💤AWAY 에
+     갇히는 일이 있었습니다. 자동감지는 **제가 내린 AWAY** 만 되돌리므로
+     이건 손대지 않는 게 맞고요 — 그래서 여기서 걸러 냅니다.
+     ===================================================================== */
+  function _startStatus(saved) {
+    const v = String(saved || "");
+    if (v === "writing" || v === "focus") return v;
+    return "focus";
+  }
+
   async function loadPersonalData() {
     if (!myNick) return;
 
@@ -382,7 +412,13 @@
           document.getElementById("db-today-done").value = data.todayDone || "";
         }
         if (document.getElementById("db-status")) {
-          const st = (data.statusChoice && data.statusChoice !== "idle") ? data.statusChoice : "rest";
+          /* [고침 2026-08-10] 저장된 값이 away 여도 ☕BREAK 로 시작합니다.
+
+             들어왔다는 건 자리에 있다는 뜻이니까요. 예전 나가기 코드가
+             away 를 찍어 두어서, 다시 들어와도 💤AWAY 에 갇히는 일이
+             있었습니다(그 코드는 고쳤지만, 이미 저장된 값은 남아 있어요).
+             자리를 비울 거면 들어와서 직접 고르면 됩니다. */
+          const st = _startStatus(data.statusChoice);
           document.getElementById("db-status").value = st;
         }
       } else {
@@ -431,7 +467,7 @@
       if (document.getElementById("db-today-goal-text")) document.getElementById("db-today-goal-text").value = payload.todayGoalText || "";
       if (document.getElementById("db-today-done")) document.getElementById("db-today-done").value = payload.todayDone || "";
       if (document.getElementById("db-status")) {
-        const st = (payload.status && payload.status !== "idle") ? payload.status : "rest";
+        const st = _startStatus(payload.status);
         document.getElementById("db-status").value = st;
       }
       renderQuickStatusBtn();
