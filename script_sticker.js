@@ -153,15 +153,23 @@
       textColor: "#3B6D11"
     },
     {
-      /* 오케이 — 손가락으로 만드는 동그라미. 따봉(좋아요)과 헷갈리지 않게
-         손 모양 대신 **동그라미 자체**를 크게 그렸습니다. */
+      /* 오케이 — 동그라미 안에 체크.
+
+         [다시 그린 이유]
+         처음에는 손 모양(엄지·검지로 만든 원 + 뻗은 손가락 셋)을 선으로만
+         그렸는데, "손인지 안 보인다"는 얘기가 나왔습니다. 손가락 셋이
+         가는 선 세 개로만 남아서, 뜻 없는 획처럼 보였어요.
+
+         손을 제대로 그리는 안도 있었지만 판에서는 58px 까지 줄어듭니다.
+         그 크기에서 손가락 셋은 서로 붙어 뭉개져요. 체크는 획이 둘뿐이라
+         작아져도 형태가 그대로 남습니다. */
       id: "ok", cmd: "오케이", label: "오케이",
       cmdRe: /^\/(ㅇㅋ|오케이|오키)$/,
-      svg: `<circle cx="31" cy="34" r="11" fill="none" stroke="#3A9E8A" stroke-width="5"/>
-            <path d="M40 26q4-8 9-11M45 30q5-6 11-7M48 35q5-3 11-2"
-                  stroke="#3A9E8A" stroke-width="4" fill="none" stroke-linecap="round"/>
-            <path d="M12 44q4 3 9 2" stroke="#3A9E8A" stroke-width="3.4"
-                  fill="none" stroke-linecap="round"/>`,
+      svg: `<circle cx="36" cy="30" r="17" fill="#9BD9C4" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M27 30l6.5 7L46 23" fill="none" stroke="#1F6B5C"
+                  stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11 16l3 3M58 13l3-3M62 24h4"
+                  stroke="#F0C674" stroke-width="2.4" stroke-linecap="round"/>`,
       textColor: "#1F6B5C"
     },
     {
