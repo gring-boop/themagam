@@ -313,7 +313,24 @@
     const modal = el("notice-modal");
     if (!modal) return;
 
-    modal.addEventListener("click", async ev => {
+    /* ★ [고침 2026-08-11] 리스너를 바깥 덮개가 아니라 **안쪽 상자**에 답니다.
+
+       [무엇이 잘못됐었나]
+       팝업 껍데기(#notice-modal)에는 "바깥을 누르면 닫기"가 걸려 있고,
+       안쪽 상자(.modal-content)에는 onclick="event.stopPropagation()" 이
+       붙어 있습니다. 그래서 안에서 누른 click 은 껍데기까지 **올라오지
+       못합니다.** 껍데기에 달아둔 리스너는 한 번도 안 불렸고, [＋ 새 공지]
+       를 눌러도 아무 일이 없었어요.
+
+       ※ stopPropagation 은 위로 올라가는 것만 막습니다. 같은 칸에 달린
+         다른 리스너는 그대로 불려요 — 그래서 이 상자에 달면 됩니다.
+
+       ※ 이 사고는 🗂️ 나의 작업 창에서 2026-08-06 에 이미 한 번 났고
+         거기 주석으로도 남겨 두었는데, 새 창을 만들며 그대로 되풀이했습니다.
+         그래서 이번엔 검사(checks.js)로 못 박아 둡니다. */
+    const box = modal.querySelector(".modal-content") || modal;
+
+    box.addEventListener("click", async ev => {
       const btn = ev.target.closest("[data-nt]");
       if (!btn) return;
       const act = btn.dataset.nt;
