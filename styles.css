@@ -6616,3 +6616,41 @@ body.split-dragging #chat-box3{ user-select: none; }
   .chat-item.other:not(.grouped) .profile-emoji{ margin-top: 1.05em; }
   .msg-bubble{ padding: 0.52em 0.68em; }
 }
+
+/* =====================================================================
+   ↩ 답장 · 😊 반응을 말풍선 줄 밖으로 (2026-08-10)
+   ---------------------------------------------------------------------
+   ★ "말풍선이 세 단어만에 줄바꿈된다" 의 진짜 원인이었습니다.
+
+   두 단추는 마우스를 올려야 보이지만(opacity:0), **자리는 늘 차지**하고
+   있었습니다. 26 + 26 에 간격까지 60px 남짓. 실제로 재보니 —
+
+       채팅 칸 347px · 말풍선 158px · 그 밖 98px
+
+   가로의 28% 를 보이지도 않는 단추가 붙들고 있었어요. 폭 제한(92%)이나
+   프사를 아무리 손봐도 이건 안 줄어듭니다. 애초에 다른 데서 새고
+   있었으니까요.
+
+   흐름 밖(absolute)으로 빼면 그 98px 중 60px 남짓이 말풍선 몫이 됩니다.
+   말풍선이 대략 140% 로 넓어지고, **프사도 그대로 남습니다.**
+
+   [자리]
+   말풍선 바깥쪽 위 모서리에 살짝 걸칩니다. 남의 말은 오른쪽 위,
+   내 말은 왼쪽 위 — 늘 "말풍선에서 먼 쪽"이라 글자를 가리지 않아요.
+   ===================================================================== */
+.bubble-tools{
+  position: absolute;
+  top: -11px;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  /* 여기서는 자리를 차지하지 않습니다 — 이 줄의 폭 계산에서 빠져요 */
+}
+.bubble-row:not(.me) .bubble-tools{ right: 2px; }
+.bubble-row.me       .bubble-tools{ left: 2px; }
+
+/* 평소에는 없는 셈 치고, 마우스를 올렸을 때만 눌립니다.
+   (안 그러면 안 보이는 단추가 클릭을 가로챕니다) */
+.bubble-tools{ pointer-events: none; }
+.chat-item:hover .bubble-tools,
+.bubble-tools:focus-within{ pointer-events: auto; }

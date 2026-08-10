@@ -758,18 +758,31 @@
         <div class="msg-content">
           ${isMe || grouped ? "" : `<div class="user-name" data-name-of="${escapeHtml(String(data.user || ""))}"${window.nickColorStyle?.(data.user) || ""}>${escapeHtml(data.user)}${data.badge ? `<span class="name-badges">${escapeHtml(String(data.badge))}</span>` : ""}</div>`}
           ${replyHtml}
+          <!-- [고침 2026-08-10] ↩ 답장 · 😊 반응을 .bubble-tools 로 묶었습니다.
+
+               예전에는 두 단추가 말풍선과 **같은 줄에 나란히** 있었습니다.
+               평소에는 투명(opacity:0)이라 눈에 안 보이는데, 자리는 그대로
+               차지합니다. 단추 26+26 에 간격까지 60px 이 넘어요. 채팅 칸이
+               347px 이던 화면에서 재보니 말풍선 158px 에 그 밖이 98px —
+               **가로의 28% 를 보이지도 않는 단추가 붙들고 있었습니다.**
+               그래서 세 단어만에 줄이 바뀌었어요.
+
+               묶어서 흐름 밖으로 빼면(CSS 에서 position:absolute) 그 자리가
+               통째로 말풍선 몫이 됩니다. -->
           <div class="bubble-row ${isMe ? "me" : ""}">
             <div class="${bubbleClass}" style="${bubbleStyle}">${msgHtml}</div>
             <div class="msg-time">${formatHHMM(time)}</div>
-            <button type="button" class="reply-add-btn" data-reply-add="1"
-                    aria-label="답장 쓰기" title="답장 쓰기">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 14 4 9l5-5"/>
-                <path d="M4 9h10a6 6 0 0 1 6 6v3"/>
-              </svg>
-            </button>
-            ${window.reactionAddButtonHtml ? window.reactionAddButtonHtml() : ""}
+            <div class="bubble-tools">
+              <button type="button" class="reply-add-btn" data-reply-add="1"
+                      aria-label="답장 쓰기" title="답장 쓰기">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 14 4 9l5-5"/>
+                  <path d="M4 9h10a6 6 0 0 1 6 6v3"/>
+                </svg>
+              </button>
+              ${window.reactionAddButtonHtml ? window.reactionAddButtonHtml() : ""}
+            </div>
           </div>
           <div class="reaction-row" data-reactions-for="${escapeHtml(String(key || ""))}"></div>
         </div>
