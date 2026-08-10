@@ -6762,7 +6762,9 @@ body.split-dragging #chat-box3{ user-select: none; }
   position: fixed;
   z-index: 9000;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* [2026-08-10] 4칸 → 3칸. 스티커가 아홉 개가 되면서 3 × 3 으로 딱
+     떨어집니다. 4칸이면 마지막 줄에 하나만 남아 허전했어요. */
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   padding: 8px;
   border-radius: var(--r-md);

@@ -3,14 +3,14 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 여덟 개. 채팅과 수다방 양쪽에서 씁니다.
+   말풍선 대신 크게 뜨는 손그림 아홉 개. 채팅과 수다방 양쪽에서 씁니다.
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
    올려야 합니다. 그림을 글자로 바꿔 메시지에 실어 보내는 방법도 있지만
    한 장에 수십 KB 라 채팅이 무거워져요.
 
-   SVG 는 선과 도형을 코드로 적는 방식이라 여덟 개를 다 합쳐도 몇 KB 고,
+   SVG 는 선과 도형을 코드로 적는 방식이라 아홉 개를 다 합쳐도 몇 KB 고,
    확대해도 안 깨지며, 저장소가 필요 없습니다. 더마감은 이미 프사 눈사람을
    이 방식으로 그리고 있어요.
 
@@ -48,6 +48,24 @@
                      stroke-width="1.7" transform="rotate(18 55 19)"/>
             <path d="M60 9l3-3M64 15h4M59 22l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#2F6191"
+    },
+    {
+      /* 인사 둘을 나란히 — 처음 만났을 때(방가)와 다시 만났을 때(리하이).
+         두 얼굴이 마주보는 그림으로, 혼자 손 흔드는 방가와 구분됩니다.
+         (재출근이 이미 ↻ 를 쓰고 있어서 화살표는 피했어요) */
+      id: "rehi", cmd: "리하이", label: "리하이",
+      svg: `<circle cx="24" cy="34" r="11" fill="#AFA9EC"/>
+            <circle cx="21" cy="33" r="1.6" fill="#3A2A22"/>
+            <circle cx="28" cy="33" r="1.6" fill="#3A2A22"/>
+            <path d="M21 38q3.5 3 7 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <circle cx="48" cy="34" r="11" fill="#CFC9F4"/>
+            <circle cx="44" cy="33" r="1.6" fill="#3A2A22"/>
+            <circle cx="51" cy="33" r="1.6" fill="#3A2A22"/>
+            <path d="M44 38q3.5 3 7 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <path d="M36 22c-2-3-6-2-6 1 0 2.6 3.6 4.6 6 6.4 2.4-1.8 6-3.8 6-6.4 0-3-4-4-6-1z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M14 20l2 3M58 20l-2 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#4A3F9E"
     },
     {
       id: "pat", cmd: "토닥", label: "토닥토닥",
