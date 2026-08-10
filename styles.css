@@ -6699,15 +6699,34 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* 답장 인용 안에서는 작게 (인용문이 본문보다 커지면 안 되니까) */
 .reply-quote .msg-sticker{ width: 34px; height: 34px; }
 
-/* 입력칸 옆 🖍️ */
+/* 🖍️ 는 입력칸 **안쪽** 오른편에 얹습니다.
+
+   밖에 두면 입력칸이 그만큼 좁아집니다. 채팅 칸이 좁을 때 44px 은
+   꽤 큰 손해예요(말풍선 폭으로 한 번 겪었습니다). 감싸는 상자 안에서
+   띄우고, 입력칸에는 오른쪽 여백을 줘서 글자가 단추 밑으로 들어가지
+   않게 합니다. */
+.input-wrap{
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.input-wrap #message{
+  flex: 1;
+  /* 단추(32) + 좌우 숨쉴 틈 */
+  padding-right: 42px;
+}
 .sticker-btn{
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
+  position: absolute;
+  right: 7px;
+  bottom: 6px;          /* 입력칸이 길어져도 아래쪽에 붙어 있습니다 */
+  width: 32px;
+  height: 32px;
+  border: none;
   border-radius: var(--r-full);
-  border: 1px solid var(--border);
-  background: var(--panel);
-  font-size: 16px;
+  background: transparent;
+  color: var(--sub-muted);
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -6716,7 +6735,8 @@ body.split-dragging #chat-box3{ user-select: none; }
   transition: background var(--anim-fast), transform var(--anim-fast);
 }
 .sticker-btn:hover{ background: var(--fill-2); }
-.sticker-btn:active{ transform: scale(.94); }
+.sticker-btn:active{ transform: scale(.92); }
+.sticker-btn[aria-expanded="true"]{ background: var(--fill-3); }
 
 /* 고르기 판 — 상태 고르기와 같은 결의 떠 있는 판 */
 .sticker-pop{
