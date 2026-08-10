@@ -228,20 +228,34 @@
     savePersonalData();
   }
 
-  function editTodo(id) {
+  /* 글자만 바꿉니다. 화면에서 부르는 쪽이 이미 새 글을 들고 있을 때 씁니다
+     (제자리 편집). 빈 글이면 아무 일도 하지 않아요 — 실수로 다 지우고
+     빠져나갔을 때 할 일이 이름 없이 남으면 안 되니까요. */
+  function setTodoText(id, text) {
+    const t = String(text || "").trim();
+    if (!t) return false;
     const items = getTodoItemsFromUI();
     const target = items.find(x => x.id === id);
-    if (!target) return;
-
-    const next = prompt("투두 수정", target.text || "");
-    if (next === null) return;
-
-    const text = String(next).trim();
-    if (!text) return;
-
-    const updated = items.map(x => x.id === id ? ({...x, text}) : x);
-    setTodoItemsToUI(updated);
+    if (!target || target.text === t) return false;
+    setTodoItemsToUI(items.map(x => x.id === id ? ({ ...x, text: t }) : x));
     savePersonalData();
+    return true;
+  }
+
+  /* [2026-08-10] prompt() 창을 걷어냈습니다.
+
+     예전에는 ✏️ 를 누르면 브라우저 기본 입력창이 떴습니다. 한 글자만
+     고치려 해도 창이 뜨고, 화면이 잠기고, 확인을 눌러야 했어요.
+     이제 할 일 글자를 누르면 그 자리에서 고쳐집니다(script_mywork.js).
+
+     이 함수는 남겨 둡니다 — 제자리 편집을 쓸 수 없는 자리(옛 화면·
+     좁은 화면)에서 여전히 부를 수 있게. */
+  function editTodo(id) {
+    const target = getTodoItemsFromUI().find(x => x.id === id);
+    if (!target) return;
+    const next = prompt("할 일 고치기", target.text || "");
+    if (next === null) return;
+    setTodoText(id, next);
   }
 
   function deleteTodo(id) {
@@ -286,6 +300,7 @@
   window.setTodoDue = setTodoDue;
   window.addTodoWithDue = addTodoWithDue;
   window.editTodo = editTodo;
+  window.setTodoText = setTodoText;
   window.deleteTodo = deleteTodo;
 
   // =====================================================

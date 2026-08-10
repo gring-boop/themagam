@@ -252,25 +252,86 @@
   /* ---------------------------------------------------------------
      화면 그리기 — 📌 할 일 탭
      --------------------------------------------------------------- */
+  /* =====================================================================
+     할 일 한 줄 (2026-08-10 손봄)
+     ---------------------------------------------------------------------
+     [무엇이 바뀌었나]
+       · ✏️ 단추를 없앴습니다. **글자를 누르면 그 자리에서** 고쳐집니다.
+         예전에는 브라우저 기본 입력창(prompt)이 떠서, 한 글자 고치려고
+         창이 뜨고 화면이 잠기고 확인을 눌러야 했어요.
+       · 완료는 앞의 **체크 상자**만 맡습니다.
+       · 지난 날짜인데 아직 안 끝낸 할 일에는 **[오늘 하기]** 가 붙습니다.
+
+     ★ 예전에는 <label> 이 체크 상자와 글자를 **함께** 감싸고 있었습니다.
+       그래서 글자를 눌러도 체크가 켜졌어요. 글자 클릭을 편집으로 쓰려면
+       이 감싸기를 풀어야 합니다 — 안 그러면 고치려고 누를 때마다 완료로
+       바뀝니다. 라벨을 걷어내고 체크 상자만 따로 세웠습니다.
+     ===================================================================== */
   function todoRowHtml(t) {
     const routine = !!t.routine;
+    /* 지난 날짜 + 아직 안 끝냄 → [오늘 하기].
+       반복(🔁)은 날짜를 가질 수 없으니 해당 없습니다. */
+    const due = String(t.due || "");
+    const overdue = !t.done && !routine && DUE_RE.test(due) && due < todayStr();
     return `
-      <li class="mw-todo${t.done ? " is-done" : ""}" data-id="${esc(t.id)}">
-        <label class="mw-todo-l">
-          <input type="checkbox" class="mw-chk" data-id="${esc(t.id)}" ${t.done ? "checked" : ""}
-                 aria-label="${esc(t.text || "할 일")} 완료">
-          <span class="mw-todo-t">${esc(t.text || "")}</span>
-          ${routine ? `<span class="mw-rbadge" title="매일 반복 — 자정에 체크가 풀려요">🔁</span>` : ""}
-          ${t.archived ? `<span class="mw-abadge" title="프로필 목록에서 치운 할 일이에요 — 여기엔 기록으로 남습니다">🗃</span>` : ""}
-        </label>
+      <li class="mw-todo${t.done ? " is-done" : ""}${overdue ? " is-overdue" : ""}" data-id="${esc(t.id)}">
+        <input type="checkbox" class="mw-chk" data-id="${esc(t.id)}" ${t.done ? "checked" : ""}
+               aria-label="${esc(t.text || "할 일")} 완료">
+        <span class="mw-todo-t" data-act="edit-inline" data-id="${esc(t.id)}"
+              role="button" tabindex="0" title="눌러서 고치기">${esc(t.text || "")}</span>
+        ${routine ? `<span class="mw-rbadge" title="매일 반복 — 자정에 체크가 풀려요">🔁</span>` : ""}
+        ${t.archived ? `<span class="mw-abadge" title="프로필 목록에서 치운 할 일이에요 — 여기엔 기록으로 남습니다">🗃</span>` : ""}
         <span class="mw-todo-btns">
-          <button type="button" data-act="edit" data-id="${esc(t.id)}" title="고치기" aria-label="고치기">✏️</button>
+          ${overdue ? `<button type="button" class="mw-today-move" data-act="move-today" data-id="${esc(t.id)}"
+                  title="오늘 날짜로 옮기기">오늘 하기</button>` : ""}
           <button type="button" data-act="routine" data-id="${esc(t.id)}"
                   title="${routine ? "매일 반복 끄기" : "매일 반복으로 (날짜는 지워져요)"}"
                   aria-label="반복 바꾸기">🔁</button>
           <button type="button" data-act="del" data-id="${esc(t.id)}" title="지우기" aria-label="지우기">🗑</button>
         </span>
       </li>`;
+  }
+
+  /* ---------------------------------------------------------------
+     제자리 편집 — 글자를 <input> 으로 바꿔치기
+     ---------------------------------------------------------------
+     Enter · 칸 밖을 누르면 저장, Esc 면 취소.
+     빈 칸으로 두고 나가면 **원래 글이 그대로 남습니다** — 실수로 다
+     지우고 빠져나갔을 때 이름 없는 할 일이 되면 안 되니까요.
+     (지우려면 🗑 을 눌러야 합니다. 그쪽은 확인을 한 번 물어요) */
+  function startInlineEdit(span) {
+    if (!span || span.querySelector("input")) return;
+    const id = span.dataset.id;
+    const before = span.textContent;
+
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.className = "mw-todo-edit";
+    inp.value = before;
+    inp.setAttribute("aria-label", "할 일 고치기");
+    span.textContent = "";
+    span.appendChild(inp);
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+
+    let done = false;
+    const finish = (save) => {
+      if (done) return;
+      done = true;
+      const next = inp.value;
+      span.textContent = before;                 // 먼저 원래대로 (실패해도 글이 안 사라지게)
+      if (save && window.setTodoText?.(id, next)) {
+        renderTodoPanel();
+        renderCal();
+      }
+    };
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter")  { e.preventDefault(); finish(true); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    });
+    inp.addEventListener("blur", () => finish(true));
+    /* 편집 중 클릭이 바깥 처리로 새지 않게 */
+    inp.addEventListener("click", (e) => e.stopPropagation());
   }
 
   function todoPanelHtml() {
@@ -509,7 +570,15 @@
     if (act === "add-day")  { addFrom("day");  return; }
     if (act === "add-free") { addFrom("free"); return; }
 
-    if (act === "edit")    { window.editTodo?.(id); return; }
+    if (act === "edit-inline") { startInlineEdit(node); return; }
+
+    /* [오늘 하기] — 못 끝낸 지난 할 일을 오늘 칸으로.
+       날짜만 바꿉니다. 완료 여부·반복·글자는 그대로예요. */
+    if (act === "move-today") {
+      window.setTodoDue?.(id, todayStr());
+      selectDate(todayStr());                    // 옮긴 곳이 바로 보이게
+      return;
+    }
     if (act === "del")     { window.deleteTodo?.(id); return; }
     if (act === "routine") { window.toggleRoutineTodo?.(id); return; }
   }

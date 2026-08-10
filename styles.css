@@ -5512,24 +5512,55 @@ body.split-dragging #chat-box3{ user-select: none; }
   background: rgba(250,246,236,.75);
   border: 1px solid rgba(163,88,70,.14);
 }
-.mw-todo-l{
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1 1 auto;
-  min-width: 0;
-  cursor: pointer;
-}
+/* [뺌 2026-08-10] .mw-todo-l 은 없앴습니다.
+
+   체크 상자와 글자를 <label> 로 함께 감싸고 있어서, 글자를 눌러도
+   완료로 바뀌었습니다. 이제 글자 클릭은 **제자리 편집**이라 감싸기를
+   풀어야 했어요 — 안 그러면 고치려고 누를 때마다 체크가 켜집니다. */
 .mw-chk{
   flex: none;
   width: 16px; height: 16px;
   accent-color: #B3372B;
+  cursor: pointer;
 }
 .mw-todo-t{
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--fs-sm);
   color: #2B2620;
   word-break: break-word;
+  padding: 2px 4px;
+  margin: -2px -4px;             /* 누를 자리는 넓히되 줄 높이는 그대로 */
+  border-radius: 6px;
+  cursor: text;                  /* "여기 눌러서 고칠 수 있다" 는 신호 */
+  transition: background var(--anim-fast);
 }
+.mw-todo-t:hover{ background: rgba(179,55,43,.09); }
+.mw-todo-t:focus-visible{ outline: 2px solid rgba(179,55,43,.45); outline-offset: 1px; }
+
+/* 제자리 편집 — 줄 모양이 흔들리지 않게 글자와 같은 크기로 */
+.mw-todo-edit{
+  width: 100%;
+  border: none;
+  background: #FFFDF6;
+  border-radius: 6px;
+  padding: 1px 4px;
+  font: inherit;
+  color: #2B2620;
+  outline: 2px solid rgba(179,55,43,.45);
+}
+
+/* 지난 날짜인데 아직 안 끝낸 할 일 */
+.mw-todo.is-overdue{ border-color: rgba(179,55,43,.34); }
+.mw-today-move{
+  font-size: var(--fs-2xs) !important;
+  font-weight: var(--fw-bold);
+  color: #B3372B;
+  background: rgba(179,55,43,.10) !important;
+  padding: 3px 8px !important;
+  white-space: nowrap;
+}
+.mw-today-move:hover{ background: rgba(179,55,43,.20) !important; }
 .mw-todo.is-done .mw-todo-t{ text-decoration: line-through; color: #8A7B68; }
 .mw-rbadge{ flex: none; font-size: var(--fs-2xs); }
 /* 🗃 — 프로필 목록에서 치운(완료 정리한) 할 일. 여기엔 기록으로 남습니다 */
