@@ -447,7 +447,7 @@ window.AppSession = AppSession;
       callIfFn("listenNotice");
       callIfFn("listenNotes");
       callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
-      callIfFn("listenNotice");       // 📢 공지 — 안 읽은 게 있으면 단추에 붉은 점
+      callIfFn("listenNoticeBoard");  // 📢 공지판 — 안 읽은 게 있으면 단추에 붉은 점
 
       /* [2026-08-10] 들어오자마자 내 할 일 **개수**를 한 번 올립니다.
 

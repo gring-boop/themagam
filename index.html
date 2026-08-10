@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608110109">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608110109">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608110143">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608110143">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608110109">
+  <link rel="manifest" href="manifest.json?v=202608110143">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608110109" />
+  <link rel="stylesheet" href="styles.css?v=202608110143" />
 </head>
 
 <body>
@@ -221,9 +221,9 @@
      안쪽은 script_notice.js 가 그립니다. 쓰는 사람은 방장 하나뿐이고,
      그건 화면이 아니라 보안규칙(서버)이 막습니다.
      ===================================================================== -->
-<div id="notice-modal" onclick="closeNotice()" role="dialog" aria-modal="true" aria-labelledby="notice-title">
+<div id="notice-modal" onclick="closeNoticeBoard()" role="dialog" aria-modal="true" aria-labelledby="notice-title">
   <div class="modal-content" onclick="event.stopPropagation()">
-    <button type="button" class="modal-x" onclick="closeNotice()" aria-label="공지판 닫기" title="닫기">✕</button>
+    <button type="button" class="modal-x" onclick="closeNoticeBoard()" aria-label="공지판 닫기" title="닫기">✕</button>
 
     <h2 class="nt-eyebrow" id="notice-title" aria-label="공지판">— NOTICE —</h2>
 
@@ -238,7 +238,7 @@
 </div>
 
 <!-- 공지 사진 크게 보기 -->
-<div id="notice-zoom" onclick="closeNoticeZoom()" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
+<div id="notice-zoom" onclick="closeNoticeBoardZoom()" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
   <img src="" alt="공지 사진">
 </div>
 
@@ -505,7 +505,7 @@
                자리는 Chat 과 ☕ 수다방 사이 — 놓치면 안 되는 글이라
                가장 먼저 눈에 걸리는 자리에 둡니다. -->
           <button id="notice-btn" class="chat-tab" type="button"
-                  onclick="openNotice()" title="공지판 열기">📢 공지
+                  onclick="openNoticeBoard()" title="공지판 열기">📢 공지
             <span id="notice-dot" class="notice-dot hidden" aria-label="안 읽은 공지 있음"></span>
           </button>
           <button id="chat-tab-chatty" class="chat-tab" type="button"
@@ -835,33 +835,33 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608110109"></script>
-<script src="script_core.js?v=202608110109"></script>
-<script src="script_auth.js?v=202608110109"></script>
-<script src="script_ui.js?v=202608110109"></script>
-<script src="script_chat.js?v=202608110109"></script>
-<script src="script_chatty.js?v=202608110109"></script>
-<script src="script_data.js?v=202608110109"></script>
-<script src="script_realtime.js?v=202608110109"></script>
-<script src="script_layout.js?v=202608110109"></script>
-<script src="script_wordcount.js?v=202608110109"></script>
-<script src="script_timelog.js?v=202608110109"></script>
-<script src="script_idledetect.js?v=202608110109"></script>
-<script src="script_profile.js?v=202608110109"></script>
-<script src="script_mywork.js?v=202608110109"></script>
-<script src="script_forest.js?v=202608110109"></script>
-<script src="script_notice.js?v=202608110109"></script>
-<script src="script_reactions.js?v=202608110109"></script>
-<script src="script_note.js?v=202608110109"></script>
+<script src="fortune_data.js?v=202608110143"></script>
+<script src="script_core.js?v=202608110143"></script>
+<script src="script_auth.js?v=202608110143"></script>
+<script src="script_ui.js?v=202608110143"></script>
+<script src="script_chat.js?v=202608110143"></script>
+<script src="script_chatty.js?v=202608110143"></script>
+<script src="script_data.js?v=202608110143"></script>
+<script src="script_realtime.js?v=202608110143"></script>
+<script src="script_layout.js?v=202608110143"></script>
+<script src="script_wordcount.js?v=202608110143"></script>
+<script src="script_timelog.js?v=202608110143"></script>
+<script src="script_idledetect.js?v=202608110143"></script>
+<script src="script_profile.js?v=202608110143"></script>
+<script src="script_mywork.js?v=202608110143"></script>
+<script src="script_forest.js?v=202608110143"></script>
+<script src="script_notice.js?v=202608110143"></script>
+<script src="script_reactions.js?v=202608110143"></script>
+<script src="script_note.js?v=202608110143"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608110109"></script>
+<script src="script_worktag.js?v=202608110143"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608110109"></script>
-<script src="script_share.js?v=202608110109"></script>
-<script src="script_manual.js?v=202608110109"></script>
-<script src="script_guard.js?v=202608110109"></script>
+<script src="script_sticker.js?v=202608110143"></script>
+<script src="script_share.js?v=202608110143"></script>
+<script src="script_manual.js?v=202608110143"></script>
+<script src="script_guard.js?v=202608110143"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -886,7 +886,7 @@
       "script_profile.js":  "renderProfilePanel",
       "script_mywork.js":   "openMyWork",
       "script_forest.js":   "openForest",
-      "script_notice.js":   "openNotice",
+      "script_notice.js":   "openNoticeBoard",
       "script_reactions.js":"toggleReaction",
       "script_share.js":   "toggleScreenShare",
       "script_note.js":    "openNoteTo",

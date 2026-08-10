@@ -67,6 +67,7 @@
   let _open    = null;   // 펼쳐 둔 공지 id
   let _imgCache = {};    // { id: [dataUrl, ...] } — 받아온 사진
   let _writing = false;  // 작성 칸이 열려 있나
+  let _editId  = null;   // 고치는 중인 공지 id (null 이면 새 글)
   let _draft   = { title: "", body: "", tag: "feat", imgs: [] };
   let _bound   = false;
 
@@ -175,7 +176,7 @@
   /* =====================================================================
      서버에서 목록 받기 — 글만. 사진은 여기서 안 받아옵니다.
      ===================================================================== */
-  function listenNotice() {
+  function listenNoticeBoard() {
     if (!window.db) return;
     window.db.ref("notice/list").on("value", snap => {
       const raw = snap.val() || {};
@@ -186,6 +187,7 @@
           body:  String(raw[id]?.body  || ""),
           tag:   String(raw[id]?.tag   || "info"),
           at:    Number(raw[id]?.at    || 0),
+          editedAt: Number(raw[id]?.editedAt || 0),
           imgs:  Math.max(0, Math.min(MAX_IMGS, Number(raw[id]?.imgs || 0)))
         }))
         .sort((a, b) => b.at - a.at);        // 최신이 위로
@@ -231,12 +233,13 @@
           <span class="nt-tag nt-tag-${esc(n.tag)}">${esc(tagLabel(n.tag))}</span>
           <span class="nt-title">${esc(n.title)}</span>
           ${n.imgs ? `<span class="nt-clip" title="사진 ${n.imgs}장">🖼 ${n.imgs}</span>` : ""}
-          <span class="nt-date">${esc(dateLabel(n.at))}</span>
+          <span class="nt-date">${esc(dateLabel(n.at))}${n.editedAt ? " (수정됨)" : ""}</span>
         </button>
         <div class="nt-body">${bodyHtml}</div>
         ${shots}
         ${isAdmin() ? `
           <div class="nt-admin">
+            <button type="button" class="nt-del" data-nt="edit" data-id="${esc(n.id)}">✏️ 고치기</button>
             <button type="button" class="nt-del" data-nt="del" data-id="${esc(n.id)}">🗑 지우기</button>
           </div>` : ""}
       </article>`;
@@ -251,6 +254,7 @@
     }
     return `
       <div class="nt-write">
+        <div class="nt-write-title">${_editId ? "✏️ 공지 고치기" : "＋ 새 공지"}</div>
         <div class="nt-tagpick" role="group" aria-label="분류">
           ${TAGS.map(t => `
             <button type="button" class="nt-tag nt-tag-${t.id}${_draft.tag === t.id ? " on" : ""}"
@@ -278,7 +282,7 @@
         <div class="nt-write-foot">
           <span class="nt-msg" id="nt-msg" role="status"></span>
           <button type="button" class="ghost-btn compact" data-nt="cancel">취소</button>
-          <button type="button" class="ghost-btn primary compact" data-nt="save">올리기</button>
+          <button type="button" class="ghost-btn primary compact" data-nt="save">${_editId ? "저장" : "올리기"}</button>
         </div>
       </div>`;
   }
@@ -354,8 +358,31 @@
         return;
       }
 
-      if (act === "new")    { _writing = true;  _draft = { title: "", body: "", tag: "feat", imgs: [] }; render(); return; }
-      if (act === "cancel") { keepDraft(); _writing = false; render(); return; }
+      if (act === "new") {
+        _writing = true; _editId = null;
+        _draft = { title: "", body: "", tag: "feat", imgs: [] };
+        render(); return;
+      }
+
+      if (act === "edit") {
+        const n = _list.find(x => x.id === id);
+        if (!n) return;
+        _writing = true;
+        _editId  = id;
+        /* 사진도 함께 불러와야 "고치기"를 눌렀다가 저장하는 것만으로
+           사진이 날아가지 않습니다. 아직 안 받아왔으면 지금 받아옵니다. */
+        _draft = { title: n.title, body: n.body, tag: n.tag, imgs: (_imgCache[id] || []).slice() };
+        render();
+        if (n.imgs && !_imgCache[id]) {
+          say("사진을 불러오는 중…");
+          try { _draft.imgs = (await loadImgs(id)).slice(); say(""); }
+          catch (e) { say("사진을 못 불러왔어요. 그대로 저장하면 사진이 지워집니다."); }
+          render();
+        }
+        return;
+      }
+
+      if (act === "cancel") { keepDraft(); _writing = false; _editId = null; render(); return; }
       if (act === "tag")    { keepDraft(); _draft.tag = btn.dataset.tag; render(); return; }
       if (act === "unpic")  { keepDraft(); _draft.imgs.splice(Number(btn.dataset.i) || 0, 1); render(); return; }
       if (act === "pic")    { keepDraft(); pickPhoto(); return; }
@@ -404,27 +431,46 @@
     if (!title) { say("제목을 적어주세요."); return; }
     if (!body)  { say("내용을 적어주세요."); return; }
 
-    say("올리는 중…");
+    const editing = !!_editId;
+    say(editing ? "저장하는 중…" : "올리는 중…");
     try {
-      const ref = window.db.ref("notice/list").push();
-      const id  = ref.key;
+      const ref = editing
+        ? window.db.ref("notice/list/" + _editId)
+        : window.db.ref("notice/list").push();
+      const id = editing ? _editId : ref.key;
 
       /* ★ 사진을 먼저 넣고 목록을 나중에 넣습니다.
          반대로 하면, 목록만 올라간 찰나에 누가 열었을 때
          "사진 2장" 이라고 써 놓고 못 불러오는 상태가 됩니다. */
       if (_draft.imgs.length) {
         await window.db.ref("notice/img/" + id).set(_draft.imgs);
+      } else if (editing) {
+        /* 고치면서 사진을 다 뺐다면 서버에서도 지웁니다 —
+           안 그러면 "사진 0장" 인데 그림이 남아 용량만 먹습니다. */
+        await window.db.ref("notice/img/" + id).remove();
       }
+
+      /* ★ 고칠 때 at(올린 시각)은 **그대로 둡니다.**
+         at 을 새로 찍으면 목록에서 맨 위로 튀어 오르고, 모두에게
+         "안 읽은 새 공지" 로 다시 붉은 점이 붙습니다. 오타 하나
+         고쳤는데 방 전체에 새 공지가 뜨면 안 되니까요.
+         대신 고친 시각은 editedAt 에 따로 남겨 "(수정됨)" 을 붙입니다. */
+      const keepAt = editing
+        ? (_list.find(x => x.id === id)?.at || Date.now())
+        : Date.now();
+
       await ref.set({
         title: title.slice(0, MAX_TITLE),
         body:  body.slice(0, MAX_BODY),
         tag:   TAGS.some(t => t.id === _draft.tag) ? _draft.tag : "info",
-        at:    Date.now(),
-        imgs:  _draft.imgs.length
+        at:    keepAt,
+        imgs:  _draft.imgs.length,
+        ...(editing ? { editedAt: Date.now() } : {})
       });
 
       _imgCache[id] = _draft.imgs.slice();
       _writing = false;
+      _editId  = null;
       _draft = { title: "", body: "", tag: "feat", imgs: [] };
       _open = id;
       say("");
@@ -441,13 +487,13 @@
       console.warn("[공지] 올리기 실패", e);
       const code = String(e && (e.code || e.message) || "");
       say(/permission|PERMISSION/i.test(code)
-        ? "권한이 없어요. 콘솔에서 noticeDiag() 를 실행해 보세요."
+        ? "권한이 없어요. 콘솔에서 noticeBoardDiag() 를 실행해 보세요."
         : "올리지 못했어요 — " + (code || "알 수 없는 오류"));
     }
   }
 
   /* =====================================================================
-     noticeDiag() — 안 써질 때 콘솔(F12)에 붙여 넣고 실행합니다.
+     noticeBoardDiag() — 안 써질 때 콘솔(F12)에 붙여 넣고 실행합니다.
      ---------------------------------------------------------------------
      "권한이 없다"는 말은 원인이 셋이라 그것만으로는 못 고칩니다:
        ① 로그인한 계정이 방장 계정이 아님
@@ -455,7 +501,7 @@
        ③ 값이 규칙의 조건에 안 맞음 (글자 수·사진 크기)
      셋을 하나씩 갈라 봅니다. 화면에 아무것도 안 남기고 확인만 해요.
      ===================================================================== */
-  async function noticeDiag() {
+  async function noticeBoardDiag() {
     const uid = (() => { try { return firebase.auth().currentUser?.uid || null; } catch (e) { return null; } })();
     console.log("① 지금 로그인한 계정 :", uid || "(로그인 안 됨)");
     console.log("   보안규칙이 허락한 계정:", ADMIN_UID);
@@ -507,11 +553,12 @@
   /* =====================================================================
      열고 닫기
      ===================================================================== */
-  function openNotice() {
+  function openNoticeBoard() {
     const modal = el("notice-modal");
     if (!modal) return;
     bind();
     _writing = false;
+    _editId  = null;
     modal.style.display = "flex";
     render();
     /* 읽음은 **연 뒤에** 표시합니다 — 먼저 표시하면 "새 공지" 딱지가
@@ -519,24 +566,25 @@
     setTimeout(markSeen, 1200);
   }
 
-  function closeNotice() {
+  function closeNoticeBoard() {
     const modal = el("notice-modal");
     if (modal) modal.style.display = "none";
     closeZoom();
     _writing = false;
+    _editId  = null;
   }
 
   document.addEventListener("keydown", ev => {
     if (ev.key !== "Escape") return;
     if (el("notice-zoom")?.style.display === "flex") { closeZoom(); return; }
-    if (el("notice-modal")?.style.display === "flex") closeNotice();
+    if (el("notice-modal")?.style.display === "flex") closeNoticeBoard();
   });
 
-  window.openNotice   = openNotice;
-  window.closeNotice  = closeNotice;
-  window.closeNoticeZoom = closeZoom;
-  window.listenNotice = listenNotice;
-  window.noticeDiag   = noticeDiag;
+  window.openNoticeBoard   = openNoticeBoard;
+  window.closeNoticeBoard  = closeNoticeBoard;
+  window.closeNoticeBoardZoom = closeZoom;
+  window.listenNoticeBoard = listenNoticeBoard;
+  window.noticeBoardDiag   = noticeBoardDiag;
   /* 검사와 콘솔 확인용 */
   window._noticeAdminUid = ADMIN_UID;
 })();

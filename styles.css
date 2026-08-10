@@ -5133,14 +5133,26 @@ html[data-theme-style="studio"] .user-card{
 
 /* [2026-08-04] 탭 줄(.chat-tabs)은 없앴습니다 — 머리말에 합쳐졌어요.
    제목(#my-info)이 메인 탭, 옆의 .chat-tab 버튼이 Chatty 탭입니다. */
+/* [2026-08-11] Chat · 📢 공지 · ☕ 수다방 세 칸의 간격을 똑같이.
+
+   ★ 예전에는 셋 사이가 달라 보였습니다. 이유는 gap 이 아니라 **안쪽 여백**
+     이었어요 — 공지·수다방은 단추라서 좌우 10px 씩 품고 있는데 Chat 은
+     맨 글자였습니다. 그래서 글자와 글자 사이가
+       Chat↔공지 = 6 + 10 = 16px,  공지↔수다방 = 10 + 6 + 10 = 26px
+     로 벌어졌습니다. gap 만 줄이면 이 차이는 그대로 남습니다.
+     Chat 에도 같은 여백을 줘서 셋을 나란히 맞췄습니다. */
 .chat-head-left{
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   flex: 1 1 auto;
   min-width: 0;
 }
-.chat-head-left #my-info{ flex: 0 1 auto; cursor: pointer; }
+.chat-head-left #my-info{
+  flex: 0 1 auto;
+  cursor: pointer;
+  padding: 5px 8px;      /* .chat-tab 과 같은 값 */
+}
 #my-info.tab-off{ opacity: .5; }
 .chat-tab{
   position: relative;
@@ -5149,7 +5161,7 @@ html[data-theme-style="studio"] .user-card{
   color: var(--muted);
   font-size: var(--fs-sm);
   font-weight: 600;
-  padding: 5px 10px;
+  padding: 5px 8px;      /* #my-info 와 같은 값 — 위 주석 참고 */
   border-radius: var(--r-sm);
   cursor: pointer;
 }
@@ -7035,3 +7047,7 @@ body.split-dragging #chat-box3{ user-select: none; }
   max-height: calc(100dvh - 40px);
   border-radius: var(--r-md);
 }
+
+/* 공지 쓰기 칸 — 새로 쓰는 중인지 고치는 중인지 한눈에 */
+.nt-write-title{ font-size: var(--fs-sm); font-weight: 600; color: var(--muted-strong); }
+.nt-admin{ display: flex; gap: 10px; justify-content: flex-end; }
