@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<!-- TheMagam © 그링링 · 무단 복제·재배포 금지 -->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>더마감 · 모바일</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FAF6EC">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="더마감">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!--
+=========================================================================
+  m.html — 더마감 모바일 화면 (2026-08-10)
+=========================================================================
+  [무엇인가]
+  폰으로 열었을 때 쓰는 가벼운 화면입니다. 탭 두 개 —
+    👤 프로필    내 상태 · 오늘/이번 주 누적 시간 · 오늘 목표
+    👥 작가 목록  누가 지금 있고 누가 없는지
+
+  [왜 따로 만드나]
+  작업방 화면은 세 칸(채팅·접속자·뽀모)을 나란히 두는 구조라
+  폰에서는 어느 칸도 제대로 안 보입니다. 자리를 다시 짜는 게 맞아요.
+
+  [무엇을 안 넣었나 — 그리고 왜]
+    · 타이머·랭킹  남의 작업 시간은 users/{닉}/timeSegs 에 있고,
+                   본인과 방장만 읽도록 잠겨 있습니다. 랭킹을 만들려면
+                   공개 집계 칸을 새로 파야 하는데, 그건 "누가 몇 시간
+                   했는지 서로 다 보인다"는 뜻이라 방 성격을 바꾸는
+                   결정입니다. 멤버들과 정한 뒤에 붙입니다.
+    · 화면 공유    getDisplayMedia 가 모바일에 없습니다. 아예 안 돼요.
+    · 자동감지     IdleDetector 가 모바일 크롬에 없습니다.
+    · 채팅·대숲    좁은 화면에서 무거워서 일단 뺐습니다.
+
+  [작업 시간은 여기서 세지 않습니다]
+  시간 집계는 작업방 화면(PC)이 맡습니다. 폰에서 열어 둔다고 시간이
+  쌓이지 않아요. 폰은 "보는 창"입니다.
+
+  [PC 와 동시에 켜면]
+  접속 표시(status)는 필명당 한 칸뿐이라 두 기기가 같은 칸을 씁니다.
+  그래서 폰은 **덮어쓰지 않고 필요한 칸만** 손댑니다(update).
+  나갈 때도 통째로 지우지 않고 "끊김" 표시만 남깁니다 — 안 그러면
+  폰을 닫는 순간 PC 쪽 접속까지 목록에서 사라집니다.
+=========================================================================
+-->
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#FAF6EC; --panel:#FFFDF6; --line:rgba(163,88,70,.22);
+    --text:#2B2620; --muted:#8A7B68; --strong:#6B5F52;
+    --accent:#B3372B; --fill:rgba(163,88,70,.10); --fill2:rgba(163,88,70,.16);
+    --r:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17120E; --panel:#211A15; --line:rgba(235,200,160,.18);
+      --text:#EDE6DA; --muted:#A2937F; --strong:#C9BCA8;
+      --accent:#E9836F; --fill:rgba(235,200,160,.08); --fill2:rgba(235,200,160,.14);
+    }
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; }
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:15px; line-height:1.5;
+    display:flex; flex-direction:column;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  button,input{ font:inherit; color:inherit; }
+
+  /* ── 입장 ── */
+  #gate{
+    position:fixed; inset:0; z-index:50; background:var(--bg);
+    display:flex; flex-direction:column; justify-content:center;
+    padding:28px 22px; gap:10px;
+  }
+  #gate h1{ font-size:26px; font-weight:600; margin:0 0 2px; letter-spacing:.18em; }
+  #gate .sub{ color:var(--muted); font-size:13px; margin:0 0 14px; }
+  #gate input{
+    width:100%; padding:13px 15px; border-radius:999px;
+    border:1px solid var(--line); background:var(--panel);
+  }
+  #gate button{
+    width:100%; padding:14px; border-radius:999px; border:none;
+    background:var(--accent); color:#FFF6EE; font-weight:600; margin-top:4px;
+  }
+  #gate .msg{ font-size:13px; color:var(--accent); min-height:1.4em; }
+  #gate .note{ font-size:12px; color:var(--muted); margin-top:10px; line-height:1.6; }
+
+  /* ── 공통 ── */
+  header{
+    padding:14px 16px 10px; display:flex; align-items:center; gap:8px;
+  }
+  header h2{ font-size:19px; font-weight:600; margin:0; flex:1; }
+  .icon-btn{
+    width:34px; height:34px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel); display:flex; align-items:center; justify-content:center;
+  }
+  main{ flex:1; overflow-y:auto; padding:0 16px 16px; -webkit-overflow-scrolling:touch; }
+  .card{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--r); padding:14px; margin-bottom:12px;
+  }
+  .row{ display:flex; align-items:center; gap:10px; }
+  .grow{ flex:1; min-width:0; }
+  .nick{ font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sub{ color:var(--muted); font-size:12.5px; }
+
+  .av{
+    width:46px; height:46px; border-radius:12px; flex:0 0 auto;
+    background:var(--fill); overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:600; color:#3B2A20;
+  }
+  .av img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  .pill{
+    display:inline-flex; align-items:center; gap:4px;
+    padding:3px 9px; border-radius:999px;
+    font-size:11.5px; font-weight:600; white-space:nowrap;
+    border:1px solid transparent;
+  }
+  .st-writing{ background:rgba(255,59,48,.74); border-color:rgba(255,59,48,.86); color:#7A1C18; }
+  .st-focus  { background:rgba(133,183,235,.74); border-color:rgba(133,183,235,.86); color:#0C3255; }
+  .st-rest   { background:rgba(93,202,165,.74); border-color:rgba(93,202,165,.86); color:#04342C; }
+  .st-away   { background:var(--fill2); border-color:var(--line); color:var(--muted); }
+
+  /* 오늘의 작업 스티커 (작업방과 같은 값) */
+  .tag{ background:var(--fill2); border-color:var(--line); color:var(--strong); }
+
+  /* ── 프로필 ── */
+  .stat2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .stat{ background:var(--fill); border-radius:12px; padding:11px 12px; }
+  .stat .k{ font-size:11.5px; color:var(--muted); }
+  .stat .v{ font-size:21px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:2px; }
+  .goal{ margin-top:12px; font-size:13.5px; color:var(--strong); }
+  .goal b{ color:var(--text); font-weight:600; }
+  .picker{ display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+  .picker button{ border:1px solid transparent; }
+  .picker button[aria-pressed="false"]{ opacity:.42; }
+
+  /* ── 목록 ── */
+  .seg{ display:flex; gap:6px; background:var(--fill); border-radius:999px; padding:4px; margin-bottom:12px; }
+  .seg button{
+    flex:1; padding:8px; border:none; border-radius:999px; background:transparent;
+    color:var(--muted); font-weight:600; font-size:13.5px;
+  }
+  .seg button[aria-selected="true"]{ background:var(--panel); color:var(--text); }
+  .search{
+    width:100%; padding:11px 15px; border-radius:999px;
+    border:1px solid var(--line); background:var(--panel); margin-bottom:12px;
+  }
+  .person{ padding:11px 0; border-bottom:1px solid var(--line); }
+  .person:last-child{ border-bottom:none; }
+  .dot{ width:7px; height:7px; border-radius:999px; background:#3FA974; flex:0 0 auto; }
+  .dot.off{ background:var(--line); }
+  .empty{ text-align:center; color:var(--muted); font-size:13.5px; padding:26px 0; }
+
+  /* ── 아래 탭 ── */
+  nav{
+    display:flex; border-top:1px solid var(--line); background:var(--panel);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav button{
+    flex:1; padding:9px 0 11px; border:none; background:transparent;
+    color:var(--muted); font-size:11.5px; display:flex; flex-direction:column;
+    align-items:center; gap:3px;
+  }
+  nav button[aria-selected="true"]{ color:var(--accent); }
+  nav .ico{ font-size:19px; line-height:1; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- 입장 -->
+<div id="gate">
+  <h1>더 마 감</h1>
+  <p class="sub">작업방과 같은 필명·비밀번호로 들어와요.</p>
+  <input id="g-nick" type="text" placeholder="필명" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <input id="g-pw" type="password" placeholder="비밀번호" autocomplete="current-password" enterkeyhint="go">
+  <button id="g-go" type="button">입장하기</button>
+  <p class="msg" id="g-msg" role="status"></p>
+  <p class="note">
+    폰에서는 <b>보기</b>와 <b>상태 바꾸기</b>만 됩니다.<br>
+    작업 시간은 <b>PC 작업방에서만</b> 쌓여요 — 폰을 켜둔다고 시간이 늘지 않습니다.
+  </p>
+</div>
+
+<!-- 👤 프로필 -->
+<header id="h-me" hidden>
+  <h2>프로필</h2>
+  <button class="icon-btn" type="button" id="btn-reload" aria-label="새로고침">↻</button>
+</header>
+<main id="p-me" hidden>
+  <div class="card">
+    <div class="row">
+      <div class="av" id="me-av"></div>
+      <div class="grow">
+        <div class="nick" id="me-nick"></div>
+        <div class="sub" id="me-sub">불러오는 중…</div>
+      </div>
+      <span class="pill" id="me-status"></span>
+    </div>
+
+    <div class="stat2">
+      <div class="stat"><div class="k">오늘 누적</div><div class="v" id="me-today">—</div></div>
+      <div class="stat"><div class="k">이번 주 누적</div><div class="v" id="me-week">—</div></div>
+    </div>
+
+    <div class="goal" id="me-goal" hidden></div>
+  </div>
+
+  <div class="card">
+    <div class="sub" style="margin-bottom:2px;">상태 바꾸기</div>
+    <div class="picker" id="me-picker"></div>
+    <p class="sub" style="margin:10px 0 0; line-height:1.6;">
+      여기서 바꾸면 작업방 카드에도 바로 보여요.
+      다만 <b>작업 시간은 PC 작업방이 셉니다</b> — 폰에서 WORK 로 바꿔도 시간은 안 쌓여요.
+    </p>
+  </div>
+</main>
+
+<!-- 👥 작가 목록 -->
+<header id="h-list" hidden>
+  <h2>작가 목록</h2>
+  <button class="icon-btn" type="button" id="btn-reload2" aria-label="새로고침">↻</button>
+</header>
+<main id="p-list" hidden>
+  <input class="search" id="q" type="search" placeholder="필명을 검색해요" autocomplete="off">
+  <div class="seg" role="tablist">
+    <button type="button" role="tab" id="seg-on"  aria-selected="true">온라인 0</button>
+    <button type="button" role="tab" id="seg-off" aria-selected="false">오프라인 0</button>
+  </div>
+  <div class="card" id="list-wrap"><div class="empty">불러오는 중…</div></div>
+</main>
+
+<!-- 아래 탭 -->
+<nav id="tabs" hidden>
+  <button type="button" data-tab="me"   aria-selected="true"><span class="ico">👤</span>프로필</button>
+  <button type="button" data-tab="list" aria-selected="false"><span class="ico">👥</span>작가 목록</button>
+</nav>
+
+<script>
+(function () {
+  "use strict";
+
+  /* 작업방과 **같은 방**을 봅니다 — script_core.js 의 값과 한 글자도 다르면 안 됩니다 */
+  const firebaseConfig = {
+    apiKey: "AIzaSyD1YV5KlgkwBSEpDupiwMcWtryrlfCFyGc",
+    authDomain: "themagam-158f7.firebaseapp.com",
+    databaseURL: "https://themagam-158f7-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "themagam-158f7",
+    storageBucket: "themagam-158f7.firebasestorage.app",
+    messagingSenderId: "429789102223",
+    appId: "1:429789102223:web:22263ce9440c144baa70fa"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+  /* 작업방과 **같은 규칙**이어야 합니다 (script_realtime.js) */
+  const DISCONNECT_GRACE_MS = 30 * 60 * 1000;
+  const ONLINE_STALE_MS     = 12 * 60 * 60 * 1000;
+  const STATUSES = [
+    { v:"writing", cls:"st-writing", label:"🔥WRITE🔥" },
+    { v:"focus",   cls:"st-focus",   label:"💻JOB💻" },
+    { v:"rest",    cls:"st-rest",    label:"☕BREAK☕" },
+    { v:"away",    cls:"st-away",    label:"💤AWAY💤" }
+  ];
+  const TAGS = {
+    idea:"💭 구상", draft:"✍️ 원고", polish:"📝 퇴고", proof:"🔍 교정",
+    revise:"✂️ 수정", rework:"🔧 개정", input:"📚 인풋", etc:"✨ 기타"
+  };
+
+  function stOf(v){ return STATUSES.find(s => s.v === v) || STATUSES[2]; }
+  function isOnline(row, now){
+    if (!row) return false;
+    const disc = Number(row.disconnectedAt || 0);
+    if (disc > 0 && now - disc >= DISCONNECT_GRACE_MS) return false;
+    const seen = Number(row.lastSeen || 0);
+    if (seen > 0 && now - seen >= ONLINE_STALE_MS) return false;
+    return true;
+  }
+  function dayKey(d){
+    d = d || new Date();
+    return d.getFullYear() + "-"
+      + String(d.getMonth()+1).padStart(2,"0") + "-"
+      + String(d.getDate()).padStart(2,"0");
+  }
+  /* 이번 주 = 월요일부터 오늘까지 (작업방과 같은 규칙) */
+  function weekKeys(){
+    const now = new Date(), dow = (now.getDay()+6)%7, out = [];
+    for (let i = dow; i >= 0; i--){
+      const d = new Date(now); d.setDate(now.getDate()-i);
+      out.push(dayKey(d));
+    }
+    return out;
+  }
+  function fmtDur(ms){
+    const m = Math.round(Math.max(0, ms)/60000);
+    if (m < 60) return m + "분";
+    const h = Math.floor(m/60);
+    return (m%60) ? `${h}시간 ${m%60}분` : `${h}시간`;
+  }
+  function hue(nick){
+    let h = 0;
+    for (const ch of String(nick)) h = (h*31 + ch.codePointAt(0)) % 360;
+    return `hsl(${h} 52% 74%)`;
+  }
+  function avHtml(nick, photo){
+    if (photo && /^(https?:|data:image\/)/i.test(photo))
+      return `<img src="${esc(photo)}" alt="" loading="lazy">`;
+    return `<span style="width:100%;height:100%;display:flex;align-items:center;
+            justify-content:center;background:${hue(nick)}">${esc(String(nick).slice(0,1))}</span>`;
+  }
+
+  /* 필명 → 로그인 아이디 (script_auth.js 와 같은 방식이어야 합니다) */
+  function nickToEmail(nick){
+    let hex = "";
+    for (const b of new TextEncoder().encode(nick)) hex += b.toString(16).padStart(2,"0");
+    return "n" + hex + "@themagam.local";
+  }
+
+  let myNick = "";
+  let _profiles = {};
+  let _status = {};
+  let _owners = {};
+  let _seg = "on";
+
+  /* =====================================================================
+     입장
+     ===================================================================== */
+  async function enter(){
+    const nick = $("g-nick").value.trim();
+    const pw   = $("g-pw").value;
+    const msg  = $("g-msg");
+    if (!nick || !pw){ msg.textContent = "필명과 비밀번호를 적어주세요."; return; }
+
+    $("g-go").disabled = true;
+    msg.textContent = "들어가는 중…";
+    try {
+      /* 탭마다 따로 로그인합니다 — PC 작업방 로그인을 건드리지 않게 */
+      try { await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch(e){}
+      await auth.signInWithEmailAndPassword(nickToEmail(nick), pw);
+    } catch (e) {
+      $("g-go").disabled = false;
+      msg.textContent = "필명이나 비밀번호가 달라요. (여기서는 새 필명을 만들 수 없어요)";
+      return;
+    }
+    myNick = nick;
+    $("gate").hidden = true;
+    $("tabs").hidden = false;
+    show("me");
+    start();
+  }
+
+  /* =====================================================================
+     듣기 — 접속 현황 · 프로필 · 전체 명단
+     ===================================================================== */
+  function start(){
+    db.ref("status").on("value", s => { _status = s.val() || {}; renderAll(); });
+    db.ref("nickOwner").on("value", s => { _owners = s.val() || {}; renderAll(); });
+
+    /* 프사는 users/{닉}/profile 만 공개로 열려 있습니다 */
+    db.ref("users").on("value", s => {
+      const v = s.val() || {};
+      _profiles = {};
+      Object.entries(v).forEach(([n, o]) => { _profiles[n] = (o && o.profile) || {}; });
+      renderAll();
+    }, () => { /* 규칙상 통째로는 못 읽을 수 있습니다 — 그때는 기본 프사로 */ });
+
+    loadMyTime();
+    markPresence();
+    setInterval(markPresence, 60 * 1000);
+  }
+
+  /* 접속 표시 — **덮어쓰지 않고 필요한 칸만** 손댑니다.
+     status 는 필명당 한 칸이라, PC 와 폰이 같은 칸을 씁니다.
+     set() 으로 통째로 쓰면 PC 가 올려둔 작업 시간·뽀모 표시가 지워져요. */
+  function markPresence(){
+    if (!myNick) return;
+    const ref = db.ref("status/" + myNick);
+    ref.update({
+      lastSeen: firebase.database.ServerValue.TIMESTAMP,
+      disconnectedAt: null
+    }).catch(()=>{});
+    /* 폰을 닫아도 **지우지 않습니다** — 지우면 PC 접속까지 목록에서 사라집니다.
+       "끊김" 만 남기고, PC 가 살아 있으면 다음 주기에 곧 지워집니다. */
+    ref.onDisconnect().update({
+      disconnectedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
+
+  /* 내 작업 시간 — 내 것만 읽습니다 (남의 기록은 잠겨 있어요) */
+  async function loadMyTime(){
+    if (!myNick) return;
+    const keys = weekKeys();
+    let today = 0, week = 0;
+    for (const k of keys){
+      let ms = 0;
+      try {
+        const snap = await db.ref(`users/${myNick}/timeSegs/${k}`).once("value");
+        /* ★ 구간의 칸 이름은 { s, a, b } 입니다 (status/from/to 가 아닙니다).
+           script_timelog.js 의 pushSegment 를 그대로 따라야 해요 —
+           이름을 잘못 짚으면 조용히 전부 0 으로 나옵니다. */
+        Object.values(snap.val() || {}).forEach(seg => {
+          if (!seg) return;
+          if (seg.s !== "writing" && seg.s !== "focus") return;   // Write + Job 만
+          ms += Math.max(0, Number(seg.b || 0) - Number(seg.a || 0));
+        });
+      } catch(e){}
+      week += ms;
+      if (k === dayKey()) today = ms;
+    }
+    $("me-today").textContent = fmtDur(today);
+    $("me-week").textContent  = fmtDur(week);
+  }
+
+  /* =====================================================================
+     그리기
+     ===================================================================== */
+  function renderAll(){ renderMe(); renderList(); }
+
+  function renderMe(){
+    if (!myNick) return;
+    const row = _status[myNick] || {};
+    const prof = _profiles[myNick] || {};
+    $("me-nick").textContent = myNick;
+    $("me-av").innerHTML = avHtml(myNick, prof.photo);
+
+    const st = stOf(row.status);
+    const pill = $("me-status");
+    pill.className = "pill " + st.cls;
+    pill.textContent = row.statusLabel || st.label;
+
+    const tag = TAGS[row.tag];
+    $("me-sub").innerHTML = tag ? `<span class="pill tag">${esc(tag)}</span>` : "오늘의 스티커 없음";
+
+    const goal = String(row.todayGoalText || "").trim();
+    const g = $("me-goal");
+    if (goal){ g.innerHTML = `🎯 <b>${esc(goal)}</b>`; g.hidden = false; }
+    else g.hidden = true;
+
+    const cur = row.status || "rest";
+    $("me-picker").innerHTML = STATUSES.map(s => `
+      <button type="button" class="pill ${s.cls}" data-set="${s.v}"
+              aria-pressed="${s.v === cur ? "true" : "false"}">${s.label}</button>`).join("");
+  }
+
+  function renderList(){
+    const now = Date.now();
+    const q = $("q").value.trim().toLowerCase();
+
+    const all = Object.keys(_owners);
+    const on = [], off = [];
+    all.forEach(n => (isOnline(_status[n], now) ? on : off).push(n));
+    on.sort((a,b) => a.localeCompare(b, "ko"));
+    off.sort((a,b) => a.localeCompare(b, "ko"));
+
+    $("seg-on").textContent  = `온라인 ${on.length}`;
+    $("seg-off").textContent = `오프라인 ${off.length}`;
+    $("seg-on").setAttribute("aria-selected",  _seg === "on"  ? "true" : "false");
+    $("seg-off").setAttribute("aria-selected", _seg === "off" ? "true" : "false");
+
+    const list = (_seg === "on" ? on : off).filter(n => !q || n.toLowerCase().includes(q));
+    const wrap = $("list-wrap");
+    if (!list.length){
+      wrap.innerHTML = `<div class="empty">${q ? "찾는 필명이 없어요." : "아무도 없어요."}</div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(n => {
+      const row = _status[n] || {};
+      const prof = _profiles[n] || {};
+      const st = stOf(row.status);
+      const tag = TAGS[row.tag];
+      const isOn = _seg === "on";
+      return `<div class="person row">
+        <span class="dot${isOn ? "" : " off"}"></span>
+        <div class="av" style="width:38px;height:38px;border-radius:10px;">${avHtml(n, prof.photo)}</div>
+        <div class="grow">
+          <div class="nick">${esc(n)}</div>
+          ${isOn && tag ? `<div class="sub">${esc(tag)}</div>` : ""}
+        </div>
+        ${isOn ? `<span class="pill ${st.cls}">${esc(row.statusLabel || st.label)}</span>` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  /* =====================================================================
+     조작
+     ===================================================================== */
+  function show(tab){
+    $("h-me").hidden   = tab !== "me";
+    $("p-me").hidden   = tab !== "me";
+    $("h-list").hidden = tab !== "list";
+    $("p-list").hidden = tab !== "list";
+    document.querySelectorAll("#tabs button").forEach(b =>
+      b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"));
+  }
+
+  /* 상태 바꾸기 — 여기도 update 입니다. PC 가 올려둔 값을 지우지 않게. */
+  function setStatus(v){
+    const s = stOf(v);
+    db.ref("status/" + myNick).update({
+      status: s.v,
+      statusLabel: s.label,
+      lastSeen: firebase.database.ServerValue.TIMESTAMP,
+      disconnectedAt: null
+    }).catch(() => alert("상태를 바꾸지 못했어요. 잠시 뒤 다시 해주세요."));
+    /* 다음에 PC 작업방에 들어갔을 때도 이어지도록 저장값도 함께 */
+    db.ref("users/" + myNick).update({ statusChoice: s.v }).catch(()=>{});
+  }
+
+  $("g-go").addEventListener("click", enter);
+  $("g-pw").addEventListener("keydown", e => { if (e.key === "Enter") enter(); });
+  $("tabs").addEventListener("click", e => {
+    const b = e.target.closest("[data-tab]");
+    if (b) show(b.dataset.tab);
+  });
+  $("me-picker").addEventListener("click", e => {
+    const b = e.target.closest("[data-set]");
+    if (b) setStatus(b.dataset.set);
+  });
+  $("q").addEventListener("input", renderList);
+  $("seg-on").addEventListener("click",  () => { _seg = "on";  renderList(); });
+  $("seg-off").addEventListener("click", () => { _seg = "off"; renderList(); });
+  [$("btn-reload"), $("btn-reload2")].forEach(b => b.addEventListener("click", () => {
+    loadMyTime(); renderAll();
+  }));
+
+  /* 폰은 화면을 껐다 켜는 일이 잦습니다 — 돌아올 때 한 번 새로 */
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && myNick){ markPresence(); loadMyTime(); }
+  });
+})();
+</script>
+</body>
+</html>
