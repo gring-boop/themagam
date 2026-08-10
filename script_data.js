@@ -165,7 +165,11 @@
       return next;
     });
 
-    _closeTodoDuePicker();
+    /* ★ 2026-08-11 — 여기서 _closeTodoDuePicker() 를 부르고 있었습니다.
+       그 함수는 8월 9일에 없앴는데(위 [뺌] 주석 참고) 부르는 쪽만
+       남아 있었어요. 이 줄에서 곧바로 멈추니 아래 두 줄이 실행되지
+       않았고, 그래서 [오늘 하기] 를 눌러도 아무 일이 없었습니다.
+       날짜 팝업이 이미 없으므로 닫을 것도 없습니다 — 줄만 걷습니다. */
     setTodoItemsToUI(items);
     savePersonalData();
   }
