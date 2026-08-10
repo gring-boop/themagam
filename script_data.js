@@ -319,6 +319,44 @@
     });
   }
 
+  /* =====================================================================
+     📌 방 전체 할 일 진척 — 개수만 따로 (2026-08-10)
+     ---------------------------------------------------------------------
+     접속자 명단 아래에 "오늘 할 일 10개 중 4개 완료" 한 줄을 띄우려고,
+     내 할 일 **개수**를 todostat/{날짜}/{필명} 에 올립니다.
+
+     [왜 status 를 안 쓰고 새 자리를 만들었나]
+     status 에도 같은 숫자(todoTotal·todoDone)가 이미 흐릅니다. 그걸
+     더하면 규칙을 손댈 필요도 없고 훨씬 간단해요. 그런데 status 는
+     **나가면 통째로 지워집니다.** 4개를 끝낸 사람이 퇴근하면 방 전체
+     합계가 3개로 **줄어듭니다.** "다 같이 쌓는다"는 느낌을 정면으로
+     깨뜨려요 — 글자수가 잘 쓰이는 이유가 바로 그 쌓이는 감각인데,
+     여기서 숫자가 내려가면 안 하느니만 못합니다.
+     그래서 글자수(wordlog)와 같은 방식으로 하루치를 남깁니다.
+
+     [무엇을 올리나 — 개수뿐입니다]
+     total 과 done 두 숫자만. 무엇을 적었는지는 올라가지 않습니다.
+     할 일 **내용**은 예전 그대로 users 아래에 잠겨 있고, 본인만 봅니다.
+
+     [세는 규칙]
+     카드에 쓰는 것과 똑같이 "오늘 것 + 날짜 없는 것"만 셉니다.
+     다음 달 할 일까지 세면 방 전체 숫자가 부풀어요.
+     ===================================================================== */
+  function _saveTodoStat() {
+    if (!myNick || !window.db) return;
+    try {
+      const day = window.Wordcount?.dayKey?.();
+      if (!day) return;                       // 날짜 계산이 아직이면 건너뜁니다
+      const list = (typeof todosForProfileList === "function")
+        ? todosForProfileList()
+        : (Array.isArray(window._todoItems) ? window._todoItems : []);
+      const total = list.length;
+      const done  = list.filter(x => x && x.done).length;
+      db.ref(`todostat/${day}/${myNick}`).set({ total, done, at: Date.now() });
+    } catch (e) {}
+  }
+  window.saveTodoStat = _saveTodoStat;
+
   function savePersonalData() {
     if (!myNick) return;
 
@@ -348,6 +386,10 @@
 
        update()는 지정한 키만 건드리고 형제는 그대로 둡니다. */
     db.ref("users/" + myNick).update(data);
+
+    /* [2026-08-10] 방 전체 할 일 진척에 쓸 **개수만** 따로 올려 둡니다.
+       (자세한 사정은 아래 _saveTodoStat 주석) */
+    _saveTodoStat();
 
     backupLocal();
     saveDailyLog();

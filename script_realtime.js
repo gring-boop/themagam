@@ -221,6 +221,51 @@
   }
   window.listenNotice = listenNotice;
   window.bindNoticeEdit = bindNoticeEdit;
+
+  /* =====================================================================
+     📌 방 전체 할 일 진척 — 접속자 명단 맨 아래 한 줄 (2026-08-10)
+     ---------------------------------------------------------------------
+     todostat/{오늘}/{필명} = { total, done } 를 모두 더해 보여줍니다.
+     개수뿐이라 누가 무엇을 적었는지는 알 수 없고, 화면에도 합계만
+     내걸립니다.
+
+     [왜 status 가 아니라 따로 쌓인 값을 보나]
+     status 는 나가면 지워집니다. 4개를 끝낸 사람이 퇴근하면 합계가
+     3개로 **줄어들어요.** 다 같이 쌓는다는 감각이 깨집니다.
+     todostat 은 하루치로 남아서, 사람이 드나들어도 안 내려갑니다.
+
+     [아무도 안 적은 날]
+     줄 자체를 감춥니다. "0개 중 0개" 는 알려주는 게 없으면서
+     쓸쓸하기만 해요.
+     ===================================================================== */
+  let _todoStatRef = null;
+
+  function listenRoomTodo() {
+    const day = window.Wordcount?.dayKey?.();
+    if (!day || !window.db) return;
+    try { _todoStatRef?.off(); } catch (e) {}
+    _todoStatRef = db.ref(`todostat/${day}`);
+    _todoStatRef.on("value", snap => renderRoomTodo(snap.val() || {}));
+  }
+
+  function renderRoomTodo(rows) {
+    const wrap = document.getElementById("room-todo");
+    const pill = document.getElementById("room-todo-pill");
+    if (!wrap || !pill) return;
+
+    let total = 0, done = 0;
+    Object.values(rows || {}).forEach(r => {
+      total += Math.max(0, Number(r?.total || 0));
+      done  += Math.max(0, Number(r?.done  || 0));
+    });
+
+    if (total <= 0) { wrap.setAttribute("hidden", ""); return; }
+    done = Math.min(done, total);                 // 어긋난 값이 와도 넘치지 않게
+    pill.innerHTML = `📌 오늘 할 일 <b>${total}개 중 ${done}개</b> 완료`;
+    wrap.removeAttribute("hidden");
+  }
+
+  window.listenRoomTodo = listenRoomTodo;
   document.addEventListener("DOMContentLoaded", () => {
     try { bindNoticeEdit(); } catch (e) {}
     try { bindHeadCountDoor(); } catch (e) {}

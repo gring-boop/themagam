@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608100036">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608100036">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608102121">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608102121">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608100036">
+  <link rel="manifest" href="manifest.json?v=202608102121">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608100036" />
+  <link rel="stylesheet" href="styles.css?v=202608102121" />
 </head>
 
 <body>
@@ -536,6 +536,18 @@
   <main class="cards-area" aria-label="공동 집필 현황">
     <h2 class="sr-only">공동 집필 현황</h2>
     <div class="user-cards-grid" id="user-cards" aria-live="polite"></div>
+
+    <!-- [2026-08-10] 📌 방 전체 할 일 진척 — 명단 맨 아래 가운데 한 줄.
+
+         글자수 36,000자가 잘 먹히는 이유와 같은 결입니다. 혼자 적는
+         숫자가 아니라 다 같이 쌓이는 숫자라서요. 할 일은 원래 혼자
+         보는 기능이라 아무 반향이 없었는데, 합계만 내걸면 그 감각이
+         생깁니다. **개수만** 모으고 내용은 올라가지 않습니다.
+
+         아무도 안 적은 날에는 줄 자체가 뜨지 않습니다(hidden). -->
+    <div class="room-todo" id="room-todo" hidden>
+      <span class="room-todo-pill" id="room-todo-pill"></span>
+    </div>
   </main>
 
 
@@ -772,30 +784,30 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608100036"></script>
-<script src="script_core.js?v=202608100036"></script>
-<script src="script_auth.js?v=202608100036"></script>
-<script src="script_ui.js?v=202608100036"></script>
-<script src="script_chat.js?v=202608100036"></script>
-<script src="script_chatty.js?v=202608100036"></script>
-<script src="script_data.js?v=202608100036"></script>
-<script src="script_realtime.js?v=202608100036"></script>
-<script src="script_layout.js?v=202608100036"></script>
-<script src="script_wordcount.js?v=202608100036"></script>
-<script src="script_timelog.js?v=202608100036"></script>
-<script src="script_idledetect.js?v=202608100036"></script>
-<script src="script_profile.js?v=202608100036"></script>
-<script src="script_mywork.js?v=202608100036"></script>
-<script src="script_forest.js?v=202608100036"></script>
-<script src="script_reactions.js?v=202608100036"></script>
-<script src="script_note.js?v=202608100036"></script>
+<script src="fortune_data.js?v=202608102121"></script>
+<script src="script_core.js?v=202608102121"></script>
+<script src="script_auth.js?v=202608102121"></script>
+<script src="script_ui.js?v=202608102121"></script>
+<script src="script_chat.js?v=202608102121"></script>
+<script src="script_chatty.js?v=202608102121"></script>
+<script src="script_data.js?v=202608102121"></script>
+<script src="script_realtime.js?v=202608102121"></script>
+<script src="script_layout.js?v=202608102121"></script>
+<script src="script_wordcount.js?v=202608102121"></script>
+<script src="script_timelog.js?v=202608102121"></script>
+<script src="script_idledetect.js?v=202608102121"></script>
+<script src="script_profile.js?v=202608102121"></script>
+<script src="script_mywork.js?v=202608102121"></script>
+<script src="script_forest.js?v=202608102121"></script>
+<script src="script_reactions.js?v=202608102121"></script>
+<script src="script_note.js?v=202608102121"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608100036"></script>
-<script src="script_share.js?v=202608100036"></script>
-<script src="script_manual.js?v=202608100036"></script>
-<script src="script_guard.js?v=202608100036"></script>
+<script src="script_worktag.js?v=202608102121"></script>
+<script src="script_share.js?v=202608102121"></script>
+<script src="script_manual.js?v=202608102121"></script>
+<script src="script_guard.js?v=202608102121"></script>
 
 <script>
   window.addEventListener("load", () => {

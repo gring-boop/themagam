@@ -446,6 +446,7 @@ window.AppSession = AppSession;
       callIfFn("listenPomodoro");
       callIfFn("listenNotice");
       callIfFn("listenNotes");
+      callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
 
       _statusIntervalId = setInterval(() => callIfFn("updateStatus", false), PRESENCE_POLL_MS);
 
