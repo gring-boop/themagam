@@ -3,14 +3,14 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 열두 개. 채팅과 수다방 양쪽에서 씁니다.
+   말풍선 대신 크게 뜨는 손그림 열다섯 개. 채팅과 수다방 양쪽에서 씁니다.
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
    올려야 합니다. 그림을 글자로 바꿔 메시지에 실어 보내는 방법도 있지만
    한 장에 수십 KB 라 채팅이 무거워져요.
 
-   SVG 는 선과 도형을 코드로 적는 방식이라 열두 개를 다 합쳐도 몇 KB 고,
+   SVG 는 선과 도형을 코드로 적는 방식이라 열다섯 개를 다 합쳐도 몇 KB 고,
    확대해도 안 깨지며, 저장소가 필요 없습니다. 더마감은 이미 프사 눈사람을
    이 방식으로 그리고 있어요.
 
@@ -134,6 +134,37 @@
       textColor: "#993C1D"
     },
     {
+      /* 끄덕끄덕 — 얼굴이 아래로 살짝 기울고, 위아래 움직임을 곡선 둘로.
+         "듣고 있어요" 에 가까운 말이라 색은 차분한 연두로. */
+      id: "nod", cmd: "끄덕", label: "끄덕끄덕",
+      cmdRe: /^\/(끄덕|ㅇㅇ)$/,
+      svg: `<g transform="rotate(9 36 32)">
+              <circle cx="36" cy="32" r="14" fill="#C0DD97"/>
+              <path d="M30 29q0 0 0 0" stroke="#3A2A22" stroke-width="3.4" stroke-linecap="round"/>
+              <circle cx="31" cy="30" r="1.8" fill="#3A2A22"/>
+              <circle cx="41" cy="30" r="1.8" fill="#3A2A22"/>
+              <path d="M31 37q5 3.5 10 0" stroke="#3A2A22" stroke-width="1.8"
+                    fill="none" stroke-linecap="round"/>
+            </g>
+            <path d="M17 20q3-4 6 0M17 44q3 4 6 0" stroke="#7FA84E" stroke-width="2.2"
+                  fill="none" stroke-linecap="round"/>
+            <path d="M55 20q-3-4-6 0M55 44q-3 4-6 0" stroke="#7FA84E" stroke-width="2.2"
+                  fill="none" stroke-linecap="round"/>`,
+      textColor: "#3B6D11"
+    },
+    {
+      /* 오케이 — 손가락으로 만드는 동그라미. 따봉(좋아요)과 헷갈리지 않게
+         손 모양 대신 **동그라미 자체**를 크게 그렸습니다. */
+      id: "ok", cmd: "오케이", label: "오케이",
+      cmdRe: /^\/(ㅇㅋ|오케이|오키)$/,
+      svg: `<circle cx="31" cy="34" r="11" fill="none" stroke="#3A9E8A" stroke-width="5"/>
+            <path d="M40 26q4-8 9-11M45 30q5-6 11-7M48 35q5-3 11-2"
+                  stroke="#3A9E8A" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M12 44q4 3 9 2" stroke="#3A9E8A" stroke-width="3.4"
+                  fill="none" stroke-linecap="round"/>`,
+      textColor: "#1F6B5C"
+    },
+    {
       /* 웃음·울음은 짝으로 둡니다. 얼굴 크기와 눈 위치를 맞춰서
          나란히 놓았을 때 한 세트로 보이게 했어요. */
       id: "haha", cmd: "ㅋㅋ", label: "ㅋㅋㅋ",
@@ -148,6 +179,20 @@
             <path d="M13 21l-4-3M14 29h-5M59 21l4-3M58 29h5"
                   stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#B07D12"
+    },
+    {
+      /* ㅎㅎ 는 ㅋㅋ 보다 한 톤 낮은 웃음입니다 — 입을 벌리지 않고
+         눈웃음에 볼만 발그레하게. 색도 노랑 대신 살구빛으로 낮췄어요. */
+      id: "hehe", cmd: "ㅎㅎ", label: "ㅎㅎㅎ",
+      cmdRe: /^\/ㅎ{1,12}$/,
+      svg: `<circle cx="36" cy="30" r="15" fill="#F5C4B3"/>
+            <path d="M27 28q3.5-4.5 7 0M38 28q3.5-4.5 7 0"
+                  stroke="#3A2A22" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            <path d="M30 37q6 5 12 0" stroke="#3A2A22" stroke-width="1.9"
+                  fill="none" stroke-linecap="round"/>
+            <circle cx="24" cy="35" r="3" fill="#E88A78" opacity=".7"/>
+            <circle cx="48" cy="35" r="3" fill="#E88A78" opacity=".7"/>`,
+      textColor: "#A34A32"
     },
     {
       id: "cry", cmd: "ㅠㅠ", label: "ㅠㅠㅠ",

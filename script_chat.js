@@ -129,6 +129,27 @@
   // =====================================================
   // ✅ 슬래시 명령어 정의
   // =====================================================
+  /* =====================================================================
+     슬래시 명령 — 둘만 남았습니다 (2026-08-10)
+
+     예전에는 열한 개가 있었습니다. /축하 /마감 /환영 /응원 /퇴근 /만세
+     /수고 /고추 /선언. 화면에 이모지를 흩뿌리고 시스템 메시지를 한 줄
+     남기는, 말하자면 "감정 표현" 도구였어요.
+
+     그 자리를 🖍️ 스티커가 대신하게 되면서 걷어냈습니다. 같은 말을 두
+     가지 방법으로 할 수 있으면 매번 어느 쪽을 쓸지 고르게 되고, 결국
+     둘 다 어중간하게 쓰입니다. 스티커가 눈에 더 잘 띄고 고르기도 쉬워요.
+
+     남긴 둘은 스티커로 대신할 수 없는 것들입니다 —
+       /운세    하루에 한 번 뽑는 값. 그림 하나로는 못 담습니다.
+       /외치기  사람이 쓴 문장이 화면 가운데 크게 뜹니다.
+
+     ★ 지난 기록은 지우지 않았습니다.
+       · 예전 /선언 메시지는 type:"declaration" 으로 저장되어 있고,
+         그리는 코드(아래 renderChatMessage)는 그대로 남겨 두었습니다.
+       · 예전 이펙트 메시지(type:"fx")는 원래도 지난 대화에 안 나옵니다.
+       명령만 없앴지, 있었던 일을 없던 일로 만들지는 않았어요.
+     ===================================================================== */
   const SLASH_COMMANDS = {
 
       "/운세": {
@@ -140,64 +161,8 @@
       isFortune: true
     },
 
-    "/축하": {
-      label: "🎉 작가님을 축하합니다!",
-      systemMsg: (nick) => `🎉 ${nick} 작가님이 축하하셨습니다!`,
-      emojis: ["🎉","🎊","✨","🥳","💖","🌟","🎈","🎆","🎇","💫"],
-      colors: ["#FF6B9D","#FFD700","#FF4500","#00CED1","#9B59B6","#FF69B4"],
-      count: 60
-    },
-    "/마감": {
-      label: "🏁 마감에 성공!",
-      systemMsg: (nick) => `🏁 ${nick} 작가님이 마감하셨습니다! 수고하셨어요 🔥`,
-      emojis: ["🏁","🔥","💪","✅","⚡","🎯","📝","💥","🌈","🥇"],
-      colors: ["#FF4500","#FF6347","#FFD700","#32CD32","#1E90FF"],
-      count: 55
-    },
-    "/환영": {
-      label: "🎉 웰컴! 어서오세요!",
-      systemMsg: (nick) => `🎉 웰컴! 어서오세요!`,
-      emojis: ["🎉","🎊","👋","💖","🌸","⭐","🎈","✨","🌺","💫"],
-      colors: ["#FF69B4","#FFD700","#00CED1","#9B59B6","#FF6B9D"],
-      count: 50
-    },
-    "/응원": {
-      label: "📣 오늘도 파이팅!",
-      systemMsg: (nick) => `📣 오늘도 파이팅!`,
-      emojis: ["📣","💪","🔥","✨","⚡","🌟","💖","🎯","🎈","💫"],
-      colors: ["#FF6347","#FFD700","#4169E1","#32CD32","#FF69B4"],
-      count: 50
-    },
     /* [2026-08-06] 먼저 자리를 뜨는 사람이 남은 사람에게 건네는 인사.
        "/수고"와 달리 남을 향한 말이라 닉네임을 넣지 않습니다. */
-    "/퇴근": {
-      label: "🏠 퇴근합니다! 이후 작업도 파이팅!!",
-      systemMsg: (nick) => `🏠 퇴근합니다! 이후 작업도 파이팅!!`,
-      emojis: ["🏠","👋","🌙","💤","✨","💪","🚪","🌆","💖","⭐"],
-      colors: ["#5B7FD4","#FF9800","#9B59B6","#00CED1","#FF6B9D"],
-      count: 50
-    },
-    "/만세": {
-      label: "🙌 만세!!",
-      systemMsg: (nick) => `🙌 ${nick} 작가님이 만세를 외치셨습니다!`,
-      emojis: ["🙌","🎉","🥳","🎊","💥","✨","🌟","💖","🎈","🔥"],
-      colors: ["#FF6347","#FFD700","#ADFF2F","#00CED1","#FF69B4"],
-      count: 65
-    },
-    "/수고": {
-      label: "💙 수고하셨습니다!",
-      systemMsg: (nick) => `💙 작가님들, 오늘도 정말 수고하셨어요!`,
-      emojis: ["💙","💜","💖","🌸","⭐","✨","🌙","🍀","🌈","💫"],
-      colors: ["#6495ED","#9370DB","#FF69B4","#98FB98","#FFD700"],
-      count: 40
-    },
-    "/고추": {
-      label: "🌶️ 고추×고추",
-      systemMsg: (nick) => `🌶️ ${nick} 작가님이 고추 농사 중이십니다 🌶️🌶️🌶️`,
-      emojis: ["🌶️","🔥","🌿","🌱","🥵","💦","🌾","🍅","🌽","🥕"],
-      colors: ["#FF2400","#FF4500","#FF6347","#228B22","#32CD32"],
-      count: 55
-    },
     "/외치기": {
       label: "📣 화면에 크게 외치기",
       systemMsg: (nick, text) => `📣 ${nick} 작가님: "${text}"`,
@@ -206,14 +171,6 @@
       count: 30,
       hasText: true
     },
-    "/선언": {
-      label: "🎯 오늘의 목표 선언",
-      systemMsg: (nick, text) => `🎯 ${nick} 작가님의 오늘 선언: "${text}"`,
-      emojis: ["🎯","✨","💪","🔥","⭐","💡","🌟","🏆"],
-      colors: ["#4169E1","#FFD700","#FF6347","#32CD32","#9B59B6"],
-      count: 35,
-      hasText: true
-    }
   };
 
   function _detectSlashCommand(text) {
@@ -1186,20 +1143,6 @@
       const sysMsg = def.systemMsg(myNick, extraText);
 
       // /선언: declaration 타입으로 저장
-      if (cmd === "/선언") {
-        runEffect(def.emojis, def.colors, def.count);
-        if (!_dndEnabled) showCommandToast(sysMsg);
-        try {
-          await _activeMsgRef().push({
-            type: "declaration",
-            user: myNick, emoji: myEmoji,
-            text: extraText, time: Date.now()
-          });
-        } catch(e) { console.error("선언 전송 실패", e); _chattySendFail(e); }
-        el.value = ""; el.style.height = "42px";
-        return;
-      }
-
       // /운세
       if (def.isFortune) {
         const fortuneMsg = _buildFortuneMsg(myNick);
@@ -1392,3 +1335,4 @@
   window.isDndEnabled        = isDndEnabled;
   window.toggleDnd           = toggleDnd;
   window.showShoutOverlay    = showShoutOverlay;
+

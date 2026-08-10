@@ -6763,17 +6763,18 @@ body.split-dragging #chat-box3{ user-select: none; }
   z-index: 9000;
   display: grid;
   /* [2026-08-10] 칸 수는 **스티커 개수에 맞춰** 바꿉니다.
-     4칸(8개) → 3칸(9개) → 5칸(10개) → 4칸(12개). 마지막 줄에 하나만
-     덩그러니 남으면 허전해서, 반듯하게 떨어지는 수로 맞춰 왔습니다.
+     4칸(8개) → 3칸(9개) → 5칸(10개) → 4칸(12개) → 5칸(15개).
+     마지막 줄에 하나만 덩그러니 남으면 허전해서, 반듯하게 떨어지는
+     수로 맞춰 왔습니다.
      (검사가 "개수 % 칸수 === 0" 을 확인하니 깜빡해도 잡힙니다) */
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   padding: 8px;
   border-radius: var(--r-md);
   border: 1px solid var(--border);
   background: var(--panel);
   box-shadow: 0 10px 28px rgba(0,0,0,.22);
-  max-width: min(300px, calc(100vw - 16px));
+  max-width: min(348px, calc(100vw - 16px));
 }
 .sticker-opt{
   border: 1px solid transparent;
