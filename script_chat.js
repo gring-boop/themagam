@@ -724,14 +724,28 @@
 
     _maybeRenderDateDivider(box, time);
 
+    /* [2026-08-10] 스티커 — 말풍선 없이 그림만 크게.
+       서버에는 `[[스티커:pat]]` 같은 짧은 글자만 저장되고, 그림은
+       각자 화면에서 그려집니다(script_sticker.js).
+       그 파일이 없거나 모르는 값이면 빈 문자열이 와서, 아래 이모지·
+       일반 글자 흐름으로 자연스럽게 넘어갑니다. */
+    const stickerHtml = window.stickerHtml?.(rawMsg) || "";
+
     // 단독 이모지 → 크게
-    const isBigEmoji = _isSingleEmoji(rawMsg);
-    const msgHtml    = isBigEmoji ? escapeHtml(rawMsg) : parseMentions(rawMsg);
+    const isBigEmoji = !stickerHtml && _isSingleEmoji(rawMsg);
+    const msgHtml    = stickerHtml ? stickerHtml
+                     : isBigEmoji ? escapeHtml(rawMsg)
+                     : parseMentions(rawMsg);
     const mentionedMe = !isMe && msgContainsMyMention(rawMsg);
 
     let bubbleClass = "msg-bubble";
     let bubbleStyle = "";
-    if (isBigEmoji) {
+    if (stickerHtml) {
+      /* 이모지와 같은 결 — 배경도 테두리도 없이 그림만 놓습니다 */
+      bubbleClass = "msg-bubble msg-bubble-sticker";
+      bubbleStyle = `padding:2px 4px;background:transparent!important;
+                     box-shadow:none!important;border:none!important;`;
+    } else if (isBigEmoji) {
       bubbleClass = "msg-bubble msg-bubble-emoji";
       bubbleStyle = `font-size:40px;line-height:1.1;padding:2px 6px;
                      background:transparent!important;box-shadow:none!important;border:none!important;`;
