@@ -6336,18 +6336,37 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 
 /* 왼쪽 위 "● 공유 중" */
+/* [바뀜 2026-08-10] 알약 전체가 빨갛던 것을 **빨간 불 하나**로.
+
+   공유 화면은 사람마다 배경이 제각각입니다 — 흰 원고, 검은 에디터,
+   사진. 그래서 알약 자체는 어두운 반투명(어느 배경에서도 읽히는 색)으로
+   두고, 빨강은 점에만 남겼습니다. 녹음실 ON 램프처럼요.
+
+   글자("공유 중")는 뺐습니다. 카드 아래에 이미 "○○의 화면" 이라고
+   적혀 있어서 무엇인지 알 수 있고, 작은 카드에서 글자 알약은 그림을
+   그만큼 가렸습니다. 대신 title·aria-label 로 뜻은 남겨 두었어요. */
 .share-live{
   position: absolute;
-  top: 5px;
-  left: 5px;
-  font-size: var(--fs-2xs);
-  font-weight: var(--fw-bold);
-  line-height: 1;
-  padding: 3px 6px;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
   border-radius: 999px;
-  background: rgba(255,59,48,.86);
-  color: #fff;
-  letter-spacing: -.2px;
+  background: rgba(20,16,14,.55);
+  /* 유리처럼 — 뒤 화면이 비쳐서 얹힌 느낌이 덜합니다.
+     지원하지 않는 브라우저에서는 그냥 반투명으로 보입니다. */
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.share-live i{
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #FF3B30;
+  box-shadow: 0 0 5px rgba(255,59,48,.9);
+  display: block;
 }
 
 /* 20초 넘게 소식이 없으면 흐리게 — 끊긴 것으로 봅니다

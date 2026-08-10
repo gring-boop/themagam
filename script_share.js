@@ -422,7 +422,10 @@
            title="${esc(SHARE_NOTICE)}">
         <div class="share-shot">
           <img class="share-img" src="${row.img}" alt="${esc(row.nick)} 님이 공유 중인 화면 (모자이크)">
-          <span class="share-live">● 공유 중</span>
+          <!-- [2026-08-10] 글자를 빼고 **빨간 불 하나**로. 녹음실 ON 램프처럼.
+               글자가 사라져도 뜻이 남도록 title 과 aria-label 을 답니다 —
+               마우스를 올리면 "공유 중" 이 뜨고, 화면 낭독기도 그렇게 읽어요. -->
+          <span class="share-live" role="img" aria-label="공유 중" title="공유 중"><i></i></span>
           <!-- [2026-08-09] 이름 줄을 그림 아래가 아니라 **그림 위**에 얹습니다.
                아래에 두면 그만큼 그림이 짧아지는데, 이 카드의 주인공은
                화면이니까요. 반투명이라 뒤가 비쳐 보입니다. -->
