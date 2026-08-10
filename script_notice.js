@@ -414,8 +414,50 @@
       markSeen();
       render();
     } catch (e) {
+      /* ★ [2026-08-11] 예전에는 여기서 "올리지 못했어요" 한 줄만 보여줬습니다.
+         그런데 실패 이유는 크게 셋이고 손볼 곳이 전부 다릅니다 —
+           · 권한 없음(PERMISSION_DENIED)  → 보안규칙 또는 로그인 계정
+           · 값이 규칙에 안 맞음            → 글자 수·사진 크기
+           · 연결 끊김                      → 네트워크
+         같은 문장으로 뭉뚱그리면 어디를 봐야 할지 알 수 없어요.
+         그래서 파이어베이스가 준 말을 그대로 함께 보여줍니다. */
       console.warn("[공지] 올리기 실패", e);
-      say("올리지 못했어요. (권한이나 연결을 확인해 주세요)");
+      const code = String(e && (e.code || e.message) || "");
+      say(/permission|PERMISSION/i.test(code)
+        ? "권한이 없어요. 콘솔에서 noticeDiag() 를 실행해 보세요."
+        : "올리지 못했어요 — " + (code || "알 수 없는 오류"));
+    }
+  }
+
+  /* =====================================================================
+     noticeDiag() — 안 써질 때 콘솔(F12)에 붙여 넣고 실행합니다.
+     ---------------------------------------------------------------------
+     "권한이 없다"는 말은 원인이 셋이라 그것만으로는 못 고칩니다:
+       ① 로그인한 계정이 방장 계정이 아님
+       ② 보안규칙이 아직 안 올라감 (또는 다른 프로젝트에 올림)
+       ③ 값이 규칙의 조건에 안 맞음 (글자 수·사진 크기)
+     셋을 하나씩 갈라 봅니다. 화면에 아무것도 안 남기고 확인만 해요.
+     ===================================================================== */
+  async function noticeDiag() {
+    const uid = (() => { try { return firebase.auth().currentUser?.uid || null; } catch (e) { return null; } })();
+    console.log("① 지금 로그인한 계정 :", uid || "(로그인 안 됨)");
+    console.log("   보안규칙이 허락한 계정:", ADMIN_UID);
+    console.log(uid === ADMIN_UID ? "   → 같습니다 ✅" : "   → ★ 다릅니다. 방장 필명으로 다시 들어와 주세요 ❌");
+    if (uid !== ADMIN_UID) return;
+
+    /* 글도 사진도 없는 최소한의 값으로 한 번 써 봅니다.
+       성공하면 곧바로 지우므로 공지판에는 아무것도 안 남습니다. */
+    const ref = window.db.ref("notice/list").push();
+    try {
+      await ref.set({ title: "진단", body: "진단", at: Date.now(), imgs: 0 });
+      await ref.remove();
+      console.log("② 최소한의 공지 쓰기 : 성공 ✅ — 보안규칙은 잘 올라가 있어요.");
+      console.log("   → 그렇다면 원인은 값입니다. 제목 60자·내용 2000자를 넘지 않았는지,");
+      console.log("     사진이 220KB 아래로 줄었는지 확인해 주세요.");
+    } catch (e) {
+      console.log("② 최소한의 공지 쓰기 : 실패 ❌ —", e.code || e.message);
+      console.log("   → 보안규칙이 아직 안 올라갔거나, 다른 프로젝트에 올라갔습니다.");
+      console.log("     콘솔 > Realtime Database > 규칙 에서 notice 항목이 보이는지 확인해 주세요.");
     }
   }
 
@@ -477,6 +519,7 @@
   window.closeNotice  = closeNotice;
   window.closeNoticeZoom = closeZoom;
   window.listenNotice = listenNotice;
+  window.noticeDiag   = noticeDiag;
   /* 검사와 콘솔 확인용 */
   window._noticeAdminUid = ADMIN_UID;
 })();
