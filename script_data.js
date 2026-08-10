@@ -357,6 +357,56 @@
   }
   window.saveTodoStat = _saveTodoStat;
 
+  /* =====================================================================
+     🔁 반복 할 일 — 자정에 실제로 한 번 훑기 (2026-08-10)
+     ---------------------------------------------------------------------
+     반복 할 일은 "끝낸 날(doneDay)이 오늘이 아니면 체크를 푼다" 는
+     규칙으로 돌아갑니다(_normalizeRoutineTodos). 그런데 그 규칙은
+     **목록을 다시 읽을 때만** 돌아요. 보통은 다음 날 접속하는 순간이라
+     차이가 없지만, **창을 켜둔 채 자정을 넘기면** 어제 체크가 그대로
+     남습니다. 가이드에는 "자정에 저절로 풀려요" 라고 적어 두었으니
+     말과 실제가 어긋나는 셈이고요.
+
+     방 전체 할 일 진척을 붙이면서 이게 더 걸리게 됐습니다 — 자정을
+     넘겨 작업하는 분이 많은 방이라, 새 날 아침 합계가 어제 체크를 물고
+     시작할 수 있거든요.
+
+     그래서 1분마다 날짜만 확인하고, 바뀐 그 순간 한 번 훑습니다.
+     (덮어놓고 1분마다 저장하지 않습니다. 날짜가 바뀔 때만이에요) */
+  let _todoDay = null;
+
+  function _routineMidnightSweep() {
+    const day = window.Wordcount?.dayKey?.();
+    if (!day) return;
+    if (_todoDay === null) { _todoDay = day; return; }   // 처음 한 번은 기준만
+    if (_todoDay === day) return;
+    _todoDay = day;
+    if (!myNick) return;
+
+    const items = getTodoItemsFromUI();
+    const hadStale = items.some(x => x && x.routine && x.done);
+
+    /* setTodoItemsToUI 안에서 _normalizeRoutineTodos 가 돌며 체크가 풀립니다 */
+    setTodoItemsToUI(items);
+
+    /* 풀린 게 있으면 서버에도 남겨야 합니다 — 안 그러면 다음 접속에
+       어제 체크가 되살아납니다. 없으면 개수만 새 날짜 칸으로 옮깁니다. */
+    if (hadStale) savePersonalData();
+    else _saveTodoStat();
+
+    /* 방 전체 진척도 새 날짜를 보게 다시 붙입니다 —
+       안 그러면 어제 숫자를 계속 보여줍니다. */
+    try { window.listenRoomTodo?.(); } catch (e) {}
+    console.log("[할 일] 날짜가 바뀌어 반복 항목을 훑었습니다 →", day);
+  }
+
+  setInterval(_routineMidnightSweep, 60 * 1000);
+  /* 절전에서 깨어나거나 탭을 다시 보는 순간에도 한 번 —
+     잠든 탭의 setInterval 은 크롬이 늦추거나 멈춥니다. */
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") _routineMidnightSweep();
+  });
+
   function savePersonalData() {
     if (!myNick) return;
 

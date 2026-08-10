@@ -448,6 +448,17 @@ window.AppSession = AppSession;
       callIfFn("listenNotes");
       callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
 
+      /* [2026-08-10] 들어오자마자 내 할 일 **개수**를 한 번 올립니다.
+
+         ★ 이걸 빠뜨려서 줄이 아예 안 떴습니다.
+         개수는 savePersonalData 안에서만 올라가는데, 그건 할 일이나
+         목표를 **건드릴 때** 도는 함수입니다. 그래서 새 기능을 올린 뒤
+         아무도 할 일을 손대지 않으면 todostat 이 텅 빈 채로 남고,
+         합계가 0 이라 줄이 감춰집니다. 이미 적어 둔 할 일이 있어도요.
+
+         목록을 다 불러온 뒤라야 제대로 세므로 조금 기다렸다 올립니다. */
+      setTimeout(() => { try { window.saveTodoStat?.(); } catch (e) {} }, 1500);
+
       _statusIntervalId = setInterval(() => callIfFn("updateStatus", false), PRESENCE_POLL_MS);
 
       // ✅ [FIX] 크롬은 백그라운드 탭의 setInterval을 최소 60초로 늦춥니다.
