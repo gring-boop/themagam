@@ -3,14 +3,14 @@
    script_sticker.js — 채팅 스티커 (2026-08-10)
    ---------------------------------------------------------------------
    [무엇인가]
-   말풍선 대신 크게 뜨는 손그림 일곱 개. 채팅과 수다방 양쪽에서 씁니다.
+   말풍선 대신 크게 뜨는 손그림 여덟 개. 채팅과 수다방 양쪽에서 씁니다.
 
    [왜 그림 파일이 아니라 코드로 그리나]
    PNG 를 쓰려면 파일 저장소(Firebase Storage)가 필요하고, 그건 요금제를
    올려야 합니다. 그림을 글자로 바꿔 메시지에 실어 보내는 방법도 있지만
    한 장에 수십 KB 라 채팅이 무거워져요.
 
-   SVG 는 선과 도형을 코드로 적는 방식이라 일곱 개를 다 합쳐도 몇 KB 고,
+   SVG 는 선과 도형을 코드로 적는 방식이라 여덟 개를 다 합쳐도 몇 KB 고,
    확대해도 안 깨지며, 저장소가 필요 없습니다. 더마감은 이미 프사 눈사람을
    이 방식으로 그리고 있어요.
 
@@ -33,6 +33,22 @@
   /* 저장되는 값(id)은 짧은 영문입니다. 나중에 이름이나 그림을 바꿔도
      지난 채팅이 깨지지 않게요. cmd 는 슬래시로 부르는 이름입니다. */
   const STICKERS = [
+    {
+      /* 인사가 맨 앞 — 판을 열면 제일 먼저 눈에 들어오는 자리입니다.
+         들어오자마자 쓰는 스티커라 손이 가장 자주 갈 거예요. */
+      id: "hi", cmd: "방가", label: "방가방가",
+      svg: `<circle cx="30" cy="32" r="14" fill="#8FB8E0"/>
+            <circle cx="25" cy="30" r="1.8" fill="#3A2A22"/>
+            <circle cx="35" cy="30" r="1.8" fill="#3A2A22"/>
+            <path d="M25 36q5 5 10 0" stroke="#3A2A22" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+            <circle cx="20" cy="36" r="2.4" fill="#F0A0B8" opacity=".75"/>
+            <circle cx="40" cy="36" r="2.4" fill="#F0A0B8" opacity=".75"/>
+            <path d="M45 30q6-2 8-8" stroke="#3A2A22" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <ellipse cx="55" cy="19" rx="6" ry="5" fill="#F3DCC4" stroke="#3A2A22"
+                     stroke-width="1.7" transform="rotate(18 55 19)"/>
+            <path d="M60 9l3-3M64 15h4M59 22l3 3" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
     {
       id: "pat", cmd: "토닥", label: "토닥토닥",
       svg: `<circle cx="27" cy="34" r="14" fill="#F0C674"/>
