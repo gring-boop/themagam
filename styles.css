@@ -6787,3 +6787,64 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .sticker-opt:hover{ background: var(--fill-1); }
 .sticker-opt:active{ transform: scale(.94); }
+
+/* =====================================================================
+   🔴 뭉갬 정도 조절 막대 (2026-08-10)
+   ---------------------------------------------------------------------
+   내 공유 카드의 빨간 불을 누르면 열립니다.
+   남의 카드 불은 그냥 표시라 눌리지 않습니다 — 뭉개는 일은 보내는 쪽
+   컴퓨터에서 일어나서, 남의 화면을 선명하게 만들 방법이 아예 없어요.
+   ===================================================================== */
+.share-live.is-mine{
+  border: 0;
+  cursor: pointer;
+  padding: 4px;                 /* span 일 때와 같은 크기로 */
+  transition: transform var(--anim-fast), background var(--anim-fast);
+}
+.share-live.is-mine:hover{ background: rgba(20,16,14,.72); transform: scale(1.12); }
+.share-live.is-mine:active{ transform: scale(.94); }
+
+.blur-pop{
+  position: fixed;
+  z-index: 9000;
+  width: 236px;
+  padding: 12px 13px 11px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 10px 28px rgba(0,0,0,.22);
+}
+.blur-pop-head{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+.blur-pop-head output{
+  color: var(--on-accent-btn);
+  font-variant-numeric: tabular-nums;
+}
+.blur-pop input[type="range"]{
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.blur-pop-ends{
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+}
+.blur-pop-note{
+  margin: 9px 0 0;
+  font-size: var(--fs-2xs);
+  color: var(--muted);
+  line-height: 1.6;
+}
+.blur-pop-note b{ color: var(--strong, var(--muted-strong)); }

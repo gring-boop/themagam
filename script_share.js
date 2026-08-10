@@ -6,7 +6,7 @@
 
    브라우저 화면 캡쳐(getDisplayMedia)로 창을 하나 잡습니다. 그 영상은
    이 컴퓨터 안에서만 흐릅니다. 5초에 한 번, **내 컴퓨터에서 먼저**
-   아주 작은 캔버스(가로 80~320px)에 옮겨 그려 글자를 못 읽게 뭉갠 다음,
+   아주 작은 캔버스(가로 80~360px)에 옮겨 그려 글자를 못 읽게 뭉갠 다음,
    그 작은 그림 한 장만 서버로 보냅니다. 원본 해상도의 프레임은 서버로도
    다른 사람에게도 절대 나가지 않습니다. 나가는 것은 언제나 뭉갠 뒤입니다.
 
@@ -31,25 +31,33 @@
    ===================================================================== */
 (function () {
   /* 모자이크 강도 — 작은 캔버스의 가로 픽셀 수가 곧 강도입니다.
-     가로 80px 이면 화면 전체가 여든 칸으로 뭉개집니다. */
-  const SHARE_LEVELS = [
-    { name: "약함", w: 320 },
-    { name: "보통", w: 160 },
-    { name: "강함", w: 80 }
-  ];
-  /* [고침 2026-08-09 · 4차] 약함을 210 → 320px 로. 나머지 두 단은 절반씩.
+     가로 80px 이면 화면 전체가 여든 칸으로 뭉개집니다.
 
-     [얼마나 선명해지나]  1920px 화면이 9.1배 → 6.0배 축소로 줄어듭니다.
-     창 배치와 색만 보이던 것이, 문단 덩어리와 그림의 윤곽까지 보입니다.
+     [바뀜 2026-08-10] 세 단계 → **연속 조절**.
 
-     [그래도 글자는 안 읽힙니다]  글자를 읽으려면 획이 5px 쯤은 남아야
-     하는데, 여기서는
-         본문 16px  →  2.7px   (획이 사라져 회색 띠로 보입니다)
-         큰 제목 32px →  5.3px  (겨우 형태만, 글자로는 잘 안 읽힘)
-     본문은 400px 까지 올려도 안 읽히지만, **큰 제목은 400 부터 읽히기
-     시작합니다.** 그래서 320 을 상한 근처가 아닌 안전한 자리로 잡았습니다.
-     더 올리고 싶어도 400 은 넘기지 마세요 — 검사에서도 막고 있습니다. */
-  const SHARE_DEFAULT_LEVEL = 0;          // 기본은 "약함"(320px)
+     예전에는 약함(320) · 보통(160) · 강함(80) 셋 중에 골랐습니다. 그런데
+     "320 은 좀 흐리고 160 은 너무 뭉개진다" 같은 자리가 없었어요.
+     이제 빨간 불을 눌러 막대로 원하는 지점을 잡습니다.
+
+     ★ 상한 360 은 함부로 올리면 안 됩니다.
+       1920px 화면 기준으로 가로 400px 부터 **큰 제목이 읽히기 시작합니다**
+       (32px 글자 → 6.7px, 획이 살아남는 크기). 본문은 한참 뒤에야
+       읽히지만 제목만 읽혀도 무엇을 쓰는지 드러나요. 그래서 400 에서
+       한 뼘 물러선 360 을 상한으로 뒀습니다. 검사도 이걸 막고 있습니다. */
+  const SHARE_W_MIN  = 80;    // 가장 뭉갠 쪽
+  const SHARE_W_MAX  = 360;   // 가장 선명한 쪽 (400 미만이어야 합니다)
+  const SHARE_W_STEP = 20;
+
+  /* 예전 저장값(0·1·2)을 새 값(가로 픽셀)으로 옮기는 표.
+     쓰던 사람이 다시 들어왔을 때 갑자기 딴 값이 되면 안 되니까요. */
+  const SHARE_LEGACY_W = [320, 160, 80];
+  /* [얼마나 선명해지나]  1920px 화면 기준으로 —
+         가로  80px  24배 축소. 색 덩어리만 보입니다
+         가로 320px   6배 축소. 문단 덩어리와 그림 윤곽까지
+     글자를 읽으려면 획이 5px 쯤 남아야 하는데, 320 에서 본문 16px 은
+     2.7px 로 줄어 회색 띠가 됩니다. 큰 제목 32px 도 5.3px 라 형태만
+     겨우 보이는 정도예요. */
+  const SHARE_DEFAULT_W = 320;            // 기본값 — 예전의 "약함"과 같습니다
 
   const SHARE_INTERVAL_MS = 5000;         // 5초에 한 장
   /* 그림이 커지면 상한도 함께 올려야 합니다. 상한을 낮게 두면 대부분의
@@ -86,7 +94,7 @@
   let _agoTimer   = null;    // 끊김 살피는 타이머 (1초)
   let _screensRef = null;    // screens 구독 — 공유 중일 때만 삽니다
   let _screensCache = null;
-  let _levelIdx   = SHARE_DEFAULT_LEVEL;
+  let _shareW     = SHARE_DEFAULT_W;      // 지금 뭉갬 정도 (가로 픽셀)
   let _lastShareHtml = null; // 만든 HTML 이 직전과 같으면 DOM 을 안 건드립니다
 
   function esc(s) {
@@ -125,7 +133,7 @@
     const vw = _video.videoWidth || 0, vh = _video.videoHeight || 0;
     if (!vw || !vh) return null;             // 아직 첫 프레임이 안 왔습니다
 
-    const w = SHARE_LEVELS[_levelIdx].w;
+    const w = _shareW;
     // 세로는 비율을 지키되 w*0.6 을 넘지 않습니다 (세로로 긴 창 대비)
     const h = Math.max(1, Math.min(Math.round(w * (vh / vw)), Math.round(w * 0.6)));
 
@@ -152,7 +160,7 @@
       await db.ref("screens/" + myNick).set({
         img,
         at: firebase.database.ServerValue.TIMESTAMP,
-        level: SHARE_LEVELS[_levelIdx].w
+        level: _shareW
       });
     } catch (e) {
       console.warn("[화면 공유 — 저장 실패]", e);
@@ -302,20 +310,32 @@
      강도 고르기 — 공유 중일 때 내 카드 안에만 나옵니다
      (공유를 안 하면 볼 일이 없는 버튼이라 머리말에 두지 않았습니다)
      --------------------------------------------------------------- */
+  /** 가로 픽셀로 직접 정합니다 (80 ~ 360). 범위를 벗어나면 잘라 맞춥니다. */
+  function setShareWidth(w, opts) {
+    const n = Math.round(Number(w) / SHARE_W_STEP) * SHARE_W_STEP;
+    _shareW = Math.max(SHARE_W_MIN, Math.min(SHARE_W_MAX, n || SHARE_DEFAULT_W));
+    try { window.AppStore && window.AppStore.setItem(SHARE_LEVEL_KEY, "w" + _shareW); } catch (e) {}
+    /* 막대를 끄는 동안에는 매번 보내지 않습니다 — 손을 뗄 때 한 번만.
+       5초에 한 장이라는 약속을 지키면서도 결과는 바로 보입니다. */
+    if (!opts || !opts.quiet) pushFrame();
+  }
+
+  /* 예전 방식(0·1·2)으로 부르던 곳을 위해 남겨 둡니다 */
   function setShareLevel(i) {
-    const n = Number(i);
-    if (!(n >= 0 && n < SHARE_LEVELS.length)) return;
-    _levelIdx = n;
-    try { window.AppStore && window.AppStore.setItem(SHARE_LEVEL_KEY, String(n)); } catch (e) {}
-    _lastShareHtml = null;
-    renderShareCards();
-    pushFrame();                       // 바뀐 강도를 바로 보여줍니다
+    const w = SHARE_LEGACY_W[Number(i)];
+    if (w) setShareWidth(w);
   }
 
   function loadShareLevel() {
     try {
-      const v = Number(window.AppStore && window.AppStore.getItem(SHARE_LEVEL_KEY));
-      if (v >= 0 && v < SHARE_LEVELS.length) _levelIdx = v;
+      const raw = String(window.AppStore && window.AppStore.getItem(SHARE_LEVEL_KEY) || "");
+      if (raw.startsWith("w")) {                    // 새 방식 — 가로 픽셀
+        const w = Number(raw.slice(1));
+        if (w >= SHARE_W_MIN && w <= SHARE_W_MAX) _shareW = w;
+        return;
+      }
+      const v = Number(raw);                        // 옛 방식 — 0·1·2
+      if (SHARE_LEGACY_W[v]) _shareW = SHARE_LEGACY_W[v];
     } catch (e) {}
   }
 
@@ -398,8 +418,8 @@
   }
 
   /* [2026-08-06] 강도 고르기 버튼은 화면에서 뺐습니다.
-     setShareLevel 과 SHARE_LEVELS 는 남겨둡니다 — 콘솔에서 바꿔보거나
-     나중에 다시 버튼을 달 때 그대로 쓸 수 있게. */
+     [2026-08-10] 이제 카드의 빨간 불을 누르면 조절 막대가 열립니다.
+     setShareLevel(0|1|2) 도 남겨 뒀어요 — 옛 저장값과 콘솔용입니다. */
 
   /* 카드 HTML 에는 "끊김" 표시를 넣지 않습니다. 시계만 흘러도 달라지므로
      만든 HTML 이 매번 달라져 그림이 새로 붙고(=깜빡이고) 맙니다.
@@ -425,7 +445,11 @@
           <!-- [2026-08-10] 글자를 빼고 **빨간 불 하나**로. 녹음실 ON 램프처럼.
                글자가 사라져도 뜻이 남도록 title 과 aria-label 을 답니다 —
                마우스를 올리면 "공유 중" 이 뜨고, 화면 낭독기도 그렇게 읽어요. -->
-          <span class="share-live" role="img" aria-label="공유 중" title="공유 중"><i></i></span>
+          ${mine
+            ? `<button type="button" class="share-live is-mine" data-blur-open="1"
+                       aria-label="공유 중 — 눌러서 뭉갬 정도 조절"
+                       title="공유 중 · 눌러서 뭉갬 정도 조절"><i></i></button>`
+            : `<span class="share-live" role="img" aria-label="공유 중" title="공유 중"><i></i></span>`}
           <!-- [2026-08-09] 이름 줄을 그림 아래가 아니라 **그림 위**에 얹습니다.
                아래에 두면 그만큼 그림이 짧아지는데, 이 카드의 주인공은
                화면이니까요. 반투명이라 뒤가 비쳐 보입니다. -->
@@ -555,7 +579,99 @@
       /* 내 카드의 "○○의 화면" — 보여줄 창 바꾸기 */
       const sw = e.target.closest("[data-share-switch]");
       if (sw) { e.stopPropagation(); switchShareWindow(); return; }
+
+      /* 내 카드의 🔴 — 뭉갬 정도 조절 막대 */
+      const bl = e.target.closest("[data-blur-open]");
+      if (bl) { e.stopPropagation(); openBlurPop(bl); return; }
     });
+  }
+
+  /* =====================================================================
+     🔴 빨간 불 → 뭉갬 정도 조절 막대 (2026-08-10)
+     ---------------------------------------------------------------------
+     ★ 내 카드에서만 열립니다.
+
+     뭉개는 일은 **보내는 쪽 컴퓨터에서** 일어납니다. 이미 뭉개진 그림만
+     서버로 나가니까요. 그래서 남의 카드에 붙은 불을 눌러도 그 사람의
+     화면을 선명하게 만들 수는 없습니다 — 애초에 선명한 그림이 온 적이
+     없어요. 이건 기능의 한계가 아니라 **이 기능의 핵심**입니다.
+
+     [손을 뗄 때 한 번만 보냅니다]
+     막대를 끄는 동안 매번 보내면 5초에 한 장이라는 약속이 깨집니다.
+     끄는 중에는 숫자만 바꾸고, 놓는 순간 한 장을 보내 결과를 보여줍니다.
+     ===================================================================== */
+  let _blurPop = null;
+
+  function closeBlurPop() {
+    if (!_blurPop) return;
+    _blurPop.remove();
+    _blurPop = null;
+    document.removeEventListener("click", _onBlurDoc, true);
+    document.removeEventListener("keydown", _onBlurKey, true);
+    window.removeEventListener("resize", closeBlurPop);
+    window.removeEventListener("scroll", closeBlurPop, true);
+  }
+  function _onBlurDoc(e) {
+    if (_blurPop && !_blurPop.contains(e.target) && !e.target.closest("[data-blur-open]"))
+      closeBlurPop();
+  }
+  function _onBlurKey(e) { if (e.key === "Escape") closeBlurPop(); }
+
+  /* 0(가장 뭉갬) ~ 100(가장 선명) 으로 보여줍니다.
+     사람에게 "가로 240픽셀" 은 아무 뜻이 없으니까요. */
+  function _wToPct(w) {
+    return Math.round((w - SHARE_W_MIN) / (SHARE_W_MAX - SHARE_W_MIN) * 100);
+  }
+
+  function openBlurPop(anchor) {
+    if (_blurPop) { closeBlurPop(); return; }
+    if (!anchor) return;
+
+    const pop = document.createElement("div");
+    pop.className = "blur-pop";
+    pop.innerHTML = `
+      <div class="blur-pop-head">
+        <span>화면 뭉갬 정도</span>
+        <output id="blur-pct">${_wToPct(_shareW)}%</output>
+      </div>
+      <input type="range" id="blur-range" aria-label="화면 뭉갬 정도"
+             min="${SHARE_W_MIN}" max="${SHARE_W_MAX}" step="${SHARE_W_STEP}"
+             value="${_shareW}">
+      <div class="blur-pop-ends"><span>뭉개짐</span><span>선명함</span></div>
+      <p class="blur-pop-note">
+        <b>내 화면에만</b> 적용돼요. 이 기기에 저장되고,
+        가장 선명해도 <b>글자는 읽히지 않는 선</b>까지만 올라갑니다.
+      </p>`;
+    document.body.appendChild(pop);
+
+    const r = anchor.getBoundingClientRect();
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    let left = Math.min(r.left, innerWidth - w - 8);
+    let top  = r.bottom + 8;
+    if (top + h > innerHeight - 8) top = r.top - h - 8;
+    pop.style.left = Math.max(8, left) + "px";
+    pop.style.top  = Math.max(8, top) + "px";
+
+    const range = pop.querySelector("#blur-range");
+    const out   = pop.querySelector("#blur-pct");
+    /* 끄는 중 — 숫자만 바꿉니다 (보내지 않음) */
+    range.addEventListener("input", () => {
+      setShareWidth(range.value, { quiet: true });
+      out.textContent = _wToPct(_shareW) + "%";
+    });
+    /* 손을 뗐을 때 — 그제서야 한 장 보냅니다 */
+    const commit = () => pushFrame();
+    range.addEventListener("change", commit);
+    range.addEventListener("pointerup", commit);
+
+    _blurPop = pop;
+    setTimeout(() => {
+      document.addEventListener("click", _onBlurDoc, true);
+      document.addEventListener("keydown", _onBlurKey, true);
+      window.addEventListener("resize", closeBlurPop);
+      window.addEventListener("scroll", closeBlurPop, true);
+    }, 0);
+    range.focus();
   }
 
   /* ---------------------------------------------------------------
@@ -571,7 +687,7 @@
   window.renderShareButton = renderShareButton;
   window.renderShareCards  = renderShareCards;
   window.isScreenSharing   = () => _sharing;
-  window.SHARE_LEVELS      = SHARE_LEVELS;
+  window.setShareWidth     = setShareWidth;
 
   /* ---------------------------------------------------------------
      기존 흐름에 끼워 넣기
