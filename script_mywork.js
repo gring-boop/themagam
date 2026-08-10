@@ -26,9 +26,16 @@
 
    [어느 화면이 무엇을 보여주는가 — 이게 이 기능의 핵심 규칙입니다]
        프로필 팝업(#goals-modal)의 투두 목록
-           → 오늘 날짜(due === 오늘) + 날짜 없는 것(due 없음)만
+           → 오늘 날짜(due === 오늘) + 루틴(날짜 없는 것)만
        나의 작업 · 📌 할 일 탭
-           → 고른 날짜의 것 + (아래 칸에) 날짜 없는 것
+           → 고른 날짜의 것 + (아래 칸에) 루틴
+
+   [2026-08-11 — 날짜 없는 할 일 = 루틴]
+   전에는 아래 칸이 "📎 날짜 없는 할 일" 이었고, 줄마다 🔁 단추로 반복을
+   따로 켰습니다. 그런데 마감 없는 큰 일정은 여기서 관리하지 않는다는
+   게 방의 쓰임이었어요 — 대부분 오늘 할 일로 씁니다.
+   그래서 아래 칸을 통째로 [🔁 루틴 (매일 반복)] 으로 바꿨습니다.
+   거기 넣으면 무조건 매일 반복이고, 🔁 단추는 없앴습니다.
    그러니 "8월 20일" 이라고 적어둔 할 일은 프로필에 안 보이다가
    그날이 되면 저절로 뜹니다. 같은 배열이라 어느 쪽에서 고쳐도 곧바로
    양쪽에 반영됩니다.
@@ -116,8 +123,9 @@
     return (Array.isArray(src) ? src : []).filter(t => t && t.id);
   }
 
-  /* 반복(🔁)과 날짜는 함께 쓰지 않습니다 — 반복이 켜져 있으면 날짜가
-     남아 있어도 "날짜 없음"으로 봅니다. (script_data.js 와 같은 규칙) */
+  /* 루틴과 날짜는 함께 쓰지 않습니다 — 루틴이면 날짜가 남아 있어도
+     "날짜 없음"으로 봅니다. (script_data.js 와 같은 규칙)
+     날짜가 없는 것은 곧 루틴이므로, undated() 가 루틴 목록이 됩니다. */
   function dueOf(t) {
     return (!t.routine && DUE_RE.test(String(t.due || ""))) ? String(t.due) : "";
   }
@@ -267,6 +275,10 @@
        이 감싸기를 풀어야 합니다 — 안 그러면 고치려고 누를 때마다 완료로
        바뀝니다. 라벨을 걷어내고 체크 상자만 따로 세웠습니다.
      ===================================================================== */
+  /* [2026-08-11] 🔁 단추와 🔁 딱지를 없앴습니다.
+     반복은 이제 "루틴 칸에 있느냐" 로 정해지므로, 줄마다 켜고 끄는
+     단추가 필요 없어졌어요. 칸 제목이 이미 [🔁 루틴 (매일 반복)] 이라
+     딱지도 같은 말을 두 번 하는 셈이라 뺐습니다. */
   function todoRowHtml(t) {
     const routine = !!t.routine;
     /* 지난 날짜 + 아직 안 끝냄 → [오늘 하기].
@@ -279,14 +291,10 @@
                aria-label="${esc(t.text || "할 일")} 완료">
         <span class="mw-todo-t" data-act="edit-inline" data-id="${esc(t.id)}"
               role="button" tabindex="0" title="눌러서 고치기">${esc(t.text || "")}</span>
-        ${routine ? `<span class="mw-rbadge" title="매일 반복 — 자정에 체크가 풀려요">🔁</span>` : ""}
         ${t.archived ? `<span class="mw-abadge" title="프로필 목록에서 치운 할 일이에요 — 여기엔 기록으로 남습니다">🗃</span>` : ""}
         <span class="mw-todo-btns">
           ${overdue ? `<button type="button" class="mw-today-move" data-act="move-today" data-id="${esc(t.id)}"
                   title="오늘 날짜로 옮기기">오늘 하기</button>` : ""}
-          <button type="button" data-act="routine" data-id="${esc(t.id)}"
-                  title="${routine ? "매일 반복 끄기" : "매일 반복으로 (날짜는 지워져요)"}"
-                  aria-label="반복 바꾸기">🔁</button>
           <button type="button" data-act="del" data-id="${esc(t.id)}" title="지우기" aria-label="지우기">🗑</button>
         </span>
       </li>`;
@@ -347,7 +355,7 @@
 
     const freeList = free.length
       ? `<ul class="mw-todolist">${free.map(todoRowHtml).join("")}</ul>`
-      : `<p class="mw-empty">날짜 없는 할 일이 없어요.</p>`;
+      : `<p class="mw-empty">아직 루틴이 없어요.</p>`;
 
     return `
       <div class="mw-dayhead">
@@ -369,22 +377,22 @@
       <hr class="mw-sep">
 
       <div class="mw-dayhead">
-        <span class="mw-daytitle">📎 날짜 없는 할 일</span>
+        <span class="mw-daytitle">🔁 루틴 (매일 반복)</span>
         <span class="mw-daycount">${free.length}개</span>
       </div>
 
       ${freeList}
 
       <div class="mw-add">
-        <label class="sr-only" for="mw-add-free">날짜 없는 할 일 추가</label>
+        <label class="sr-only" for="mw-add-free">루틴 추가</label>
         <input type="text" id="mw-add-free" class="mw-add-in" data-add="free"
                maxlength="${MAX_TEXT}" value="${esc(_draft.free)}"
-               placeholder="날짜 없이 할 일 추가…" enterkeyhint="done">
-        <button type="button" class="mw-add-btn" data-act="add-free" aria-label="날짜 없는 할 일 추가">＋</button>
+               placeholder="매일 반복할 일 추가…" enterkeyhint="done">
+        <button type="button" class="mw-add-btn" data-act="add-free" aria-label="루틴 추가">＋</button>
       </div>
 
       <p class="mw-hint">
-        🔁 반복은 날짜와 함께 쓸 수 없어서 늘 아래 칸에 있어요.
+        여기 넣은 건 <b>매일 반복</b>돼요 — 자정이 지나면 체크가 다시 풀립니다.
       </p>
 
       <!-- [옮김 2026-08-09] 🧹 치우기.
@@ -580,7 +588,11 @@
       return;
     }
     if (act === "del")     { window.deleteTodo?.(id); return; }
-    if (act === "routine") { window.toggleRoutineTodo?.(id); return; }
+    /* [뺌 2026-08-11] act === "routine" (🔁 켜고 끄기).
+       루틴 칸에 있는 것이 곧 반복이라 단추 자체를 없앴습니다.
+       ★ script_data.js 의 toggleRoutineTodo 는 그대로 둡니다 — 부르는
+         쪽이 없어도 해가 없고, 반대로 함수만 지우고 부르는 줄을 남기면
+         그 자리에서 멈춥니다(8월 11일 [오늘 하기] 가 그랬어요). */
   }
 
   function onChange(e) {

@@ -3044,8 +3044,10 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
 #mywork-modal .modal-content{ position: relative; }
 /* 제목이 길어도 ✕ 밑으로 파고들지 않게 오른쪽을 비워 둡니다 */
 #settings-modal .modal-title,
-#mywork-modal .modal-title,
-#mywork-modal .mw-eyebrow{ padding-right: 34px; }
+#mywork-modal .modal-title{ padding-right: 34px; }
+/* 나의 작업 제목은 가운데 정렬이라 한쪽만 비우면 왼쪽으로 밀립니다.
+   양쪽을 같이 비워야 ✕ 를 피하면서도 가운데에 섭니다. */
+#mywork-modal .mw-eyebrow{ padding-left: 34px; padding-right: 34px; }
 
 .modal-content{
   width: 400px;
@@ -5315,20 +5317,21 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 
 /* ── 표지식 제목 ─────────────────────────────────────────────── */
+/* [2026-08-11] 아래 한글 제목을 없애고 이 줄 하나만 남겼습니다.
+   그래서 (1) 글자를 12.5px → 15px 로 키우고, (2) 자간을 조금 더 벌려
+   표지 느낌을 살리고, (3) 아래 여백을 4px → 20px 로 늘렸습니다.
+   전에는 한글 제목이 사이를 받쳐 줬는데 그게 사라졌거든요.
+   ★ <div> 에서 <h2> 로 바뀌었으므로 브라우저 기본 여백을 지웁니다. */
 #mywork-modal .mw-eyebrow{
-  text-align: center;
-  font-size: var(--fs-xs);
-  color: #B3372B;
-  letter-spacing: 1px;
-  font-weight: var(--fw-medium);
-  margin-bottom: 4px;
-}
-#mywork-modal .modal-title{
+  /* 명조는 원래 아래 한글 제목이 쓰던 글꼴입니다. 그 줄이 사라지면서
+     창에서 표지 느낌이 통째로 빠지길래 이 줄이 물려받았습니다. */
   font-family: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
   text-align: center;
-  letter-spacing: 3px;
-  color: #2B2620;
-  margin-bottom: var(--sp-4);
+  font-size: var(--fs-md);
+  color: #B3372B;
+  letter-spacing: 2.5px;
+  font-weight: var(--fw-medium);
+  margin: 0 0 var(--sp-5);
 }
 #mywork-modal .hint{ color: #8A7B68; }
 #mywork-modal .hint b{ color: #6B5F52; }
@@ -5562,7 +5565,8 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .mw-today-move:hover{ background: rgba(179,55,43,.20) !important; }
 .mw-todo.is-done .mw-todo-t{ text-decoration: line-through; color: #8A7B68; }
-.mw-rbadge{ flex: none; font-size: var(--fs-2xs); }
+/* [뺌 2026-08-11] .mw-rbadge (줄마다 붙던 🔁 딱지) —
+   루틴 칸 제목이 이미 말하고 있어서 없앴습니다. */
 /* 🗃 — 프로필 목록에서 치운(완료 정리한) 할 일. 여기엔 기록으로 남습니다 */
 .mw-abadge{ flex: none; font-size: var(--fs-2xs); opacity: .55; }
 .mw-todo-btns{ display: flex; flex: none; gap: 2px; }

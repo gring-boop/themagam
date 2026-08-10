@@ -70,13 +70,29 @@
     return window._todoItems || [];
   }
 
+  /* ★ [2026-08-11] "날짜 없는 할 일" 칸이 [🔁 루틴 (매일 반복)] 으로
+       바뀌었습니다. 그 칸에 들어가는 건 이제 전부 매일 반복이에요.
+
+       그런데 예전에 그 칸에 넣어 둔 할 일들은 routine 표시가 없습니다.
+       그대로 두면 루틴 칸에 앉아 있으면서 자정에 안 풀리고, 🔁 켜는
+       단추도 없어졌으니 **되살릴 방법이 없는** 상태가 됩니다.
+
+       그래서 여기서 한 번 훑어 붙입니다 — 날짜가 없으면 루틴으로.
+       (날짜가 붙은 할 일은 손대지 않습니다)
+       고쳐 놓은 값은 다음 저장 때 서버에도 함께 올라갑니다. */
   function _normalizeRoutineTodos(items) {
     const today = ymd(Date.now());
-    return (Array.isArray(items) ? items : []).map(x =>
-      (x && x.routine && x.done && x.doneDay !== today)
-        ? ({ ...x, done: false, doneDay: "" })
-        : x
-    );
+    return (Array.isArray(items) ? items : []).map(x => {
+      if (!x) return x;
+
+      /* ① 날짜 없는 옛 할 일 → 루틴으로 */
+      let y = (!x.routine && !isTodoDue(x.due)) ? { ...x, routine: true } : x;
+
+      /* ② 어제 체크해 둔 루틴 → 체크 풀기 */
+      if (y.routine && y.done && y.doneDay !== today) y = { ...y, done: false, doneDay: "" };
+
+      return y;
+    });
   }
 
   function setTodoItemsToUI(items) {
@@ -286,8 +302,12 @@
       done: false,
       createdAt: Date.now()
     };
-    /* 날짜와 반복은 함께 쓰지 않으므로, 여기서는 날짜만 붙입니다 */
+    /* 날짜와 반복은 함께 쓰지 않습니다 — 둘 중 하나입니다.
+       [2026-08-11] 날짜를 안 주면 곧 "루틴 칸에 넣는다"는 뜻이 되었으므로
+       여기서 곧바로 매일 반복으로 만듭니다. (날짜 없는 보통 할 일은
+       이제 만들 수 없어요 — 화면에 그런 칸이 없습니다) */
     if (isTodoDue(due)) item.due = due;
+    else item.routine = true;
 
     const items = getTodoItemsFromUI();
     items.unshift(item);
