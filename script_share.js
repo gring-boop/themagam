@@ -151,9 +151,38 @@
     const vw = _video.videoWidth || 0, vh = _video.videoHeight || 0;
     if (!vw || !vh) return null;             // 아직 첫 프레임이 안 왔습니다
 
-    const w = _shareW;
-    // 세로는 비율을 지키되 w*0.6 을 넘지 않습니다 (세로로 긴 창 대비)
-    const h = Math.max(1, Math.min(Math.round(w * (vh / vw)), Math.round(w * 0.6)));
+    /* =====================================================================
+       ★ [고침 2026-08-11] 여기서 그림을 **눌러 납작하게** 만들고 있었습니다.
+
+       예전 줄:
+           const h = Math.min(round(w * vh/vw), round(w * 0.6));
+           ctx.drawImage(_video, 0, 0, w, h);
+
+       세로를 "가로의 0.6배" 로 못박아 두었어요. 뜻은 "세로로 긴 창이
+       와도 용량이 커지지 않게" 였는데, drawImage 에 목적지 크기만 주면
+       **원본을 그 상자에 밀어 넣습니다.** 잘라내는 게 아니라 눌러요.
+
+       그래서 1216×1332 짜리 거의 정사각 창도 360×216 으로 찍눌려서,
+       무슨 창을 띄우든 납작하게 나왔습니다. 카드에서 "위아래가 잘린다"
+       고 보였던 것의 진짜 원인이 이거였어요.
+
+       [이제는]
+       비율을 **언제나** 지킵니다. 용량은 세로를 자르는 대신 **넓이(픽셀 수)**
+       로 잡아요 — 지금까지의 가장 큰 그림(360×216)과 같은 양을 상한으로
+       두고, 그보다 넓어지면 비율을 지킨 채 통째로 줄입니다.
+
+       ※ 세로로 긴 창은 그만큼 가로가 줄어듭니다. 글자는 더 안 읽히게
+         되니 사생활 쪽으로도 안전한 방향이에요.
+       ===================================================================== */
+    const PIX_BUDGET = SHARE_W_MAX * Math.round(SHARE_W_MAX * 0.6);   // 360×216
+
+    let w = _shareW;
+    let h = Math.max(1, Math.round(w * (vh / vw)));
+    if (w * h > PIX_BUDGET) {
+      const k = Math.sqrt(PIX_BUDGET / (w * h));
+      w = Math.max(1, Math.round(w * k));
+      h = Math.max(1, Math.round(h * k));
+    }
 
     const cv = _canvas || (_canvas = document.createElement("canvas"));
     cv.width = w; cv.height = h;
