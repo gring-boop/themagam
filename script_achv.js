@@ -186,8 +186,24 @@
     /* ★ id 는 rew30 그대로 둡니다. 이름표(label)만 바꿔요 —
        id 를 바꾸면 이미 딴 사람의 배지가 목록에서 사라집니다
        (achv/{필명}/got 에 옛 id 로 적혀 있으니까요). */
+    /* ★ "30일 내내" 가 아니라 **통틀어 30일** 입니다. 연달을 필요가 없어요.
+       퇴고는 원래 붙였다 뗐다 하는 작업이라, 연속을 요구하면 오히려
+       현실과 안 맞습니다.
+       7일짜리를 앞에 둬서, 서른 날까지 가는 길에 딛고 갈 돌을 놓았습니다. */
+    { id: "rew7",    g: "작업의 결", icon: "🐊", label: "퇴고의 늪",   at: "cRewrite", n: 7,  new: true,
+      desc: "📝 퇴고를 붙인 날 통틀어 7일 — 들어가면 안 나와져요" },
+    { id: "rev7",    g: "작업의 결", icon: "🏰", label: "수정궁에 갇혔어요", at: "cRevise", n: 7, new: true,
+      desc: "✂️ 수정을 붙인 날 통틀어 7일" },
     { id: "rew30",   g: "작업의 결", icon: "🪵", label: "퇴고 장인",  at: "cRewrite", n: 30, new: true,
-      desc: "퇴고 스티커로 30일 — 방망이 깎는 노인의 마음으로" },
+      desc: "📝 퇴고를 붙인 날 통틀어 30일 — 방망이 깎는 노인의 마음으로" },
+    { id: "rev30",   g: "작업의 결", icon: "👑", label: "수정궁 여왕", at: "cRevise", n: 30, new: true,
+      desc: "✂️ 수정을 붙인 날 통틀어 30일" },
+    /* 👀 관심이 필요해 — 화면 공유를 하루 두 시간 넘게, 통틀어 서른 날.
+       ★ 공유 시간은 여태 아무 데도 안 남았습니다(screens 에는 "지금 화면"
+         한 장만 있고 기록이 없어요). 그래서 공유하는 동안 1초씩 세어
+         이 기기에 적어 둡니다 — 그래서 소급이 안 되고 오늘부터예요. */
+    { id: "share30", g: "작업의 결", icon: "👀", label: "관심이 필요해", at: "cShareDay", n: 30, new: true,
+      desc: "🖥️ 화면 공유를 하루 2시간 넘긴 날 통틀어 30일" },
     { id: "tagall",  g: "작업의 결", icon: "🎨", label: "팔방미인",  at: "cTagKind", n: 8,  new: true, desc: "작업 스티커 여덟 종을 모두" },
     { id: "todo100", g: "작업의 결", icon: "✅", label: "마감러",    at: "cTodo",    n: 100, new: true, desc: "할 일 100개 완료" },
     { id: "rout30",  g: "작업의 결", icon: "🔁", label: "루틴킹",    at: "cRoutine", n: 30, new: true, desc: "루틴을 30일 채움" }
@@ -237,6 +253,77 @@
   function kindCount(prefix) {
     return Object.keys(_c).filter(k => k.startsWith(prefix + "_")).length;
   }
+
+  /* =====================================================================
+     오늘 붙여둔 작업 스티커를 하루로 세어 둡니다.
+     ---------------------------------------------------------------------
+     ★ [고침 2026-08-11] 처음에는 **스티커를 누른 순간**에만 셌습니다.
+       그런데 이 방의 작업 스티커는 자정에 안 풀립니다 — 퇴고처럼 며칠씩
+       이어지는 작업 때문에 일부러 그렇게 뒀어요(script_worktag.js).
+
+       그래서 📝 퇴고를 한 번 붙이고 그대로 둔 사람은 **하루밖에 안 세어
+       졌습니다.** 서른 날을 퇴고만 해도 1일이었어요. 정작 이 업적이
+       기리려던 사람이 못 따는 셈이었습니다.
+
+       이제 **들어올 때마다** 그날 붙여둔 스티커를 하루로 셉니다.
+       하루에 몇 번 들어와도 같은 날짜라 한 번만 셉니다.
+     ===================================================================== */
+  let _tagDay = "";
+
+  function noteTagDay() {
+    try {
+      const v = window.myWorkTag?.();
+      if (!v) return;
+      const k = dayKey();
+      if (_tagDay === k && _c["tag_" + v]) return;   // 오늘 이미 셌습니다
+      _tagDay = k;
+      window.achvBump?.("tag", v);                    // 팔방미인 — 종류
+      if (v === "polish") window.achvBump?.("rew", k);  // 🪵 퇴고 장인
+      if (v === "revise") window.achvBump?.("rev", k);  // 👑 수정궁 여왕
+    } catch (e) {}
+  }
+
+  /* 자정을 넘겨 켜 둔 창에서도 새 날이 세어지도록 이따금 확인합니다 */
+  setInterval(() => { if (_tagDay && _tagDay !== dayKey()) noteTagDay(); }, 60000);
+
+  /* =====================================================================
+     🖥️ 화면 공유 시간 — 👀 관심이 필요해
+     ---------------------------------------------------------------------
+     공유한 시간은 서버 어디에도 안 남습니다. screens/{필명} 에는 "지금
+     보이는 화면" 한 장만 있고, 얼마나 오래 켜 뒀는지는 기록이 없어요.
+     그래서 공유하는 동안 script_share.js 가 1초마다 여기로 알려줍니다.
+
+     ★ localStorage 에 매초 쓰면 안 됩니다. 동기(同期) 저장이라 1초마다
+       화면이 아주 잠깐씩 멎어요. 머리에 모아 뒀다가 30초에 한 번만 씁니다.
+
+     ★ 이 값은 **이 기기에만** 쌓입니다. 두 기기에서 나눠 공유하면 각각
+       따로 세어져서 두 시간을 못 채울 수 있어요. 공유는 보통 한 자리에서
+       하니 실제로는 잘 안 걸립니다.
+     ===================================================================== */
+  const SHARE_DAY_MS = 2 * 3600e3;     // 하루 두 시간
+  const SHARE_FLUSH_MS = 30000;
+  let _shareAcc = 0, _shareFlushed = 0;
+
+  function shareKey(day) { return "achvShareMs_" + day; }
+
+  function shareTick(ms) {
+    if (!me()) return;
+    _shareAcc += Number(ms) || 0;
+    if (_shareAcc - _shareFlushed < SHARE_FLUSH_MS) return;
+    shareFlush();
+  }
+
+  function shareFlush() {
+    try {
+      if (!me() || _shareAcc <= 0) return;
+      const k = dayKey();
+      const cur = Number(window.AppStore?.getItem(shareKey(k)) || 0) + _shareAcc;
+      window.AppStore?.setItem(shareKey(k), String(cur));
+      _shareAcc = 0; _shareFlushed = 0;
+      if (cur >= SHARE_DAY_MS) window.achvBump?.("shr", k);
+    } catch (e) {}
+  }
+  window.addEventListener("pagehide", () => { try { shareFlush(); } catch (e) {} });
 
   /* =====================================================================
      서버에서 훑기
@@ -528,6 +615,8 @@
     if (a.at === "cStkKind") return kindCount("stk");
     if (a.at === "cTagKind") return kindCount("tag");
     if (a.at === "cRewrite") return kindCount("rew");
+    if (a.at === "cRevise")  return kindCount("rev");
+    if (a.at === "cShareDay") return kindCount("shr");
     if (a.at === "cRoutine") return kindCount("rout");
     if (a.at && a.at.startsWith("c")) return Number(_c[a.at] || 0);
     return Number(_stats?.[a.at] || 0);
@@ -722,6 +811,7 @@
       _pick = v.pick || "";
       _c    = v.c    || {};
       await scan(false);
+      noteTagDay();       // 오늘 붙여둔 스티커를 하루로
       evaluate();
     } catch (e) {
       console.warn("[업적] 시작 실패", e);
@@ -759,7 +849,10 @@
     return el("achv-panel")?.innerHTML || "";
   };
 
-  window.startAchv     = start;
+  window.startAchv       = start;
+  window.achvNoteTagDay  = noteTagDay;
+  window.achvShareTick   = shareTick;
+  window.achvShareFlush  = shareFlush;
   window.openAchvOf    = openOther;
   window.closeAchvOther = closeOther;
   window.achvEvaluate  = evaluate;

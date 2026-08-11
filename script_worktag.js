@@ -82,20 +82,13 @@
     window.updateStatus?.(true);
     window.renderUserCards?.();
 
-    /* 🏅 팔방미인·퇴고쟁이 — 여덟 종을 다 써봤나, 퇴고로 며칠 보냈나.
-       ★ 퇴고는 **날짜별로** 셉니다. 하루에 몇 번을 눌러도 하루입니다. */
-    try {
-      if (t && t.v) {
-        window.achvBump?.("tag", t.v);
-        /* ★ 퇴고의 값은 "polish" 입니다. "revise" 는 ✂️ 수정이에요 —
-           한글 이름만 보고 고르면 엉뚱한 스티커를 세게 됩니다. */
-        if (t.v === "polish") {
-          const d = new Date();
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          window.achvBump?.("rew", key);
-        }
-      }
-    } catch (e) {}
+    /* 🏅 팔방미인 · 퇴고 장인 · 수정궁 여왕.
+
+       ★ 세는 일은 script_achv.js 한 곳에 맡깁니다. 여기서 직접 세면
+         "누른 순간" 만 세어지는데, 이 방의 작업 스티커는 자정에 안 풀려요.
+         퇴고를 한 번 붙이고 그대로 둔 사람이 하루로만 세어지던 이유입니다.
+         업적 쪽은 **들어올 때마다** 그날 붙여둔 것을 하루로 셉니다. */
+    try { window.achvNoteTagDay?.(); } catch (e) {}
   }
 
   /* ── 카드에 그릴 조각 ────────────────────────────────────
