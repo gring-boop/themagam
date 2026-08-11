@@ -280,17 +280,33 @@
   function pickGrowIndex(node, map) {
     /* [고침 2026-08-03] 접힌 채팅은 후보에서 뺍니다.
        채팅이 남는 공간 1순위(GROW_RANK 1)라, 접힌 채팅이 뽑히면
-       0px 칸이 "받은 셈"이 되어 남는 공간이 빈 채로 남았습니다. */
-    const folded = document.body.classList.contains("chat-collapsed");
-    let best = Infinity, bestIdx = node.kids.length - 1;
+       0px 칸이 "받은 셈"이 되어 남는 공간이 빈 채로 남았습니다.
+
+       [고침 2026-08-11] 뽀모도 똑같이 뺍니다.
+       ★ 예전에는 채팅만 뺐어요. 뽀모는 차례가 꼴찌(9)라 어차피 안
+         뽑힌다고 여겼는데, **후보가 전부 접혀 있으면** 맨 아래의
+         기본값(마지막 가지)이 그대로 나옵니다. 그 마지막이 접힌
+         뽀모면 0px 칸이 "남는 공간을 받은 셈"이 되고, 아무도 안
+         늘어나 빈 자리가 덩그러니 남습니다.
+       ★ 그래서 아래에서 **접히지 않은 가지 중 첫째**를 기본값으로
+         씁니다. 어떤 경우에도 늘어나는 칸이 반드시 하나 있습니다. */
+    const chatFolded = document.body.classList.contains("chat-collapsed");
+    const pomoFolded = isSideCollapsed();
+    const 접힘 = (ids) => ids.length > 0 && (
+      (chatFolded && ids.every(pid => pid === "chat")) ||
+      (pomoFolded && ids.every(pid => pid === "pomo"))
+    );
+
+    let best = Infinity, bestIdx = -1;
     node.kids.forEach((kid, i) => {
       const ids = leafPanels(kid, map);
-      if (folded && ids.length > 0 && ids.every(pid => pid === "chat")) return;
+      if (접힘(ids)) return;
+      if (bestIdx < 0) bestIdx = i;                 // 안 접힌 것 중 첫째 = 기본값
       const ranks = ids.map(pid => GROW_RANK[pid] ?? 5);
       const r = ranks.length ? Math.min(...ranks) : 99;
       if (r < best) { best = r; bestIdx = i; }
     });
-    return bestIdx;
+    return bestIdx < 0 ? node.kids.length - 1 : bestIdx;
   }
 
   /* 크기는 자리(위치)가 아니라 창을 따라갑니다.
@@ -385,6 +401,7 @@
            0 1 <크기> 로 두면 자리가 모자랄 때 서로 조금씩 양보하며
            줄어듭니다. 최소 크기는 아래에서 따로 잡아줍니다. */
         child.style.flex = "0 1 " + px + "px";
+        child.dataset.sizeKey = key;      // syncSizes 가 이걸 보고 폭을 되돌립니다
         if (node.dir === "h") {
           child.style.minWidth = MIN_PX + "px";
           child.style.minHeight = "0";
@@ -646,13 +663,34 @@
 
 
   /** 크기만 다시 반영 (구조는 그대로) */
+  /* [고침 2026-08-11] 이 함수는 **아무것도 하지 않고 있었습니다.**
+     안을 보면 querySelectorAll 을 돌면서 손잡이면 return 할 뿐, 그 뒤에
+     아무 일도 없어요. 껍데기만 있었던 셈입니다.
+
+     ★ 왜 문제인가 — applyLayout 은 "상태가 같으면" 다시 그리지 않고
+       여기로 넘깁니다(화면 깜빡임을 막으려고). 그러니 저장된 폭을
+       실제로 되돌리는 일은 **다시 그릴 때만** 일어났어요. 창 크기를
+       바꾸거나 다른 화면을 다녀오면 칸 폭이 저장값과 어긋난 채로
+       남을 수 있었습니다.
+
+     이제 저장된 폭을 그 자리에서 다시 입힙니다. "남는 공간을 받는 칸"
+     (flex-grow 가 1인 칸)은 건드리지 않아요 — 그 칸은 제 폭이 없으니까요. */
   function syncSizes() {
     const orient = currentOrient();
     const sizes = loadSizes(orient);
     document.querySelectorAll("#split-root .split > *").forEach(el => {
       if (el.classList.contains("split-grip")) return;
+      if (el.classList.contains("chat-collapsed-slot")) return;
+      if (el.classList.contains("pomo-collapsed-slot")) return;
+      if (el.classList.contains("side-rail")) return;
+      /* 늘어나는 칸은 그대로 둡니다 */
+      if ((el.style.flexGrow || "") === "1") return;
+      const key = el.dataset.sizeKey;
+      if (!key) return;
+      const px = Number(sizes[key] ?? DEFAULT_SIZE[key] ?? 0);
+      if (!px) return;
+      el.style.flex = "0 1 " + Math.max(MIN_PX, px) + "px";
     });
-    void sizes;
   }
 
   /* ---------------------------------------------------------------
@@ -754,12 +792,25 @@
     // 이 쪼갬 안에서 쓸 수 있는 전체 크기
     const box = el.parentElement;
     const total = horiz ? box.clientWidth : box.clientHeight;
-    // 뒤에 오는 가지들도 최소 크기는 확보해야 합니다
-    const others = [...box.children].filter(c => c !== el && !c.classList.contains("split-grip"));
+    /* 뒤에 오는 가지들도 최소 크기는 확보해야 합니다.
+
+       ★ [고침 2026-08-11] 접힌 칸과 숨은 손잡이(레일)까지 "최소 120px 이
+         필요한 칸" 으로 세고 있었습니다. 뽀모를 접으면 접힌 칸·레일까지
+         넷이 세어져서, 끌 수 있는 최대 폭이 480px 이나 깎였어요.
+         자리를 안 쓰는 것들은 빼고 셉니다. */
+    const others = [...box.children].filter(c =>
+      c !== el &&
+      !c.classList.contains("split-grip") &&
+      !c.classList.contains("chat-collapsed-slot") &&
+      !c.classList.contains("pomo-collapsed-slot") &&
+      !c.classList.contains("side-rail"));
     const max = Math.max(MIN_PX, total - others.length * MIN_PX - 20);
 
     const next = Math.round(Math.max(MIN_PX, Math.min(max, px)));
-    el.style.flex = "0 0 " + next + "px";
+    /* ★ 0 0 이 아니라 0 1 입니다. 0 0 으로 못 박으면 창을 줄였을 때
+       칸이 양보하지 않아 뒤엣것이 화면 밖으로 밀려납니다. */
+    el.style.flex = "0 1 " + next + "px";
+    el.dataset.sizeKey = key;
 
     const orient = currentOrient();
     const sizes = loadSizes(orient);
@@ -884,6 +935,55 @@
   window.renderSlotMap    = renderSlotMap;
   window.bindLayoutUI     = bindLayoutUI;
   window.resetSplitSizes  = resetSizes;
+
+  /* =================================================================
+     🔎 배치 진단 — layoutDiag()
+     -----------------------------------------------------------------
+     "칸이 이상하게 벌어진다" 는 화면만 봐서는 어느 칸이 범인인지
+     알 수 없습니다. 이 함수는 지금 한 줄에 늘어선 것들을 **실제 폭과
+     함께** 그대로 찍어 줍니다. 빈 칸이 보이면 어느 요소가 그 자리를
+     먹고 있는지 바로 드러납니다.
+
+     쓰는 법 — 브라우저에서 F12 → 콘솔에 layoutDiag() 를 치고 엔터.
+     ================================================================= */
+  window.layoutDiag = function () {
+    const orient = currentOrient();
+    const out = {
+      화면: orient,
+      좌우뒤집기: document.body.classList.contains("chat-right"),
+      뽀모접힘: isSideCollapsed(),
+      채팅접힘: document.body.classList.contains("chat-collapsed"),
+      자리배치: loadSlotMap(orient),
+      저장된폭: loadSizes(orient),
+      기본폭: DEFAULT_SIZE,
+      줄: []
+    };
+    document.querySelectorAll("#split-root .split").forEach((box, n) => {
+      const 칸 = [...box.children].map(c => {
+        const r = c.getBoundingClientRect();
+        const cs = getComputedStyle(c);
+        return {
+          무엇: (c.id ? "#" + c.id : "") + "." + (c.className || "").split(" ").slice(0, 2).join("."),
+          왼쪽: Math.round(r.left),
+          폭: Math.round(r.width),
+          flex: cs.flex,
+          최소폭: cs.minWidth,
+          보임: cs.display !== "none"
+        };
+      });
+      out.줄.push({ 방향: box.className, 전체폭: Math.round(box.getBoundingClientRect().width), 칸 });
+    });
+    console.log("=== TheMagam 배치 진단 ===");
+    console.log(JSON.stringify(out, null, 2));
+    out.줄.forEach(줄 => console.table(줄.칸));
+    return out;
+  };
+
+  /* 저장된 칸 폭을 몽땅 지우고 기본값으로 — 이상해졌을 때의 비상구 */
+  window.layoutReset = function () {
+    resetSizes();
+    return "칸 폭을 기본값으로 되돌렸어요.";
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => { bindLayoutUI(); applyLayout(true); });
