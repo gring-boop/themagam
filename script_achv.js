@@ -406,6 +406,18 @@
        오늘부터만 세면, 아직 안 들어온 아침에 연속이 0 으로 뚝 떨어져서
        어제까지 29일을 채운 사람이 "한 달 개근"을 코앞에서 잃습니다.
      ===================================================================== */
+  /* 오늘 낮 12시 — 날짜를 하루씩 밟아 갈 때의 **끝점**입니다.
+     ★ [고침 2026-08-12] 예전에는 그냥 new Date() 를 끝점으로 썼습니다.
+       밟는 쪽은 낮 12시로 맞춰 두었는데(서머타임에 하루가 밀리지 않게)
+       끝점만 "지금" 이었어요. 그래서 **자정부터 낮 12시 사이**에 켜면
+       오늘이 끝점을 넘어서서 계산에서 빠졌습니다.
+
+       이레 내리 5,000자를 채우고 새벽 한 시에 들어오면, 오늘이 빠져
+       엿새로 세어져 💥 성실 폭발이 안 붙었어요. 낮이 되면 슬그머니
+       붙고요. "아침엔 없다가 오후에 생기는" 이상한 배지였습니다.
+       (checks.js 가 새벽에 돌다가 걸렸습니다) */
+  function 오늘낮() { return new Date(dayKey() + "T12:00:00"); }
+
   function computeStats(src) {
     const { att, wcs, pomo, segs, nick } = src;
     /* 접어둔 합계. 없으면 전부 0 — 접기 전과 같은 값이 나옵니다. */
@@ -461,7 +473,7 @@
     let sincereBursts = 0, sincereRun = 0, _run = 0;
     if (wcDays.length) {
       const from = new Date(wcDays[0] + "T12:00:00");
-      const to = new Date();
+      const to = 오늘낮();
       for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
         if ((wcDay[dayKey(d)] || 0) >= 5000) {
           _run++;
@@ -509,7 +521,7 @@
     const pomoKeys = Object.keys(pomoDay).sort();
     if (pomoKeys.length) {
       const pFrom = new Date(pomoKeys[0] + "T12:00:00");
-      const pTo = new Date();
+      const pTo = 오늘낮();
       for (let d = new Date(pFrom); d <= pTo; d.setDate(d.getDate() + 1)) {
         if ((pomoDay[dayKey(d)] || 0) >= 10) {
           _tRun++;

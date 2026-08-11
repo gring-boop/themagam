@@ -6573,20 +6573,24 @@ body.split-dragging #chat-box3{ user-select: none; }
    거의 불투명하게 두면 어떤 카드 위에서도 같게 읽힙니다.
    글자색은 각 색을 아주 진하게 낮춘 것이라, 밝은 바탕에서도 읽혀요. */
 .card-tag[data-tag-val="idea"]  { background: rgba(175,169,236,.88); border-color: rgba(175,169,236,.95); color: #26215C; }
-.card-tag[data-tag-val="draft"] { background: rgba(255,59,48,.88);   border-color: rgba(255,59,48,.95);   color: #8E2420; }
+/* [맞바꿈 2026-08-11] ✍️ 원고 ↔ 🔧 개정.
+   15세 이용가를 19금으로 개정하는 일이 잦아서 개정 쪽에 붉은색이
+   어울린다는 이야기가 있었습니다. 색만 바꾸고 값(draft/rework)은
+   그대로 둡니다 — 값을 건드리면 지난 기록이 통째로 어긋나요. */
+.card-tag[data-tag-val="draft"] { background: rgba(133,183,235,.88); border-color: rgba(133,183,235,.95); color: #042C53; }
 .card-tag[data-tag-val="polish"]{ background: rgba(240,153,123,.88); border-color: rgba(240,153,123,.95); color: #4A1B0C; }
 .card-tag[data-tag-val="proof"] { background: rgba(93,202,165,.88);  border-color: rgba(93,202,165,.95);  color: #04342C; }
 .card-tag[data-tag-val="revise"]{ background: rgba(255,159,10,.88);  border-color: rgba(255,159,10,.95);  color: #7A4406; }
-.card-tag[data-tag-val="rework"]{ background: rgba(133,183,235,.88); border-color: rgba(133,183,235,.95); color: #042C53; }
+.card-tag[data-tag-val="rework"]{ background: rgba(255,59,48,.88);   border-color: rgba(255,59,48,.95);   color: #8E2420; }
 .card-tag[data-tag-val="input"] { background: rgba(151,196,89,.88);  border-color: rgba(151,196,89,.95);  color: #173404; }
 .card-tag[data-tag-val="etc"]   { background: rgba(237,147,177,.88); border-color: rgba(237,147,177,.95); color: #4B1528; }
 
 :root[data-is-dark="true"] .card-tag[data-tag-val="idea"]  { color: #CECBF6; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="draft"] { color: #FFA59E; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="draft"] { color: #B5D4F4; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="polish"]{ color: #F5C4B3; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="proof"] { color: #9FE1CB; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="revise"]{ color: #FFCE85; }
-:root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ color: #B5D4F4; }
+:root[data-is-dark="true"] .card-tag[data-tag-val="rework"]{ color: #FFA59E; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="input"] { color: #C0DD97; }
 :root[data-is-dark="true"] .card-tag[data-tag-val="etc"]   { color: #F4C0D1; }
 
@@ -6597,11 +6601,11 @@ body.split-dragging #chat-box3{ user-select: none; }
 .worktag-item{ display: flex; align-items: center; gap: 6px; padding: 7px 9px; }
 .worktag-none{ color: var(--muted); }
 .worktag-item.tag-idea  { background: rgba(175,169,236,.16); }
-.worktag-item.tag-draft { background: rgba(255,59,48,.16); }
+.worktag-item.tag-draft { background: rgba(133,183,235,.16); }
 .worktag-item.tag-polish{ background: rgba(240,153,123,.16); }
 .worktag-item.tag-proof { background: rgba(93,202,165,.16); }
 .worktag-item.tag-revise{ background: rgba(255,159,10,.16); }
-.worktag-item.tag-rework{ background: rgba(133,183,235,.16); }
+.worktag-item.tag-rework{ background: rgba(255,59,48,.16); }
 .worktag-item.tag-input { background: rgba(151,196,89,.16); }
 .worktag-item.tag-etc   { background: rgba(237,147,177,.16); }
 
