@@ -69,6 +69,18 @@
      n  : 목표 숫자 (달성 정도를 막대로 보여줄 때 씁니다)
      at : 어떤 값으로 재는가 — 아래 stats() 가 만드는 이름
      new: true 면 "오늘부터 세는 것" (소급되지 않음)
+     rep: 되풀이되는 업적이면, **몇 번 해냈나**를 담은 값의 이름
+
+     [되풀이 — 2026-08-11 추가]
+     "하루 1만 자" 같은 것은 한 번 따고 끝날 일이 아닙니다. 두 번째,
+     열 번째가 더 대단해요. 그래서 그런 업적에는 rep 를 달아 **×12** 처럼
+     횟수를 함께 보여줍니다.
+
+     ★ 되풀이를 셀 수 있는 것과 없는 것이 갈립니다.
+       · 셀 수 있다 — "그날 1만 자를 넘겼나" 처럼 **하루하루 따로 판정**되는 것
+       · 셀 수 없다 — "누적 10만 자", "출석 100일" 처럼 **한 번뿐**인 것
+       움직이는 이레로 재는 "한 주 3만"도 뺐습니다. 이레를 하루씩 밀며
+       세면 한 번 잘 쓴 주가 일곱 번으로 부풀거든요.
      ===================================================================== */
   const ACHV = [
     /* ── 출석 ─────────────────────────────────────────────── */
@@ -87,15 +99,19 @@
     { id: "wc10m",   g: "글자수", icon: "📚", label: "10만 자",      at: "wcTotal",    n: 100000,  desc: "누적 10만 자" },
     { id: "wc50m",   g: "글자수", icon: "🗂", label: "50만 자",      at: "wcTotal",    n: 500000,  desc: "누적 50만 자" },
     { id: "wc100m",  g: "글자수", icon: "🏛", label: "100만 자",     at: "wcTotal",    n: 1000000, desc: "누적 100만 자" },
-    { id: "wcd5k",   g: "글자수", icon: "🔥", label: "하루 5천",     at: "wcBestDay",  n: 5000,    desc: "하루에 5,000자" },
-    { id: "wcd10k",  g: "글자수", icon: "🌋", label: "폭주",         at: "wcBestDay",  n: 10000,   desc: "하루에 10,000자" },
+    { id: "wcd5k",   g: "글자수", icon: "🔥", label: "하루 5천",     at: "wcBestDay",  n: 5000,    rep: "wcDays5k",  desc: "하루에 5,000자" },
+    { id: "wcd10k",  g: "글자수", icon: "🌋", label: "폭주",         at: "wcBestDay",  n: 10000,   rep: "wcDays10k", desc: "하루에 10,000자" },
     { id: "wc7d",    g: "글자수", icon: "🪄", label: "이레 내리",    at: "wcStreak",   n: 7,       desc: "이레 연속 기록" },
     { id: "wcw3m",   g: "글자수", icon: "🚀", label: "한 주 3만",    at: "wcBestWeek", n: 30000,   desc: "한 주에 30,000자" },
+    /* 작가들 사이의 우스갯소리 — "하루 5천 자만 꾸준히 쓰면 글먹 된다".
+       하루 잘 쓴 것보다 **이레를 내리** 지킨 쪽이 훨씬 어렵습니다. */
+    { id: "burst7",  g: "글자수", icon: "💥", label: "성실 폭발",    at: "sincereBursts", n: 1, rep: "sincereBursts",
+      desc: "이레 내리 하루 5,000자 이상" },
 
     /* ── 작업 시간 ────────────────────────────────────────── */
-    { id: "run3h",   g: "작업 시간", icon: "🎯", label: "집중왕",    at: "bestSeg",  n: 3 * 3600e3,  desc: "한 번에 3시간" },
+    { id: "run3h",   g: "작업 시간", icon: "🎯", label: "집중왕",    at: "bestSeg",  n: 3 * 3600e3,  rep: "seg3hCount", desc: "한 번에 3시간" },
     { id: "run5h",   g: "작업 시간", icon: "🧿", label: "초집중왕",  at: "bestSeg",  n: 5 * 3600e3,  desc: "한 번에 5시간" },
-    { id: "day8h",   g: "작업 시간", icon: "⛰", label: "하루 8시간", at: "bestDayMs", n: 8 * 3600e3, desc: "하루에 8시간" },
+    { id: "day8h",   g: "작업 시간", icon: "⛰", label: "하루 8시간", at: "bestDayMs", n: 8 * 3600e3, rep: "day8hCount", desc: "하루에 8시간" },
     { id: "t100h",   g: "작업 시간", icon: "⏳", label: "100시간",   at: "msTotal",  n: 100 * 3600e3, desc: "누적 100시간" },
     { id: "t500h",   g: "작업 시간", icon: "🗿", label: "500시간",   at: "msTotal",  n: 500 * 3600e3, desc: "누적 500시간" },
     { id: "owl10",   g: "작업 시간", icon: "🦉", label: "올빼미",    at: "owlDays",  n: 10, desc: "자정~새벽에 작업한 날 10일" },
@@ -103,10 +119,16 @@
 
     /* ── 뽀모 ─────────────────────────────────────────────── */
     { id: "pom1",    g: "뽀모", icon: "🍅", label: "첫 토마토",     at: "pomoTotal",   n: 1,   desc: "집중 1회" },
-    { id: "pomd8",   g: "뽀모", icon: "🧺", label: "하루 여덟 알",  at: "pomoBestDay", n: 8,   desc: "하루에 8회" },
+    { id: "pomd8",   g: "뽀모", icon: "🧺", label: "하루 여덟 알",  at: "pomoBestDay", n: 8,   rep: "pomoDay8Count", desc: "하루에 8회" },
     { id: "pom100",  g: "뽀모", icon: "🥫", label: "100알",         at: "pomoTotal",   n: 100, desc: "누적 100회" },
     { id: "pom500",  g: "뽀모", icon: "🏺", label: "500알",         at: "pomoTotal",   n: 500, desc: "누적 500회" },
     { id: "pom7d",   g: "뽀모", icon: "🧭", label: "이레 연속 뽀모", at: "pomoStreak", n: 7,   desc: "이레 내리 집중" },
+    /* 🌾 토마토 수확왕 — 성실 폭발의 뽀모판입니다.
+       하루 열 알이면 250분, 네 시간이 넘는 집중이에요. 그걸 이레 내리
+       지킨 것이라 "왕" 을 붙일 만합니다. 세는 방식도 성실 폭발과 같게
+       맞췄어요 — 열나흘이면 ×2 입니다. */
+    { id: "harv7",   g: "뽀모", icon: "🌾", label: "토마토 수확왕", at: "tomatoBursts", n: 1, rep: "tomatoBursts",
+      desc: "이레 내리 하루 10알 이상" },
 
     /* ── 표현 (오늘부터) ──────────────────────────────────── */
     { id: "greet50", g: "표현", icon: "👋", label: "인사왕",        at: "cGreet",   n: 50,   new: true, desc: "방가·리하이 50번" },
@@ -131,6 +153,7 @@
 
   /* 지금까지 딴 것 · 대표 · 세어둔 값 */
   let _got  = {};
+  let _rep  = {};        // { 업적id: 몇 번 해냈나 } — 되풀이되는 것만
   let _pick = "";
   let _c    = {};
   let _stats = null;
@@ -239,6 +262,31 @@
     const wcDays = Object.keys(wcDay).sort();
     const wcTotal = wcDays.reduce((a, d) => a + wcDay[d], 0);
     const wcBestDay = wcDays.reduce((a, d) => Math.max(a, wcDay[d]), 0);
+    const wcDays5k  = wcDays.filter(d => wcDay[d] >= 5000).length;
+    const wcDays10k = wcDays.filter(d => wcDay[d] >= 10000).length;
+
+    /* 💥 성실 폭발 — "이레 내리 하루 5,000자 이상".
+
+       ★ 이레마다 새로 셉니다. 열나흘을 내리 지켰으면 2회예요.
+         "7일 넘긴 구간 하나 = 1회" 로 하면 서른 날을 지킨 사람과
+         이레만 지킨 사람이 같아집니다. 계속할 이유가 있어야 해요.
+
+       ★ 중간에 하루라도 5,000자 아래면 거기서 끊고 처음부터 다시 셉니다
+         (연달아 이레여야 하니까요). 기록이 아예 없는 날도 끊긴 것입니다. */
+    let sincereBursts = 0, sincereRun = 0, _run = 0;
+    if (wcDays.length) {
+      const from = new Date(wcDays[0] + "T12:00:00");
+      const to = new Date();
+      for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+        if ((wcDay[dayKey(d)] || 0) >= 5000) {
+          _run++;
+          if (_run > sincereRun) sincereRun = _run;
+          if (_run % 7 === 0) sincereBursts++;
+        } else {
+          _run = 0;
+        }
+      }
+    }
 
     /* 어느 이레를 잘라도 가장 많았던 합 (달력 주가 아니라 움직이는 이레) */
     let wcBestWeek = 0;
@@ -264,11 +312,34 @@
     });
     const pomoTotal = Object.values(pomoDay).reduce((a, b) => a + b, 0);
     const pomoBestDay = Object.values(pomoDay).reduce((a, b) => Math.max(a, b), 0);
+    const pomoDay8Count = Object.values(pomoDay).filter(v => v >= 8).length;
+
+    /* 🌾 토마토 수확왕 — 이레 내리 하루 10알 이상.
+       ★ 성실 폭발과 **같은 방식**으로 셉니다(이레마다 새로). 두 업적이
+         다르게 세면 "왜 저건 2회고 이건 1회지?" 가 되니까요.
+       ★ 뽀모를 아예 안 돌린 날도 끊긴 것입니다 — pomoDay 에 그 날짜가
+         없으므로 0 으로 읽혀 자연히 끊깁니다. */
+    let tomatoBursts = 0, tomatoRun = 0, _tRun = 0;
+    const pomoKeys = Object.keys(pomoDay).sort();
+    if (pomoKeys.length) {
+      const pFrom = new Date(pomoKeys[0] + "T12:00:00");
+      const pTo = new Date();
+      for (let d = new Date(pFrom); d <= pTo; d.setDate(d.getDate() + 1)) {
+        if ((pomoDay[dayKey(d)] || 0) >= 10) {
+          _tRun++;
+          if (_tRun > tomatoRun) tomatoRun = _tRun;
+          if (_tRun % 7 === 0) tomatoBursts++;
+        } else {
+          _tRun = 0;
+        }
+      }
+    }
 
     /* ── 작업 시간 ──
        timeSegs/{날짜} 는 { s(상태), a(시작), b(끝) } 들입니다.
        ⏱️ 작업 시간 화면과 같은 기준으로 writing·focus 만 셉니다. */
     let msTotal = 0, bestSeg = 0, bestDayMs = 0, owlDays = 0, larkDays = 0;
+    let seg3hCount = 0, day8hCount = 0;
     Object.keys(segs).forEach(d => {
       let dayMs = 0, owl = false, lark = false;
       Object.values(segs[d] || {}).forEach(seg => {
@@ -276,12 +347,14 @@
         if (seg.s !== "writing" && seg.s !== "focus") return;
         const len = Math.max(0, Number(seg.b || 0) - Number(seg.a || 0));
         dayMs += len;
+        if (len >= 3 * 3600e3) seg3hCount++;
         if (len > bestSeg) bestSeg = len;
         const h = new Date(Number(seg.a || 0)).getHours();
         if (h < 5) owl = true;
         if (h >= 6 && h < 9) lark = true;
       });
       msTotal += dayMs;
+      if (dayMs >= 8 * 3600e3) day8hCount++;
       if (dayMs > bestDayMs) bestDayMs = dayMs;
       if (owl) owlDays++;
       if (lark) larkDays++;
@@ -291,11 +364,12 @@
       attTotal: attDays.length,
       attStreak: streak(attSet),
       dawnDays, weekendDays,
-      wcTotal, wcBestDay, wcBestWeek,
+      wcTotal, wcBestDay, wcBestWeek, wcDays5k, wcDays10k,
+      sincereBursts, sincereRun,
       wcStreak: streak(new Set(wcDays)),
-      pomoTotal, pomoBestDay,
+      pomoTotal, pomoBestDay, pomoDay8Count, tomatoBursts, tomatoRun,
       pomoStreak: streak(new Set(Object.keys(pomoDay))),
-      msTotal, bestSeg, bestDayMs, owlDays, larkDays
+      msTotal, bestSeg, bestDayMs, owlDays, larkDays, seg3hCount, day8hCount
     };
   }
 
@@ -310,6 +384,12 @@
     const d = new Date(start);
     while (daySet.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1); }
     return n;
+  }
+
+  /** 되풀이 횟수 — rep 가 없으면 1 */
+  function repOf(a) {
+    if (!a.rep) return 1;
+    return Math.max(1, Number(_stats?.[a.rep] || 0));
   }
 
   /** 업적 하나의 지금 값 */
@@ -333,21 +413,41 @@
   function evaluate() {
     let 새로 = [];
     ACHV.forEach(a => {
-      if (_got[a.id]) return;
-      if (valueOf(a) >= a.n) { _got[a.id] = Date.now(); 새로.push(a); }
+      if (_got[a.id]) {
+        /* 이미 딴 것이라도 **횟수는 늘 수 있습니다.**
+           ★ 늘었을 때만 알립니다. 매번 알리면 새로고침마다 뜹니다. */
+        if (a.rep) {
+          const n = repOf(a);
+          if (n > (Number(_rep[a.id]) || 1)) {
+            _rep[a.id] = n;
+            _dirty = true;
+            toast(a, n);
+          } else if (_rep[a.id] !== n) {
+            _rep[a.id] = n;
+            _dirty = true;
+          }
+        }
+        return;
+      }
+      if (valueOf(a) >= a.n) {
+        _got[a.id] = Date.now();
+        if (a.rep) _rep[a.id] = repOf(a);
+        새로.push(a);
+      }
     });
-    if (새로.length) { _dirty = true; 새로.forEach(toast); }
+    if (새로.length) { _dirty = true; 새로.forEach(a => toast(a, repOf(a))); }
     paint();
     return 새로;
   }
 
   /* 딴 순간 — 내 화면에만 조용히. 18명이 따는 것을 다 채팅에 흘리면
      금방 시끄러워집니다. */
-  function toast(a) {
+  function toast(a, n) {
     const box = document.createElement("div");
     box.className = "achv-toast";
+    const 횟수 = Number(n) > 1 ? ` <span class="achv-x">×${Number(n)}</span>` : "";
     box.innerHTML = `<span class="achv-ic">${a.icon}</span>
-      <span><b>${esc(a.label)}</b><br><small>${esc(a.desc)}</small></span>`;
+      <span><b>${esc(a.label)}</b>${횟수}<br><small>${esc(a.desc)}</small></span>`;
     document.body.appendChild(box);
     setTimeout(() => box.classList.add("go"), 20);
     setTimeout(() => box.remove(), 5200);
@@ -360,7 +460,7 @@
     if (!_dirty || !me() || !window.db) return;
     _dirty = false;
     try {
-      await window.db.ref(`achv/${me()}`).update({ got: _got, pick: _pick || "", c: _c });
+      await window.db.ref(`achv/${me()}`).update({ got: _got, rep: _rep, pick: _pick || "", c: _c });
     } catch (e) { console.warn("[업적] 저장 실패", e); }
   }
   setInterval(save, 10000);
@@ -390,7 +490,8 @@
 
     pill.hidden = false;
     pill.innerHTML = a
-      ? `<span class="achv-ic">${a.icon}</span><span class="achv-nm">${esc(a.label)}</span><span class="achv-n">${n}</span>`
+      ? `<span class="achv-ic">${a.icon}</span><span class="achv-nm">${esc(a.label)}${
+            a.rep && repOf(a) > 1 ? ` ×${repOf(a)}` : ""}</span><span class="achv-n">${n}</span>`
       : `<span class="achv-ic">🏅</span><span class="achv-nm">업적</span>`;
     pill.setAttribute("aria-expanded", _open ? "true" : "false");
     if (_open) renderPanel();
@@ -405,8 +506,9 @@
           ${has ? `data-pick="${esc(a.id)}" role="button" tabindex="0" title="대표로 걸기"` : ""}>
         <span class="achv-ic">${has ? a.icon : "🔒"}</span>
         <span class="achv-t">
-          <b>${esc(a.label)}</b>
-          <small>${esc(a.desc)}${a.new ? " · 오늘부터 셈" : ""}</small>
+          <b>${esc(a.label)}</b>${has && a.rep && repOf(a) > 1
+            ? ` <span class="achv-x">×${repOf(a)}</span>` : ""}
+          <small>${esc(a.desc)}${a.rep ? " · 되풀이" : ""}${a.new ? " · 오늘부터 셈" : ""}</small>
           ${has ? "" : `<span class="achv-bar"><i style="width:${pct}%"></i></span>`}
         </span>
         ${has ? `<span class="achv-ok">✓</span>` : `<span class="achv-p">${pct}%</span>`}
@@ -455,14 +557,18 @@
     modal.style.display = "flex";
     try {
       const snap = await window.db.ref(`achv/${nick}`).once("value");
-      const got = (snap.val() || {}).got || {};
+      const v = snap.val() || {};
+      const got = v.got || {};
+      const rep = v.rep || {};
       const list = Object.keys(got).map(byId).filter(Boolean)
         .sort((a, b) => Number(got[b.id]) - Number(got[a.id]));
       body.innerHTML = list.length
         ? `<ul class="achv-list">${list.map(a => `
             <li class="achv-row is-got">
               <span class="achv-ic">${a.icon}</span>
-              <span class="achv-t"><b>${esc(a.label)}</b><small>${esc(a.desc)}</small></span>
+              <span class="achv-t"><b>${esc(a.label)}</b>${Number(rep[a.id]) > 1
+                ? ` <span class="achv-x">×${Number(rep[a.id])}</span>` : ""}
+                <small>${esc(a.desc)}</small></span>
             </li>`).join("")}</ul>`
         : `<p class="achv-empty">아직 딴 업적이 없어요.</p>`;
     } catch (e) {
@@ -484,6 +590,7 @@
       const snap = await window.db.ref(`achv/${me()}`).once("value");
       const v = snap.val() || {};
       _got  = v.got  || {};
+      _rep  = v.rep  || {};
       _pick = v.pick || "";
       _c    = v.c    || {};
       await scan(false);

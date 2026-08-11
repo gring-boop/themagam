@@ -7229,3 +7229,10 @@ body.split-dragging #chat-box3{ user-select: none; }
   max-height: calc(100dvh - 32px);
   overflow: auto;
 }
+/* 되풀이 업적의 횟수 — ×12 처럼 */
+.achv-x{
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
