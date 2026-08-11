@@ -139,9 +139,104 @@
     return out;
   }
 
+  /* =====================================================================
+     [2026-08-11] 지난 7일 보기 — ⏱️ 작업 시간과 같은 방식
+
+     [왜 두 가지인가]
+     월~일로 끊으면 "이번 주 얼마 썼나"를 재기 좋습니다. 대신 월요일
+     아침에는 막대가 하나뿐이라 화면이 허전하고, 주말에 몰아 쓴 흐름이
+     월요일에 뚝 끊겨 보입니다.
+     지난 7일로 보면 늘 일곱 칸이라 요즘 페이스가 한눈에 들어옵니다.
+     대신 합계가 매일 조금씩 밀려나서 **주간 목표의 잣대로는 못 씁니다.**
+
+     둘 중 하나가 옳은 게 아니라 무엇을 보려느냐의 차이라, 각자 고르게
+     하고 그 선택을 이 기기에 적어 둡니다.
+     ===================================================================== */
+  function rollKeys(back = 0) {
+    const now = new Date();
+    const out = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i - back * 7);
+      out.push(dayKey(d));
+    }
+    return out;
+  }
+
+
   const DOW_LABEL = ["월", "화", "수", "목", "금", "토", "일"];
 
   function fmt(n) { return Number(n || 0).toLocaleString(); }
+
+  /* 그래프 위에 얹는 짧은 숫자. 일곱 개가 나란히 서니 길면 겹칩니다.
+     만 단위부터 줄이고 그 아래는 그대로 둡니다 — 우리말로는 1.2만이
+     12k 보다 바로 읽혀요. */
+  function shortNum(n) {
+    n = Number(n) || 0;
+    if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, "") + "만";
+    return n.toLocaleString();
+  }
+
+  /* =====================================================================
+     최근 7일 꺾은선 (2026-08-11)
+     ---------------------------------------------------------------------
+     위쪽 막대는 **월~일 한 주**라 "이번 주 얼마 썼나"를 재는 자리입니다.
+     그 아래 이 그래프는 **오늘부터 거꾸로 7일** — 주가 바뀌어도 끊기지
+     않아서 요즘 페이스가 이어져 보입니다. 둘은 같은 자료를 다르게
+     자른 것뿐이라 서로 어긋날 일이 없어요.
+
+     [왜 꺾은선인가]
+     막대는 "그날 얼마"를 재기 좋고, 꺾은선은 "오르내림"을 보기 좋습니다.
+     같은 모양을 두 번 겹쳐 놓으면 아래쪽을 볼 이유가 없어집니다.
+
+     [그림은 SVG 로 직접 그립니다]
+     차트 라이브러리를 하나 붙이면 그 파일만 수십 KB 인데, 점 일곱 개를
+     잇는 선 하나 때문에 그럴 이유가 없습니다.
+
+     ★ 좌표 계산에서 조심할 곳이 둘입니다.
+       ① 이레 내내 0 이면 최댓값이 0 이라 나누기에서 NaN 이 됩니다.
+       ② 점이 위아래 끝에 붙으면 숫자 글자가 그림 밖으로 잘립니다.
+     ===================================================================== */
+  function lineChartHtml(pts) {
+    /* ★ preserveAspectRatio 를 건드리지 않습니다.
+       "none" 으로 두면 가로와 세로가 따로 늘어나서 **숫자 글자가
+       찌그러집니다.** 기본값(비율 유지)으로 두고, 높이는 CSS 에서
+       auto 로 둬 폭에 맞춰 따라오게 합니다. */
+    const W = 640, H = 210;
+    const L = 26, R = 26, T = 34, B = 26;      // 숫자와 날짜가 앉을 여백
+    const iw = W - L - R, ih = H - T - B;
+
+    const max = Math.max(1, ...pts.map(p => p.v));   // ① 0 나누기 막이
+    const n = pts.length;
+    const x = i => L + (n === 1 ? iw / 2 : (iw * i) / (n - 1));
+    const y = v => T + ih - (ih * (Number(v) || 0)) / max;
+
+    const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+
+    const dots = pts.map((p, i) => `
+      <circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4.5" class="wcl-dot"/>`).join("");
+
+    /* 0 인 날은 숫자를 적지 않습니다 — 바닥에 0 이 줄줄이 늘어서면
+       정작 쓴 날의 숫자가 묻힙니다. */
+    const nums = pts.map((p, i) => p.v > 0 ? `
+      <text x="${x(i).toFixed(1)}" y="${(y(p.v) - 12).toFixed(1)}"
+            class="wcl-num" text-anchor="middle">${shortNum(p.v)}</text>` : "").join("");
+
+    const days = pts.map((p, i) => `
+      <text x="${x(i).toFixed(1)}" y="${H - 6}" class="wcl-day${p.today ? " is-today" : ""}"
+            text-anchor="middle">${p.label}</text>`).join("");
+
+    return `
+      <div class="wcl-wrap">
+        <div class="wcl-h">최근 7일 · 글자수</div>
+        <svg class="wcl" viewBox="0 0 ${W} ${H}"
+             role="img" aria-label="최근 7일 글자수 꺾은선 그래프">
+          <line x1="${L}" y1="${T + ih}" x2="${W - R}" y2="${T + ih}" class="wcl-base"/>
+          <polyline points="${line}" class="wcl-line"/>
+          ${dots}${nums}${days}
+        </svg>
+      </div>`;
+  }
 
   /* 내 필명 읽기.
 
@@ -660,8 +755,17 @@
 
     /* 주간은 날짜마다 따로 붙습니다. 하루치씩이라 양이 적어요.
        [고침 2026-08-10] weekDays() 대신 weekKeys(0) — 같은 값이지만
-       화면과 같은 함수를 써야 어긋나지 않습니다(위 주석 참고). */
-    weekKeys(0).forEach(k => {
+       화면과 같은 함수를 써야 어긋나지 않습니다(위 주석 참고).
+
+       ★ [2026-08-11] weekKeys(0) → rollKeys(0) 으로 넓혔습니다.
+         [주간/7일] 단추가 생기면서 화면이 **이번 주 월요일보다 앞선
+         날짜**를 그릴 수 있게 됐습니다. 듣는 쪽이 월~오늘 뿐이면 그
+         앞의 칸들이 0 으로 보입니다 — 8월 10일에 터졌던 "월요일 아침에
+         지난 주가 싹 날아갔다" 와 똑같은 어긋남이에요.
+         지난 7일은 언제나 월~오늘을 품으므로(둘 다 오늘로 끝나니까)
+         이 하나로 두 보기를 모두 덮습니다. 붙는 날짜 수는 최대 일곱으로
+         전과 같습니다 — 일요일에 보던 개수예요. */
+    rollKeys(0).forEach(k => {
       const r = window.db.ref(`wordlog/${k}`);
       r.on("value", snap => { _week[k] = snap.val() || {}; render(); });
       _weekRefs.push(r);
@@ -758,11 +862,19 @@
     const vals = [];
     /* [고침 2026-08-10] "오늘부터 거꾸로 7일"이 아니라 **그 주의 월~일**.
        예전 방식은 요일이 어긋나서, 월요일에 보면 지난 주말이 이번 주에도
-       지난 주에도 안 나왔습니다 (weekKeys 주석 참고). */
+       지난 주에도 안 나왔습니다 (weekKeys 주석 참고).
+       [2026-08-11] 이제 보기 방식(주간/7일)에 따라 갈라집니다. */
     const keys = weekKeys(wcBack);
+
+    /* ★ 지금 실시간으로 듣고 있는 날짜들.
+       "이번 주냐" 가 아니라 **"듣고 있느냐"** 로 갈라야 합니다.
+       7일 보기의 첫 화면에는 이번 주 월요일보다 앞선 날이 섞여 있는데,
+       그걸 캐시에서 찾으면 0 이 나옵니다. */
+    const live = new Set(rollKeys(0));
+
     for (const key of keys) {
       let total = 0;
-      if (isThisWeek) {
+      if (live.has(key)) {
         total = Number(_week[key]?.[me()]?.total || 0);
       } else {
         try {
@@ -784,6 +896,23 @@
         <div class="rec-sub">오늘 쓴 글자수</div>
       </div>`;
 
+    /* ── 아래쪽 최근 7일 꺾은선 ──────────────────────────────────────
+       ★ 이 그래프는 ‹ › 를 따라가지 **않습니다.** 늘 오늘까지의 7일이에요.
+         위쪽에서 지난 주를 넘겨보는 동안 아래도 함께 옮겨가면, 두 그림이
+         같은 기간을 조금 다르게 자른 꼴이 되어 볼 이유가 없어집니다.
+         위는 "그 주에 얼마", 아래는 "요즘 페이스" — 역할이 다릅니다.
+
+       날짜는 전부 지금 듣고 있는 범위(rollKeys(0)) 안에 있으므로
+       서버를 다시 읽지 않습니다. */
+    const linePts = rollKeys(0).map(k => {
+      const d = new Date(k + "T12:00:00");
+      return {
+        v: Number(_week[k]?.[me()]?.total || 0),
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+        today: k === dayKey()
+      };
+    });
+
     return `
       ${todayHtml}
       <div class="rec-h2 rec-weeknav">
@@ -795,6 +924,7 @@
       </div>
       <div class="wc-rows" style="max-height:none">${drawRows(vals, isThisWeek ? vals.length - 1 : -1)}</div>
       <div class="rec-foot">${weekLabel} <b>${fmt(week)}자</b></div>
+      ${lineChartHtml(linePts)}
       ${isThisWeek && (base === null || base === undefined)
         ? `<p class="hint">아직 출발선을 안 잡았어요. 글자수 칸에서 지금 원고의 전체 글자수를 적어주세요.</p>`
         : ""}`;
@@ -952,7 +1082,7 @@
   window.openWcAll = openWcAll;
   window.closeWcAll = closeWcAll;
 
-  window.Wordcount = { dayKey, weekDays, weekKeys, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
+  window.Wordcount = { dayKey, weekDays, weekKeys, rollKeys, drawRows, drawFeed, sumWeek, myWeekHtml, addMyPomoLine,
                        _state: () => ({ today: _today, week: _week, feed: _feed,
                                         pomoLines: _pomoLines, tab: _tab }) };
 })();

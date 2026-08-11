@@ -7051,3 +7051,39 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* 공지 쓰기 칸 — 새로 쓰는 중인지 고치는 중인지 한눈에 */
 .nt-write-title{ font-size: var(--fs-sm); font-weight: 600; color: var(--muted-strong); }
 .nt-admin{ display: flex; gap: 10px; justify-content: flex-end; }
+
+/* [2026-08-11] 최근 7일 꺾은선 — 주간 막대 아래에 함께 놓습니다.
+   위는 "이번 주 얼마"(막대), 아래는 "요즘 페이스"(선). 모양을 달리 해야
+   두 번 볼 이유가 생깁니다. */
+.wcl-wrap{
+  margin-top: 14px;
+  padding: 12px 4px 4px;
+  border-radius: var(--r-md);
+  background: var(--panel2);
+}
+.wcl-h{
+  padding: 0 10px 2px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+}
+/* 세로 비율을 고정해 두면 창 폭이 달라져도 선이 뭉개지지 않습니다 */
+.wcl{ display: block; width: 100%; height: auto; overflow: visible; }
+.wcl-base{ stroke: var(--border); stroke-width: 1; }
+.wcl-line{
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: .75;
+}
+.wcl-dot{ fill: var(--accent); opacity: .85; }
+.wcl-num{
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  fill: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.wcl-day{ font-size: 11px; fill: var(--muted); }
+.wcl-day.is-today{ fill: var(--accent); font-weight: var(--fw-medium); }
