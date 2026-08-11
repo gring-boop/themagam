@@ -5195,23 +5195,40 @@ html[data-theme-style="studio"] .user-card{
   vertical-align: 1px;
 }
 /* Chatty 탭을 보는 중에만 오른쪽 끝에 살짝 보이는 나가기 */
+/* [옮김 2026-08-12] 머리말 탭 줄 → 접속자 줄 오른쪽 끝.
+   글자 없이 아이콘만 둡니다. 옆에 이름이 늘어서는 줄이라 글자를 하나 더
+   얹으면 그것도 이름처럼 읽혀요.
+   ★ 색은 이름과 **다르게** — 이름은 --muted-strong 이고 이건 붉은 계열
+     입니다. 같은 색이면 아이콘이 이름 목록의 일부로 보입니다. */
 .chatty-leave-btn{
-  margin-left: auto;
-  border: 1px solid var(--border);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  margin-top: -1px;
+  border: none;
   background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-xs);
-  padding: 3px 8px;
+  color: var(--danger);
+  opacity: .65;
   border-radius: var(--r-sm);
   cursor: pointer;
+  padding: 0;
 }
-.chatty-leave-btn:hover{ color: var(--danger); border-color: var(--danger-line); }
+.chatty-leave-btn svg{ width: 15px; height: 15px; }
+.chatty-leave-btn:hover{ opacity: 1; background: var(--danger-soft, rgba(255,59,48,.10)); }
+.chatty-leave-btn:focus-visible{ opacity: 1; outline: 2px solid var(--danger-line); }
+.chatty-leave-btn.hidden{ display: none; }
 
 /* ☕ Chatty 탭 라벨의 (n명) — 숫자는 조금 작고 옅게 */
 #chatty-tab-count{ font-size: var(--fs-xs); font-weight: var(--fw-medium); opacity: .8; }
 
 /* ☕ Chatty 접속자 줄 — 핀 배너 자리처럼 머리말 바로 아래.
    길어지면 최대 3줄까지 보이고 그 뒤는 … 으로 접습니다. */
+/* [고침 2026-08-12] 이 줄이 [이름들] + [나가기] 두 칸을 담게 됐습니다.
+   ★ 줄 접기(-webkit-line-clamp)는 **이름 쪽에만** 걸어야 합니다.
+     줄 전체에 걸면 단추까지 접기 대상이 되어, 이름이 길어지는 순간
+     단추가 잘려 사라져요. */
 #chatty-online-bar{
   flex: 0 0 auto;
   padding: 6px var(--sp-3);
@@ -5220,13 +5237,20 @@ html[data-theme-style="studio"] .user-card{
   background: var(--accent-softer);
   border-bottom: 1px solid var(--border);
   line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+#chatty-online-bar.hidden{ display: none; }
+.chatty-who{
+  flex: 1 1 auto;
+  min-width: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
   word-break: break-all;
 }
-#chatty-online-bar.hidden{ display: none; }
 
 /* 🔒 세 번째 탭 — 아이콘만. 승인 전에는 자물쇠 하나뿐이라
    "아직 준비 중인 무언가"처럼 보이게 폭을 좁게 잡습니다.

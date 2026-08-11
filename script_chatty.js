@@ -170,9 +170,12 @@
       /* ② 머리말 아래 접속자 줄 — [👥 미호, 그링, 버찌]
          (안내 문구 앞의 "n명 접속 중"은 이 줄과 겹쳐서 뺐습니다 — 사용자 요청)
          핀 배너 자리처럼 한 줄로 시작해 길어지면 최대 3줄(CSS 클램프). */
-      const bar = document.getElementById("chatty-online-bar");
-      if (bar) {
-        bar.innerHTML = cnt > 0
+      /* [고침 2026-08-12] 예전에는 줄 전체(#chatty-online-bar)에 썼습니다.
+         이제 그 줄 안에 [나가기] 단추가 함께 살아서, 통째로 덮어쓰면
+         단추가 지워져요. 이름만 안쪽 칸(#chatty-who)에 씁니다. */
+      const who = document.getElementById("chatty-who");
+      if (who) {
+        who.innerHTML = cnt > 0
           ? `👥 ${names.map(_escChatty).join(", ")}`
           : `👥 아직 아무도 없어요`;
       }
