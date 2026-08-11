@@ -167,6 +167,33 @@
             <circle cx="55" cy="11" r="3" fill="#B3372B"/>`,
       textColor: "#2E7D57"
     },
+    /* [2026-08-11] 응원 두 장. 🙌 파이팅 옆에 나란히 둡니다 —
+       고르는 판에서 비슷한 결끼리 모여 있어야 눈이 덜 헤맵니다. */
+    {
+      id: "cheerup", cmd: "힘내", label: "힘내요",
+      svg: `<circle cx="28" cy="33" r="13" fill="#F2B07A"/>
+            <path d="M21.5 32l2.5-3 2.5 3M30.5 32l2.5-3 2.5 3" stroke="#3A2A22" stroke-width="1.9"
+                  fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 39q4 4 8 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M40 41q9 2 10-7" stroke="#3A2A22" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+            <path d="M43 36q5-1 6-6" stroke="#3A2A22" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/>
+            <circle cx="51" cy="27" r="5.5" fill="#F2B07A" stroke="#3A2A22" stroke-width="1.8"/>
+            <path d="M58 13l1.4 3.2 3.2 1.4-3.2 1.4-1.4 3.2-1.4-3.2-3.2-1.4 3.2-1.4z" fill="#B3372B" opacity=".75"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      id: "cando", cmd: "할뚜", label: "할뚜이따",
+      svg: `<circle cx="36" cy="32" r="14" fill="#F6C8D6"/>
+            <path d="M28 31l3-3 3 3M38 31l3-3 3 3" stroke="#3A2A22" stroke-width="1.9"
+                  fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <ellipse cx="36" cy="39" rx="3.4" ry="2.9" fill="#B3372B"/>
+            <circle cx="25" cy="36" r="2.6" fill="#F0A0B8" opacity=".85"/>
+            <circle cx="47" cy="36" r="2.6" fill="#F0A0B8" opacity=".85"/>
+            <circle cx="17" cy="41" r="4.6" fill="#F6C8D6" stroke="#3A2A22" stroke-width="1.7"/>
+            <circle cx="55" cy="41" r="4.6" fill="#F6C8D6" stroke="#3A2A22" stroke-width="1.7"/>
+            <path d="M13 29l-3-3M59 29l3-3M36 15v-4" stroke="#F0C674" stroke-width="2.4" stroke-linecap="round"/>`,
+      textColor: "#C2557A"
+    },
     {
       id: "away", cmd: "자리비움", label: "자리 비움",
       svg: `<rect x="18" y="24" width="36" height="22" rx="6" fill="#EDE3D2" stroke="#3A2A22" stroke-width="1.8"/>
@@ -422,8 +449,19 @@
   function countForAchv(id) {
     try {
       window.achvBump?.("stk", id);                 // 종류 모으기
-      if (id === "hi" || id === "rehi") window.achvBump?.("cGreet");
-      if (id === "pat") window.achvBump?.("cPat");
+      /* [2026-08-11] 어느 스티커가 어느 업적에 드는지 한곳에 모았습니다.
+         전에는 if 가 흩어져 있어서, 스티커를 늘릴 때 업적 쪽을 같이
+         고쳐야 한다는 걸 놓치기 쉬웠어요.
+         ★ 겹쳐도 됩니다 — 🙌 힘내요는 토닥이에도, 응원왕에도 듭니다.
+           위로이면서 응원이니까요. */
+      const ACHV_STK = {
+        cGreet: ["hi", "rehi", "welcome", "bye"],   // 👋 인사왕
+        cPat:   ["pat", "cheerup"],                  // 🫶 토닥이
+        cCheer: ["fight", "cheerup", "cando"]        // 📣 응원왕
+      };
+      Object.keys(ACHV_STK).forEach(k => {
+        if (ACHV_STK[k].includes(id)) window.achvBump?.(k);
+      });
     } catch (e) {}
   }
 

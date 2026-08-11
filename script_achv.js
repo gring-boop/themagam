@@ -188,10 +188,16 @@
       desc: "이레 내리 하루 10알 이상" },
 
     /* ── 표현 (오늘부터) ──────────────────────────────────── */
-    { id: "greet50", g: "표현", icon: "👋", label: "인사왕",        at: "cGreet",   n: 50,   new: true, desc: "방가·리하이 50번" },
-    { id: "pat30",   g: "표현", icon: "🫶", label: "토닥이",        at: "cPat",     n: 30,   new: true, desc: "토닥토닥 30번" },
+    /* [2026-08-11] 어느 스티커가 드는지는 script_sticker.js 의 ACHV_STK
+       한 군데에 적혀 있습니다. 설명 글도 거기에 맞춰 두세요. */
+    { id: "greet50", g: "표현", icon: "👋", label: "인사왕",        at: "cGreet",   n: 50,   new: true, desc: "방가·리하이·어서와요·잘가요 50번" },
+    { id: "pat30",   g: "표현", icon: "🫶", label: "토닥이",        at: "cPat",     n: 30,   new: true, desc: "토닥토닥·힘내요 30번" },
+    /* 📣 응원왕 — 힘내요는 토닥이와 겹칩니다. 위로이면서 응원이니 둘 다 듭니다. */
+    { id: "cheer50", g: "표현", icon: "📣", label: "응원왕",        at: "cCheer",   n: 50,   new: true, desc: "파이팅·힘내요·할뚜이따 50번" },
     { id: "chat1k",  g: "표현", icon: "💬", label: "수다왕",        at: "cChat",    n: 1000, new: true, desc: "채팅 1,000줄" },
-    { id: "stkall",  g: "표현", icon: "🖍", label: "스티커 수집가",  at: "cStkKind", n: 20,   new: true, desc: "스무 종을 모두 한 번씩" },
+    /* ★ 스티커가 늘면 이 숫자도 같이 올려야 합니다 (지금 스물다섯 종).
+       안 올리면 스무 종만 써도 "모두 모았다" 가 되어 뜻이 무너집니다. */
+    { id: "stkall",  g: "표현", icon: "🖍", label: "스티커 수집가",  at: "cStkKind", n: 25,   new: true, desc: "스물다섯 종을 모두 한 번씩" },
     { id: "forest10",g: "표현", icon: "🎋", label: "대숲지기",      at: "cForest",  n: 10,   new: true, desc: "대숲에 10번" },
     /* ☕ 수다방 — "며칠 들어왔나" 는 여태 기록이 없었습니다.
        chattyParticipation 에는 "지금 참여 중인가" 한 칸만 있고, 어느
