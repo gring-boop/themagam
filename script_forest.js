@@ -350,6 +350,7 @@
       const ref = window.db.ref("forest").push();
       await ref.set(note);
       remember(MINE_KEY, ref.key);      // ← 이 기기에만 남는 기록
+      window.achvBump?.("cForest");     // 🏅 대숲지기 (누가 썼는지는 여전히 안 남습니다)
       _notes.push(normalize(ref.key, note));
       _compose = null;
       render();

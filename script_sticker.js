@@ -366,6 +366,17 @@
     close();
     window.send?.();
     el.focus();
+    countForAchv(id);
+  }
+
+  /* 🏅 업적에 알리기 — 인사왕·토닥이·스티커 수집가가 이 숫자를 봅니다.
+     ★ 업적 파일이 없어도 스티커는 그대로 돌아야 하므로 ?. 로 부릅니다. */
+  function countForAchv(id) {
+    try {
+      window.achvBump?.("stk", id);                 // 종류 모으기
+      if (id === "hi" || id === "rehi") window.achvBump?.("cGreet");
+      if (id === "pat") window.achvBump?.("cPat");
+    } catch (e) {}
   }
 
   window.toggleStickerPicker = function () {
@@ -422,6 +433,8 @@
            웃을 때 ㅋ 을 몇 번 치는지는 사람마다 그때그때 다릅니다. */
         const hit = STICKERS.find(s => m === "/" + s.cmd || (s.cmdRe && s.cmdRe.test(m)));
         if (hit) el.value = `[[스티커:${hit.id}]]`;
+        /* 판을 안 열고 슬래시로 친 것도 같은 값으로 셉니다 */
+        if (hit) countForAchv(hit.id);
       } catch (e) {}
       return orig.apply(this, arguments);
     };

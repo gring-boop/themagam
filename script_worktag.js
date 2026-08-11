@@ -81,6 +81,21 @@
     /* 남들 카드에도 곧바로 반영되도록 상태를 한 번 밀어 올립니다 */
     window.updateStatus?.(true);
     window.renderUserCards?.();
+
+    /* 🏅 팔방미인·퇴고쟁이 — 여덟 종을 다 써봤나, 퇴고로 며칠 보냈나.
+       ★ 퇴고는 **날짜별로** 셉니다. 하루에 몇 번을 눌러도 하루입니다. */
+    try {
+      if (t && t.v) {
+        window.achvBump?.("tag", t.v);
+        /* ★ 퇴고의 값은 "polish" 입니다. "revise" 는 ✂️ 수정이에요 —
+           한글 이름만 보고 고르면 엉뚱한 스티커를 세게 됩니다. */
+        if (t.v === "polish") {
+          const d = new Date();
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          window.achvBump?.("rew", key);
+        }
+      }
+    } catch (e) {}
   }
 
   /* ── 카드에 그릴 조각 ────────────────────────────────────

@@ -464,7 +464,7 @@
      ※ 이 목록은 쓰는 곳(syncTabs)보다 **위에** 있어야 합니다.
         const 는 끌어올려지지 않아서, 아래에 두면 먼저 부를 때 터집니다.
      --------------------------------------------------------------- */
-  const MW_TABS = ["todo", "goal", "time", "wc", "note"];
+  const MW_TABS = ["todo", "goal", "time", "wc", "note", "achv"];
 
   function syncTabs() {
     document.querySelectorAll("#mywork-tabs [data-mw-tab]").forEach(b => {
@@ -487,6 +487,13 @@
       /* 📮 쪽지 — 열면 받은 것을 읽음으로 바꿉니다 */
       window.renderNotePanel?.();
       window.markNotesRead?.();
+    }
+    else if (_tab === "achv") {
+      /* 🏅 업적 — 알약을 눌러 여는 판과 **같은 내용**입니다.
+         두 곳에서 따로 그리면 언젠가 어긋나므로, script_achv.js 가
+         만든 것을 그대로 옮겨 담습니다. */
+      const box = el("mywork-panel-achv");
+      if (box) box.innerHTML = window.achvPanelHtml?.() || "";
     }
     else renderRecPanel();          // 작업 시간·글자수 둘 다 여기서 갈라집니다
   }

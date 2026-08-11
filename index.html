@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608110143">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608110143">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608111237">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608111237">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608110143">
+  <link rel="manifest" href="manifest.json?v=202608111237">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608110143" />
+  <link rel="stylesheet" href="styles.css?v=202608111237" />
 </head>
 
 <body>
@@ -177,6 +177,8 @@
                   onclick="switchMyWorkTab('wc')">✍️ 글자수</button>
           <button class="mw-tab" type="button" data-mw-tab="note" role="tab" aria-selected="false"
                   onclick="switchMyWorkTab('note')">📮 쪽지</button>
+          <button class="mw-tab" type="button" data-mw-tab="achv" role="tab" aria-selected="false"
+                  onclick="switchMyWorkTab('achv')">🏅 업적</button>
         </div>
 
         <!-- 📌 할 일 — 고른 날짜의 할 일 + 날짜 없는 할 일 -->
@@ -200,6 +202,9 @@
 
         <!-- 📮 쪽지 — script_note.js 가 그립니다 (받은 것 / 보낸 것) -->
         <div class="mw-panel" id="mywork-panel-note" role="tabpanel"></div>
+
+        <!-- 🏅 업적 — script_achv.js 가 그립니다 (알약을 눌러 여는 판과 같은 내용) -->
+        <div class="mw-panel" id="mywork-panel-achv" role="tabpanel"></div>
       </section>
     </div>
 
@@ -240,6 +245,16 @@
 <!-- 공지 사진 크게 보기 -->
 <div id="notice-zoom" onclick="closeNoticeBoardZoom()" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
   <img src="" alt="공지 사진">
+</div>
+
+<!-- 🏅 남의 업적 — 카드의 **프사**를 누르면 열립니다 (닉네임 칸은 📮 쪽지) -->
+<div id="achv-other" onclick="closeAchvOther()" role="dialog" aria-modal="true" aria-labelledby="achv-other-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button type="button" class="modal-x" onclick="closeAchvOther()" aria-label="닫기" title="닫기">✕</button>
+    <h2 class="nt-eyebrow" id="achv-other-title">업적</h2>
+    <div id="achv-other-body"></div>
+    <p class="hint">딴 업적만 보여요. 몇 자 썼는지·몇 시간 일했는지는 서로 보이지 않습니다.</p>
+  </div>
 </div>
 
 <div id="forest-modal" onclick="closeForest()" role="dialog" aria-modal="true" aria-labelledby="forest-title">
@@ -596,8 +611,28 @@
          생깁니다. **개수만** 모으고 내용은 올라가지 않습니다.
 
          아무도 안 적은 날에는 줄 자체가 뜨지 않습니다(hidden). -->
-    <div class="room-todo" id="room-todo" hidden>
-      <span class="room-todo-pill" id="room-todo-pill"></span>
+    <!-- [2026-08-11] 🏅 업적 알약을 같은 줄 오른쪽에 나란히.
+
+         ★ 왼쪽 할 일 알약은 **방 전체** 숫자이고, 오른쪽 업적은 **내 것**
+           입니다. 나란히 두면 둘 다 방 전체로 읽히기 쉬워서, 업적 쪽에는
+           작은 아이콘과 딴 개수를 붙이고 사이에 옅은 선을 하나 뒀습니다.
+
+         판은 **위로** 펼쳐집니다 — 이 줄이 이미 명단 맨 아래라 아래로
+         열면 화면 밖으로 나갑니다. -->
+    <div class="room-foot">
+      <div class="room-todo" id="room-todo" hidden>
+        <span class="room-todo-pill" id="room-todo-pill"></span>
+      </div>
+
+      <!-- 둘 사이 옅은 선 — 할 일 줄이 없는 날에는 CSS 가 함께 감춥니다 -->
+      <span class="room-foot-sep" aria-hidden="true"></span>
+
+      <div class="achv-bar" id="achv-bar">
+        <div class="achv-pop" id="achv-panel" hidden></div>
+        <button type="button" class="achv-pill" id="achv-pill"
+                aria-expanded="false" aria-controls="achv-panel" hidden
+                title="내 업적 보기"></button>
+      </div>
     </div>
   </main>
 
@@ -835,33 +870,34 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608110143"></script>
-<script src="script_core.js?v=202608110143"></script>
-<script src="script_auth.js?v=202608110143"></script>
-<script src="script_ui.js?v=202608110143"></script>
-<script src="script_chat.js?v=202608110143"></script>
-<script src="script_chatty.js?v=202608110143"></script>
-<script src="script_data.js?v=202608110143"></script>
-<script src="script_realtime.js?v=202608110143"></script>
-<script src="script_layout.js?v=202608110143"></script>
-<script src="script_wordcount.js?v=202608110143"></script>
-<script src="script_timelog.js?v=202608110143"></script>
-<script src="script_idledetect.js?v=202608110143"></script>
-<script src="script_profile.js?v=202608110143"></script>
-<script src="script_mywork.js?v=202608110143"></script>
-<script src="script_forest.js?v=202608110143"></script>
-<script src="script_notice.js?v=202608110143"></script>
-<script src="script_reactions.js?v=202608110143"></script>
-<script src="script_note.js?v=202608110143"></script>
+<script src="fortune_data.js?v=202608111237"></script>
+<script src="script_core.js?v=202608111237"></script>
+<script src="script_auth.js?v=202608111237"></script>
+<script src="script_ui.js?v=202608111237"></script>
+<script src="script_chat.js?v=202608111237"></script>
+<script src="script_chatty.js?v=202608111237"></script>
+<script src="script_data.js?v=202608111237"></script>
+<script src="script_realtime.js?v=202608111237"></script>
+<script src="script_layout.js?v=202608111237"></script>
+<script src="script_wordcount.js?v=202608111237"></script>
+<script src="script_timelog.js?v=202608111237"></script>
+<script src="script_idledetect.js?v=202608111237"></script>
+<script src="script_profile.js?v=202608111237"></script>
+<script src="script_mywork.js?v=202608111237"></script>
+<script src="script_forest.js?v=202608111237"></script>
+<script src="script_notice.js?v=202608111237"></script>
+<script src="script_achv.js?v=202608111237"></script>
+<script src="script_reactions.js?v=202608111237"></script>
+<script src="script_note.js?v=202608111237"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608110143"></script>
+<script src="script_worktag.js?v=202608111237"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608110143"></script>
-<script src="script_share.js?v=202608110143"></script>
-<script src="script_manual.js?v=202608110143"></script>
-<script src="script_guard.js?v=202608110143"></script>
+<script src="script_sticker.js?v=202608111237"></script>
+<script src="script_share.js?v=202608111237"></script>
+<script src="script_manual.js?v=202608111237"></script>
+<script src="script_guard.js?v=202608111237"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -887,6 +923,7 @@
       "script_mywork.js":   "openMyWork",
       "script_forest.js":   "openForest",
       "script_notice.js":   "openNoticeBoard",
+      "script_achv.js":     "startAchv",
       "script_reactions.js":"toggleReaction",
       "script_share.js":   "toggleScreenShare",
       "script_note.js":    "openNoteTo",

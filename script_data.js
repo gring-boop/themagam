@@ -201,6 +201,17 @@
     });
     setTodoItemsToUI(items);
     savePersonalDataDebounced();
+
+    /* 🏅 마감러·루틴킹 — 켤 때만 셉니다.
+       ★ 껐다 켜기를 되풀이하면 숫자가 부풀 수 있는데, 그건 본인이
+         자기 배지를 부풀리는 것뿐이라 남에게 피해가 없습니다.
+         막으려고 "완료한 id 목록"을 따로 쌓으면 저장이 그만큼 무거워져서
+         그냥 둡니다. */
+    if (done) {
+      window.achvBump?.("cTodo");
+      const t = getTodoItemsFromUI().find(x => x.id === id);
+      if (t && t.routine) window.achvBump?.("rout", ymd(Date.now()));
+    }
   }
 
   function toggleRoutineTodo(id) {

@@ -448,6 +448,9 @@ window.AppSession = AppSession;
       callIfFn("listenNotes");
       callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
       callIfFn("listenNoticeBoard");  // 📢 공지판 — 안 읽은 게 있으면 단추에 붉은 점
+      /* 🏅 업적 — 방이 자리를 잡은 뒤에 훑습니다. 입장 직후에는
+         카드·채팅이 먼저 떠야 하고, 업적은 급할 게 없어요. */
+      setTimeout(() => callIfFn("startAchv"), 8000)
 
       /* [2026-08-10] 들어오자마자 내 할 일 **개수**를 한 번 올립니다.
 

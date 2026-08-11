@@ -1112,6 +1112,8 @@
       : "전송하지 못했어요. 연결을 확인해 주세요");
   }
 
+  /* 🏅 수다왕 — 실제로 보낸 줄만 셉니다. 빈 줄이나 막힌 전송은 아래
+     흐름에서 걸러지므로, 세는 자리는 **보내기가 끝난 뒤**여야 합니다. */
   async function send() {
     // ✅ [2026-08-04] Chatty 탭이 활성이면 script_chatty.js 가 먼저 문지기 역할.
     //    true 를 돌려주면(미참여·빈 입력 등) 여기서 멈추고,
@@ -1206,6 +1208,9 @@
       }
 
       await _activeMsgRef().push(payload);
+      /* 🏅 수다왕 — **보내기가 끝난 뒤**에 셉니다. 위에서 빈 줄이나
+         막힌 전송은 이미 걸러졌으므로, 여기 도달했으면 진짜 한 줄입니다. */
+      window.achvBump?.("cChat");
       el.value = ""; el.style.height = "42px";
       _cancelReply();
       _scrollActiveChat();

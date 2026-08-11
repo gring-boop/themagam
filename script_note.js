@@ -281,6 +281,22 @@
         if (!card) return;
         const nick = card.getAttribute("data-card-nick");
         if (!nick || nick === myNick) return;
+
+        /* [2026-08-11] 남의 카드를 둘로 가릅니다 —
+             프사   → 🏅 그 사람의 업적
+             그 밖  → 📮 쪽지
+
+           내 카드가 이미 이 규칙으로 돌아갑니다(내 프사를 누르면 프로필,
+           아래칸을 누르면 나의 작업). 남의 카드도 "프사 = 그 사람",
+           "그 밖 = 그 사람에게 하는 일" 로 맞췄어요.
+
+           ★ 여태 카드 아무 데나 눌러도 쪽지였습니다. 손에 익은 분들이
+             프사를 눌렀다가 당황하지 않게, 업적 창에 쪽지로 가는 길을
+             함께 둡니다. */
+        if (e.target.closest("[data-avatar-of]")) {
+          window.openAchvOf?.(nick);
+          return;
+        }
         openNoteTo(nick);
       });
     }
