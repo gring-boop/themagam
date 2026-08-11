@@ -47,7 +47,52 @@
   "use strict";
 
   const SCAN_DAYS = 200;              // 훑을 날짜 수 (약 반년)
+  const FOLD_DAYS = 150;              // 이보다 오래된 날은 "쟁여둔 값" 으로 접습니다
   const CACHE_KEY = "achvScanDay";    // 마지막으로 훑은 날
+
+  /* =====================================================================
+     쟁여두기 (base) — 누적이 줄어들지 않게
+     ---------------------------------------------------------------------
+     [무엇이 문제였나]
+     훑는 범위가 최근 200일입니다. 방을 연 지 반년이 넘으면 가장 오래된
+     날들이 계산에서 빠지고, 그러면 **누적 글자수가 실제보다 작아집니다.**
+     이미 딴 배지는 안 사라지지만(딴 것은 절대 빼지 않으니까요), 그다음
+     단계(50만·100만 자)를 코앞에 두고 숫자가 뒷걸음질치는 셈이에요.
+
+     [어떻게 막나]
+     150일보다 오래된 날들을 **미리 접어서** 합계만 남깁니다.
+
+         achv/{필명}/base = { upto: "2026-03-14", wc: 812000, ... }
+
+     그 뒤로는 "접어둔 합계 + upto 다음 날부터 오늘까지" 로 셉니다.
+     범위(200일)가 접는 선(150일)보다 50일 넉넉하므로, 50일 안에 한 번만
+     들어오면 아무것도 잃지 않습니다.
+
+     ★ 접기 전과 접은 뒤의 합계가 **똑같아야** 합니다. 어긋나면 누적이
+       뛰거나 줄어드는데, 그건 배지를 신뢰할 수 없게 만듭니다.
+       (checks.js 에서 두 값을 맞춰 봅니다)
+
+     ★ 반년 넘게 안 들어온 사람은 그 사이 날들이 범위 밖으로 나갑니다.
+       이미 딴 배지는 그대로 남지만 누적 숫자는 그만큼 모자랍니다.
+       요금제를 올리지 않는 한 이보다 나은 방법이 없어요.
+
+     ★ [연속(streak)은 접어 담지 않습니다 — 일부러입니다]
+       누적은 더하면 되지만 연속은 "끊겼는가" 를 알아야 해서, 접힌 쪽과
+       안 접힌 쪽이 이어져 있는지 따로 기억해야 합니다. 그 장치를 두면
+       틀리기 쉬운 곳이 하나 더 늘어요.
+
+       대신 **연속을 재는 업적 중 가장 긴 것이 30일** 입니다. 접는 선이
+       150일이니 다섯 배 넉넉해요 — 어떤 배지도 영향을 받지 않습니다.
+       (그래서 화면에 보이는 연속 일수는 최대 150일에서 멈춥니다)
+
+       ※ 나중에 "200일 연속" 같은 걸 넣으려면 이 장치부터 만들어야 합니다.
+         checks.js 가 그 조건을 지켜보고 있어서, 넘는 업적을 넣으면
+         검사에서 바로 걸립니다.
+     ===================================================================== */
+  const BASE_KEYS = ["wc", "ms", "pomo", "att", "wc5k", "wc10k",
+                     "seg3h", "day8h", "pomo8", "dawn", "wknd", "owl", "lark",
+                     "burst", "harv"];
+  const MAX_KEYS  = ["wcBest", "segBest", "dayMsBest", "pomoBest", "weekBest"];
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
@@ -206,24 +251,36 @@
     const today = dayKey();
     if (!force && window.AppStore?.getItem(CACHE_KEY) === today && _stats) return _stats;
 
-    const [attSnap, wcSnap, meSnap] = await Promise.all([
+    const [attSnap, wcSnap, meSnap, baseSnap] = await Promise.all([
       window.db.ref("attendance").orderByKey().limitToLast(SCAN_DAYS).once("value"),
       window.db.ref("wordlog").orderByKey().limitToLast(SCAN_DAYS).once("value"),
       /* 잠긴 칸 — 내 것이라 읽힙니다 */
-      window.db.ref(`users/${nick}`).once("value")
+      window.db.ref(`users/${nick}`).once("value"),
+      window.db.ref(`achv/${nick}/base`).once("value")
     ]);
 
     const att = attSnap.val() || {};
     const wcs = wcSnap.val() || {};
     const mine = meSnap.val() || {};
-
-    _stats = computeStats({
+    const src = {
       att, wcs,
       pomo: mine.pomoSessions || {},
       segs: mine.timeSegs || {},
-      nick
-    });
+      nick,
+      base: baseSnap.val() || {}
+    };
+
+    _stats = computeStats(src);
     window.AppStore?.setItem(CACHE_KEY, today);
+
+    /* 오래된 날들을 접어 둡니다 — 범위 밖으로 나가기 전에.
+       ★ 접은 뒤에도 위에서 이미 계산한 _stats 는 그대로 씁니다.
+         접기는 **다음 번**을 위한 것이라, 지금 값을 다시 만들 이유가 없어요. */
+    try {
+      const next = foldOld(src, src.base);
+      if (next) await window.db.ref(`achv/${nick}/base`).set(next);
+    } catch (e) { console.warn("[업적] 오래된 기록 접기 실패", e); }
+
     return _stats;
   }
 
@@ -236,9 +293,15 @@
      ===================================================================== */
   function computeStats(src) {
     const { att, wcs, pomo, segs, nick } = src;
+    /* 접어둔 합계. 없으면 전부 0 — 접기 전과 같은 값이 나옵니다. */
+    const B = src.base || {};
+    const b = (k) => Number(B[k] || 0);
+    /* upto 보다 오래된 날은 이미 접혀 있으므로 **두 번 세면 안 됩니다** */
+    const upto = String(B.upto || "");
+    const 셀날 = (d) => !upto || d > upto;
 
     /* ── 출석 ── */
-    const attDays = Object.keys(att).filter(d => att[d] && att[d][nick]).sort();
+    const attDays = Object.keys(att).filter(d => 셀날(d) && att[d] && att[d][nick]).sort();
     const attSet = new Set(attDays);
 
     let dawnDays = 0, weekendDays = 0;
@@ -256,6 +319,7 @@
     /* ── 글자수 ── */
     const wcDay = {};
     Object.keys(wcs).forEach(d => {
+      if (!셀날(d)) return;
       const v = Number(wcs[d]?.[nick]?.total || 0);
       if (v > 0) wcDay[d] = v;
     });
@@ -307,6 +371,7 @@
     /* ── 뽀모 ── */
     const pomoDay = {};
     Object.keys(pomo).forEach(d => {
+      if (!셀날(d)) return;
       const v = Number(pomo[d]?.count || 0);
       if (v > 0) pomoDay[d] = v;
     });
@@ -341,6 +406,7 @@
     let msTotal = 0, bestSeg = 0, bestDayMs = 0, owlDays = 0, larkDays = 0;
     let seg3hCount = 0, day8hCount = 0;
     Object.keys(segs).forEach(d => {
+      if (!셀날(d)) return;
       let dayMs = 0, owl = false, lark = false;
       Object.values(segs[d] || {}).forEach(seg => {
         if (!seg) return;
@@ -360,16 +426,78 @@
       if (lark) larkDays++;
     });
 
+    /* ★ 더하는 것과 큰 쪽을 고르는 것을 갈라야 합니다.
+       누적(합계)은 더하고, "가장 많았던 하루" 같은 것은 큰 쪽을 남깁니다.
+       최고 기록을 더해 버리면 있지도 않은 하루가 만들어져요. */
     return {
-      attTotal: attDays.length,
+      attTotal: attDays.length + b("att"),
       attStreak: streak(attSet),
-      dawnDays, weekendDays,
-      wcTotal, wcBestDay, wcBestWeek, wcDays5k, wcDays10k,
-      sincereBursts, sincereRun,
+      dawnDays: dawnDays + b("dawn"),
+      weekendDays: weekendDays + b("wknd"),
+      wcTotal: wcTotal + b("wc"),
+      wcBestDay: Math.max(wcBestDay, b("wcBest")),
+      wcBestWeek: Math.max(wcBestWeek, b("weekBest")),
+      wcDays5k: wcDays5k + b("wc5k"),
+      wcDays10k: wcDays10k + b("wc10k"),
+      sincereBursts: sincereBursts + b("burst"),
+      sincereRun,
       wcStreak: streak(new Set(wcDays)),
-      pomoTotal, pomoBestDay, pomoDay8Count, tomatoBursts, tomatoRun,
+      pomoTotal: pomoTotal + b("pomo"),
+      pomoBestDay: Math.max(pomoBestDay, b("pomoBest")),
+      pomoDay8Count: pomoDay8Count + b("pomo8"),
+      tomatoBursts: tomatoBursts + b("harv"),
+      tomatoRun,
       pomoStreak: streak(new Set(Object.keys(pomoDay))),
-      msTotal, bestSeg, bestDayMs, owlDays, larkDays, seg3hCount, day8hCount
+      msTotal: msTotal + b("ms"),
+      bestSeg: Math.max(bestSeg, b("segBest")),
+      bestDayMs: Math.max(bestDayMs, b("dayMsBest")),
+      owlDays: owlDays + b("owl"),
+      larkDays: larkDays + b("lark"),
+      seg3hCount: seg3hCount + b("seg3h"),
+      day8hCount: day8hCount + b("day8h")
+    };
+  }
+
+  /* =====================================================================
+     접기 — 오래된 날들을 합계 하나로 눌러 담습니다.
+     ---------------------------------------------------------------------
+     범위(200일) 안이지만 접는 선(150일)보다 오래된 날들이 대상입니다.
+     그 날들만 따로 계산해서 base 에 더하고, upto 를 옮깁니다.
+
+     ★ 접는 계산은 위의 computeStats 를 **그대로** 씁니다. 따로 만들면
+       두 곳이 언젠가 어긋나고, 그 순간 누적이 뛰거나 줄어듭니다.
+     ===================================================================== */
+  function foldOld(src, base) {
+    const cut = new Date();
+    cut.setDate(cut.getDate() - FOLD_DAYS);
+    const cutKey = dayKey(cut);
+    const upto = String(base.upto || "");
+    if (cutKey <= upto) return null;                 // 접을 게 없습니다
+
+    /* 접을 날짜만 남깁니다 — (upto, cutKey] */
+    const 고르기 = (obj) => {
+      const out = {};
+      Object.keys(obj || {}).forEach(d => {
+        if ((!upto || d > upto) && d <= cutKey) out[d] = obj[d];
+      });
+      return out;
+    };
+    const 조각 = {
+      att: 고르기(src.att), wcs: 고르기(src.wcs),
+      pomo: 고르기(src.pomo), segs: 고르기(src.segs),
+      nick: src.nick, base: base
+    };
+    const r = computeStats(조각);
+
+    return {
+      upto: cutKey,
+      wc: r.wcTotal, ms: r.msTotal, pomo: r.pomoTotal, att: r.attTotal,
+      wc5k: r.wcDays5k, wc10k: r.wcDays10k,
+      seg3h: r.seg3hCount, day8h: r.day8hCount, pomo8: r.pomoDay8Count,
+      dawn: r.dawnDays, wknd: r.weekendDays, owl: r.owlDays, lark: r.larkDays,
+      burst: r.sincereBursts, harv: r.tomatoBursts,
+      wcBest: r.wcBestDay, segBest: r.bestSeg, dayMsBest: r.bestDayMs,
+      pomoBest: r.pomoBestDay, weekBest: r.wcBestWeek
     };
   }
 

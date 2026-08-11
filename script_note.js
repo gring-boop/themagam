@@ -293,7 +293,12 @@
            ★ 여태 카드 아무 데나 눌러도 쪽지였습니다. 손에 익은 분들이
              프사를 눌렀다가 당황하지 않게, 업적 창에 쪽지로 가는 길을
              함께 둡니다. */
-        if (e.target.closest("[data-avatar-of]")) {
+        /* ★ [고침 2026-08-11] 처음에 [data-avatar-of] 를 봤는데, 그건
+             **채팅 말풍선**의 프사에 붙는 표시였습니다(chatAvatarHtml).
+             카드의 프사는 .card-avatar-wrap > .card-avatar 라서 한 번도
+             걸리지 않았어요 — 눌러도 그냥 쪽지가 떴습니다.
+             둘 다 받아 두되, 실제로 쓰이는 건 앞의 둘입니다. */
+        if (e.target.closest(".card-avatar-wrap, .card-avatar, [data-avatar-of]")) {
           window.openAchvOf?.(nick);
           return;
         }
