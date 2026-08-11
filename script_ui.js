@@ -263,10 +263,23 @@
     "💠 조용한 스튜디오": { isDark:false, style:"studio", bg:"#F1F2F4", text:"#20242B", me:"#4C74B4", other:"#FFFFFF", header:"#FFFFFF", meText:"#FFFFFF", otherText:"#20242B", accent:"#2E9E7E" },
     /* [추가 2026-08-04] 새 테마 5종 — 전용 style 표식 없이 색만 바꿉니다(style:"default").
        솜사탕의 포인트는 옐로 대신 하늘색(사용자 요청). */
-    "🍬 솜사탕":         { isDark:false, style:"default", bg:"#FBEDF3", text:"#463A50", me:"#A98BDE", other:"#FFFFFF", header:"#F6E1ED", meText:"#FFFFFF", otherText:"#463A50", accent:"#5CA8E0" },
+    /* [고침 2026-08-11] 🍬 솜사탕 — 흰 글자가 뿌옇게 보이던 것.
+       보라(#A98BDE)가 밝아서 흰 글자와 대비가 2.82 밖에 안 됐습니다
+       (읽기 기준 4.5). 밝은 데서 폰으로 보면 글자가 배경에 반쯤 녹았어요.
+       ★ 말풍선 색은 **그대로** 두고 글자만 짙은 자주로 바꿉니다 → 4.64.
+         🍭 롤리팝이 이미 쓰는 방식이라 방 인상이 거의 안 바뀝니다. */
+    "🍬 솜사탕":         { isDark:false, style:"default", bg:"#FBEDF3", text:"#463A50", me:"#A98BDE", other:"#FFFFFF", header:"#F6E1ED", meText:"#3B2168", otherText:"#463A50", accent:"#5CA8E0" },
     "🍭 롤리팝":         { isDark:false, style:"default", bg:"#E9F4FB", text:"#2C4657", me:"#F5A8C2", other:"#FFFFFF", header:"#DCEDF8", meText:"#5C2038", otherText:"#2C4657", accent:"#35C4A5" },
     "🔩 인더스트리":     { isDark:false, style:"default", bg:"#E4E6EA", text:"#2A2E33", me:"#3A6EA5", other:"#FFFFFF", header:"#D6D9DE", meText:"#FFFFFF", otherText:"#2A2E33", accent:"#CF4141" },
-    "🌿 허브티":         { isDark:false, style:"default", bg:"#EFF3EA", text:"#33402B", me:"#6E8F5E", other:"#FFFFFF", header:"#E2EAD8", meText:"#FFFFFF", otherText:"#33402B", accent:"#C6754A" },
+    /* [고침 2026-08-11] 🌿 허브티 — 같은 문제(3.65).
+       ★ 여기는 글자만 바꿔서는 못 고칩니다. 초록(#6E8F5E)이 중간 밝기라
+         글자를 거의 검정으로 해도 4.35 에서 멈춰요. 그래서 말풍선 쪽을
+         **연둣빛으로 올리고** 짙은 초록 글자를 얹었습니다 → 7.09.
+       ※ 말풍선이 밝아진 만큼, --me 를 쓰는 **가는 선들**(뽀모 안쪽 고리,
+         카드 왼쪽 띠)은 옅어집니다. 바탕과의 대비가 3.25 → 1.90 이에요.
+         고리가 잘 안 보이면 #85A571 로 한 톤만 내리면 됩니다
+         (글자 5.49 / 고리 2.45 로 둘 다 지켜집니다). */
+    "🌿 허브티":         { isDark:false, style:"default", bg:"#EFF3EA", text:"#33402B", me:"#9DBA8C", other:"#FFFFFF", header:"#E2EAD8", meText:"#1B2A13", otherText:"#33402B", accent:"#C6754A" },
     "🌌 오로라":         { isDark:true,  style:"default", bg:"#141B2A", text:"#D9E2F2", me:"#57D9C0", other:"#243049", header:"#1C2537", meText:"#0B2B24", otherText:"#D9E2F2", accent:"#9D8BE8" },
     /* [추가 2026-08-09] 칠판 같은 짙은 녹색에 금빛 포인트.
        미리보기의 B안을 골랐고, "녹색 느낌을 더" 라는 말에 맞춰
