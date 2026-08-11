@@ -249,8 +249,18 @@
   // =====================================================
   const themes = {
     "📜 원고와 잉크":     { isDark:false, style:"ink",    bg:"#FAF6EC", text:"#2B2620", me:"#2B2620", other:"#FFFDF6", header:"#F4EEDF", meText:"#F5EFDF", otherText:"#2B2620", accent:"#B3372B", grid:"rgba(163,88,70,.16)" },
-    "🌙 마감 전야":       { isDark:true,  style:"night",  bg:"#15171E", text:"#E6E4DC", me:"#FFB43C", other:"#232733", header:"#1B1E27", meText:"#231A05", otherText:"#E6E4DC", accent:"#FFB43C" },
-    "💠 조용한 스튜디오": { isDark:false, style:"studio", bg:"#F1F2F4", text:"#20242B", me:"#2F6BFF", other:"#FFFFFF", header:"#FFFFFF", meText:"#FFFFFF", otherText:"#20242B", accent:"#2F6BFF" },
+    /* [2026-08-11] me 와 accent 가 같은 색이던 세 테마에 **두 번째 포인트**를
+       넣었습니다. 두 겹 고리 타이머(바깥=오늘 목표, 안=뽀모)가 한 색이라
+       두 고리가 겹쳐 보였거든요. 말풍선 색(me)은 방 전체 인상이라
+       원칙적으로 안 건드렸습니다 — 조용한 스튜디오만 예외입니다. */
+    /* 🌙 산딸기. 어두운 바탕에서는 호박빛과 둘 다 따뜻한 쪽이라
+       초록 바탕만큼 갈리지는 않습니다. 붉은기를 더 넣은 #D9614F 도
+       미리 봤지만, 산딸기 결을 살리는 쪽을 골랐습니다. */
+    "🌙 마감 전야":       { isDark:true,  style:"night",  bg:"#15171E", text:"#E6E4DC", me:"#FFB43C", other:"#232733", header:"#1B1E27", meText:"#231A05", otherText:"#E6E4DC", accent:"#DD7F5E" },
+    /* 💠 세이지 청록 + 파랑 채도 낮춤(#2F6BFF → #4C74B4).
+       ★ 여기만 me 를 바꿉니다. "쨍한 파랑이 눈이 아프다" 는 말에 맞춰
+         한 걸음 더 내렸어요. 흰 글자 대비는 4.7:1 로 기준(4.5)을 넘습니다. */
+    "💠 조용한 스튜디오": { isDark:false, style:"studio", bg:"#F1F2F4", text:"#20242B", me:"#4C74B4", other:"#FFFFFF", header:"#FFFFFF", meText:"#FFFFFF", otherText:"#20242B", accent:"#2E9E7E" },
     /* [추가 2026-08-04] 새 테마 5종 — 전용 style 표식 없이 색만 바꿉니다(style:"default").
        솜사탕의 포인트는 옐로 대신 하늘색(사용자 요청). */
     "🍬 솜사탕":         { isDark:false, style:"default", bg:"#FBEDF3", text:"#463A50", me:"#A98BDE", other:"#FFFFFF", header:"#F6E1ED", meText:"#FFFFFF", otherText:"#463A50", accent:"#5CA8E0" },
@@ -262,7 +272,12 @@
        미리보기의 B안을 골랐고, "녹색 느낌을 더" 라는 말에 맞춰
        회색기를 걷어내고 채도를 올렸습니다 (#1E2E22 → #16321F).
        금빛은 그대로 뒀어요 — 녹색을 진하게 할수록 금이 더 살아납니다. */
-    "🌲 포레스트 그린":   { isDark:true,  style:"default", bg:"#16321F", text:"#E7EFE4", me:"#E2C074", other:"#234630", header:"#1B3B25", meText:"#1C3320", otherText:"#E7EFE4", accent:"#E2C074" },
+    /* [2026-08-11] 포인트 둘째 색으로 캐러멜.
+       ※ 금빛(#E2C074)과 같은 갈색 계열이라 두 고리가 또렷하게 갈리지는
+         않습니다. 미리보기에서 그렇게 알려드렸고, 그래도 이 결이
+         좋다고 하셔서 넣었어요. 나중에 더 갈리길 원하시면 붉은기가 있는
+         구운 벽돌(#B06A45) 로 이 한 줄만 바꾸면 됩니다. */
+    "🌲 포레스트 그린":   { isDark:true,  style:"default", bg:"#16321F", text:"#E7EFE4", me:"#E2C074", other:"#234630", header:"#1B3B25", meText:"#1C3320", otherText:"#E7EFE4", accent:"#C48A5C" },
   };
 
   function hexToRgba(hex, alpha) {
