@@ -435,8 +435,12 @@ window.AppSession = AppSession;
       window._beforeUnloadBound = true;
       _leaveBeaconSent = false;
       window.addEventListener("beforeunload", _handleBeforeUnload, { once: true });
-      // ✅ 모바일 사파리 등에서는 beforeunload가 안 뜨는 경우가 있어 pagehide도 함께 사용
-      window.addEventListener("pagehide", _handleBeforeUnload, { once: true });
+      /* ✅ 모바일 사파리 등에서는 beforeunload 가 안 뜨는 경우가 있어 pagehide 도 함께.
+         ★ 다만 곧 돌아올 때(persisted)는 거릅니다 — 위 _handlePageHide 참고.
+         ★ once 를 뗐습니다. 걸러 보내는 일이 생겼으니, 한 번 거르고 나면
+           정작 진짜 나갈 때 아무도 안 듣게 됩니다. 두 번 보내는 건
+           _leaveBeaconSent 가 이미 막고 있어요. */
+      window.addEventListener("pagehide", _handlePageHide);
       await _writeJoinSystemMessageOnce();
 
       callIfFn("recordAttendance");
@@ -520,7 +524,7 @@ window.AppSession = AppSession;
     window.resetPomoUserScopedUI?.();
     // ✅ 수동 퇴장 시 beforeunload 리스너 제거 (중복 방지)
     window.removeEventListener("beforeunload", _handleBeforeUnload);
-    window.removeEventListener("pagehide", _handleBeforeUnload);
+    window.removeEventListener("pagehide", _handlePageHide);
     detachListeners();
     // ✅ Chatty listener도 함께 정리 (참여 여부 자체는 서버에 남습니다)
     try { window.detachChatty?.(); } catch(e) {}
@@ -615,6 +619,41 @@ window.AppSession = AppSession;
 
   window._handleBeforeUnload = _handleBeforeUnload;
 
+  /* ===================================================================
+     ★★ [고침 2026-08-12] "한 사람만 자꾸 슝 사라졌다 나타나요"
+     -------------------------------------------------------------------
+     [무엇이 일어나고 있었나]
+     퇴장 처리(_handleBeforeUnload)를 beforeunload 와 **pagehide 둘 다**에
+     걸어 두었습니다. 모바일 사파리에서 beforeunload 가 안 뜨는 경우가
+     있어서요. 그런데 pagehide 는 **창을 닫을 때만 뜨는 것이 아닙니다.**
+
+       · 폰에서 다른 앱으로 넘어갈 때
+       · 화면을 끌 때
+       · 다른 사이트에 갔다가 뒤로가기로 돌아올 때
+
+     이때도 pagehide 가 뜹니다. 그리고 이 함수는 status/{필명} 을
+     **통째로 지웁니다.** 끊김 표시(disconnectedAt)를 남기는 게 아니라
+     기록 자체를 지우는 것이라, 30분 유예도 소용이 없어요. 남들 화면에서
+     그 사람 카드가 **그 자리에서** 사라집니다. 돌아오면 되살아나고요.
+
+     그래서 "폰으로 켜 두고 가끔 들여다보는 사람" 한 명만 계속 그랬습니다.
+     조용한 분이라 더 그랬어요 — 말을 안 하니 앱을 자주 오갔을 뿐입니다.
+     자리를 비운 것도, 네트워크가 나쁜 것도 아니었습니다.
+
+     [어떻게 고치나]
+     pagehide 에는 persisted 라는 표가 붙어 옵니다.
+       · persisted = true  → 페이지를 얼려 두는 것. **곧 돌아옵니다.**
+       · persisted = false → 진짜로 없어지는 것.
+     참이면 아무것도 하지 않습니다. 잠깐 끊기는 건 onDisconnect 가 이미
+     맡고 있어요 — 끊김 표시를 남기고 30분 기다립니다. 그게 유예를 둔
+     이유이기도 하고요.
+     =================================================================== */
+  function _handlePageHide(e) {
+    if (e && e.persisted) return;   // 얼려 두는 것뿐 — 나간 게 아닙니다
+    _handleBeforeUnload();
+  }
+  window._handlePageHide = _handlePageHide;
+
   // ✅ [FIX] bfcache 복귀 대응: 다른 사이트로 갔다가 '뒤로가기'로 돌아오면
   // 페이지가 얼려진 상태 그대로 살아나는데, 떠나는 순간 퇴장 메시지가 이미 전송됨.
   // → 복귀를 감지해서 상태를 복구하고 재입장 메시지를 남겨 모순을 해소한다.
@@ -628,7 +667,7 @@ window.AppSession = AppSession;
 
     try {
       window.addEventListener("beforeunload", _handleBeforeUnload, { once: true });
-      window.addEventListener("pagehide", _handleBeforeUnload, { once: true });
+      window.addEventListener("pagehide", _handlePageHide);
     } catch(err) {}
 
     try { armPresenceOnDisconnect(); } catch(err) {}

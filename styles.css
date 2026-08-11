@@ -4398,10 +4398,18 @@ html[data-theme-style="ink"] .brand-stamp#head-count{ font-family: "Noto Serif K
   font-size: .45em;
   vertical-align: 8px;
 }
-html[data-theme-style="ink"] #timer-pill[data-phase] #timer-text{
+/* [고침 2026-08-12] 가로 바의 큰 숫자에도 같은 서체를 씌웁니다.
+   ★ 원형에만 걸려 있어서, 📜 원고와 잉크·🌙 마감 전야에서 모양을 바꾸면
+     숫자만 갑자기 기본 서체로 돌아갔습니다. 테마의 결이 반만 걸린 셈이라
+     "뭔가 다른데 뭔지 모르겠는" 어색함이 남았어요.
+   ★ 두 자리를 한 규칙에 묶어 둡니다 — 나중에 서체를 바꿀 때 한쪽만
+     고치는 일이 없게. */
+html[data-theme-style="ink"] #timer-pill[data-phase] #timer-text,
+html[data-theme-style="ink"] .pomo-bar-time{
   font-family: "Noto Serif KR", serif;
 }
-html[data-theme-style="night"] #timer-pill[data-phase] #timer-text{
+html[data-theme-style="night"] #timer-pill[data-phase] #timer-text,
+html[data-theme-style="night"] .pomo-bar-time{
   font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 /* 시간이 얼마 안 남았을 때(경고)는 숫자를 인주색으로 */
@@ -7341,6 +7349,14 @@ body.split-dragging #chat-box3{ user-select: none; }
 .pomo-ring .ring-day{ stroke: var(--accent); opacity: .85; transition: stroke-dashoffset .4s ease; }
 .pomo-ring .ring-pom{ stroke: var(--me);     opacity: .9;  transition: stroke-dashoffset .3s linear; }
 
+/* [2026-08-12] 바깥(오늘 목표) 고리를 안쪽(뽀모)의 70% 두께로.
+   ★ 둘이 같은 두께면 고리 두 개가 한 덩어리로 보입니다. 굵기를 달리하면
+     "안쪽이 지금 도는 것" 이라는 게 색을 안 봐도 읽혀요.
+   ★ 가로 바도 같은 결입니다 — 위(뽀모) 9px, 아래(목표) 6px.
+   ※ .ring-bg 는 둘이라 순서로 가릅니다. 첫째가 바깥(r=86)이에요. */
+.pomo-ring .ring-day,
+.pomo-ring .ring-bg:first-of-type{ stroke-width: 9; }
+
 /* 목표를 안 정했으면 바깥 고리를 통째로 감춥니다 —
    빈 고리는 "못 채웠다" 로 읽혀서, 안 정한 사람에게 없느니만 못합니다. */
 .pomo-ring-wrap.no-goal .ring-day{ display: none; }
@@ -7432,11 +7448,12 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .pomo-bar-time{
   text-align: center;
-  /* [2026-08-12] 원형일 때 숫자(최대 44px)의 **150%** = 66px.
-     처음에 33px 로 줄였다가 막상 보니 너무 작았어요.
-     ★ 칸이 좁아지면 66px 그대로는 넘칩니다. 그래서 위 그릇의 폭을
-       따라 줄어들게 두고, 66px 을 천장으로만 씁니다. */
-  font-size: min(66px, 26cqw);
+  /* [2026-08-12] 크기를 두 번 손봤습니다.
+       33px → 66px (너무 작았음) → **53px** (이번엔 너무 컸음)
+     53px 은 66px 의 80% 이고, 원형일 때 숫자(최대 44px)의 120% 입니다.
+     ★ 칸이 좁아지면 53px 그대로는 넘칩니다. 그래서 위 그릇의 폭을
+       따라 줄어들게 두고, 53px 을 천장으로만 씁니다. */
+  font-size: min(53px, 21cqw);
   font-weight: var(--fw-bold);
   line-height: 1.15;
   letter-spacing: -.02em;
