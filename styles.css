@@ -7422,11 +7422,21 @@ body.split-dragging #chat-box3{ user-select: none; }
 #pomo-block[data-shape="bar"] .pomo-barrow{ display: block; }
 
 /* ── 가로 바 ── */
-.pomo-barrow{ width: 100%; padding: 2px 2px 0; }
+.pomo-barrow{
+  width: 100%;
+  padding: 2px 2px 0;
+  /* [2026-08-12] 숫자 크기를 **이 줄의 폭**으로 재려고 그릇으로 삼습니다.
+     ★ vw(창 폭) 로 재면 안 됩니다. 칸은 손잡이로 좁혔다 넓혔다 하는데
+       창 크기는 그대로라, 칸을 아무리 좁혀도 숫자가 안 줄어 넘칩니다. */
+  container-type: inline-size;
+}
 .pomo-bar-time{
   text-align: center;
-  /* 미리보기의 44px 에서 75% — 좁은 칸에서 44px 은 좌우가 빠듯했습니다 */
-  font-size: 33px;
+  /* [2026-08-12] 원형일 때 숫자(최대 44px)의 **150%** = 66px.
+     처음에 33px 로 줄였다가 막상 보니 너무 작았어요.
+     ★ 칸이 좁아지면 66px 그대로는 넘칩니다. 그래서 위 그릇의 폭을
+       따라 줄어들게 두고, 66px 을 천장으로만 씁니다. */
+  font-size: min(66px, 26cqw);
   font-weight: var(--fw-bold);
   line-height: 1.15;
   letter-spacing: -.02em;
