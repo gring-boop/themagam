@@ -871,6 +871,9 @@
       const r = document.getElementById(id);
       if (r) r.dataset.state = state;
     });
+    /* [2026-08-12] 머리말의 "집중 중 · 오늘 n회" 도 여기서 함께 갱신합니다.
+       상태가 바뀌는 곳이 여기 하나라, 다른 데서 따로 부르면 어긋납니다. */
+    window.renderPomoHeadState?.();
     const row = document.getElementById("pomo-controls");
     if (!row) return;
 

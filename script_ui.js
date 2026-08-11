@@ -531,6 +531,7 @@
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
     if (name === "theme") renderThemePalette();
+    if (name === "pomo") { renderPomodoroSoundMini(); applyPomoShape(loadPomoShape()); }
     if (name === "chat") { renderLayoutPick(); window.bindLayoutUI?.(); window.renderSlotMap?.(); }
     if (name === "privacy") {
       window.bindAdminEasterEgg?.();
@@ -981,6 +982,46 @@
 
      ★ 오늘 작업 시간은 이미 status 에 실려 있습니다(카드의 ⏱ 과 같은 값).
        따로 세지 않아요 — 두 곳에서 세면 언젠가 어긋납니다. */
+  /* =====================================================================
+     🍅 타이머 모양 — 원형 / 가로 바 (2026-08-12)
+     ---------------------------------------------------------------------
+     ★ 이 기기에만 저장합니다. 서버로 안 올라가요.
+       같은 방이라도 각자 제 눈에 맞는 모양을 쓸 수 있습니다. 작업방은
+       하루에 몇 시간씩 보는 화면이라, 이런 건 방 규칙이 아니라 취향으로
+       두는 편이 맞습니다.
+       (다만 폰과 PC 는 따로 골라야 합니다 — 기기별 저장이라서요)
+
+     ★ 두 모양을 각각 그리지 않습니다. 화면에는 둘 다 들어 있고 CSS 가
+       한쪽만 보여줘요. 아래 그리는 코드는 **늘 둘 다** 채웁니다.
+       모양에 따라 갈라 쓰면, 안 보이는 쪽이 조용히 썩습니다.
+     ===================================================================== */
+  const POMO_SHAPES = ["ring", "bar"];
+  const SHAPE_KEY = "pomoShape";
+
+  function loadPomoShape() {
+    try {
+      const v = window.AppStore?.getItem(SHAPE_KEY);
+      return POMO_SHAPES.includes(v) ? v : "ring";
+    } catch (e) { return "ring"; }
+  }
+
+  function applyPomoShape(shape) {
+    const v = POMO_SHAPES.includes(shape) ? shape : "ring";
+    document.getElementById("pomo-block")?.setAttribute("data-shape", v);
+    document.querySelectorAll("#pomo-shape-pick .pomo-shape-opt").forEach(b =>
+      b.setAttribute("aria-checked", b.dataset.shape === v ? "true" : "false"));
+    return v;
+  }
+
+  function setPomoShape(shape) {
+    const v = applyPomoShape(shape);
+    try { window.AppStore?.setItem(SHAPE_KEY, v); } catch (e) {}
+    /* 방금 보이게 된 쪽은 값이 비어 있을 수 있으니 그 자리에서 채웁니다 */
+    renderDayRing();
+    renderPomoHeadState();
+  }
+  window.setPomoShape = setPomoShape;
+
   const RING_R_DAY = 86, RING_R_POM = 66;
 
   function _ringSet(id, r, ratio) {
@@ -1022,6 +1063,10 @@
     /* ── 바깥 : 오늘 작업 시간 ── */
     renderDayRing();
 
+    /* 가로 바 — 원형과 같은 값입니다 (모양만 다릅니다) */
+    const pom = document.getElementById("pomo-bar-pom");
+    if (pom) pom.style.width = ((done / total) * 100).toFixed(2) + "%";
+
     /* 옛 가로 바가 남아 있는 화면(단일파일 등)에서도 어긋나지 않게 */
     const bar = document.getElementById("pomo-bar");
     if (bar) bar.style.width = ((done / total) * 100).toFixed(2) + "%";
@@ -1041,7 +1086,42 @@
         ? `오늘 ${_hm(ms)} / ${gh % 1 ? gh.toFixed(1) : gh}h`
         : `오늘 ${_hm(ms)}`;
     }
+
+    /* ── 가로 바도 같은 값으로 ── */
+    const row = document.querySelector(".pomo-barrow");
+    if (row) row.classList.toggle("no-goal", gh <= 0);
+    const dayBar = document.getElementById("pomo-bar-day");
+    if (dayBar && gh > 0) {
+      const p = Math.max(0, Math.min(1, ms / (gh * 3600e3)));
+      dayBar.style.width = (p * 100).toFixed(2) + "%";
+    }
+    const bsub = document.getElementById("pomo-bar-sub");
+    if (bsub) {
+      bsub.innerHTML = gh > 0
+        ? `<b>${_hm(ms)}</b> / ${gh % 1 ? gh.toFixed(1) : gh}시간`
+        : `오늘 <b>${_hm(ms)}</b>`;
+    }
   }
+
+  /* =====================================================================
+     머리말의 "집중 중 · 오늘 n회"
+     ---------------------------------------------------------------------
+     원형·가로 바 **어느 모양에서나** 같은 자리(칸 머리말 오른쪽)에 뜹니다.
+     모양 안에 넣으면 두 벌을 만들어야 하고, 한쪽만 고치는 사고가 납니다.
+     ===================================================================== */
+  function renderPomoHeadState() {
+    const el = document.getElementById("pomo-head-state");
+    if (!el) return;
+    const n = _getTodaySessionCount();
+    const st = document.getElementById("pomo-controls")?.dataset.state || "idle";
+    const 말 = { running: "집중 중", paused: "잠깐 멈춤", idle: "" }[st] ?? "";
+    /* 아직 한 번도 안 했고 돌지도 않으면 아무 말도 안 씁니다 —
+       0회 를 띄우면 시작도 전에 못한 것처럼 보입니다. */
+    if (!말 && !n) { el.textContent = ""; return; }
+    /* 말은 위 표에서 고른 고정 낱말이라 그대로 넣어도 안전합니다 */
+    el.innerHTML = (말 ? 말 + " · " : "") + `오늘 <b>${n}회</b>`;
+  }
+  window.renderPomoHeadState = renderPomoHeadState;
 
   /* 🎯 목표 칸의 숫자를 바꾸면 — 이 기기와 서버에 함께 적습니다.
      ★ 목표는 **나만 봅니다.** 카드에 나가지 않아요 — 남과 견주는
@@ -1110,6 +1190,9 @@
 
   /* 화면 표시는 없앴지만 집계는 계속 쌓입니다(추후 통계용). */
   function renderTodaySessionCount() {
+    /* [2026-08-12] 머리말의 "집중 중 · 오늘 n회" 도 같은 값을 씁니다.
+       세는 곳은 하나(_getTodaySessionCount)로 두고, 보여주는 곳만 둘입니다. */
+    renderPomoHeadState();
     const el = document.getElementById("today-session-count");
     if (!el) return;
     el.textContent = `오늘 집중 ${_getTodaySessionCount()}회`;
@@ -1346,6 +1429,7 @@
 
     _renderParticipationButton();
     renderPomodoroSoundMini();
+    renderPomoHeadState();
   };
 
   /* [고침 2026-08-09] 입장 직후 테마 적용.
@@ -1386,6 +1470,15 @@
     applyTheme(currentTheme);
     renderThemePalette();
     renderTodaySessionCount();
+
+    /* 🍅 타이머 모양 — 저장해 둔 것으로 바로 맞춥니다.
+       ★ 로그인 전에도 해야 합니다. 나중에 하면 켤 때마다 원형이 잠깐
+         보였다가 가로 바로 바뀌어 번쩍입니다. */
+    applyPomoShape(loadPomoShape());
+    document.getElementById("pomo-shape-pick")?.addEventListener("click", (e) => {
+      const b = e.target.closest(".pomo-shape-opt");
+      if (b) setPomoShape(b.dataset.shape);
+    });
 
     _renderParticipationButton();
 
