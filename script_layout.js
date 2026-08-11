@@ -976,8 +976,59 @@
     console.log("=== TheMagam 배치 진단 ===");
     console.log(JSON.stringify(out, null, 2));
     out.줄.forEach(줄 => console.table(줄.칸));
+    layoutOutline();          // 화면에도 그려 줍니다
     return out;
   };
+
+  /* =================================================================
+     🖍 배치 윤곽선 — layoutOutline()
+     -----------------------------------------------------------------
+     콘솔을 안 열어도 됩니다. 한 줄에 늘어선 것들을 **화면 위에 빨간
+     테두리와 이름표**로 덮어 그립니다. 빈 칸이 보이면 어느 요소가
+     그 자리를 먹고 있는지 그 자리에 이름이 뜹니다.
+
+     ★ 실제 화면은 건드리지 않습니다 — 위에 덮어 그리기만 해요.
+       다시 부르거나 아무 데나 누르면 사라집니다.
+     ================================================================= */
+  function layoutOutline() {
+    document.getElementById("layout-outline")?.remove();
+    const host = document.createElement("div");
+    host.id = "layout-outline";
+    host.style.cssText = "position:fixed;inset:0;z-index:99999;pointer-events:none";
+
+    const 그리기 = (el, 이름, 색) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      const b = document.createElement("div");
+      b.style.cssText =
+        `position:absolute;left:${r.left}px;top:${r.top}px;` +
+        `width:${r.width}px;height:${r.height}px;` +
+        `border:2px solid ${색};background:${색}18;` +
+        `font:11px/1.35 ui-monospace,monospace;color:#fff;overflow:hidden`;
+      b.innerHTML =
+        `<span style="display:inline-block;background:${색};padding:2px 5px">` +
+        `${이름}<br>${Math.round(r.width)}px · flex:${cs.flex}</span>`;
+      host.appendChild(b);
+    };
+
+    const 색들 = ["#E24B4A", "#185FA5", "#3B6D11", "#854F0B", "#534AB7", "#993556"];
+    let n = 0;
+    document.querySelectorAll("#split-root .split").forEach(box => {
+      그리기(box, "줄 (" + box.className + ")", "#000");
+      [...box.children].forEach(c => {
+        if (getComputedStyle(c).display === "none") return;
+        const 이름 = (c.id ? "#" + c.id : "") +
+                     "." + (c.className || "?").split(" ").slice(0, 2).join(".");
+        그리기(c, 이름, 색들[n++ % 색들.length]);
+      });
+    });
+
+    document.body.appendChild(host);
+    const 끄기 = () => { host.remove(); document.removeEventListener("click", 끄기, true); };
+    setTimeout(() => document.addEventListener("click", 끄기, true), 100);
+    return "빨간 테두리가 칸 하나하나입니다. 빈 자리에 이름이 뜨면 그게 범인이에요. (아무 데나 누르면 사라집니다)";
+  }
+  window.layoutOutline = layoutOutline;
 
   /* 저장된 칸 폭을 몽땅 지우고 기본값으로 — 이상해졌을 때의 비상구 */
   window.layoutReset = function () {
