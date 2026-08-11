@@ -7274,3 +7274,72 @@ body.split-dragging #chat-box3{ user-select: none; }
   border-color: var(--accent-line);
   color: var(--text);
 }
+
+/* =====================================================================
+   🍅 두 겹 고리 타이머 (2026-08-11)
+   ---------------------------------------------------------------------
+   바깥 = 오늘 작업 시간(목표 대비) · 안쪽 = 지금 뽀모.
+   색은 테마의 포인트 두 가지를 그대로 씁니다 —
+     --accent  테마 포인트색   → 바깥
+     --me      내 말풍선 색     → 안쪽
+   테마를 바꾸면 고리 색도 함께 바뀝니다.
+   ===================================================================== */
+.pomo-ringrow{ flex-direction: column; gap: 6px; }
+.pomo-ring-wrap{
+  position: relative;
+  width: 100%;
+  max-width: 208px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+.pomo-ring{ display: block; width: 100%; height: 100%; }
+
+/* 고리는 12시 방향에서 시작해 시계 방향으로 찹니다.
+   (기본은 3시 방향이라 -90° 돌립니다) */
+.pomo-ring circle{
+  fill: none;
+  stroke-width: 13;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+.pomo-ring .ring-bg{ stroke: var(--fill-2); stroke-linecap: butt; }
+.pomo-ring .ring-day{ stroke: var(--accent); opacity: .85; transition: stroke-dashoffset .4s ease; }
+.pomo-ring .ring-pom{ stroke: var(--me);     opacity: .9;  transition: stroke-dashoffset .3s linear; }
+
+/* 목표를 안 정했으면 바깥 고리를 통째로 감춥니다 —
+   빈 고리는 "못 채웠다" 로 읽혀서, 안 정한 사람에게 없느니만 못합니다. */
+.pomo-ring-wrap.no-goal .ring-day{ display: none; }
+.pomo-ring-wrap.no-goal .ring-bg:first-of-type{ display: none; }
+
+.pomo-ring-mid{
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+}
+.pomo-ring-mid #timer-pill{ pointer-events: auto; }
+.pomo-ring-sub{
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.pomo-ring-legend{
+  display: flex; justify-content: center; gap: 12px;
+  font-size: var(--fs-2xs); color: var(--muted);
+}
+.pomo-ring-legend span{ display: inline-flex; align-items: center; gap: 4px; }
+.pomo-ring-legend i{ width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+.pomo-ring-legend .lg-day{ background: var(--accent); }
+.pomo-ring-legend .lg-pom{ background: var(--me); }
+/* 목표가 없으면 바깥 고리가 없으니 그 설명도 뺍니다 */
+.pomo-ring-wrap.no-goal ~ .pomo-ring-legend span:first-child{ display: none; }
+
+/* 하루 목표 작업 시간 (🎯 목표 칸) */
+.goal-hr{ display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--sub-muted); }
+.goal-hr input{ width: 72px; flex: 0 0 auto; text-align: center; }
+.goal-hr-unit{ flex: 0 0 auto; }

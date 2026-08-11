@@ -341,6 +341,8 @@
       detectJoins(data);
       updateChatHeader();
       renderUserCards(data);
+      /* 🍅 바깥 고리(오늘 작업 시간)도 같은 값을 보므로 함께 다시 그립니다 */
+      window.renderDayRing?.();
       /* 남이 공유를 켜고 끄면 머리말 버튼 색이 따라 바뀝니다 */
       window.renderShareButton?.();
     });

@@ -938,17 +938,125 @@
     });
   }
 
-  function updatePomoProgressBar(totalSec, remainingSec) {
-    const bar = document.getElementById("pomo-bar");
-    if (!bar) return;
+  /* =====================================================================
+     🍅 두 겹 고리 (2026-08-11)
+     ---------------------------------------------------------------------
+     예전에는 가로 진행 바 하나였습니다. 이제 고리 둘이에요 —
+       바깥 : 오늘 작업 시간 ÷ 하루 목표
+       안쪽 : 지금 뽀모 세션
 
+     ★ 고리를 채우는 방법은 stroke-dasharray/offset 입니다.
+       둘레만큼 점선을 만들어 두고, 안 채운 만큼을 밀어내면(offset)
+       채워진 것처럼 보입니다. 반지름이 다르면 둘레도 다르므로
+       **고리마다 따로** 계산해야 합니다 — 한 값을 돌려 쓰면 안쪽 고리가
+       엉뚱하게 찹니다.
+
+     ★ 오늘 작업 시간은 이미 status 에 실려 있습니다(카드의 ⏱ 과 같은 값).
+       따로 세지 않아요 — 두 곳에서 세면 언젠가 어긋납니다. */
+  const RING_R_DAY = 86, RING_R_POM = 66;
+
+  function _ringSet(id, r, ratio) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    const len = 2 * Math.PI * r;
+    const p = Math.max(0, Math.min(1, Number(ratio) || 0));
+    c.setAttribute("stroke-dasharray", len.toFixed(2));
+    c.setAttribute("stroke-dashoffset", (len * (1 - p)).toFixed(2));
+  }
+
+  /** 오늘 내가 일한 밀리초 — 카드에 뜨는 ⏱ 과 같은 값 */
+  function _todayWorkMs() {
+    try {
+      const nick = (typeof myNick === "string" && myNick) ? myNick : window.myNick;
+      const row = (window._statusCache || {})[nick];
+      return Math.max(0, Number(row && row.workMs || 0));
+    } catch (e) { return 0; }
+  }
+
+  /** 하루 목표 시간 (시간 단위, 안 정했으면 0) */
+  function goalHours() {
+    const v = Number(window._goalHours);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  function _hm(ms) {
+    const m = Math.round(ms / 60000);
+    return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+  }
+
+  function updatePomoProgressBar(totalSec, remainingSec) {
+    /* ── 안쪽 : 뽀모 ── */
     const total = Math.max(1, Number(totalSec || 1));
     const remain = Math.max(0, Number(remainingSec || 0));
     const done = Math.max(0, total - remain);
-    const pct = Math.max(0, Math.min(100, (done / total) * 100));
+    _ringSet("ring-pom", RING_R_POM, done / total);
 
-    bar.style.width = pct.toFixed(2) + "%";
+    /* ── 바깥 : 오늘 작업 시간 ── */
+    renderDayRing();
+
+    /* 옛 가로 바가 남아 있는 화면(단일파일 등)에서도 어긋나지 않게 */
+    const bar = document.getElementById("pomo-bar");
+    if (bar) bar.style.width = ((done / total) * 100).toFixed(2) + "%";
   }
+
+  function renderDayRing() {
+    const wrap = document.getElementById("pomo-ring-wrap");
+    const sub  = document.getElementById("pomo-ring-sub");
+    const ms   = _todayWorkMs();
+    const gh   = goalHours();
+
+    if (wrap) wrap.classList.toggle("no-goal", gh <= 0);
+    if (gh > 0) _ringSet("ring-day", RING_R_DAY, ms / (gh * 3600e3));
+
+    if (sub) {
+      sub.textContent = gh > 0
+        ? `오늘 ${_hm(ms)} / ${gh % 1 ? gh.toFixed(1) : gh}h`
+        : `오늘 ${_hm(ms)}`;
+    }
+  }
+
+  /* 🎯 목표 칸의 숫자를 바꾸면 — 이 기기와 서버에 함께 적습니다.
+     ★ 목표는 **나만 봅니다.** 카드에 나가지 않아요 — 남과 견주는
+       숫자를 하나 더 만들지 않으려고요. */
+  let _goalSaveT = null;
+  function saveGoalHours() {
+    const inp = document.getElementById("db-goal-hours");
+    if (!inp) return;
+    const raw = String(inp.value || "").trim();
+    const v = raw === "" ? 0 : Math.max(0, Math.min(24, Number(raw) || 0));
+    window._goalHours = v;
+    try { window.AppStore?.setItem("goalHours", String(v)); } catch (e) {}
+    renderDayRing();
+
+    clearTimeout(_goalSaveT);
+    _goalSaveT = setTimeout(() => {
+      try {
+        const nick = (typeof myNick === "string" && myNick) ? myNick : window.myNick;
+        if (nick && window.db) window.db.ref(`users/${nick}/prefs/goalHours`).set(v);
+      } catch (e) {}
+    }, 600);
+  }
+
+  async function loadGoalHours() {
+    let v = 0;
+    try { v = Number(window.AppStore?.getItem("goalHours") || 0) || 0; } catch (e) {}
+    try {
+      const nick = (typeof myNick === "string" && myNick) ? myNick : window.myNick;
+      if (nick && window.db) {
+        const snap = await window.db.ref(`users/${nick}/prefs/goalHours`).once("value");
+        const sv = Number(snap.val());
+        if (Number.isFinite(sv) && sv >= 0) v = sv;   // 서버 값이 우선
+      }
+    } catch (e) {}
+    window._goalHours = v;
+    const inp = document.getElementById("db-goal-hours");
+    if (inp) inp.value = v > 0 ? String(v) : "";
+    renderDayRing();
+  }
+
+  window.saveGoalHours = saveGoalHours;
+  window.loadGoalHours = loadGoalHours;
+  window.renderDayRing = renderDayRing;
 
   function _todayKey() {
     const d = new Date();

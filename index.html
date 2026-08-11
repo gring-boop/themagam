@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608111237">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608111237">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608111552">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608111552">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608111237">
+  <link rel="manifest" href="manifest.json?v=202608111552">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608111237" />
+  <link rel="stylesheet" href="styles.css?v=202608111552" />
 </head>
 
 <body>
@@ -648,18 +648,42 @@
               onclick="toggleSideCollapsed()" aria-label="뽀모·글자수 접기" title="뽀모·글자수 접기">❯</button>
     </h4>
     <div id="timer-wrap">
-      <!-- [1줄] 상태 문구 -->
-      <div class="pomo-row pomo-row-1">
-        <div id="timer-pill" role="status" aria-live="polite" data-phase="idle">
-          <span id="timer-text" class="pill-muted">25:00</span>
-        </div>
-      </div>
+      <!-- =====================================================================
+           [1줄] 두 겹 고리 — 2026-08-11
+           바깥 = 오늘 작업 시간(목표 대비) · 안쪽 = 지금 뽀모
+           ---------------------------------------------------------------------
+           예전에는 큰 숫자 한 줄 + 가로 진행 바 한 줄이었습니다.
+           "오늘 얼마나 했나" 는 카드에만 있어서, 뽀모를 보는 동안에는
+           안 보였어요. 둘을 한자리에 겹쳤습니다.
 
-      <!-- [2줄] 진행 바 -->
-      <div class="pomo-row pomo-row-3">
-        <div class="pomo-progress" role="progressbar" aria-label="현재 세션 진행률"
-             aria-valuemin="0" aria-valuemax="100">
-          <div id="pomo-bar"></div>
+           ★ 전환 단추를 두지 않은 이유 — 뽀모를 감추면 "멈췄나?" 하고
+             헷갈립니다. 겹쳐 두면 늘 둘 다 보여요.
+
+           ★ 색은 테마의 포인트 **두 가지**를 그대로 씁니다.
+             바깥은 --accent, 안쪽은 --me(내 말풍선 색). 테마를 바꾸면
+             고리 색도 따라 바뀝니다.
+
+           ★ 목표를 안 정했으면 바깥 고리는 그리지 않습니다(.no-goal).
+             빈 고리를 보여주면 못 채운 것처럼 보이니까요.
+           ===================================================================== -->
+      <div class="pomo-row pomo-ringrow">
+        <div class="pomo-ring-wrap" id="pomo-ring-wrap">
+          <svg class="pomo-ring" viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="ring-bg"  cx="100" cy="100" r="86"/>
+            <circle class="ring-day" cx="100" cy="100" r="86" id="ring-day"/>
+            <circle class="ring-bg"  cx="100" cy="100" r="66"/>
+            <circle class="ring-pom" cx="100" cy="100" r="66" id="ring-pom"/>
+          </svg>
+          <div class="pomo-ring-mid">
+            <div id="timer-pill" role="status" aria-live="polite" data-phase="idle">
+              <span id="timer-text" class="pill-muted">25:00</span>
+            </div>
+            <div class="pomo-ring-sub" id="pomo-ring-sub"></div>
+          </div>
+        </div>
+        <div class="pomo-ring-legend" id="pomo-ring-legend">
+          <span><i class="lg-day"></i>오늘 작업</span>
+          <span><i class="lg-pom"></i>뽀모</span>
         </div>
       </div>
 
@@ -816,6 +840,15 @@
       placeholder="오늘의 한줄 목표(공유됨)"
     >
 
+    <!-- [2026-08-11] 하루 목표 작업 시간 — 뽀모 창 바깥 고리가 이 값을 향해 찹니다.
+         비워두면 고리 없이 숫자만 보여요(못 채운 것처럼 보이지 않게). -->
+    <label class="goal-hr" for="db-goal-hours">
+      <span>오늘 목표 작업 시간</span>
+      <input type="number" id="db-goal-hours" min="0" max="24" step="0.5"
+             inputmode="decimal" placeholder="—" oninput="saveGoalHours()">
+      <span class="goal-hr-unit">시간</span>
+    </label>
+
     <!-- 상태는 이제 카드의 상태표를 눌러서 바꿉니다.
 
          이 <select> 는 화면에서 감추되 지우지는 않았습니다. 저장과 시간
@@ -870,34 +903,34 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608111237"></script>
-<script src="script_core.js?v=202608111237"></script>
-<script src="script_auth.js?v=202608111237"></script>
-<script src="script_ui.js?v=202608111237"></script>
-<script src="script_chat.js?v=202608111237"></script>
-<script src="script_chatty.js?v=202608111237"></script>
-<script src="script_data.js?v=202608111237"></script>
-<script src="script_realtime.js?v=202608111237"></script>
-<script src="script_layout.js?v=202608111237"></script>
-<script src="script_wordcount.js?v=202608111237"></script>
-<script src="script_timelog.js?v=202608111237"></script>
-<script src="script_idledetect.js?v=202608111237"></script>
-<script src="script_profile.js?v=202608111237"></script>
-<script src="script_mywork.js?v=202608111237"></script>
-<script src="script_forest.js?v=202608111237"></script>
-<script src="script_notice.js?v=202608111237"></script>
-<script src="script_achv.js?v=202608111237"></script>
-<script src="script_reactions.js?v=202608111237"></script>
-<script src="script_note.js?v=202608111237"></script>
+<script src="fortune_data.js?v=202608111552"></script>
+<script src="script_core.js?v=202608111552"></script>
+<script src="script_auth.js?v=202608111552"></script>
+<script src="script_ui.js?v=202608111552"></script>
+<script src="script_chat.js?v=202608111552"></script>
+<script src="script_chatty.js?v=202608111552"></script>
+<script src="script_data.js?v=202608111552"></script>
+<script src="script_realtime.js?v=202608111552"></script>
+<script src="script_layout.js?v=202608111552"></script>
+<script src="script_wordcount.js?v=202608111552"></script>
+<script src="script_timelog.js?v=202608111552"></script>
+<script src="script_idledetect.js?v=202608111552"></script>
+<script src="script_profile.js?v=202608111552"></script>
+<script src="script_mywork.js?v=202608111552"></script>
+<script src="script_forest.js?v=202608111552"></script>
+<script src="script_notice.js?v=202608111552"></script>
+<script src="script_achv.js?v=202608111552"></script>
+<script src="script_reactions.js?v=202608111552"></script>
+<script src="script_note.js?v=202608111552"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608111237"></script>
+<script src="script_worktag.js?v=202608111552"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608111237"></script>
-<script src="script_share.js?v=202608111237"></script>
-<script src="script_manual.js?v=202608111237"></script>
-<script src="script_guard.js?v=202608111237"></script>
+<script src="script_sticker.js?v=202608111552"></script>
+<script src="script_share.js?v=202608111552"></script>
+<script src="script_manual.js?v=202608111552"></script>
+<script src="script_guard.js?v=202608111552"></script>
 
 <script>
   window.addEventListener("load", () => {
