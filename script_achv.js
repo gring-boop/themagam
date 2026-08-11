@@ -91,7 +91,7 @@
      ===================================================================== */
   const BASE_KEYS = ["wc", "ms", "pomo", "att", "wc5k", "wc10k",
                      "seg3h", "day8h", "pomo8", "dawn", "wknd", "owl", "lark",
-                     "burst", "harv"];
+                     "morn", "burst", "harv"];
   const MAX_KEYS  = ["wcBest", "segBest", "dayMsBest", "pomoBest", "weekBest"];
 
   const el = (id) => document.getElementById(id);
@@ -137,6 +137,18 @@
     { id: "att100",  g: "출석", icon: "💯", label: "백일",          at: "attTotal",   n: 100, desc: "모두 100일 출석" },
     { id: "dawn10",  g: "출석", icon: "🌙", label: "새벽반",        at: "dawnDays",   n: 10,  desc: "0~6시에 들어온 날 10일" },
     { id: "wknd8",   g: "출석", icon: "🛋", label: "주말 지킴이",   at: "weekendDays",n: 8,   desc: "주말 출석 8일" },
+    /* 🌅 미라클 모닝 (2026-08-11)
+       ---------------------------------------------------------------
+       ★ **오늘부터**가 아닙니다. 출석에는 그날 처음 들어온 시각이
+         예전부터 남아 있어서(firstAt), 지난 날들도 함께 세어집니다.
+         새벽에 나오던 분들은 켜자마자 꽤 쌓여 있을 거예요.
+       ★ 5시대~9시대. 열 시 정각은 안 들어갑니다.
+       ★ "연달아" 가 아니라 **통틀어** 며칠입니다. 하루 늦잠 잤다고
+         처음부터 다시 세면 아침에 일어날 마음이 꺾이니까요. */
+    { id: "morn10",  g: "출석", icon: "🌅", label: "미라클 모닝반",  at: "morningDays", n: 10,
+      desc: "새벽 5시~아침 10시 사이에 들어온 날 통틀어 10일" },
+    { id: "morn30",  g: "출석", icon: "🥇", label: "아침반 반장!",   at: "morningDays", n: 30,
+      desc: "새벽 5시~아침 10시 사이에 들어온 날 통틀어 30일" },
 
     /* ── 글자수 ───────────────────────────────────────────── */
     { id: "wc1k",    g: "글자수", icon: "✏️", label: "첫 천 자",     at: "wcBestDay",  n: 1000,    desc: "하루에 1,000자" },
@@ -401,13 +413,19 @@
     const attDays = Object.keys(att).filter(d => 셀날(d) && att[d] && att[d][nick]).sort();
     const attSet = new Set(attDays);
 
-    let dawnDays = 0, weekendDays = 0;
+    let dawnDays = 0, weekendDays = 0, morningDays = 0;
     attDays.forEach(d => {
       const row = att[d][nick] || {};
       const t = Number(row.firstAt || row.at || 0);
       if (t) {
         const h = new Date(t).getHours();
         if (h < 6) dawnDays++;
+        /* 🌅 미라클 모닝 — 그날 **처음 들어온 시각**이 5시대~9시대.
+           ★ 10시 정각은 안 들어갑니다. "10시 사이" 는 10시가 되기 전까지
+             라는 뜻으로 읽었어요. 9시 59분까지 들어오면 세어집니다.
+           ★ 🌙 새벽반(0~6시)과 5시대가 겹칩니다. 일부러 뒀어요 —
+             5시 반에 일어난 사람은 양쪽 다 받을 만합니다. */
+        if (h >= 5 && h < 10) morningDays++;
       }
       const wd = new Date(d + "T12:00:00").getDay();
       if (wd === 0 || wd === 6) weekendDays++;
@@ -530,6 +548,7 @@
       attTotal: attDays.length + b("att"),
       attStreak: streak(attSet),
       dawnDays: dawnDays + b("dawn"),
+      morningDays: morningDays + b("morn"),
       weekendDays: weekendDays + b("wknd"),
       wcTotal: wcTotal + b("wc"),
       wcBestDay: Math.max(wcBestDay, b("wcBest")),
@@ -592,6 +611,7 @@
       wc5k: r.wcDays5k, wc10k: r.wcDays10k,
       seg3h: r.seg3hCount, day8h: r.day8hCount, pomo8: r.pomoDay8Count,
       dawn: r.dawnDays, wknd: r.weekendDays, owl: r.owlDays, lark: r.larkDays,
+      morn: r.morningDays,
       burst: r.sincereBursts, harv: r.tomatoBursts,
       wcBest: r.wcBestDay, segBest: r.bestSeg, dayMsBest: r.bestDayMs,
       pomoBest: r.pomoBestDay, weekBest: r.wcBestWeek
