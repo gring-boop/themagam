@@ -6378,7 +6378,11 @@ body.split-dragging #chat-box3{ user-select: none; }
 .share-img{
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* [2026-08-11] object-fit 은 여기서 정하지 않습니다.
+     공유하는 사람이 고른 방식에 따라 .is-cover / .is-contain 이 붙어요.
+     여기에 cover 를 박아 두면 "전체 보기" 와 싸우게 되고, 어느 쪽이
+     이기는지가 규칙 순서에 달리게 됩니다 — 헷갈릴 자리를 아예 없앱니다.
+     (그리는 쪽이 둘 중 하나를 **반드시** 붙입니다) */
   display: block;
   /* 작은 그림을 크게 늘려도 번지지 않게 — 네모 칸이 그대로 보입니다 */
   image-rendering: pixelated;
@@ -7239,4 +7243,34 @@ body.split-dragging #chat-box3{ user-select: none; }
   font-weight: var(--fw-medium);
   color: var(--accent);
   font-variant-numeric: tabular-nums;
+}
+
+/* [2026-08-11] 공유 그림을 카드에 맞추는 방식 — 채우기 / 전체 보기.
+
+   ★ 잘라내기(cover)가 기본입니다. 타임좌처럼 가로로 길쭉한 창은
+     높이에 맞춰 늘어나면서 **양옆이 잘려** 정작 숫자가 사라지므로,
+     그런 창을 띄운 사람이 전체 보기로 바꾸면 됩니다.
+
+   여백 색은 칸의 바탕(.share-shot 의 --fill-1)이 그대로 비칩니다 —
+   테마를 따라가는 은은한 색이라 그림이 주인공으로 남습니다. */
+.share-img.is-cover{ object-fit: cover; }
+.share-img.is-contain{ object-fit: contain; }
+
+.blur-pop-head2{ margin-top: 12px; }
+.fit-pick{ display: flex; gap: 6px; }
+.fit-pick button{
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+.fit-pick button[aria-pressed="true"]{
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--text);
 }

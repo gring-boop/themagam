@@ -44,6 +44,24 @@
        (32px 글자 → 6.7px, 획이 살아남는 크기). 본문은 한참 뒤에야
        읽히지만 제목만 읽혀도 무엇을 쓰는지 드러나요. 그래서 400 에서
        한 뼘 물러선 360 을 상한으로 뒀습니다. 검사도 이걸 막고 있습니다. */
+  /* =====================================================================
+     그림을 카드에 맞추는 방식 (2026-08-11)
+     ---------------------------------------------------------------------
+     "채우기" 는 칸을 꽉 채우고 넘치는 쪽을 잘라냅니다. 원고 창처럼
+     세로로 긴 그림에는 이게 낫습니다.
+
+     그런데 타임좌 같은 **가로로 길쭉한 창**은 높이에 맞춰 늘어나면서
+     양옆이 잘려 나갑니다 — 정작 숫자가 있는 자리가 사라져요.
+     그래서 "전체 보기" 를 함께 둡니다. 잘라내지 않고 통째로 넣어요.
+
+     ★ 이 값은 **공유하는 사람**이 정하고 **모두의 화면에 그대로** 갑니다.
+       보는 사람이 각자 고르게 하면, 정작 타임좌를 띄운 본인이 남들
+       화면을 고쳐 줄 수 없습니다. 카드가 잘려 보이는 걸 아는 사람은
+       공유하는 본인이니까요.
+     ===================================================================== */
+  const FIT_KEY = "shareFit";           // "cover"(채우기) | "contain"(전체 보기)
+  let _shareFit = "cover";
+
   const SHARE_W_MIN  = 80;    // 가장 뭉갠 쪽
   const SHARE_W_MAX  = 360;   // 가장 선명한 쪽 (400 미만이어야 합니다)
   const SHARE_W_STEP = 20;
@@ -160,7 +178,8 @@
       await db.ref("screens/" + myNick).set({
         img,
         at: firebase.database.ServerValue.TIMESTAMP,
-        level: _shareW
+        level: _shareW,
+        fit: _shareFit          // 카드에 어떻게 맞출지 — 보는 쪽이 그대로 따릅니다
       });
     } catch (e) {
       console.warn("[화면 공유 — 저장 실패]", e);
@@ -313,6 +332,18 @@
      (공유를 안 하면 볼 일이 없는 버튼이라 머리말에 두지 않았습니다)
      --------------------------------------------------------------- */
   /** 가로 픽셀로 직접 정합니다 (80 ~ 360). 범위를 벗어나면 잘라 맞춥니다. */
+  /* 맞추는 방식 바꾸기 — 이 기기에 적어 두고, 공유 중이면 곧바로 한 장 보냅니다 */
+  function setShareFit(v, opts) {
+    _shareFit = (v === "contain") ? "contain" : "cover";
+    try { window.AppStore?.setItem(FIT_KEY, _shareFit); } catch (e) {}
+    /* 내 카드는 서버를 기다리지 않고 바로 바뀌게 — 누른 느낌이 살아야 해요 */
+    document.querySelectorAll('.share-card.is-me .share-img').forEach(im => {
+      im.classList.toggle("is-contain", _shareFit === "contain");
+      im.classList.toggle("is-cover", _shareFit !== "contain");
+    });
+    if (!opts || !opts.quiet) pushFrame();
+  }
+
   function setShareWidth(w, opts) {
     const n = Math.round(Number(w) / SHARE_W_STEP) * SHARE_W_STEP;
     _shareW = Math.max(SHARE_W_MIN, Math.min(SHARE_W_MAX, n || SHARE_DEFAULT_W));
@@ -339,6 +370,13 @@
       const v = Number(raw);                        // 옛 방식 — 0·1·2
       if (SHARE_LEGACY_W[v]) _shareW = SHARE_LEGACY_W[v];
     } catch (e) {}
+  }
+
+  function loadShareFit() {
+    try {
+      const raw = String(window.AppStore && window.AppStore.getItem(FIT_KEY) || "");
+      _shareFit = (raw === "contain") ? "contain" : "cover";
+    } catch (e) { _shareFit = "cover"; }
   }
 
   /* ---------------------------------------------------------------
@@ -412,7 +450,9 @@
       const at = Number(r.at || 0);
       const age = t - at;
       if (age > SHARE_DROP_MS) continue;      // 30초 넘게 소식이 없으면 뺍니다
-      rows.push({ nick, img, at, age });
+      /* 모르는 값이 오면 예전처럼 "채우기" — 옛 기록과 섞여도 안 깨집니다 */
+      const fit = (r.fit === "contain") ? "contain" : "cover";
+      rows.push({ nick, img, at, age, fit });
     }
     // 내 카드가 맨 앞 (자기 것 확인용)
     rows.sort((a, b) => (a.nick === myNick ? -1 : 0) - (b.nick === myNick ? -1 : 0));
@@ -443,7 +483,8 @@
            data-share-nick="${esc(row.nick)}" data-share-at="${row.at}"
            title="${esc(SHARE_NOTICE)}">
         <div class="share-shot">
-          <img class="share-img" src="${row.img}" alt="${esc(row.nick)} 님이 공유 중인 화면 (모자이크)">
+          <img class="share-img is-${row.fit === "contain" ? "contain" : "cover"}"
+               src="${row.img}" alt="${esc(row.nick)} 님이 공유 중인 화면 (모자이크)">
           <!-- [2026-08-10] 글자를 빼고 **빨간 불 하나**로. 녹음실 ON 램프처럼.
                글자가 사라져도 뜻이 남도록 title 과 aria-label 을 답니다 —
                마우스를 올리면 "공유 중" 이 뜨고, 화면 낭독기도 그렇게 읽어요. -->
@@ -646,6 +687,18 @@
              min="${SHARE_W_MIN}" max="${SHARE_W_MAX}" step="${SHARE_W_STEP}"
              value="${_shareW}">
       <div class="blur-pop-ends"><span>뭉개짐</span><span>선명함</span></div>
+
+      <div class="blur-pop-head blur-pop-head2"><span>카드에 맞추기</span></div>
+      <div class="fit-pick" role="group" aria-label="카드에 맞추는 방식">
+        <button type="button" data-fit="cover"   aria-pressed="${_shareFit !== "contain"}">채우기</button>
+        <button type="button" data-fit="contain" aria-pressed="${_shareFit === "contain"}">전체 보기</button>
+      </div>
+      <p class="blur-pop-note">
+        <b>채우기</b> 는 칸을 꽉 채우고 넘치는 쪽을 잘라내요.
+        <b>전체 보기</b> 는 잘라내지 않는 대신 위아래에 여백이 생깁니다 —
+        타임좌처럼 <b>가로로 길쭉한 창</b>에 쓰세요.
+      </p>
+
       <p class="blur-pop-note">
         <b>내 화면에만</b> 적용돼요. 이 기기에 저장되고,
         가장 선명해도 <b>글자는 읽히지 않는 선</b>까지만 올라갑니다.
@@ -667,6 +720,15 @@
       setShareWidth(range.value, { quiet: true });
       out.textContent = _wToPct(_shareW) + "%";
     });
+    /* 맞추는 방식 — 누르면 곧바로 바뀝니다 (막대와 달리 끄는 동작이 없어요) */
+    pop.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-fit]");
+      if (!b) return;
+      setShareFit(b.getAttribute("data-fit"));
+      pop.querySelectorAll("[data-fit]").forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+    });
+
     /* 손을 뗐을 때 — 그제서야 한 장 보냅니다 */
     const commit = () => pushFrame();
     range.addEventListener("change", commit);
@@ -696,6 +758,7 @@
   window.renderShareCards  = renderShareCards;
   window.isScreenSharing   = () => _sharing;
   window.setShareWidth     = setShareWidth;
+  window.setShareFit       = setShareFit;
 
   /* ---------------------------------------------------------------
      기존 흐름에 끼워 넣기
@@ -725,6 +788,7 @@
     }
 
     loadShareLevel();
+    loadShareFit();
     renderShareButton();
     bindShareClicks();
   })();
