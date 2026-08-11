@@ -189,6 +189,42 @@
      ===================================================================== */
   let _firstSeen = null;      // { 닉: "YYYY-MM-DD" }
 
+  /* =====================================================================
+     📏 한 달 18일 출석 규칙 — 늦게 들어온 사람은 비율로 (2026-08-11)
+     ---------------------------------------------------------------------
+     [무엇이 문제였나]
+     18일은 **한 달을 통째로 있은 사람**의 기준입니다. 11일에 들어온
+     분에게 같은 18일을 요구하면, 남은 21일 중 18일 — 거의 매일 나와야
+     해요. 규칙이 아니라 벌이 됩니다.
+
+     [셈법]
+       ① 이 달에 멤버였던 날    = 그 달 날수 − 들어오기 전 날수
+       ② 휴가 낸 날은 통째로 뺍니다 ("쉬어도 되는 날" 이라는 뜻이니까요)
+       ③ 기준 = 반올림( (①−②) ÷ 그 달 날수 × 18 )
+
+     11일 입장 · 휴가 없음 · 31일 달이면 → 21 ÷ 31 × 18 ≈ 12.2 → **12일**
+     30일 달에 같은 조건이면 → 20 ÷ 30 × 18 = 12 → **12일**
+     달 길이가 달라도 같은 값이 나옵니다.
+
+     [세 가지 상태]
+     이번 달은 아직 안 끝났으니 "못 지켰다" 고 할 수 없습니다. 그래서
+     **남은 날로 채울 수 있는가**까지 봅니다.
+       ✅ 달성  — 이미 기준을 넘음
+       🟡 가능  — 아직이지만 남은 날로 채울 수 있음
+       🔴 불가  — 남은 날을 다 나와도 못 채움 (지난 달이면 '미달')
+     ===================================================================== */
+  const RULE_DAYS = 18;       // 한 달 기준 출석일 (달을 통째로 있은 사람)
+
+  /** 한 사람의 이 달 규칙 셈 */
+  function ruleOf({ daysInMonth, beforeN, vacInMonth, attended, daysLeft }) {
+    const member = daysInMonth - beforeN;              // 멤버였던 날
+    const eff = Math.max(0, member - vacInMonth);      // 휴가를 뺀 날
+    const need = Math.round((eff / daysInMonth) * RULE_DAYS);
+    if (attended >= need) return { need, state: "ok" };
+    if (attended + daysLeft >= need) return { need, state: "maybe" };
+    return { need, state: "bad" };
+  }
+
   async function loadFirstSeen() {
     if (_firstSeen) return _firstSeen;
     const out = {};
@@ -280,7 +316,12 @@
       }
 
       /* 표 만들기 — ① 인원 수 줄 ② 날짜 머리글 줄 ③ 멤버 줄들 */
-      let cntRow = `<tr><th class="name-h cnt-h">인원</th><th class="sum-h cnt-h"></th><th class="sum-h cnt-h"></th>`;
+      /* 이번 달이면 오늘 **다음** 날부터가 아직 남은 날입니다.
+         지난 달을 보고 있으면 남은 날은 없어요(0). */
+      const todayD = new Date().getDate();
+      const isThisMonth = (monthOffset === 0);
+
+      let cntRow = `<tr><th class="rule-h cnt-h"></th><th class="name-h cnt-h">인원</th><th class="sum-h cnt-h"></th><th class="sum-h cnt-h"></th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
         const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
@@ -290,7 +331,8 @@
       }
       cntRow += "</tr>";
 
-      let head = `<tr><th class="name-h">이름</th><th class="sum-h">출석</th><th class="sum-h">휴가</th>`;
+      let head = `<tr><th class="rule-h" title="한 달 ${RULE_DAYS}일 규칙 — 늦게 들어온 분은 있었던 날수에 비례해 기준을 낮춥니다">규칙</th>` +
+                 `<th class="name-h">이름</th><th class="sum-h">출석</th><th class="sum-h">휴가</th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
         const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
@@ -346,8 +388,26 @@
           if (dk === todayKey) cls += " today";
           cells += `<td class="${cls}">${txt}</td>`;
         }
+        /* ── 규칙 칸 ──
+           ★ 남은 날에서 **앞으로 낼 휴가**는 뺍니다. 휴가는 기준에서도
+             빠졌으니, 나올 수 있는 날로 세면 두 번 봐주는 셈이 돼요. */
+        let daysLeft = 0;
+        if (isThisMonth) {
+          for (let d = todayD + 1; d <= daysInMonth; d++) {
+            const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+            if (vacs[dk] !== true) daysLeft++;
+          }
+        }
+        const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays, attended: attDays, daysLeft });
+        const 표 = { ok: "✅", maybe: "🟡", bad: "🔴" };
+        const 말 = { ok: "달성", maybe: "남은 날로 채울 수 있어요",
+                     bad: isThisMonth ? "남은 날을 다 나와도 모자라요" : "미달" };
+        const ruleCell =
+          `<td class="rule-c ${r.state}" title="기준 ${r.need}일 · ${말[r.state]}">` +
+          `${표[r.state]} ${attDays}/${r.need}</td>`;
+
         /* 이름 옆 [✕] — 탈퇴 인원 삭제. 늘 있지만 아주 옅게, 마우스를 올리면 진해집니다. */
-        return `<tr><td class="name-c"><span class="nmw">` +
+        return `<tr>${ruleCell}<td class="name-c"><span class="nmw">` +
                  `<span class="nm">${escapeHtml(n)}</span>` +
                  `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>` +
                `</span></td>` +
