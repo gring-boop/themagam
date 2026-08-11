@@ -269,6 +269,8 @@
 
     if (_timer)    { clearInterval(_timer);    _timer = null; }
     if (_agoTimer) { clearInterval(_agoTimer); _agoTimer = null; }
+    /* 머리에 모아둔 초를 마저 적습니다 — 안 그러면 30초까지 날아갑니다 */
+    try { window.achvShareFlush?.(); } catch (e) {}
 
     try {
       _stream && _stream.getTracks().forEach(t => { t.onended = null; t.stop(); });
@@ -549,6 +551,12 @@
      20초가 넘으면 흐리게, 30초가 넘으면 카드를 뺍니다.
      ("n초 전" 글자는 뺐습니다 — 화면이 흐려지는 것만으로 충분해서요) */
   function tickShare() {
+    /* 🏅 👀 관심이 필요해 — 공유한 시간을 1초씩 업적 쪽에 알립니다.
+       ★ 이 타이머는 **내가 공유 중일 때만** 돕니다(startScreenShare 에서
+         켜고 stopScreenShare 에서 끕니다). 그래서 남의 화면을 보고만
+         있는 시간은 세어지지 않아요. */
+    try { window.achvShareTick?.(1000); } catch (e) {}
+
     const t = now();
     document.querySelectorAll(".share-card").forEach(card => {
       const at = Number(card.getAttribute("data-share-at") || 0);
