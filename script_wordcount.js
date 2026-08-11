@@ -822,7 +822,11 @@
     });
 
     /* [전체 기록] 은 탭이 아니라 창을 엽니다 — 눌러도 오늘/내 기록 선택은 그대로 */
+    /* [2026-08-11] 단추가 접속자 명단 맨 아래로 옮겨갔습니다.
+       옛 자리도 그대로 부릅니다 — 단일파일처럼 오래 열어 둔 화면에서
+       옛 뼈대가 남아 있을 수 있어요. */
     el("wc-all-btn")?.addEventListener("click", openWcAll);
+    el("wcall-pill")?.addEventListener("click", openWcAll);
 
     host.querySelectorAll("[data-wc-tab]").forEach(b => {
       b.addEventListener("click", () => {

@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608111552">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608111552">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608111626">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608111626">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608111552">
+  <link rel="manifest" href="manifest.json?v=202608111626">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608111552" />
+  <link rel="stylesheet" href="styles.css?v=202608111626" />
 </head>
 
 <body>
@@ -620,6 +620,13 @@
          판은 **위로** 펼쳐집니다 — 이 줄이 이미 명단 맨 아래라 아래로
          열면 화면 밖으로 나갑니다. -->
     <div class="room-foot">
+      <!-- [2026-08-11] 📓 Letters 전체 기록 — 뽀모 창에서 옮겨 왔습니다.
+           방 전체의 달력이라 "혼자 보는 것" 이 아니어서, 방 전체 할 일 줄
+           옆이 오히려 제자리예요. -->
+      <button type="button" class="room-pill" id="wcall-pill"
+              title="방 전체의 달력 기록 보기">📓 Letters 전체 기록</button>
+      <span class="room-foot-sep" aria-hidden="true"></span>
+
       <div class="room-todo" id="room-todo" hidden>
         <span class="room-todo-pill" id="room-todo-pill"></span>
       </div>
@@ -769,10 +776,9 @@
         <div class="wc-tabs" role="tablist" aria-label="글자수 보기">
           <button class="wc-tab on" type="button" data-wc-tab="today" role="tab" aria-selected="true">오늘</button>
           <button class="wc-tab" type="button" data-wc-tab="me"    role="tab" aria-selected="false">내 기록</button>
-          <!-- [2026-08-07] 탭이 아니라 창을 여는 버튼입니다 — 달력은 좁은 칸에
-               넣기엔 커서, 눌러서 큰 창으로 봅니다. -->
-          <button class="wc-tab wc-tab-open" type="button" id="wc-all-btn"
-                  title="방 전체의 달력 기록 보기">전체 기록</button>
+          <!-- [옮김 2026-08-11] [전체 기록] 은 접속자 명단 맨 아래 줄로 갔습니다.
+               칸을 좁히면 탭 셋이 두 줄로 접혀 "오늘 / 내 기록" 이 흩어졌어요.
+               둘만 남으니 어지간히 좁혀도 한 줄로 버팁니다. -->
         </div>
       </div>
 
@@ -903,34 +909,34 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608111552"></script>
-<script src="script_core.js?v=202608111552"></script>
-<script src="script_auth.js?v=202608111552"></script>
-<script src="script_ui.js?v=202608111552"></script>
-<script src="script_chat.js?v=202608111552"></script>
-<script src="script_chatty.js?v=202608111552"></script>
-<script src="script_data.js?v=202608111552"></script>
-<script src="script_realtime.js?v=202608111552"></script>
-<script src="script_layout.js?v=202608111552"></script>
-<script src="script_wordcount.js?v=202608111552"></script>
-<script src="script_timelog.js?v=202608111552"></script>
-<script src="script_idledetect.js?v=202608111552"></script>
-<script src="script_profile.js?v=202608111552"></script>
-<script src="script_mywork.js?v=202608111552"></script>
-<script src="script_forest.js?v=202608111552"></script>
-<script src="script_notice.js?v=202608111552"></script>
-<script src="script_achv.js?v=202608111552"></script>
-<script src="script_reactions.js?v=202608111552"></script>
-<script src="script_note.js?v=202608111552"></script>
+<script src="fortune_data.js?v=202608111626"></script>
+<script src="script_core.js?v=202608111626"></script>
+<script src="script_auth.js?v=202608111626"></script>
+<script src="script_ui.js?v=202608111626"></script>
+<script src="script_chat.js?v=202608111626"></script>
+<script src="script_chatty.js?v=202608111626"></script>
+<script src="script_data.js?v=202608111626"></script>
+<script src="script_realtime.js?v=202608111626"></script>
+<script src="script_layout.js?v=202608111626"></script>
+<script src="script_wordcount.js?v=202608111626"></script>
+<script src="script_timelog.js?v=202608111626"></script>
+<script src="script_idledetect.js?v=202608111626"></script>
+<script src="script_profile.js?v=202608111626"></script>
+<script src="script_mywork.js?v=202608111626"></script>
+<script src="script_forest.js?v=202608111626"></script>
+<script src="script_notice.js?v=202608111626"></script>
+<script src="script_achv.js?v=202608111626"></script>
+<script src="script_reactions.js?v=202608111626"></script>
+<script src="script_note.js?v=202608111626"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608111552"></script>
+<script src="script_worktag.js?v=202608111626"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608111552"></script>
-<script src="script_share.js?v=202608111552"></script>
-<script src="script_manual.js?v=202608111552"></script>
-<script src="script_guard.js?v=202608111552"></script>
+<script src="script_sticker.js?v=202608111626"></script>
+<script src="script_share.js?v=202608111626"></script>
+<script src="script_manual.js?v=202608111626"></script>
+<script src="script_guard.js?v=202608111626"></script>
 
 <script>
   window.addEventListener("load", () => {
