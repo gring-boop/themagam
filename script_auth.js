@@ -186,6 +186,31 @@
       } catch (e) { /* 못 바꿔도 로그인은 진행합니다 */ }
 
       const owner = await ownerOf(nick);
+
+      /* =====================================================================
+         🔐 승인·내보내기 확인 (2026-08-11)
+         ---------------------------------------------------------------------
+         ★ 여기서 막는 건 **안내를 위한 것**입니다. 진짜 자물쇠는 보안규칙이라
+           이 줄을 지워도 뚫리지 않아요. 다만 안내가 없으면 "비밀번호가
+           틀렸나?" 하고 헤매게 되니, 먼저 읽고 알려 줍니다.
+
+         config 는 누구나 읽을 수 있게 열려 있고(쓰기만 방장), 그래서
+         입장 전에도 확인할 수 있습니다. */
+      try {
+        const banned = (await firebase.database().ref("config/ban/" + nick).once("value")).val();
+        if (banned) {
+          setMsg("이 필명은 방장이 내보낸 상태예요. 방장에게 말해 주세요.", true);
+          return false;
+        }
+        if (owner === null) {
+          const ok = (await firebase.database().ref("config/allow/" + nick).once("value")).val();
+          if (ok !== true) {
+            setMsg("방장이 승인한 필명만 들어올 수 있어요. 방장에게 필명을 알려 주세요.", true);
+            return false;
+          }
+        }
+      } catch (e) { /* 못 읽으면 그냥 진행 — 어차피 서버가 막습니다 */ }
+
       let cred;
 
       if (owner === null) {
@@ -226,7 +251,15 @@
       }
 
       const uid = cred.user.uid;
-      const mine = await claimNick(nick, uid);
+      let mine = false;
+      try {
+        mine = await claimNick(nick, uid);
+      } catch (e) {
+        /* 규칙이 막은 경우 — 승인 명단에 없는 새 필명입니다 */
+        await auth.signOut();
+        setMsg("방장이 승인한 필명만 들어올 수 있어요. 방장에게 필명을 알려 주세요.", true);
+        return false;
+      }
       if (!mine) {
         /* 계정은 만들어졌는데 필명 도장은 남의 것 — 아주 드문 경우입니다
            (같은 순간에 두 사람이 같은 필명을 처음 쓴 경우) */

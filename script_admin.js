@@ -139,6 +139,8 @@
     loadPinnedMessage();
     loadHistoryConfig();
     loadForest();
+    loadAllowList();
+    loadBanList();
   }
 
   // ------------------------------------------------- ③-0 내 계정 uid
@@ -361,6 +363,154 @@
     } catch (e) {
       console.warn("[adm removeMember]", e);
       msg("adm-att-msg", "지우지 못했어요 — 보안규칙에 관리자 예외가 들어갔는지 확인해 주세요.", true);
+    }
+  }
+
+  /* =====================================================================
+     🔐 입장 승인 · 🚫 내보내기 (2026-08-11)
+     ---------------------------------------------------------------------
+     [왜 만들었나]
+     모르는 필명이 작업방에 들어와 수다방까지 들어왔는데 아무 대꾸가
+     없었습니다. 멤버들이 무서워했어요.
+
+     예전에는 **주소만 알면 아무 필명이나 새로 만들어** 들어올 수
+     있었습니다. 멤버를 늘리기 쉬우라고 그렇게 뒀던 건데, 방이 알려질수록
+     그게 구멍이 됩니다.
+
+     [두 칸으로 나눴습니다]
+       config/allow/{필명} = true   승인 명단 — 여기 있어야 **새로** 만들 수 있음
+       config/ban/{필명}   = true   내보낸 사람 — 있으면 아무것도 못 함
+
+     config 는 이미 **방장만 쓸 수 있게** 잠겨 있어서, 이 두 칸도 자동으로
+     방장 전용입니다.
+
+     ★ 막는 일은 화면이 아니라 **보안규칙(서버)** 이 합니다. 개발자도구로
+       무엇을 하든 안 뚫려요. 여기 화면은 그 명단을 손보는 곳일 뿐입니다.
+
+     [내보내기가 지우기와 다른 점]
+     지우기(✕)는 기록까지 없애고 되돌릴 수 없습니다. 내보내기는 **문만
+     잠급니다** — 기록은 그대로 두고, 마음이 바뀌면 풀 수 있어요.
+     낯선 사람에게 쓸 때는 이쪽이 맞습니다.
+     ===================================================================== */
+  async function loadAllowList() {
+    const box = el("adm-allow-list");
+    if (!box) return;
+    try {
+      const v = (await db.ref("config/allow").once("value")).val() || {};
+      const nicks = Object.keys(v).filter(n => v[n] === true).sort();
+      box.innerHTML = nicks.length
+        ? nicks.map(n => `
+            <div class="adm-row">
+              <span class="n">${escapeHtml(n)}</span>
+              <button class="adm-btn ghost" data-allow-del="${escapeHtml(n)}">승인 취소</button>
+            </div>`).join("")
+        : "아직 승인한 필명이 없어요. 아래 [지금 쓰는 필명 전부 승인] 을 먼저 눌러 주세요.";
+    } catch (e) {
+      box.textContent = "불러오지 못했어요.";
+    }
+  }
+
+  async function addAllow(nickRaw) {
+    const nick = String(nickRaw || "").trim();
+    if (!nick) { msg("adm-allow-msg", "필명을 적어 주세요.", true); return; }
+    if (/[.#$/\[\]]/.test(nick)) {
+      msg("adm-allow-msg", "필명에 . $ # [ ] / 는 쓸 수 없어요.", true); return;
+    }
+    try {
+      await db.ref("config/allow/" + nick).set(true);
+      const inp = el("adm-allow-nick"); if (inp) inp.value = "";
+      await loadAllowList();
+      msg("adm-allow-msg", `✅ ${nick} — 이제 들어올 수 있어요.`);
+    } catch (e) {
+      msg("adm-allow-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  async function delAllow(nick) {
+    if (!nick) return;
+    if (!confirm(`${nick} 님의 승인을 취소할까요?\n\n이미 쓰고 있는 분이면 **지금 쓰는 데는 지장이 없습니다** — ` +
+                 `필명을 처음 만들 때만 보는 명단이라서요.\n완전히 막으려면 [내보내기] 를 쓰세요.`)) return;
+    try {
+      await db.ref("config/allow/" + nick).remove();
+      await loadAllowList();
+      msg("adm-allow-msg", `${nick} — 승인을 취소했어요.`);
+    } catch (e) {
+      msg("adm-allow-msg", "지우지 못했어요.", true);
+    }
+  }
+
+  /* 지금 쓰이고 있는 필명을 통째로 승인 명단에 넣습니다.
+     ★ 보안규칙을 올리기 **전에** 눌러야 합니다. 순서가 바뀌면 명단에
+       없는 분이 새 기기에서 들어올 때 막힐 수 있어요. */
+  async function seedAllow() {
+    if (!confirm("지금 쓰이고 있는 필명을 전부 승인 명단에 넣을까요?\n(이미 있는 것은 그대로 둡니다)")) return;
+    msg("adm-allow-msg", "넣는 중…");
+    try {
+      const owners = (await db.ref("nickOwner").once("value")).val() || {};
+      const upd = {};
+      Object.keys(owners).forEach(n => { upd[n] = true; });
+      if (!Object.keys(upd).length) { msg("adm-allow-msg", "쓰이고 있는 필명이 없어요.", true); return; }
+      await db.ref("config/allow").update(upd);
+      await loadAllowList();
+      msg("adm-allow-msg", `✅ ${Object.keys(upd).length}개 필명을 승인했어요.`);
+    } catch (e) {
+      msg("adm-allow-msg", "넣지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  async function loadBanList() {
+    const box = el("adm-ban-list");
+    if (!box) return;
+    try {
+      const v = (await db.ref("config/ban").once("value")).val() || {};
+      const nicks = Object.keys(v).sort();
+      box.innerHTML = nicks.length
+        ? nicks.map(n => `
+            <div class="adm-row">
+              <span class="n">${escapeHtml(n)}</span>
+              <button class="adm-btn ghost" data-ban-del="${escapeHtml(n)}">다시 들이기</button>
+            </div>`).join("")
+        : "내보낸 사람이 없어요.";
+    } catch (e) {
+      box.textContent = "불러오지 못했어요.";
+    }
+  }
+
+  async function addBan(nickRaw) {
+    const nick = String(nickRaw || "").trim();
+    if (!nick) { msg("adm-ban-msg", "필명을 적어 주세요.", true); return; }
+    if (!confirm(`${nick} 님을 내보낼까요?\n\n· 접속자 명단에서 곧바로 사라집니다\n` +
+                 `· 채팅·수다방에 글을 쓸 수 없습니다\n· 다시 들어와도 아무것도 못 합니다\n\n` +
+                 `기록은 지우지 않아요. 되돌릴 수 있습니다.`)) return;
+    msg("adm-ban-msg", "내보내는 중…");
+    try {
+      /* ① 문을 먼저 잠급니다 — 잠그기 전에 지우면 그 사이에 다시 씁니다 */
+      await db.ref("config/ban/" + nick).set(true);
+      /* ② 승인 명단에서도 빼서, 필명을 새로 만드는 길도 막습니다 */
+      await db.ref("config/allow/" + nick).remove();
+      /* ③ 지금 떠 있는 접속 표시를 지웁니다 (방장은 남의 status 도 지울 수 있어요) */
+      await db.ref("status/" + nick).remove();
+      /* ④ 공유 중이던 화면도 함께 내립니다 */
+      await db.ref("screens/" + nick).remove();
+
+      const inp = el("adm-ban-nick"); if (inp) inp.value = "";
+      await Promise.all([loadBanList(), loadAllowList()]);
+      msg("adm-ban-msg", `🚫 ${nick} 님을 내보냈어요. 접속자 명단에서 사라집니다.`);
+    } catch (e) {
+      msg("adm-ban-msg", "내보내지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  async function delBan(nick) {
+    if (!nick) return;
+    if (!confirm(`${nick} 님을 다시 들일까요?`)) return;
+    try {
+      await db.ref("config/ban/" + nick).remove();
+      await db.ref("config/allow/" + nick).set(true);
+      await Promise.all([loadBanList(), loadAllowList()]);
+      msg("adm-ban-msg", `${nick} 님을 다시 들였어요.`);
+    } catch (e) {
+      msg("adm-ban-msg", "풀지 못했어요.", true);
     }
   }
 
@@ -890,6 +1040,25 @@
       if (!el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
       if (!el("adm-cards-modal")?.hasAttribute("hidden")) closeMemberPreview();
     });
+    /* 🔐 입장 승인 · 🚫 내보내기 */
+    el("adm-allow-add")?.addEventListener("click", () => addAllow(el("adm-allow-nick")?.value));
+    el("adm-allow-nick")?.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.isComposing) addAllow(el("adm-allow-nick")?.value);
+    });
+    el("adm-allow-seed")?.addEventListener("click", seedAllow);
+    el("adm-allow-list")?.addEventListener("click", e => {
+      const b = e.target.closest("[data-allow-del]");
+      if (b) delAllow(b.getAttribute("data-allow-del"));
+    });
+    el("adm-ban-add")?.addEventListener("click", () => addBan(el("adm-ban-nick")?.value));
+    el("adm-ban-nick")?.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.isComposing) addBan(el("adm-ban-nick")?.value);
+    });
+    el("adm-ban-list")?.addEventListener("click", e => {
+      const b = e.target.closest("[data-ban-del]");
+      if (b) delBan(b.getAttribute("data-ban-del"));
+    });
+
     el("adm-forest-reload")?.addEventListener("click", loadForest);
     el("adm-forest-sweep")?.addEventListener("click", sweepForest);
     el("adm-forest-clear")?.addEventListener("click", clearForest);

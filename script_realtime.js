@@ -302,11 +302,39 @@
   // =====================================================
   // status realtime
   // =====================================================
+  /* 🚫 내보낸 사람 — 방장이 내보내면 모두의 화면에서 곧바로 사라져야 합니다.
+
+     서버 규칙이 그 사람의 status 쓰기를 막지만, **이미 적혀 있던 값**은
+     남아 있습니다(방장이 지우기 전까지, 또는 연결이 끊길 때까지).
+     그동안 명단에 계속 떠 있으면 내보낸 뜻이 없어요. 그래서 보는 쪽에서도
+     걸러 냅니다. 명단은 누구나 읽을 수 있어 곧바로 반영됩니다. */
+  let _banned = {};
+  function listenBans() {
+    try {
+      db.ref("config/ban").on("value", s => {
+        _banned = s.val() || {};
+        if (_statusCache) renderUserCards(_statusCache);
+      });
+    } catch (e) {}
+  }
+
+  function dropBanned(data) {
+    if (!data || !_banned) return data;
+    let hit = false;
+    const out = {};
+    Object.keys(data).forEach(n => {
+      if (_banned[n]) { hit = true; return; }
+      out[n] = data[n];
+    });
+    return hit ? out : data;
+  }
+
   function listenStatus() {
     _seenOnline = null;   // 다시 붙을 때는 씨앗부터 (옛 목록으로 오알림 방지)
+    listenBans();
     _statusRef = db.ref("status");
     _statusRef.on("value", snap => {
-      const data = snap.val() || null;
+      const data = dropBanned(snap.val() || null);
       _statusCache = data;
       window._statusCache = data;   // ✅ 전역 노출
 
