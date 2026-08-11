@@ -6,7 +6,7 @@
    index.html에서 script_realtime.js 다음에 로드됩니다.
 
    [1] 채팅 사이드바 접기/펼치기 (기기별 · localStorage)
-   [2] 프로필 데이터 (필명별 · Firebase users/{닉}/profile)
+   [2] 프로필 데이터 (닉네임별 · Firebase users/{닉}/profile)
    [3] 설정 모달 "프로필" 탭
    ===================================================================== */
 
@@ -91,7 +91,7 @@ function noteChatMessageWhileCollapsed() {
    아무 일도 일어나지 않던 자리입니다. 이제 실제로 동작합니다.
 
    지우는 것은 이 기기에만 저장되는 값들뿐입니다.
-   프사·투두·목표처럼 필명에 묶여 서버에 있는 것은 건드리지 않습니다.
+   프사·투두·목표처럼 닉네임에 묶여 서버에 있는 것은 건드리지 않습니다.
    ===================================================================== */
 function resetLocalSettings() {
   const keys = [
@@ -117,7 +117,7 @@ function resetLocalSettings() {
 
   try {
     keys.forEach(k => AppStore.removeItem(k));
-    // 필명별로 저장된 테마 캐시도 함께 정리
+    // 닉네임별로 저장된 테마 캐시도 함께 정리
     for (let i = AppStore.length - 1; i >= 0; i--) {
       const k = AppStore.key(i);
       if (k && k.startsWith("writerTheme_")) AppStore.removeItem(k);
@@ -409,7 +409,7 @@ function fileToSquareDataUrl(file) {
    기본 프사 — 눈사람
    ---------------------------------------------------------------------
    사진을 안 올린 사람에게 이모지 대신 보여줍니다.
-   배경색은 필명에서 계산하므로 같은 사람은 늘 같은 색이고,
+   배경색은 닉네임에서 계산하므로 같은 사람은 늘 같은 색이고,
    서버에 따로 저장할 값이 없습니다.
 
    머리와 몸통을 각각 반투명 흰색으로 겹쳐서, 겹치는 부분만
@@ -430,7 +430,7 @@ function snowColor(nick) {
   return SNOW_COLORS[Math.abs(hash) % SNOW_COLORS.length];
 }
 
-/** 필명으로 만든 눈사람 SVG 문자열 */
+/** 닉네임으로 만든 눈사람 SVG 문자열 */
 /* 카드 무늬 — CSS 그라데이션으로 그리므로 이미지 파일이 필요 없습니다 */
 const CARD_PATTERNS = [
   { id: "none",           label: "무늬 없음" },
@@ -486,7 +486,7 @@ function sanitizeHexColor(v) {
 }
 window.sanitizeHexColor = sanitizeHexColor;
 
-/** 눈사람 배경색 — 본인이 고른 색이 있으면 그것, 없으면 필명으로 자동 배정 */
+/** 눈사람 배경색 — 본인이 고른 색이 있으면 그것, 없으면 닉네임으로 자동 배정 */
 function snowBgFor(nick) {
   const prof = (window._profileCache || {})[nick] || {};
   const mine = (nick === (typeof myNick !== "undefined" ? myNick : null))
@@ -753,7 +753,7 @@ function renderProfilePanel() {
           </div>
           <div class="hint" id="prof-photo-hint">${
             photo ? "카드와 채팅에 이 사진이 보여요."
-                  : "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 필명에 맞는 색의 눈사람이 보여요."
+                  : "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 닉네임에 맞는 색의 눈사람이 보여요."
           }</div>
         </div>
       </div>
@@ -1049,7 +1049,7 @@ function bindProfilePanel() {
       photoClear.classList.add("hidden");
       if (photoHint) {
         photoHint.textContent =
-          "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 필명에 맞는 색의 눈사람이 보여요.";
+          "정사각형으로 잘라 128px로 줄여서 저장해요. 안 올리면 닉네임에 맞는 색의 눈사람이 보여요.";
       }
       window.rerenderUserCards?.();
       document.getElementById("prof-snowbg-block")?.classList.remove("hidden");
@@ -1151,8 +1151,8 @@ window.bindCardEditDelegate = bindCardEditDelegate;
 
   /* 입장 완료 후 프로필 로드 + 시간 기록 시작
 
-     [왜 입장 뒤인가] startTimelog 는 필명이 있어야 동작합니다.
-     페이지 로드(init) 시점에는 필명이 아직 없어서 첫 줄에서 그냥
+     [왜 입장 뒤인가] startTimelog 는 닉네임이 있어야 동작합니다.
+     페이지 로드(init) 시점에는 닉네임이 아직 없어서 첫 줄에서 그냥
      돌아가므로, 입장한 뒤에 다시 불러줍니다. 여러 번 불려도
      안전하도록 만들어져 있습니다. */
   const _join = window.join;

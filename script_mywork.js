@@ -11,14 +11,14 @@
        오른쪽 — 📌 할 일 / 🎯 목표 / 📊 기록  세 탭
 
    [일정 기능은 없앴습니다]
-   users/{필명}/schedule 에 적어두던 "일정"(집필·마감·송고…)은 통째로
+   users/{닉네임}/schedule 에 적어두던 "일정"(집필·마감·송고…)은 통째로
    뺐습니다. 사용자가 "일정은 지워줘, 할 일만 남길게"라고 했어요.
    서버에 남아 있는 옛 schedule 데이터는 **일부러 손대지 않습니다** —
    지우는 코드를 두면 실수로 남의 것까지 지울 위험만 생기고, 그냥
    두어도 아무 화면에도 나타나지 않아 무해합니다.
 
    [할 일은 여기서 만들지 않습니다 — 주인은 script_data.js]
-   할 일 한 덩어리(users/{필명}/todos)의 주인은 script_data.js 입니다.
+   할 일 한 덩어리(users/{닉네임}/todos)의 주인은 script_data.js 입니다.
    여기서는 그 배열을 읽어 날짜별로 늘어놓고, 넣고 빼는 일은
    script_data.js 가 열어둔 창구(window.addTodoWithDue · toggleTodoDone ·
    editTodo · deleteTodo · toggleRoutineTodo · setTodoDue)에 부탁합니다.
@@ -82,7 +82,7 @@
      자잘한 도구
      --------------------------------------------------------------- */
 
-  /* 내 필명 읽기.
+  /* 내 닉네임 읽기.
      script_core.js 의 `let myNick` 은 window 에 붙지 않습니다(let 규칙).
      이름 그대로 읽되 window 쪽도 함께 봅니다. */
   function me() {

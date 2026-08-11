@@ -56,7 +56,7 @@
   접속 표시(lastSeen)는 건드리지 않습니다.
 
   [PC 와 동시에 켜면]
-  접속 표시(status)는 필명당 한 칸뿐이라 두 기기가 같은 칸을 씁니다.
+  접속 표시(status)는 닉네임당 한 칸뿐이라 두 기기가 같은 칸을 씁니다.
   폰이 아무것도 안 쓰므로 PC 쪽은 아무 영향을 받지 않습니다.
 =========================================================================
 -->
@@ -207,8 +207,8 @@
 <!-- 입장 -->
 <div id="gate">
   <h1>더 마 감</h1>
-  <p class="sub">작업방과 같은 필명·비밀번호로 들어와요.</p>
-  <input id="g-nick" type="text" placeholder="필명" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <p class="sub">작업방과 같은 닉네임·비밀번호로 들어와요.</p>
+  <input id="g-nick" type="text" placeholder="닉네임" autocomplete="off" autocapitalize="off" spellcheck="false">
   <input id="g-pw" type="password" placeholder="비밀번호" autocomplete="current-password" enterkeyhint="go">
   <button id="g-go" type="button">입장하기</button>
   <p class="msg" id="g-msg" role="status"></p>
@@ -259,7 +259,7 @@
   <button class="icon-btn" type="button" id="btn-reload2" aria-label="새로고침">↻</button>
 </header>
 <main id="p-list" hidden>
-  <input class="search" id="q" type="search" placeholder="필명을 검색해요" autocomplete="off">
+  <input class="search" id="q" type="search" placeholder="닉네임을 검색해요" autocomplete="off">
   <div class="seg" role="tablist">
     <button type="button" role="tab" id="seg-on"  aria-selected="true">온라인 0</button>
     <button type="button" role="tab" id="seg-off" aria-selected="false">오프라인 0</button>
@@ -351,7 +351,7 @@
             justify-content:center;background:${hue(nick)}">${esc(String(nick).slice(0,1))}</span>`;
   }
 
-  /* 필명 → 로그인 아이디 (script_auth.js 와 같은 방식이어야 합니다) */
+  /* 닉네임 → 로그인 아이디 (script_auth.js 와 같은 방식이어야 합니다) */
   function nickToEmail(nick){
     let hex = "";
     for (const b of new TextEncoder().encode(nick)) hex += b.toString(16).padStart(2,"0");
@@ -371,7 +371,7 @@
     const nick = $("g-nick").value.trim();
     const pw   = $("g-pw").value;
     const msg  = $("g-msg");
-    if (!nick || !pw){ msg.textContent = "필명과 비밀번호를 적어주세요."; return; }
+    if (!nick || !pw){ msg.textContent = "닉네임과 비밀번호를 적어주세요."; return; }
 
     $("g-go").disabled = true;
     msg.textContent = "들어가는 중…";
@@ -381,7 +381,7 @@
       await auth.signInWithEmailAndPassword(nickToEmail(nick), pw);
     } catch (e) {
       $("g-go").disabled = false;
-      msg.textContent = "필명이나 비밀번호가 달라요. (여기서는 새 필명을 만들 수 없어요)";
+      msg.textContent = "닉네임이나 비밀번호가 달라요. (여기서는 새 닉네임을 만들 수 없어요)";
       return;
     }
     myNick = nick;
@@ -492,7 +492,7 @@
     const list = (_seg === "on" ? on : off).filter(n => !q || n.toLowerCase().includes(q));
     const wrap = $("list-wrap");
     if (!list.length){
-      wrap.innerHTML = `<div class="empty">${q ? "찾는 필명이 없어요." : "아무도 없어요."}</div>`;
+      wrap.innerHTML = `<div class="empty">${q ? "찾는 닉네임이 없어요." : "아무도 없어요."}</div>`;
       return;
     }
     wrap.innerHTML = list.map(n => {

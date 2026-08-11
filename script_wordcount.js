@@ -21,7 +21,7 @@
      🆕 새 편  — 기준을 0으로. 빈 문서에서 시작할 때.
 
    [저장하는 곳]
-       wordlog/{날짜}/{필명}   = { total, base, at }   ← 합계와 기준
+       wordlog/{날짜}/{닉네임}   = { total, base, at }   ← 합계와 기준
        wordfeed/{날짜}/{자동}  = { nick, add, snap, at } ← 올라온 기록 하나씩
 
    날짜별로 나눠 담으면 "오늘"과 "이번 주"를 따로 세기 쉽고, 오래된
@@ -56,8 +56,8 @@
   const el = (id) => document.getElementById(id);
 
   let _tab   = "today";
-  let _today = {};        // { 필명: {total, base} }
-  let _week  = {};        // { 날짜: { 필명: {total} } }
+  let _today = {};        // { 닉네임: {total, base} }
+  let _week  = {};        // { 날짜: { 닉네임: {total} } }
   let _feed  = [];        // [{ nick, add, at }] — 오늘 올라온 것들
   let _ref   = null;
   let _feedRef = null;
@@ -238,7 +238,7 @@
       </div>`;
   }
 
-  /* 내 필명 읽기.
+  /* 내 닉네임 읽기.
 
      ★ `window.myNick` 이 아닙니다.
 
@@ -478,7 +478,7 @@
   function denyMsg(e) {
     const c = String(e && (e.code || e.message) || "");
     if (/permission|PERMISSION_DENIED/i.test(c)) {
-      return "저장이 거부됐어요. 다른 창에서 다른 필명으로 들어가면 이 창의 로그인이 풀립니다. 새로고침 후 다시 입장해 주세요.";
+      return "저장이 거부됐어요. 다른 창에서 다른 닉네임으로 들어가면 이 창의 로그인이 풀립니다. 새로고침 후 다시 입장해 주세요.";
     }
     return "저장하지 못했어요. 잠시 뒤 다시 해주세요.";
   }

@@ -11,7 +11,7 @@
 
        { text, color, x, y, rot, at, hearts }
 
-   필명도, uid 도, 시간대도, 브라우저 정보도 넣지 않습니다.
+   닉네임도, uid 도, 시간대도, 브라우저 정보도 넣지 않습니다.
    **누가 썼는지는 서버 어디에도 남지 않습니다.** 그래서 나중에
    "이건 내가 쓴 거니까 지울래" 를 서버가 판단할 방법이 없어요.
    대신 글을 붙인 직후 그 쪽지의 키를 이 기기의 AppStore 에 적어둡니다.
@@ -88,7 +88,7 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
 
-  /* 내 필명 — 입장했는지 확인하는 용도로만 씁니다.
+  /* 내 닉네임 — 입장했는지 확인하는 용도로만 씁니다.
      이 값이 서버로 나가는 일은 이 파일 어디에도 없습니다. */
   function me() {
     try { if (typeof myNick === "string" && myNick) return myNick; } catch (e) {}
@@ -325,7 +325,7 @@
   }
 
   /** 붙이기 — 여기가 서버에 무엇을 적는지 전부입니다.
-      필명·uid 는 어떤 이름으로도 넣지 않습니다. */
+      닉네임·uid 는 어떤 이름으로도 넣지 않습니다. */
   async function postNote() {
     if (!_compose || _busy) return;
     const text = String(_compose.text || "").trim().slice(0, MAX_TEXT);

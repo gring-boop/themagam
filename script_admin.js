@@ -6,10 +6,10 @@
    작게 다시 담았어요:
      · Firebase 설정 (script_core.js 와 동일 — ★ 코어와 동기 유지)
      · 닉네임→가짜 이메일 변환 (script_auth.js 와 동일한 방식)
-     · 관리자 필명·PIN (script_realtime.js 의 것과 동일하게 유지)
+     · 관리자 닉네임·PIN (script_realtime.js 의 것과 동일하게 유지)
 
-   접속 흐름: ① 관리자 필명+비밀번호 로그인 → ② PIN → 대시보드.
-   관리자 필명이 아니면 ①에서 막혀 PIN 화면까지 가지 못합니다.
+   접속 흐름: ① 관리자 닉네임+비밀번호 로그인 → ② PIN → 대시보드.
+   관리자 닉네임이 아니면 ①에서 막혀 PIN 화면까지 가지 못합니다.
    PIN 은 진짜 잠금장치가 아닙니다 — 파괴적 동작의 실수 방지용이고,
    진짜 방어는 파이어베이스 보안 규칙이 합니다.
    ===================================================================== */
@@ -22,7 +22,7 @@
      ※ 메인 앱(script_realtime.js) 맨 위에 같은 값이 있습니다.
        두 파일은 반드시 함께 고쳐야 해요 — 동기 필요!
      ===================================================================== */
-  const ADMIN_NICK = "그링링🍄";     // ← 관리자 필명
+  const ADMIN_NICK = "그링링🍄";     // ← 관리자 닉네임
   const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
 
   /* ★ script_core.js 의 firebaseConfig 와 동기 유지 — 코어가 바뀌면 여기도 */
@@ -80,9 +80,9 @@
     if (!nick) { msg("adm-login-msg", "닉네임을 입력해주세요.", true); return; }
     if (pw.length < 6) { msg("adm-login-msg", "비밀번호는 6자 이상이에요.", true); return; }
 
-    /* 관리자 필명이 아니면 여기서 끝 — PIN 화면까지 가지 못합니다.
+    /* 관리자 닉네임이 아니면 여기서 끝 — PIN 화면까지 가지 못합니다.
        문구를 일부러 뭉뚱그립니다. "그 닉이 아니에요" 처럼 말해버리면
-       관리자 필명을 찾는 힌트를 주는 셈이라서요. */
+       관리자 닉네임을 찾는 힌트를 주는 셈이라서요. */
     if (nick !== ADMIN_NICK) {
       msg("adm-login-msg", "로그인 정보가 올바르지 않아요.", true);
       return;
@@ -95,7 +95,7 @@
       /* 메인과 같은 탭 단위 로그인 */
       try { await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION); } catch (e) {}
 
-      /* 도장(nickOwner)이 없는 필명은 관리자 페이지에서 새로 만들지 않습니다 */
+      /* 도장(nickOwner)이 없는 닉네임은 관리자 페이지에서 새로 만들지 않습니다 */
       const owner = (await db.ref("nickOwner/" + nick).once("value")).val();
       if (owner === null) {
         msg("adm-login-msg", "등록되지 않은 닉네임이에요. 메인 방에서 먼저 입장해 주세요.", true);
@@ -497,16 +497,16 @@
      🔐 입장 승인 · 🚫 내보내기 (2026-08-11)
      ---------------------------------------------------------------------
      [왜 만들었나]
-     모르는 필명이 작업방에 들어와 수다방까지 들어왔는데 아무 대꾸가
+     모르는 닉네임이 작업방에 들어와 수다방까지 들어왔는데 아무 대꾸가
      없었습니다. 멤버들이 무서워했어요.
 
-     예전에는 **주소만 알면 아무 필명이나 새로 만들어** 들어올 수
+     예전에는 **주소만 알면 아무 닉네임이나 새로 만들어** 들어올 수
      있었습니다. 멤버를 늘리기 쉬우라고 그렇게 뒀던 건데, 방이 알려질수록
      그게 구멍이 됩니다.
 
      [두 칸으로 나눴습니다]
-       config/allow/{필명} = true   승인 명단 — 여기 있어야 **새로** 만들 수 있음
-       config/ban/{필명}   = true   내보낸 사람 — 있으면 아무것도 못 함
+       config/allow/{닉네임} = true   승인 명단 — 여기 있어야 **새로** 만들 수 있음
+       config/ban/{닉네임}   = true   내보낸 사람 — 있으면 아무것도 못 함
 
      config 는 이미 **방장만 쓸 수 있게** 잠겨 있어서, 이 두 칸도 자동으로
      방장 전용입니다.
@@ -531,7 +531,7 @@
               <span class="n">${escapeHtml(n)}</span>
               <button class="adm-btn ghost" data-allow-del="${escapeHtml(n)}">승인 취소</button>
             </div>`).join("")
-        : "아직 승인한 필명이 없어요. 아래 [지금 쓰는 필명 전부 승인] 을 먼저 눌러 주세요.";
+        : "아직 승인한 닉네임이 없어요. 아래 [지금 쓰는 닉네임 전부 승인] 을 먼저 눌러 주세요.";
     } catch (e) {
       box.textContent = "불러오지 못했어요.";
     }
@@ -539,9 +539,9 @@
 
   async function addAllow(nickRaw) {
     const nick = String(nickRaw || "").trim();
-    if (!nick) { msg("adm-allow-msg", "필명을 적어 주세요.", true); return; }
+    if (!nick) { msg("adm-allow-msg", "닉네임을 적어 주세요.", true); return; }
     if (/[.#$/\[\]]/.test(nick)) {
-      msg("adm-allow-msg", "필명에 . $ # [ ] / 는 쓸 수 없어요.", true); return;
+      msg("adm-allow-msg", "닉네임에 . $ # [ ] / 는 쓸 수 없어요.", true); return;
     }
     try {
       await db.ref("config/allow/" + nick).set(true);
@@ -556,7 +556,7 @@
   async function delAllow(nick) {
     if (!nick) return;
     if (!confirm(`${nick} 님의 승인을 취소할까요?\n\n이미 쓰고 있는 분이면 **지금 쓰는 데는 지장이 없습니다** — ` +
-                 `필명을 처음 만들 때만 보는 명단이라서요.\n완전히 막으려면 [내보내기] 를 쓰세요.`)) return;
+                 `닉네임을 처음 만들 때만 보는 명단이라서요.\n완전히 막으려면 [내보내기] 를 쓰세요.`)) return;
     try {
       await db.ref("config/allow/" + nick).remove();
       await loadAllowList();
@@ -566,20 +566,20 @@
     }
   }
 
-  /* 지금 쓰이고 있는 필명을 통째로 승인 명단에 넣습니다.
+  /* 지금 쓰이고 있는 닉네임을 통째로 승인 명단에 넣습니다.
      ★ 보안규칙을 올리기 **전에** 눌러야 합니다. 순서가 바뀌면 명단에
        없는 분이 새 기기에서 들어올 때 막힐 수 있어요. */
   async function seedAllow() {
-    if (!confirm("지금 쓰이고 있는 필명을 전부 승인 명단에 넣을까요?\n(이미 있는 것은 그대로 둡니다)")) return;
+    if (!confirm("지금 쓰이고 있는 닉네임을 전부 승인 명단에 넣을까요?\n(이미 있는 것은 그대로 둡니다)")) return;
     msg("adm-allow-msg", "넣는 중…");
     try {
       const owners = (await db.ref("nickOwner").once("value")).val() || {};
       const upd = {};
       Object.keys(owners).forEach(n => { upd[n] = true; });
-      if (!Object.keys(upd).length) { msg("adm-allow-msg", "쓰이고 있는 필명이 없어요.", true); return; }
+      if (!Object.keys(upd).length) { msg("adm-allow-msg", "쓰이고 있는 닉네임이 없어요.", true); return; }
       await db.ref("config/allow").update(upd);
       await loadAllowList();
-      msg("adm-allow-msg", `✅ ${Object.keys(upd).length}개 필명을 승인했어요.`);
+      msg("adm-allow-msg", `✅ ${Object.keys(upd).length}개 닉네임을 승인했어요.`);
     } catch (e) {
       msg("adm-allow-msg", "넣지 못했어요. " + (e.code || e.message || ""), true);
     }
@@ -605,7 +605,7 @@
 
   async function addBan(nickRaw) {
     const nick = String(nickRaw || "").trim();
-    if (!nick) { msg("adm-ban-msg", "필명을 적어 주세요.", true); return; }
+    if (!nick) { msg("adm-ban-msg", "닉네임을 적어 주세요.", true); return; }
     if (!confirm(`${nick} 님을 내보낼까요?\n\n· 접속자 명단에서 곧바로 사라집니다\n` +
                  `· 채팅·수다방에 글을 쓸 수 없습니다\n· 다시 들어와도 아무것도 못 합니다\n\n` +
                  `기록은 지우지 않아요. 되돌릴 수 있습니다.`)) return;
@@ -613,7 +613,7 @@
     try {
       /* ① 문을 먼저 잠급니다 — 잠그기 전에 지우면 그 사이에 다시 씁니다 */
       await db.ref("config/ban/" + nick).set(true);
-      /* ② 승인 명단에서도 빼서, 필명을 새로 만드는 길도 막습니다 */
+      /* ② 승인 명단에서도 빼서, 닉네임을 새로 만드는 길도 막습니다 */
       await db.ref("config/allow/" + nick).remove();
       /* ③ 지금 떠 있는 접속 표시를 지웁니다 (방장은 남의 status 도 지울 수 있어요) */
       await db.ref("status/" + nick).remove();
@@ -913,7 +913,7 @@
                      rest:"☕BREAK☕", away:"💤AWAY💤" };
   const ST_CLASS = { writing:"writing", focus:"focus", rest:"rest", away:"away" };
 
-  /* 필명으로 눈사람 배경색을 만듭니다 (작업방 script_profile.js 와 같은 방식) */
+  /* 닉네임으로 눈사람 배경색을 만듭니다 (작업방 script_profile.js 와 같은 방식) */
   function snowBg(nick) {
     let h = 0;
     for (const ch of String(nick)) h = (h * 31 + ch.codePointAt(0)) % 360;

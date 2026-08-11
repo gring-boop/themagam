@@ -505,7 +505,7 @@
     const uid = (() => { try { return firebase.auth().currentUser?.uid || null; } catch (e) { return null; } })();
     console.log("① 지금 로그인한 계정 :", uid || "(로그인 안 됨)");
     console.log("   보안규칙이 허락한 계정:", ADMIN_UID);
-    console.log(uid === ADMIN_UID ? "   → 같습니다 ✅" : "   → ★ 다릅니다. 방장 필명으로 다시 들어와 주세요 ❌");
+    console.log(uid === ADMIN_UID ? "   → 같습니다 ✅" : "   → ★ 다릅니다. 방장 닉네임으로 다시 들어와 주세요 ❌");
     if (uid !== ADMIN_UID) return;
 
     /* 글도 사진도 없는 최소한의 값으로 한 번 써 봅니다.

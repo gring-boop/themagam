@@ -142,7 +142,7 @@ window.AppSession = AppSession;
 
   const PRESENCE_POLL_MS = 15000;
 
-  // 마지막으로 쓴 필명 (이 기기에만 저장)
+  // 마지막으로 쓴 닉네임 (이 기기에만 저장)
   const LAST_NICK_KEY = "writerLastNick";
   let _myJoinTs = 0;
 
@@ -385,12 +385,12 @@ window.AppSession = AppSession;
 
     const inputEl = document.getElementById("nick-input");
     const input = (inputEl?.value || "").trim();
-    if (!input) return alert("필명을 입력해주세요!");
+    if (!input) return alert("닉네임을 입력해주세요!");
 
     _joining = true;
 
     try {
-      // ✅ [FIX] 관리자 인증은 필명이 아닌 탭에 남아 있었음 →
+      // ✅ [FIX] 관리자 인증은 닉네임이 아닌 탭에 남아 있었음 →
       // 입장할 때마다 초기화해서, 재입장한 사람이 자동으로 관리자 취급되는 것을 방지
       try { AppSession.removeItem("adminPinOk"); } catch(e) {}
       try { window.refreshAdminUiVisibility?.(); } catch(e) {}
@@ -401,7 +401,7 @@ window.AppSession = AppSession;
       myEmoji = getDailyEmoji(myNick);
       _ensureSessionId();
 
-      // ✅ 다음 접속 때 입력창에 채워두기 위해 필명을 기억합니다 (이 기기에만)
+      // ✅ 다음 접속 때 입력창에 채워두기 위해 닉네임을 기억합니다 (이 기기에만)
       try { AppStore.setItem(LAST_NICK_KEY, myNick); } catch (e) {}
 
       // joinTs: 입장 직전 1.2초만 허용 (이전 로그 거의 안 보이게)
@@ -631,7 +631,7 @@ window.AppSession = AppSession;
        · 화면을 끌 때
        · 다른 사이트에 갔다가 뒤로가기로 돌아올 때
 
-     이때도 pagehide 가 뜹니다. 그리고 이 함수는 status/{필명} 을
+     이때도 pagehide 가 뜹니다. 그리고 이 함수는 status/{닉네임} 을
      **통째로 지웁니다.** 끊김 표시(disconnectedAt)를 남기는 게 아니라
      기록 자체를 지우는 것이라, 30분 유예도 소용이 없어요. 남들 화면에서
      그 사람 카드가 **그 자리에서** 사라집니다. 돌아오면 되살아나고요.
@@ -693,7 +693,7 @@ window.AppSession = AppSession;
 
     const nickInput = document.getElementById("nick-input");
 
-    // ✅ 지난번에 쓴 필명을 채워두고 전체 선택 상태로 둡니다.
+    // ✅ 지난번에 쓴 닉네임을 채워두고 전체 선택 상태로 둡니다.
     // 그대로 쓰려면 Enter, 바꾸려면 바로 타이핑하면 돼요.
     try {
       const last = AppStore.getItem(LAST_NICK_KEY);
