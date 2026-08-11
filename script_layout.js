@@ -420,7 +420,42 @@
         // 이 가지와 다음 가지 사이의 손잡이
         const grip = document.createElement("div");
         grip.className = "split-grip " + (node.dir === "h" ? "grip-v" : "grip-h");
-        grip.dataset.key = sizeKeyFor(kid, map, keyPrefix, i);
+        /* =============================================================
+           ★★ [고침 2026-08-11] 손잡이는 **남는 공간을 받는 칸을 잡으면
+              안 됩니다.**
+
+           [무엇이 문제였나 — "채팅 폭은 그대로인데 창이 옆으로 움직여요"]
+           손잡이는 여태 무조건 **자기 앞 칸**을 잡았습니다. 그런데 그
+           앞 칸이 하필 "남는 공간을 받는 칸" 이면, 끄는 순간 그 칸이
+           고정 폭으로 못 박히면서 **아무도 안 늘어나게** 됩니다.
+           그러면 늘어났어야 할 만큼이 통째로 빈 자리로 남고, 칸들이
+           그 빈 자리에 밀려 자리만 옮겨 다녔어요. 폭은 그대로인데
+           창이 벽에서 떨어져 보이던 게 이겁니다.
+
+           ★ 뒤집어 쓰면(chat-right) 더 두드러집니다. 줄이 거꾸로 흐르니
+             빈 자리가 **왼쪽**에 생겨서, 채팅이 왼쪽 벽에서 뚝 떨어져요.
+             게다가 뒤집으면 채팅이 DOM 의 마지막이라, 채팅을 잡는
+             손잡이가 아예 없었습니다 — 그래서 폭이 안 변했던 겁니다.
+
+           이제 규칙은 하나입니다 —
+             **늘어나는 칸보다 앞에 있는 손잡이는 앞 칸을,
+               뒤에 있는 손잡이는 뒤 칸을 잡는다.**
+
+           그러면 늘어나는 칸을 향해 바깥쪽에서 안쪽으로 하나씩 짝이
+           지어져, 손잡이 하나에 칸 하나가 정확히 맞물립니다.
+           늘어나는 칸만 빼고 **모든 칸이 손잡이를 하나씩** 갖고,
+           같은 칸을 두 손잡이가 잡는 일도 없습니다.
+
+           ※ "앞 칸이 늘어나는 칸일 때만 뒤를 잡는다" 로 하면 모자랍니다.
+             늘어나는 칸이 맨 앞에 오는 배치에서 두 손잡이가 같은 칸을
+             잡아 버리고, 맨 뒤 칸은 영영 못 잡게 됩니다.
+             (checks.js 가 이걸 잡아냈어요)
+           ============================================================= */
+        const 뒤를잡음 = (i >= growIdx);
+        grip.dataset.target = 뒤를잡음 ? "next" : "prev";
+        grip.dataset.key = 뒤를잡음
+          ? sizeKeyFor(kids[i + 1], map, keyPrefix, i + 1)
+          : sizeKeyFor(kid, map, keyPrefix, i);
         grip.dataset.dir = node.dir;
         grip.tabIndex = 0;
         grip.setAttribute("role", "separator");
@@ -736,9 +771,32 @@
     document.addEventListener("visibilitychange", () => { if (document.hidden) endDrag(); });
   }
 
+  /* 손잡이가 잡을 칸 — 사이에 낀 레일·숨은 것은 건너뜁니다.
+     (레일은 접힌 칸 옆에 끼어 있어서, 그냥 이웃을 잡으면 레일을 잡습니다) */
+  function gripTarget(grip) {
+    const 뒤쪽 = grip.dataset.target === "next";
+    let el = 뒤쪽 ? grip.nextElementSibling : grip.previousElementSibling;
+    while (el && (el.classList.contains("split-grip") ||
+                  el.classList.contains("side-rail") ||
+                  getComputedStyle(el).display === "none")) {
+      el = 뒤쪽 ? el.nextElementSibling : el.previousElementSibling;
+    }
+    return el;
+  }
+
+  /* 끄는 방향 — 두 가지가 곱해집니다.
+     ① 뒤 칸을 잡았으면 반대로 (손잡이를 오른쪽으로 밀면 뒤 칸이 좁아집니다)
+     ② 좌우를 뒤집어 쓰면 또 반대로 (줄이 거꾸로 흐르니까요) */
+  function gripSign(grip) {
+    const horiz = grip.dataset.dir === "h";
+    let s = grip.dataset.target === "next" ? -1 : 1;
+    if (horiz && document.body.classList.contains("chat-right")) s = -s;
+    return s;
+  }
+
   function bindGrip(grip) {
     grip.addEventListener("pointerdown", (e) => {
-      const prev = grip.previousElementSibling;
+      const prev = gripTarget(grip);
       if (!prev) return;
 
       const horiz = grip.dataset.dir === "h";
@@ -749,7 +807,7 @@
         start: horiz ? e.clientX : e.clientY,
         startPx: horiz ? prev.getBoundingClientRect().width
                        : prev.getBoundingClientRect().height,
-        sign: (horiz && document.body.classList.contains("chat-right")) ? -1 : 1
+        sign: gripSign(grip)
       };
       grip.classList.add("dragging");
       document.body.classList.add("split-dragging");
@@ -759,7 +817,7 @@
 
     grip.addEventListener("dblclick", (e) => {
       e.preventDefault();
-      const prev = grip.previousElementSibling;
+      const prev = gripTarget(grip);
       if (!prev) return;
       const def = DEFAULT_SIZE[grip.dataset.key] ?? 260;
       setSize(grip.dataset.key, def, prev, grip.dataset.dir === "h");
@@ -771,11 +829,13 @@
       if (!keys.includes(e.key)) return;
       e.preventDefault();
 
-      const prev = grip.previousElementSibling;
+      /* 화살표로도 같은 칸을 잡아야 합니다 — 여기만 옛 방식으로 남아
+         있으면, 끌 때와 화살표를 누를 때가 서로 다른 칸을 건드립니다. */
+      const prev = gripTarget(grip);
       if (!prev) return;
       const cur = horiz ? prev.getBoundingClientRect().width
                         : prev.getBoundingClientRect().height;
-      const dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
+      const dir = ((e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1) * gripSign(grip);
       setSize(grip.dataset.key, cur + dir * (e.shiftKey ? 32 : 10), prev, horiz);
     });
   }
