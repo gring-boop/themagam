@@ -171,6 +171,45 @@
        users/{닉}/timeSegs/{YYYY-MM-DD}/{pushId} = { s, a, b }  ← 접속 구간(ms) */
   let _attOffset = 0;
 
+  /* =====================================================================
+     "이 사람이 언제부터 있었나" — 처음 나타난 날 (2026-08-11)
+     ---------------------------------------------------------------------
+     새로 들어온 분의 줄은 앞쪽이 통째로 비어 있습니다. 그런데 빈 칸은
+     "안 왔다" 와 "아직 없었다" 를 구분해 주지 못해요. 곰미님이 오늘
+     들어왔는데 열흘을 결석한 것처럼 보이는 셈입니다.
+
+     그래서 attendance 를 **한 번** 통째로 훑어 사람마다 처음 나타난
+     날을 구해 둡니다. 그 앞은 칸을 하나로 합쳐 "입장 전" 이라고 적어요.
+
+     ★ 왜 한 번만 읽나 — 이 값은 달을 넘겨도 안 바뀝니다. 달을 옮길
+       때마다 다시 읽으면 화살표를 누를 때마다 방 전체 출석을 내려받게
+       돼요. 관리 화면을 여는 동안 한 번만 읽고 기억해 둡니다.
+     ★ 휴가만 찍힌 날도 "있었던" 날로 셉니다. 출석은 안 했어도 그날
+       이미 멤버였다는 뜻이니까요.
+     ===================================================================== */
+  let _firstSeen = null;      // { 닉: "YYYY-MM-DD" }
+
+  async function loadFirstSeen() {
+    if (_firstSeen) return _firstSeen;
+    const out = {};
+    try {
+      const snap = await db.ref("attendance").once("value");
+      const all = snap.val() || {};
+      Object.keys(all).forEach(day => {
+        Object.keys(all[day] || {}).forEach(n => {
+          const r = all[day][n];
+          if (!r || !(r.firstAt || r.at)) return;
+          if (!out[n] || day < out[n]) out[n] = day;
+        });
+      });
+    } catch (e) {
+      console.warn("[adm firstSeen]", e);
+      return null;            // 못 읽으면 표시를 아예 안 합니다 (틀리게 칠하느니)
+    }
+    _firstSeen = out;
+    return out;
+  }
+
   function hhmm(ts) {
     const d = new Date(ts);
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -192,10 +231,11 @@
 
     try {
       /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번 */
-      const [asnap, nickSnap] = await Promise.all([
+      const [asnap, nickSnap, firstSeen] = await Promise.all([
         db.ref("attendance").orderByKey()
           .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value"),
-        db.ref("nickOwner").once("value")
+        db.ref("nickOwner").once("value"),
+        loadFirstSeen()
       ]);
       const attMonth = asnap.val() || {};
       const nicks = Object.keys(nickSnap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
@@ -262,8 +302,35 @@
       const rows = nicks.map(n => {
         const vacs = vacByNick[n] || {};
         const mins = minsByNick[n] || {};
+
+        /* 이 사람이 처음 나타난 날 — 출석과 휴가 중 이른 쪽.
+           (vacations 는 위에서 달을 안 가리고 통째로 읽어 옵니다) */
+        let born = firstSeen ? firstSeen[n] : null;
+        Object.keys(vacs).forEach(d => {
+          if (vacs[d] === true && (!born || d < born)) born = d;
+        });
+
+        /* 이 달에서 "아직 없었던" 날이 며칠까지인가.
+           ★ 한 번도 나타난 적이 없으면(born 이 없으면) 이 달 전체가
+             입장 전입니다 — 명단에는 있는데 아직 한 번도 안 온 분이에요.
+           ★ firstSeen 을 못 읽었으면 아예 표시하지 않습니다. */
+        let beforeN = 0;
+        if (firstSeen) {
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+            if (born && dk >= born) break;
+            beforeN++;
+          }
+        }
+
         let attDays = 0, vacDays = 0, cells = "";
-        for (let d = 1; d <= daysInMonth; d++) {
+        if (beforeN > 0) {
+          /* 칸을 하나로 합칩니다 — 흩어진 빈 칸보다 "여기까지는 없었다" 가
+             한눈에 읽힙니다. 좁으면 글자는 생략해요. */
+          cells += `<td class="cell before" colspan="${beforeN}">` +
+                   (beforeN >= 3 ? "입장 전" : "") + "</td>";
+        }
+        for (let d = beforeN + 1; d <= daysInMonth; d++) {
           const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
           const rec = attMonth[dk]?.[n];
           const inAt = rec ? (rec.firstAt || rec.at) : null;
