@@ -7441,6 +7441,20 @@ body.split-dragging #chat-box3{ user-select: none; }
   line-height: 1.15;
   letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
+  /* [되돌림 2026-08-12] 잠깐 --me(막대와 같은 색)로 뒀다가 되돌립니다.
+
+     ★ 처음 생각 — "숫자와 그 밑 막대가 같은 색이라야 짝으로 읽힌다".
+       ★ 실제로는 — 파란 숫자 밑에 파란 막대가 붙으니 **한 덩어리로
+         뭉개져** 보였습니다. 화면이 단조로워지고, 정작 두 막대를 가르는
+         일에는 아무 도움도 안 됐어요.
+
+     사람은 이 자리를 색으로 구분하지 않습니다. 큰 숫자는 하나뿐이고,
+     막대는 위아래로 나란하니 자리만으로 충분해요. 색은 화면을 살리는
+     쪽에 쓰는 편이 낫습니다.
+
+     ★ 그래서 숫자는 --accent, 뽀모 막대는 --me — 테마의 **두 포인트 색**을
+       하나씩 나눠 씁니다. 두 색이 모든 테마에서 확실히 다르다는 것은
+       이미 검사로 못 박혀 있어요(테마마다 포인트가 둘인지 보는 검사). */
   color: var(--accent);
 }
 .pomo-bar-track{
@@ -7449,8 +7463,15 @@ body.split-dragging #chat-box3{ user-select: none; }
   background: var(--fill-2);
   overflow: hidden;
 }
-.pomo-bar-track.day{ height: 9px; margin-top: 9px; }
-.pomo-bar-track.pom{ height: 6px; margin-top: 5px; }
+/* [바꿈 2026-08-12] 위 = 뽀모, 아래 = 오늘 목표.
+   ★ 원형에서는 **바깥**이 목표, **안쪽**이 뽀모입니다. 가로로 펴면
+     바깥(큰 것)이 아래, 안쪽(작은 것)이 위로 오는 게 자연스러워요.
+     숫자 바로 밑에 붙는 막대가 그 숫자와 같은 것(뽀모)이라야
+     설명 없이 읽힙니다.
+   ★ 색도 덜 단조로워집니다 — 붉은 숫자 밑에 붉은 막대가 또 오면
+     둘이 한 덩어리로 뭉쳐 보였어요. */
+.pomo-bar-track.pom{ height: 9px; margin-top: 9px; }
+.pomo-bar-track.day{ height: 6px; margin-top: 5px; }
 .pomo-bar-track i{
   display: block; height: 100%; width: 0;
   border-radius: var(--r-full);
@@ -7468,17 +7489,10 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .pomo-bar-sub b{ font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); }
 
-/* ── 머리말의 "집중 중 · 오늘 n회" — 두 모양 어디서나 같은 자리 ── */
+/* [뺌 2026-08-12] 머리말의 "집중 중 · 오늘 n회" 를 없애면서 함께 걷어냈습니다.
+   이 방에서는 🍅 를 수확하고, 오늘 딴 토마토는 카드와 업적에 이미 나옵니다.
+   (제목 줄의 한 줄 배치는 접기 단추 때문에 그대로 둡니다) */
 .pomo-pane-title{ display: flex; align-items: baseline; gap: var(--sp-2); }
-.pomo-head-state{
-  margin-left: auto;
-  font-size: var(--fs-2xs);
-  font-weight: var(--fw-medium);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.pomo-head-state b{ color: var(--accent); font-weight: var(--fw-bold); }
-.pomo-head-state:empty{ display: none; }
 
 /* ── 설정의 모양 고르기 ── */
 .pomo-shape-pick{ display: flex; gap: var(--sp-2); margin: var(--sp-2) 0; }
@@ -7507,3 +7521,10 @@ body.split-dragging #chat-box3{ user-select: none; }
    넉넉하게 둘 수 있습니다. */
 .pomo-setrow .pomo-setup-field input{ width: 52px; font-size: var(--fs-sm); }
 .pomo-setrow .pomo-setup-label{ font-size: var(--fs-sm); }
+
+/* [2026-08-12] 뽀모 그림을 누르면 ⚙️ 설정 → 🍅 뽀모.
+   눌리는 자리라는 걸 아주 옅게만 알려 줍니다 — 늘 보이는 화면이라
+   테두리나 그림자를 두면 눈에 거슬려요. */
+.pomo-shape-hit{ cursor: pointer; border-radius: var(--r-md); }
+.pomo-shape-hit:hover{ background: var(--fill-1); }
+.pomo-shape-hit:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; }

@@ -1104,24 +1104,44 @@
   }
 
   /* =====================================================================
-     머리말의 "집중 중 · 오늘 n회"
+     [뺌 2026-08-12] 머리말의 "집중 중 · 오늘 n회"
      ---------------------------------------------------------------------
-     원형·가로 바 **어느 모양에서나** 같은 자리(칸 머리말 오른쪽)에 뜹니다.
-     모양 안에 넣으면 두 벌을 만들어야 하고, 한쪽만 고치는 사고가 납니다.
+     이 방에서는 🍅 를 **수확**합니다. 오늘 딴 토마토는 카드에도 뜨고
+     🌾 토마토 수확왕 업적도 그걸로 셉니다. 같은 것을 머리말에 한 번 더
+     적으면 숫자만 늘고 뜻은 안 늘어요.
+
+     ★ 세는 일은 그대로입니다 — _getTodaySessionCount() 는 업적이 씁니다.
+       "화면에서 안 보인다" 와 "안 센다" 는 전혀 다른 일이에요.
+
+     ★ 부르는 곳이 여럿(script_realtime.js 포함)이라 빈 함수로 남깁니다.
+       지우면 그쪽에서 터집니다.
      ===================================================================== */
-  function renderPomoHeadState() {
-    const el = document.getElementById("pomo-head-state");
-    if (!el) return;
-    const n = _getTodaySessionCount();
-    const st = document.getElementById("pomo-controls")?.dataset.state || "idle";
-    const 말 = { running: "집중 중", paused: "잠깐 멈춤", idle: "" }[st] ?? "";
-    /* 아직 한 번도 안 했고 돌지도 않으면 아무 말도 안 씁니다 —
-       0회 를 띄우면 시작도 전에 못한 것처럼 보입니다. */
-    if (!말 && !n) { el.textContent = ""; return; }
-    /* 말은 위 표에서 고른 고정 낱말이라 그대로 넣어도 안전합니다 */
-    el.innerHTML = (말 ? 말 + " · " : "") + `오늘 <b>${n}회</b>`;
-  }
+  function renderPomoHeadState() { /* 화면 표시는 없앴습니다 */ }
   window.renderPomoHeadState = renderPomoHeadState;
+
+  /* =====================================================================
+     🍅 그림을 누르면 ⚙️ 설정 → 🍅 뽀모
+     ---------------------------------------------------------------------
+     카드 프사를 눌러 편집창이 열리는 것과 같은 결입니다. "이 모양을
+     바꾸고 싶다" 는 생각이 드는 자리가 바로 그림 위니까요.
+
+     ★ 남은 시간 알약(#timer-pill)은 뺍니다 — 그 안에도 눌리는 것이
+       있어서, 통째로 먹으면 그쪽이 안 눌립니다.
+     ===================================================================== */
+  function bindPomoShapeHit() {
+    document.querySelectorAll(".pomo-shape-hit").forEach(el => {
+      if (el._hitBound) return;
+      el._hitBound = true;
+      const 열기 = () => { openSettings(); openTab("pomo"); };
+      el.addEventListener("click", (e) => {
+        if (e.target.closest("#timer-pill, button, input, select, a")) return;
+        열기();
+      });
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); 열기(); }
+      });
+    });
+  }
 
   /* 🎯 목표 칸의 숫자를 바꾸면 — 이 기기와 서버에 함께 적습니다.
      ★ 목표는 **나만 봅니다.** 카드에 나가지 않아요 — 남과 견주는
@@ -1475,6 +1495,7 @@
        ★ 로그인 전에도 해야 합니다. 나중에 하면 켤 때마다 원형이 잠깐
          보였다가 가로 바로 바뀌어 번쩍입니다. */
     applyPomoShape(loadPomoShape());
+    bindPomoShapeHit();
     document.getElementById("pomo-shape-pick")?.addEventListener("click", (e) => {
       const b = e.target.closest(".pomo-shape-opt");
       if (b) setPomoShape(b.dataset.shape);

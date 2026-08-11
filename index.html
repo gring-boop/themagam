@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608120104">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608120104">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608120133">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608120133">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608120104">
+  <link rel="manifest" href="manifest.json?v=202608120133">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608120104" />
+  <link rel="stylesheet" href="styles.css?v=202608120133" />
 </head>
 
 <body>
@@ -692,9 +692,11 @@
   <section class="pane pane-pomo" id="pomo-block" aria-label="뽀모도로">
     <h4 class="personal-title pomo-pane-title">
       <span>Pomodoro 🍅</span>
-      <!-- [2026-08-12] 지금 무엇을 하는 중인지 + 오늘 몇 번 했는지.
-           두 모양(원형·가로 바) 어디서나 같은 자리에 뜹니다. -->
-      <span class="pomo-head-state" id="pomo-head-state" role="status" aria-live="polite"></span>
+      <!-- [뺌 2026-08-12] "집중 중 · 오늘 n회" 는 없앴습니다.
+           이 방에서는 🍅 를 **수확**합니다 — 카드에도, 업적에도 이미
+           오늘 딴 토마토가 나와요. 같은 것을 한 번 더 세어 보여주면
+           숫자만 늘고 뜻은 안 늡니다.
+           ※ 세는 일 자체는 그대로입니다 (🌾 토마토 수확왕이 씁니다). -->
       <button id="side-fold-btn" class="icon-btn side-fold" type="button"
               onclick="toggleSideCollapsed()" aria-label="뽀모·글자수 접기" title="뽀모·글자수 접기">❯</button>
     </h4>
@@ -717,7 +719,11 @@
            ★ 목표를 안 정했으면 바깥 고리는 그리지 않습니다(.no-goal).
              빈 고리를 보여주면 못 채운 것처럼 보이니까요.
            ===================================================================== -->
-      <div class="pomo-row pomo-ringrow">
+      <!-- [2026-08-12] 그림을 누르면 ⚙️ 설정 → 🍅 뽀모 로 갑니다.
+           카드 프사를 눌러 편집창이 열리는 것과 같은 결이에요 —
+           "이 모양을 바꾸고 싶다" 는 생각이 드는 자리가 바로 여기입니다. -->
+      <div class="pomo-row pomo-ringrow pomo-shape-hit" role="button" tabindex="0"
+           title="타이머 모양·알림음 설정 열기" aria-label="타이머 모양·알림음 설정 열기">
         <div class="pomo-ring-wrap" id="pomo-ring-wrap">
           <svg class="pomo-ring" viewBox="0 0 200 200" aria-hidden="true">
             <circle class="ring-bg"  cx="100" cy="100" r="86"/>
@@ -751,10 +757,11 @@
            ★ 세로를 원형보다 덜 먹습니다(약 55px). 그만큼 아래 글자수
              창이 넓어져요 — 가로 바를 고르는 이유가 대개 이것입니다.
            ===================================================================== -->
-      <div class="pomo-row pomo-barrow">
+      <div class="pomo-row pomo-barrow pomo-shape-hit" role="button" tabindex="0"
+           title="타이머 모양·알림음 설정 열기" aria-label="타이머 모양·알림음 설정 열기">
         <div class="pomo-bar-time" id="pomo-bar-time">25:00</div>
-        <div class="pomo-bar-track day"><i id="pomo-bar-day"></i></div>
         <div class="pomo-bar-track pom"><i id="pomo-bar-pom"></i></div>
+        <div class="pomo-bar-track day"><i id="pomo-bar-day"></i></div>
         <div class="pomo-bar-sub" id="pomo-bar-sub"></div>
       </div>
 
@@ -953,34 +960,34 @@
 
 <!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
-<script src="fortune_data.js?v=202608120104"></script>
-<script src="script_core.js?v=202608120104"></script>
-<script src="script_auth.js?v=202608120104"></script>
-<script src="script_ui.js?v=202608120104"></script>
-<script src="script_chat.js?v=202608120104"></script>
-<script src="script_chatty.js?v=202608120104"></script>
-<script src="script_data.js?v=202608120104"></script>
-<script src="script_realtime.js?v=202608120104"></script>
-<script src="script_layout.js?v=202608120104"></script>
-<script src="script_wordcount.js?v=202608120104"></script>
-<script src="script_timelog.js?v=202608120104"></script>
-<script src="script_idledetect.js?v=202608120104"></script>
-<script src="script_profile.js?v=202608120104"></script>
-<script src="script_mywork.js?v=202608120104"></script>
-<script src="script_forest.js?v=202608120104"></script>
-<script src="script_notice.js?v=202608120104"></script>
-<script src="script_achv.js?v=202608120104"></script>
-<script src="script_reactions.js?v=202608120104"></script>
-<script src="script_note.js?v=202608120104"></script>
+<script src="fortune_data.js?v=202608120133"></script>
+<script src="script_core.js?v=202608120133"></script>
+<script src="script_auth.js?v=202608120133"></script>
+<script src="script_ui.js?v=202608120133"></script>
+<script src="script_chat.js?v=202608120133"></script>
+<script src="script_chatty.js?v=202608120133"></script>
+<script src="script_data.js?v=202608120133"></script>
+<script src="script_realtime.js?v=202608120133"></script>
+<script src="script_layout.js?v=202608120133"></script>
+<script src="script_wordcount.js?v=202608120133"></script>
+<script src="script_timelog.js?v=202608120133"></script>
+<script src="script_idledetect.js?v=202608120133"></script>
+<script src="script_profile.js?v=202608120133"></script>
+<script src="script_mywork.js?v=202608120133"></script>
+<script src="script_forest.js?v=202608120133"></script>
+<script src="script_notice.js?v=202608120133"></script>
+<script src="script_achv.js?v=202608120133"></script>
+<script src="script_reactions.js?v=202608120133"></script>
+<script src="script_note.js?v=202608120133"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608120104"></script>
+<script src="script_worktag.js?v=202608120133"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608120104"></script>
-<script src="script_share.js?v=202608120104"></script>
-<script src="script_manual.js?v=202608120104"></script>
-<script src="script_guard.js?v=202608120104"></script>
+<script src="script_sticker.js?v=202608120133"></script>
+<script src="script_share.js?v=202608120133"></script>
+<script src="script_manual.js?v=202608120133"></script>
+<script src="script_guard.js?v=202608120133"></script>
 
 <script>
   window.addEventListener("load", () => {
