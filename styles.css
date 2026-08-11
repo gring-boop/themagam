@@ -7436,16 +7436,11 @@ body.split-dragging #chat-box3{ user-select: none; }
   line-height: 1.4;
 }
 
-.pomo-ring-legend{
-  display: flex; justify-content: center; gap: 12px;
-  font-size: var(--fs-2xs); color: var(--muted);
-}
-.pomo-ring-legend span{ display: inline-flex; align-items: center; gap: 4px; }
-.pomo-ring-legend i{ width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
-.pomo-ring-legend .lg-day{ background: var(--accent); }
-.pomo-ring-legend .lg-pom{ background: var(--me); }
-/* 목표가 없으면 바깥 고리가 없으니 그 설명도 뺍니다 */
-.pomo-ring-wrap.no-goal ~ .pomo-ring-legend span:first-child{ display: none; }
+/* [뺌 2026-08-12] 고리 아래 색 설명 줄(● 오늘 작업 / ● 뽀모).
+   안쪽 고리는 숫자와 함께 도니 뽀모라는 게 저절로 읽히고, 바깥은
+   그 아래 "오늘 1h 14m / 8h" 가 이미 말해 줍니다. 모양 규칙까지
+   함께 걷어냈어요 — 화면에 없는 것의 꾸밈만 남으면, 다음 사람이
+   "어딘가에 쓰는 줄" 알고 살려 둡니다. */
 
 /* 하루 목표 작업 시간 (🎯 목표 칸) */
 .goal-hr{ display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--sub-muted); }
