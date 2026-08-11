@@ -798,8 +798,13 @@
     pill.dataset.phase = _isPaused() ? "paused" : _pomo.phase;
     text.textContent = `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
 
-    const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
-    pill.classList.toggle("timer-warn", !_isPaused() && remainMs <= warnMin * 60000);
+    /* [뺌 2026-08-12] "임박" 표시(남은 10분부터 붉게)를 없앴습니다.
+       이 방의 뽀모는 **그 안에 무언가를 끝내야 하는 시계가 아닙니다.**
+       집중을 끊어 주는 것이 일이라, 남은 시간이 줄었다고 재촉할 이유가
+       없어요. 붉은 숫자는 오히려 마음을 급하게 만듭니다.
+       ★ 값(warnMinutes)을 읽던 것도 함께 뺐습니다 — 안 쓰는 값을
+         계속 읽으면 다음 사람이 "쓰는 줄" 알고 살려 둡니다. */
+    pill.classList.remove("timer-warn");
   }
 
   /* 집중 ↔ 휴식 전환. 소리·알림·오늘 집중 횟수도 여기서 처리합니다. */

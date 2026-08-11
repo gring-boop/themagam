@@ -892,11 +892,9 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   min-height: var(--tap-sm);
 }
 #timer-pill .pill-muted{ opacity: .8; font-weight: var(--fw-normal); }
-#timer-pill.timer-warn{
-  background: var(--timer-warn-b);
-  box-shadow: 0 8px 20px rgba(255,69,58,.12);
-  transform: translateY(-1px);
-}
+/* [뺌 2026-08-12] "임박" 표시 — 남은 10분부터 붉게 물들던 것.
+   이 방의 뽀모는 그 안에 무언가를 끝내야 하는 시계가 아니라서,
+   재촉하는 표시가 필요 없습니다. 모양 규칙만 걷어냈어요. */
 
 .timer-controls{
   flex: 0 0 auto;
@@ -4413,7 +4411,8 @@ html[data-theme-style="night"] .pomo-bar-time{
   font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 /* 시간이 얼마 안 남았을 때(경고)는 숫자를 인주색으로 */
-#timer-pill.timer-warn[data-phase] #timer-text{ color: var(--accent); }
+/* [뺌 2026-08-12] 임박하면 숫자가 붉어지던 규칙도 함께 걷어냈습니다.
+   숫자는 두 모양 모두 늘 --text(중립)입니다. */
 
 /* =====================================================================
    [2026-08-03·2차] 채팅 위 타이머 제거 · 헤더 여백 · 카드 이름/안테나
@@ -5528,6 +5527,41 @@ body.split-dragging #chat-box3{ user-select: none; }
   font-weight: var(--fw-bold);
   color: #2B2620;
 }
+
+/* [2026-08-12] 날짜 앞뒤로 넘기는 ‹ › — 달력을 열지 않고 하루씩.
+   ★ 글자(날짜)와 같은 줄에 서므로 baseline 이 아니라 가운데로 맞춥니다.
+     안 그러면 화살표만 아래로 처져 보여요. */
+.mw-daynav{
+  flex: 0 0 auto;
+  align-self: center;
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.mw-daynav:hover{ background: var(--fill-2); color: var(--text); }
+.mw-daynav:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+/* [오늘로] — 오늘이 아닐 때만 뜹니다. 오늘 표(빨간 딱지)와 같은 자리라
+   둘이 함께 보이는 일은 없습니다. */
+.mw-todaybtn{
+  flex: 0 0 auto;
+  align-self: center;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  cursor: pointer;
+}
+.mw-todaybtn:hover{ background: var(--accent-softer); }
 .mw-todaytag{
   background: #B3372B;
   color: #FFFDF6;
@@ -7571,3 +7605,28 @@ body.split-dragging #chat-box3{ user-select: none; }
 .pomo-shape-hit{ cursor: pointer; border-radius: var(--r-md); }
 .pomo-shape-hit:hover{ background: var(--fill-1); }
 .pomo-shape-hit:focus-visible{ outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+
+/* =====================================================================
+   🍅 가로 바 — 원형과 같은 표정 (2026-08-12)
+   ---------------------------------------------------------------------
+   멈췄을 때 흐려지는 표시가 원형에만 걸려 있으면 두 모양이 달라 보입니다.
+   숫자를 옮겨 적는 코드가 단계(data-phase)도 함께 옮겨 줍니다.
+   ===================================================================== */
+.pomo-barrow[data-phase="paused"] .pomo-bar-time{ opacity: .55; }
+/* (가로 바의 임박 표시도 함께 뺐습니다) */
+
+/* =====================================================================
+   📜 원고와 잉크 — 뽀모는 인주색, 목표는 먹색 (2026-08-12)
+   ---------------------------------------------------------------------
+   이 테마만 --me 가 먹색(#2B2620)이고 --accent 가 인주색(#B3372B) 입니다.
+   다른 테마와 같은 짝(뽀모=--me)을 쓰면 뽀모가 먹색이 되는데,
+   **지금 도는 것**이 가장 옅어 보여 뒤바뀐 느낌이 납니다.
+   원고지 위에서는 인주 도장이 눈에 먼저 들어오는 게 자연스러워요.
+
+   ★ 원형과 가로 바를 **함께** 뒤집습니다. 한쪽만 뒤집으면 모양을 바꿀
+     때 색이 서로 바뀌어 더 헷갈립니다.
+   ===================================================================== */
+html[data-theme-style="ink"] .pomo-ring .ring-pom{ stroke: var(--accent); }
+html[data-theme-style="ink"] .pomo-ring .ring-day{ stroke: var(--me); }
+html[data-theme-style="ink"] .pomo-bar-track.pom i{ background: var(--accent); }
+html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }

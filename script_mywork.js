@@ -357,10 +357,21 @@
       ? `<ul class="mw-todolist">${free.map(todoRowHtml).join("")}</ul>`
       : `<p class="mw-empty">아직 루틴이 없어요.</p>`;
 
+    /* [2026-08-12] 날짜 앞뒤로 한 칸씩. 달력에서 짚는 것보다 빠르고,
+       [오늘 하기] 로 어제 것을 정리할 때 특히 편합니다.
+       ★ 앞으로 가는 [>] 는 막지 않습니다 — 내일 할 일을 미리 적어 두는
+         분이 있어서요. 대신 오늘이 아니면 [오늘] 로 바로 돌아옵니다. */
     return `
       <div class="mw-dayhead">
+        <button type="button" class="mw-daynav" data-act="day-prev"
+                aria-label="하루 앞으로" title="하루 앞으로">‹</button>
         <span class="mw-daytitle">${dowLabel(ds)}</span>
-        ${isToday ? `<span class="mw-todaytag">오늘</span>` : ""}
+        <button type="button" class="mw-daynav" data-act="day-next"
+                aria-label="하루 뒤로" title="하루 뒤로">›</button>
+        ${isToday
+          ? `<span class="mw-todaytag">오늘</span>`
+          : `<button type="button" class="mw-todaybtn" data-act="day-today"
+                     title="오늘로 돌아가기">오늘로</button>`}
         <span class="mw-daycount">${list.length}개 중 ${doneN}개 완료</span>
       </div>
 
@@ -587,11 +598,39 @@
 
     if (act === "edit-inline") { startInlineEdit(node); return; }
 
+    /* 날짜 넘기기 — 달이 바뀌면 달력도 그 달로 따라갑니다.
+       ★ 안 따라가면 "고른 날" 표시가 달력 밖에 있어서, 지금 어디를
+         보고 있는지 알 수 없게 됩니다. */
+    if (act === "day-prev" || act === "day-next") {
+      const d = new Date((_sel || todayStr()) + "T12:00:00");
+      d.setDate(d.getDate() + (act === "day-next" ? 1 : -1));
+      const ds2 = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      _y = d.getFullYear(); _m = d.getMonth();
+      selectDate(ds2);
+      return;
+    }
+    if (act === "day-today") {
+      const t = new Date();
+      _y = t.getFullYear(); _m = t.getMonth();
+      selectDate(todayStr());
+      return;
+    }
+
     /* [오늘 하기] — 못 끝낸 지난 할 일을 오늘 칸으로.
-       날짜만 바꿉니다. 완료 여부·반복·글자는 그대로예요. */
+       날짜만 바꿉니다. 완료 여부·반복·글자는 그대로예요.
+
+       ★ [고침 2026-08-12] 예전에는 옮긴 뒤 **보던 날짜까지 오늘로**
+         넘겼습니다("옮긴 곳이 바로 보이게"). 그런데 어제 못 한 일이
+         여러 개면, 하나 옮길 때마다 화면이 오늘로 튀어서 다시 어제로
+         돌아와야 했어요. 세 개 옮기려면 여섯 번을 눌러야 합니다.
+
+         이제 보던 날짜에 그대로 머뭅니다. 옮긴 것은 그 자리에서
+         사라지니 무슨 일이 일어났는지도 보이고, 남은 것을 이어서
+         누르면 됩니다. */
     if (act === "move-today") {
       window.setTodoDue?.(id, todayStr());
-      selectDate(todayStr());                    // 옮긴 곳이 바로 보이게
+      renderCal();                               // 달력의 개수 표시만 새로
+      renderTodoPanel();                         // 옮긴 줄이 목록에서 빠집니다
       return;
     }
     if (act === "del")     { window.deleteTodo?.(id); return; }

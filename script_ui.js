@@ -460,7 +460,9 @@
   // Settings modal
   // =====================================================
   let timerHidden = AppStore.getItem("timerHidden") === "true";
-  let warnMinutes = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
+  /* [뺌 2026-08-12] 임박 강조 기준(분) — 임박 표시를 없애면서 함께 뺐습니다.
+     조절 슬라이더(#set-warn-min)는 이미 화면에서 빠져 있어서, 이 값은
+     아무도 안 바꾸고 아무도 안 쓰는 채로 남아 있었어요. */
 
   function openSettings() {
     if (window.isMobile) return;
@@ -500,18 +502,6 @@
             && Notification.permission === "default") {
           try { Notification.requestPermission(); } catch (e) {}
         }
-      };
-    }
-
-    const warn = document.getElementById("set-warn-min");
-    const warnLabel = document.getElementById("warn-min-label");
-    if (warn && warnLabel) {
-      warn.value = warnMinutes;
-      warnLabel.innerText = String(warnMinutes);
-      warn.oninput = () => {
-        warnMinutes = parseInt(warn.value, 10);
-        AppStore.setItem("warnMinutes", String(warnMinutes));
-        warnLabel.innerText = String(warnMinutes);
       };
     }
 
@@ -1128,6 +1118,51 @@
      ★ 남은 시간 알약(#timer-pill)은 뺍니다 — 그 안에도 눌리는 것이
        있어서, 통째로 먹으면 그쪽이 안 눌립니다.
      ===================================================================== */
+  /* =====================================================================
+     ★★ [고침 2026-08-12] 가로 바 숫자가 25:00 에서 안 움직이던 것
+     ---------------------------------------------------------------------
+     [무엇을 빠뜨렸나]
+     남은 시간을 적는 곳은 **#timer-text** 하나뿐입니다(원형 안의 숫자).
+     가로 바를 만들면서 자리(#pomo-bar-time)만 만들고, 거기에 숫자를
+     넣는 코드를 안 붙였어요. 그래서 처음 그려진 25:00 이 그대로 남았습니다.
+
+     [왜 세 군데를 고치지 않고 이렇게 하나]
+     #timer-text 에 글자를 쓰는 곳이 세 군데입니다 —
+       ① 1초마다 도는 몸통  ② "멈춰 있음" 그리기  ③ 집중 시간 입력칸
+     세 곳에 한 줄씩 더 붙이면, 나중에 **네 번째 자리**가 생겼을 때 또
+     빠집니다. 이 방에서 여러 번 겪은 사고예요.
+
+     그래서 원본이 바뀌는 것을 지켜보다가 그대로 옮겨 적습니다.
+     누가 어디서 쓰든 가로 바가 따라옵니다.
+     ===================================================================== */
+  function bindPomoTimeMirror() {
+    const src = document.getElementById("timer-text");
+    const dst = document.getElementById("pomo-bar-time");
+    const pill = document.getElementById("timer-pill");
+    const row = document.querySelector(".pomo-barrow");
+    if (!src || !dst || src._mirrorBound) return;
+    src._mirrorBound = true;
+
+    const 옮기기 = () => {
+      dst.textContent = src.textContent;
+      /* 단계(집중·휴식·멈춤)도 함께 — 멈췄을 때 흐려지는 표시가
+         원형에만 걸려 있으면 두 모양이 달라 보입니다. */
+      if (row && pill) {
+        row.dataset.phase = pill.dataset.phase || "idle";
+        /* 임박 표시는 2026-08-12 에 없앴습니다 — 옮길 것이 없어요 */
+      }
+    };
+    옮기기();
+    try {
+      new MutationObserver(옮기기).observe(src, {
+        childList: true, characterData: true, subtree: true
+      });
+      if (pill) new MutationObserver(옮기기).observe(pill, {
+        attributes: true, attributeFilter: ["data-phase", "class"]
+      });
+    } catch (e) { /* 아주 옛 브라우저 — 숫자만 안 따라올 뿐 나머지는 멀쩡합니다 */ }
+  }
+
   function bindPomoShapeHit() {
     document.querySelectorAll(".pomo-shape-hit").forEach(el => {
       if (el._hitBound) return;
@@ -1322,8 +1357,9 @@
     if (tag) tag.textContent = (mode === "rest") ? "☕" : "🍅";
     if (digits) digits.textContent = _fmtMMSS(remain);
 
-    const warnMin = parseInt(AppStore.getItem("warnMinutes") || "10", 10);
-    line.classList.toggle("pomo-mega-warn", remain <= warnMin * 60);
+    /* [뺌 2026-08-12] 임박 강조 — 없앴습니다. (이 줄 자체가 화면에서
+       빠져 있어 보이지도 않던 코드예요) */
+    line.classList.remove("pomo-mega-warn");
   }
 
   // ✅ 뽀모도로 호스트 시간 설정 UI: 실행 중이면 잠그고, 진행 중인 세션의 실제 시간을 보여줌
@@ -1495,6 +1531,7 @@
        ★ 로그인 전에도 해야 합니다. 나중에 하면 켤 때마다 원형이 잠깐
          보였다가 가로 바로 바뀌어 번쩍입니다. */
     applyPomoShape(loadPomoShape());
+    bindPomoTimeMirror();
     bindPomoShapeHit();
     document.getElementById("pomo-shape-pick")?.addEventListener("click", (e) => {
       const b = e.target.closest(".pomo-shape-opt");
