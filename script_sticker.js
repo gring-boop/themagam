@@ -68,6 +68,36 @@
       textColor: "#4A3F9E"
     },
     {
+      /* 인사 셋을 나란히 — 방가(처음) · 리하이(다시) · 어서와요(맞이).
+         앞의 둘은 들어온 사람이 하는 말이고, 이건 **맞는 쪽**이 하는
+         말이라 얼굴 하나가 아니라 두 팔을 벌린 온몸으로 그렸습니다. */
+      id: "welcome", cmd: "어서와", label: "어서와요",
+      cmdRe: /^\/(어서와|어서와요|환영)$/,
+      svg: `<circle cx="36" cy="26" r="10" fill="#6FBF9B"/>
+            <circle cx="32" cy="25" r="1.6" fill="#3A2A22"/>
+            <circle cx="40" cy="25" r="1.6" fill="#3A2A22"/>
+            <path d="M32 30q4 3.5 8 0" stroke="#3A2A22" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <path d="M28 38q-9 3-12 12M44 38q9 3 12 12" stroke="#3A2A22" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+            <path d="M36 36v16" stroke="#3A2A22" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M13 34c-1.4-2-4.2-1.4-4.2.7 0 1.8 2.5 3.1 4.2 4.4 1.7-1.3 4.2-2.6 4.2-4.4 0-2.1-2.8-2.7-4.2-.7z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.1"/>
+            <path d="M59 34c-1.4-2-4.2-1.4-4.2.7 0 1.8 2.5 3.1 4.2 4.4 1.7-1.3 4.2-2.6 4.2-4.4 0-2.1-2.8-2.7-4.2-.7z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.1"/>`,
+      textColor: "#2E7D57"
+    },
+    {
+      /* ★ 방가방가가 이미 "얼굴 + 흔드는 손" 입니다. 잘가요까지 얼굴을
+         넣으면 판에서 둘이 헷갈려요. 그래서 **손만** 크게 그리고,
+         흔들리는 결을 양옆에 넣어 움직임으로 구분했습니다. */
+      id: "bye", cmd: "잘가", label: "잘가요",
+      cmdRe: /^\/(잘가|잘가요|바이)$/,
+      svg: `<path d="M32 46V28c0-3 4-3 4 0v10M36 38V24c0-3 4-3 4 0v14M40 38V26c0-3 4-3 4 0v12M44 40V30c0-3 4-3 4 0v12c0 8-4 14-10 14-7 0-12-5-12-12v-6c0-3 4-3 4 0z"
+                  fill="#F3DCC4" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M18 22q-4-3-4-7M20 30q-6 0-9-3M56 22q4-3 4-7M54 30q6 0 9-3"
+                  stroke="#8FB8E0" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
       id: "pat", cmd: "토닥", label: "토닥토닥",
       svg: `<circle cx="27" cy="34" r="14" fill="#F0C674"/>
             <circle cx="22" cy="33" r="1.7" fill="#3A2A22"/>
@@ -131,6 +161,37 @@
             <rect x="18" y="31" width="12" height="17" rx="3.5"
                   fill="#F6C4AC" stroke="#3A2A22" stroke-width="1.7"/>
             <path d="M52 13l3-3M58 19h5M56 26l3 2" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      /* ★ 따봉은 이미 좋아요가 쓰고 있습니다. 최고예요까지 손을 쓰면
+         둘이 겹쳐서, 별에 얼굴을 붙였습니다. */
+      id: "best", cmd: "최고", label: "최고예요",
+      cmdRe: /^\/(최고|최고예요|짱)$/,
+      svg: `<path d="M36 14l6.6 13.4L57 29.6 46.5 40l2.5 14.5L36 47.7 22.5 54.5 25 40 14.5 29.6l14.9-2.2z"
+                  fill="#F0C674" stroke="#3A2A22" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle cx="31" cy="33" r="1.7" fill="#3A2A22"/>
+            <circle cx="41" cy="33" r="1.7" fill="#3A2A22"/>
+            <path d="M31 39q5 4 10 0" stroke="#3A2A22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M9 12l3 3M63 12l-3 3M36 4v4" stroke="#F0997B" stroke-width="2.2" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      /* 고마워요 — 두 손으로 하트를 받쳐 든 모양.
+
+         ★ 처음에는 두 손을 위아래로 붙여 모은 모양(🙏)이었는데,
+           작게 줄이면 손 둘이 한 덩어리로 뭉쳐 보여서 무슨 그림인지
+           안 읽혔습니다. 손을 **양옆으로 벌리고** 사이에 하트를 띄우니
+           비로소 "건네는" 모양이 됐어요. */
+      id: "thanks", cmd: "고마워", label: "고마워요",
+      cmdRe: /^\/(고마워|고마워요|감사|땡큐)$/,
+      svg: `<path d="M36 30c-3.5-4.6-10.5-3.4-10.5 2.9 0 5.2 7 9.2 10.5 12.6 3.5-3.4 10.5-7.4 10.5-12.6 0-6.3-7-7.5-10.5-2.9z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.7" stroke-linejoin="round"/>
+            <ellipse cx="24" cy="50" rx="11" ry="6.5" fill="#F3DCC4" stroke="#3A2A22"
+                     stroke-width="1.7" transform="rotate(-20 24 50)"/>
+            <ellipse cx="48" cy="50" rx="11" ry="6.5" fill="#F3DCC4" stroke="#3A2A22"
+                     stroke-width="1.7" transform="rotate(20 48 50)"/>
+            <path d="M14 22l2 3M58 22l-2 3M36 14v4" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>`,
       textColor: "#993C1D"
     },
     {
@@ -214,6 +275,21 @@
             <path d="M30 32q-2.5 5-2.5 7.5a2.5 2.5 0 0 0 5 0Q32.5 37 30 32z" fill="#5B9BD5"/>
             <path d="M42 32q-2.5 5-2.5 7.5a2.5 2.5 0 0 0 5 0Q44.5 37 42 32z" fill="#5B9BD5"/>`,
       textColor: "#2F6191"
+    },
+    {
+      /* 죽겠어요 — 마감 앞둔 방에서 가장 자주 오갈 말입니다.
+         눈이 ×× 로 풀린 얼굴에서 영혼이 빠져나가는 모양이에요.
+         스무 개 중 유일하게 보라 계열이라 판에서 바로 눈에 띕니다. */
+      id: "dead", cmd: "죽겠다", label: "죽겠어요",
+      cmdRe: /^\/(죽겠다|죽겠어|힘들어)$/,
+      svg: `<ellipse cx="34" cy="40" rx="16" ry="12" fill="#C9C2D8"/>
+            <path d="M25 35l6 6M31 35l-6 6M39 35l6 6M45 35l-6 6"
+                  stroke="#3A2A22" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M30 47q4-3 8 0" stroke="#3A2A22" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+            <path d="M50 34q5-2 4-7t3-8" stroke="#A79FC4" stroke-width="2" fill="none"
+                  stroke-linecap="round" stroke-dasharray="3 3"/>
+            <circle cx="58" cy="16" r="4.5" fill="#EDE9F5" stroke="#A79FC4" stroke-width="1.4"/>`,
+      textColor: "#5A5175"
     },
     {
       id: "cheer", cmd: "축하", label: "축하",
