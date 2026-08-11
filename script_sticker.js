@@ -98,6 +98,54 @@
       textColor: "#2F6191"
     },
     {
+      /* ── 밥 셋 ─────────────────────────────────────────────
+         날마다 오갈 말이라 인사 바로 뒤, 판의 첫 줄 언저리에 둡니다.
+         밥그릇 하나를 셋이 나눠 쓰되 한눈에 갈리게 했어요 —
+           밥탐 : 곁눈질하는 얼굴 + 하트 (셋 중 유일하게 얼굴이 있음)
+           맛점 : 해 + 노란 그릇
+           맛저 : 초승달·별 + 파란 그릇 (색이 차가워 맛점과 안 헷갈림) */
+      id: "yum", cmd: "밥탐", label: "밥탐",
+      cmdRe: /^\/(밥탐|배고파|배고픔)$/,
+      svg: `<path d="M27 34q12-11 24 0z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M22 34h34c0 10-7.6 16-17 16s-17-6-17-16z" fill="#F0997B" stroke="#3A2A22"
+                  stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M22 34h34" stroke="#3A2A22" stroke-width="1.6"/>
+            <circle cx="12" cy="24" r="8" fill="#F0C674"/>
+            <circle cx="9.5" cy="23" r="1.9" fill="#3A2A22"/>
+            <circle cx="15" cy="23" r="1.9" fill="#3A2A22"/>
+            <path d="M10 28q2.5 2.5 5 0" stroke="#3A2A22" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <path d="M14 31q1 3 0 4" stroke="#8FB8E0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M60 20c-1.6-2.4-5-1.6-5 .8 0 2.1 3 3.7 5 5.2 2-1.5 5-3.1 5-5.2 0-2.4-3.4-3.2-5-.8z"
+                  fill="#F0A0B8" stroke="#3A2A22" stroke-width="1.2" stroke-linejoin="round"/>`,
+      textColor: "#993C1D"
+    },
+    {
+      id: "lunch", cmd: "맛점", label: "맛점",
+      cmdRe: /^\/(맛점|점심)$/,
+      svg: `<circle cx="55" cy="14" r="6" fill="#F3D9A0" stroke="#3A2A22" stroke-width="1.5"/>
+            <path d="M55 4v3M64 14h-3M62 7l-2 2M62 21l-2-2" stroke="#F0C674" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M27 36q12-11 24 0z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M22 36h34c0 10-7.6 16-17 16s-17-6-17-16z" fill="#F0C674" stroke="#3A2A22"
+                  stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M22 36h34" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M30 26q3-4 0-8M45 26q3-4 0-8" stroke="#C9BCA8" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#C2762B"
+    },
+    {
+      id: "dinner", cmd: "맛저", label: "맛저",
+      cmdRe: /^\/(맛저|저녁)$/,
+      svg: `<path d="M58 8a8 8 0 1 0 5 14 9.5 9.5 0 0 1-5-14z" fill="#EDE9F5" stroke="#3A2A22"
+                  stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M13 12l1.6 3.4L18 17l-3.4 1.6L13 22l-1.6-3.4L8 17l3.4-1.6z" fill="#AFA9EC"/>
+            <path d="M45 8l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" fill="#AFA9EC"/>
+            <path d="M27 36q12-11 24 0z" fill="#FFFDF6" stroke="#3A2A22" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M22 36h34c0 10-7.6 16-17 16s-17-6-17-16z" fill="#8FB8E0" stroke="#3A2A22"
+                  stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M22 36h34" stroke="#3A2A22" stroke-width="1.6"/>
+            <path d="M30 26q3-4 0-8M45 26q3-4 0-8" stroke="#C9BCA8" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+      textColor: "#2F6191"
+    },
+    {
       id: "pat", cmd: "토닥", label: "토닥토닥",
       svg: `<circle cx="27" cy="34" r="14" fill="#F0C674"/>
             <circle cx="22" cy="33" r="1.7" fill="#3A2A22"/>
