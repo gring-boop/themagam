@@ -296,6 +296,17 @@
     } catch (e) {
       console.warn("[chattyParticipation save failed]", e);
     }
+
+    /* 🏅 ☕ 수다방 지킴이 · 안방마님 — 들어온 날을 하루로 셉니다.
+       ★ [참여하기] 를 누른 자리라야 맞습니다. 탭만 열어 보는 것으로
+         세면 "들어왔다" 가 아니라 "구경했다" 가 되거든요.
+       같은 날 여러 번 눌러도 날짜 하나라 한 번만 셉니다. */
+    try {
+      const d = new Date();
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      window.achvBump?.("cha", k);
+    } catch (e) {}
+
     _attachChattyListener();
     _renderChattyLeaveBtn();
   }

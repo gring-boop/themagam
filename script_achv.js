@@ -181,6 +181,16 @@
     { id: "chat1k",  g: "표현", icon: "💬", label: "수다왕",        at: "cChat",    n: 1000, new: true, desc: "채팅 1,000줄" },
     { id: "stkall",  g: "표현", icon: "🖍", label: "스티커 수집가",  at: "cStkKind", n: 20,   new: true, desc: "스무 종을 모두 한 번씩" },
     { id: "forest10",g: "표현", icon: "🎋", label: "대숲지기",      at: "cForest",  n: 10,   new: true, desc: "대숲에 10번" },
+    /* ☕ 수다방 — "며칠 들어왔나" 는 여태 기록이 없었습니다.
+       chattyParticipation 에는 "지금 참여 중인가" 한 칸만 있고, 어느
+       날들에 들어왔는지는 안 남아요. 그래서 오늘부터 하루씩 셉니다.
+       ★ 참여는 접속할 때마다 꺼집니다(일부러 그렇게 만든 기능이에요).
+         그러니 [참여하기] 를 실제로 누른 날만 세어집니다 — 마침
+         "들어온 날" 의 뜻과 정확히 맞습니다. */
+    { id: "chatty30", g: "표현", icon: "☕", label: "수다방 지킴이",   at: "cChattyDay", n: 30,  new: true,
+      desc: "☕ 수다방에 들어온 날 통틀어 30일" },
+    { id: "chatty100",g: "표현", icon: "🫖", label: "수다방 안방마님", at: "cChattyDay", n: 100, new: true,
+      desc: "☕ 수다방에 들어온 날 통틀어 100일" },
 
     /* ── 작업의 결 ────────────────────────────────────────── */
     /* ★ id 는 rew30 그대로 둡니다. 이름표(label)만 바꿔요 —
@@ -617,6 +627,7 @@
     if (a.at === "cRewrite") return kindCount("rew");
     if (a.at === "cRevise")  return kindCount("rev");
     if (a.at === "cShareDay") return kindCount("shr");
+    if (a.at === "cChattyDay") return kindCount("cha");
     if (a.at === "cRoutine") return kindCount("rout");
     if (a.at && a.at.startsWith("c")) return Number(_c[a.at] || 0);
     return Number(_stats?.[a.at] || 0);
