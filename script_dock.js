@@ -68,7 +68,14 @@
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */
   const BASE_H = 430;
 
-  let _open = "";      // 지금 열린 판의 id ("" 면 다 닫힘)
+  /* =====================================================================
+     열린 판들 — **여럿을 동시에** 열 수 있습니다 (2026-08-12)
+     ---------------------------------------------------------------------
+     처음에는 하나만 열리게 했는데, 실제로 쓰는 모습을 보면 뽀모와
+     글자수를 같이 켜 두고 작업하고, 챗과 수다방도 함께 봅니다.
+     판은 나란히 놓이고, 한 줄에 다 못 들어가면 위로 접힙니다.
+     ===================================================================== */
+  const _open = new Set();
 
   /* =====================================================================
      판 만들기 — 알약마다 하나씩
@@ -183,18 +190,19 @@
     const d = DOCK.find(x => x.id === id);
     if (!d) return;
 
-    /* 📓 전체 기록은 가운데 창 — 판을 안 씁니다 */
-    if (d.modal) { closeAll(); window.openWcAll?.(); return; }
+    /* 📓 전체 기록은 가운데 창 — 판을 안 씁니다.
+       ★ 다른 판은 닫지 않습니다. 가운데 창이 뜬 동안 뒤에 뽀모가
+         켜져 있어도 아쉬울 게 없어요. */
+    if (d.modal) { window.openWcAll?.(); return; }
 
-    if (_open === id) { closeAll(); return; }
-    closeAll();
+    if (_open.has(id)) { close(id); return; }
 
     const p = el("dock-panel-" + id);
     if (!p) return;
     p.hidden = false;
-    _open = id;
+    _open.add(id);
     el("dock-pill-" + id)?.setAttribute("aria-expanded", "true");
-    document.getElementById("dock")?.setAttribute("data-open", id);
+    document.getElementById("dock")?.setAttribute("data-open", [..._open].join(" "));
 
     /* 판마다 열 때 해줄 일 */
     if (id === "achv") {
@@ -209,14 +217,36 @@
     badge(id, 0);
   }
 
+  /** 하나만 닫기 */
+  function close(id) {
+    const p = el("dock-panel-" + id);
+    if (p) p.hidden = true;
+    el("dock-pill-" + id)?.setAttribute("aria-expanded", "false");
+    _open.delete(id);
+    const dock = document.getElementById("dock");
+    if (!dock) return;
+    if (_open.size) dock.setAttribute("data-open", [..._open].join(" "));
+    else dock.removeAttribute("data-open");
+  }
+
+  /** 전부 닫기 */
   function closeAll() {
+    [..._open].forEach(close);
     DOCK.forEach(d => {
       const p = el("dock-panel-" + d.id);
       if (p) p.hidden = true;
       el("dock-pill-" + d.id)?.setAttribute("aria-expanded", "false");
     });
-    _open = "";
+    _open.clear();
     document.getElementById("dock")?.removeAttribute("data-open");
+  }
+
+  /** 스쳐 보는 판만 닫기 — 바깥을 눌렀을 때 */
+  function closeGlances() {
+    [..._open].forEach(id => {
+      const d = DOCK.find(x => x.id === id);
+      if (d && !d.stay) close(id);
+    });
   }
 
   /** 안 읽음 숫자 — 0 이면 감춥니다 */
@@ -241,19 +271,21 @@
       if (pill) { open(pill.dataset.dock); return; }
 
       const x = e.target.closest("[data-dock-close]");
-      if (x) { closeAll(); return; }
+      if (x) { close(x.dataset.dockClose); return; }   // ★ 그 판만 닫습니다
 
-      if (!_open) return;
-      const d = DOCK.find(v => v.id === _open);
-      if (d && d.stay) return;                       // 머무는 판은 그대로
-
-      if (!e.target.closest(".dock-panel")) closeAll();
+      if (!_open.size) return;
+      /* 판 안을 누른 것이면 아무것도 닫지 않습니다 */
+      if (e.target.closest(".dock-panel")) return;
+      /* 바깥을 눌렀을 때 — **스쳐 보는 판만** 닫습니다.
+         머무는 판(챗·수다방…)은 그대로예요. 여럿이 열려 있어도
+         각자 제 규칙을 지킵니다. */
+      closeGlances();
     });
 
     /* Esc 는 어느 판이든 닫습니다 — 빠져나갈 길은 늘 있어야 하니까요.
        ★ 다만 글을 쓰는 중이면 한 번은 봐줍니다 (실수로 날리지 않게) */
     document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape" || !_open) return;
+      if (e.key !== "Escape" || !_open.size) return;
       const t = document.activeElement;
       const 쓰는중 = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA") && t.value;
       if (쓰는중) { t.blur(); return; }
@@ -278,5 +310,7 @@
 
   window.dockOpen  = open;
   window.dockClose = closeAll;
+  window.dockCloseOne = close;
+  window.dockOpened = () => [..._open];
   window.DOCK_LIST = DOCK;
 })();

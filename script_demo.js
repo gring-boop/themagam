@@ -192,6 +192,7 @@
       window.applyLayout?.();
       고리멈춤();
       가짜채팅();
+      가짜할일();
 
       배너();
       console.log("%c[시험 모드] 서버에 아무것도 쓰지 않습니다.",
@@ -248,6 +249,18 @@
         `<div class="msg-bubble ${나 ? "mine" : ""}"><div class="msg-content">${msg}</div></div>`;
       box.appendChild(wrap);
     });
+  }
+
+  /* 방 전체 할 일 진척 — 시험 모드에서는 아무도 안 적으니 비어 있습니다.
+     알약 줄에 빈 자리로 남으면 "고장인가?" 싶어서 그럴듯하게 채웁니다. */
+  function 가짜할일() {
+    try {
+      const pill = document.getElementById("room-todo-pill");
+      const wrap = document.getElementById("room-todo");
+      if (!pill) return;
+      pill.innerHTML = "📌 오늘 할 일 <b>78개</b> 중 <b>31개</b> 완료";
+      if (wrap) wrap.hidden = false;
+    } catch (e) {}
   }
 
   /* 시험 모드라는 걸 잊고 "왜 저장이 안 되지" 하지 않도록 */
