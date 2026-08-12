@@ -1591,6 +1591,82 @@
   window.playPomodoroSound = playPomodoroSound;
   window.testPresetSound = testPresetSound;
 
+  /* =====================================================================
+     ⌨️ 한글 조합 블랙박스 — imeDiag() (2026-08-13)
+     ---------------------------------------------------------------------
+     "베ㄹㅔ니ㅁㅣ" 처럼 자모가 안 뭉치고 낱개로 찍히는 일이 보고됐습니다.
+     조합(ㅂ+ㅔ→베)이 음절이 되기 전에 끊기는 것인데, 끊는 손은 보통
+     넷 중 하나예요 — 입력칸이 DOM 에서 옮겨짐 · 강제 blur/focus ·
+     코드가 커서를 옮김 · 코드가 값을 씀. 정적으로는 범인이 안 보여서,
+     **끊기는 순간을 현장에서 잡는** 블랙박스를 둡니다.
+
+     쓰는 법: 콘솔(F12)에 imeDiag() → 채팅에 한글을 쳐서 재현 →
+     증상이 나면 🚨 와 함께 직전 기록이 찍힙니다. 그걸 캡쳐하면 됩니다.
+
+     ★ 판정: compositionend 의 data 가 **자모 한 개**(ㄹ, ㅔ …)면
+       무조건 비정상입니다. 정상 타자에서는 음절(베)이나 여러 글자로
+       끝나지, 자모 낱개로 끝나는 일이 없어요.
+     ===================================================================== */
+  window.imeDiag = function () {
+    if (window._imeDiagStop) window._imeDiagStop();
+
+    const 기록 = [];
+    const t0 = performance.now();
+    const 이름 = (n) => n ? (n.id ? "#" + n.id : (n.className ? "." + String(n.className).split(" ")[0] : n.nodeName)) : "?";
+    const 적기 = (m) => {
+      기록.push(`[${(performance.now() - t0).toFixed(0).padStart(6)}ms] ${m}`);
+      if (기록.length > 300) 기록.shift();
+    };
+
+    let 조합중 = false, 칸 = null;
+
+    const onStart = (e) => { 조합중 = true; 칸 = e.target; 적기(`조합 시작 @${이름(e.target)}`); };
+    const onUpd   = (e) => 적기(`조합 중 "${e.data}"`);
+    const onEnd   = (e) => {
+      조합중 = false;
+      적기(`조합 끝 "${e.data}" @${이름(e.target)}`);
+      if (/^[ㄱ-ㅎㅏ-ㅣ]$/.test(e.data || "")) {
+        console.warn("🚨 조합이 자모 낱개로 끊겼습니다! 직전 기록:");
+        console.log(기록.slice(-30).join("\n"));
+        console.log("── 이 내용을 통째로 캡쳐해 주세요 ──");
+      }
+    };
+    const onFocus = (e) => { if (e.target?.tagName === "TEXTAREA" || e.target?.tagName === "INPUT") 적기(`focus → ${이름(e.target)}`); };
+    const onBlur  = (e) => { if (e.target?.tagName === "TEXTAREA" || e.target?.tagName === "INPUT") 적기(`blur ← ${이름(e.target)}${조합중 ? "  ★ 조합 중이었음!" : ""}`); };
+    const onSel   = () => { if (조합중 && 칸) 적기(`선택/커서 변화 @${이름(document.activeElement)}`); };
+
+    const mo = new MutationObserver((muts) => {
+      if (!칸) return;
+      muts.forEach(m => {
+        const 이사 = [...m.addedNodes, ...m.removedNodes].some(n =>
+          n === 칸 || (n.contains && n.contains(칸)));
+        if (이사) 적기(`★★ 입력칸이 옮겨지거나 지워짐! ${m.target ? "부모 " + 이름(m.target) : ""}${조합중 ? "  (조합 중!)" : ""}`);
+      });
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    document.addEventListener("compositionstart", onStart, true);
+    document.addEventListener("compositionupdate", onUpd, true);
+    document.addEventListener("compositionend", onEnd, true);
+    document.addEventListener("focusin", onFocus, true);
+    document.addEventListener("focusout", onBlur, true);
+    document.addEventListener("selectionchange", onSel, true);
+
+    window._imeDiagStop = () => {
+      mo.disconnect();
+      document.removeEventListener("compositionstart", onStart, true);
+      document.removeEventListener("compositionupdate", onUpd, true);
+      document.removeEventListener("compositionend", onEnd, true);
+      document.removeEventListener("focusin", onFocus, true);
+      document.removeEventListener("focusout", onBlur, true);
+      document.removeEventListener("selectionchange", onSel, true);
+      window._imeDiagStop = null;
+      console.log("[imeDiag] 껐습니다.");
+    };
+    console.log("[imeDiag] 지켜보는 중 — 한글을 쳐서 증상을 재현해 주세요. 끄기: _imeDiagStop()");
+    return "켜짐";
+  };
+
   window.updatePomoProgressBar = updatePomoProgressBar;
   window.incrementTodayFocusSessions = incrementTodayFocusSessions;
   window.renderTodaySessionCount = renderTodaySessionCount;
