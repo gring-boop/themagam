@@ -150,7 +150,11 @@
       out[n] = {
         emoji: "🍄",
         status: 상태들[i % 상태들.length],
-        goal: 목표들[i % 목표들.length],
+        statusLabel: "",
+        /* ★ 열쇠 이름은 카드가 읽는 것과 **똑같아야** 합니다.
+           처음에 goal 이라고 적었더니 열아홉 장이 전부
+           "오늘의 한줄 목표 없음" 이었어요 — 카드는 todayGoalText 를 봅니다. */
+        todayGoalText: 목표들[i % 목표들.length],
         tag: 태그들[i % 태그들.length],
         workMs: (1 + (i % 7)) * 3600e3 + (i * 7 % 60) * 60e3,
         pomoCount: i % 15,
@@ -186,11 +190,64 @@
       window.renderUserCards?.(window._statusCache);
       window.updateChatHeader?.();
       window.applyLayout?.();
+      고리멈춤();
+      가짜채팅();
 
       배너();
       console.log("%c[시험 모드] 서버에 아무것도 쓰지 않습니다.",
                   "background:#B3372B;color:#fff;padding:2px 6px;border-radius:3px");
     } catch (e) { console.warn("[demo] 화면 채우기 실패", e); }
+  }
+
+  /* =====================================================================
+     뽀모 고리를 "멈춰 있음" 으로 그려 둡니다
+     ---------------------------------------------------------------------
+     ★ SVG 의 원은 dasharray 를 정해 주기 전까지 **꽉 찬 원**으로 그려집니다.
+       평소에는 입장 직후 _paintIdle() 이 0% 로 맞춰 주는데, 시험 모드는
+       입장을 안 하니 그 함수가 안 돌아요. 그래서 붉은 고리가 100% 로
+       꽉 차 보였습니다 (실제로는 아무것도 안 돌고 있는데).
+     ===================================================================== */
+  function 고리멈춤() {
+    try {
+      window.updatePomoProgressBar?.(1, 1);
+      window.renderDayRing?.();
+      ["ring-day", "ring-pom"].forEach(id => {
+        const c = document.getElementById(id);
+        if (!c) return;
+        const r = Number(c.getAttribute("r")) || 1;
+        const len = 2 * Math.PI * r;
+        c.setAttribute("stroke-dasharray", len.toFixed(2));
+        c.setAttribute("stroke-dashoffset", len.toFixed(2));   // 0%
+      });
+    } catch (e) {}
+  }
+
+  /* =====================================================================
+     가짜 채팅 몇 줄
+     ---------------------------------------------------------------------
+     빈 채팅 창으로는 말풍선 폭·줄바꿈·아바타 자리를 볼 수 없습니다.
+     리뉴얼에서 채팅을 팝업으로 옮길 참이라 특히 필요해요.
+     ===================================================================== */
+  function 가짜채팅() {
+    const box = document.getElementById("chat-box");
+    if (!box || box.childElementCount) return;
+    const 줄 = [
+      ["고메",   "출근합니다~", false],
+      ["그링링", "고메님 어서오세요!", true],
+      ["벨벨",   "저 퇴고만 벌써 사흘째예요… 이게 맞나 싶고", false],
+      ["그링링", "토닥토닥 ㅠㅠ 그 구간이 제일 힘들죠", true],
+      ["소소",   "오늘 5천 자 채웠습니다!!", false],
+      ["그링링", "헐 대박!! 축하드려요 🎉", true],
+      ["초초",   "저는 저녁 먹고 재출근할게요", false]
+    ];
+    줄.forEach(([who, msg, 나]) => {
+      const wrap = document.createElement("div");
+      wrap.className = "chat-item" + (나 ? " mine" : "");
+      wrap.innerHTML =
+        (나 ? "" : `<div class="user-name">${who}</div>`) +
+        `<div class="msg-bubble ${나 ? "mine" : ""}"><div class="msg-content">${msg}</div></div>`;
+      box.appendChild(wrap);
+    });
   }
 
   /* 시험 모드라는 걸 잊고 "왜 저장이 안 되지" 하지 않도록 */
