@@ -288,16 +288,20 @@
             .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")).val() || {};
           const per = {};
           Object.keys(segs).forEach(d => {
-            let ms = 0;
-            /* 같은 구간이 두 번 적힌 흉터는 한 번만 셉니다 (2026-08-13) */
-            const seen = new Set();
+            /* 같은 구간이 두 번 적힌 흉터는 한 번만 셉니다 (2026-08-13).
+               ★ 끝(b)은 몇 초 어긋난 채 중복됩니다 — 한 번은 나가는 순간의
+                 시계로, 한 번은 서버의 끊김 시각으로 닫혀서요. 그래서
+                 **같은 상태 + 같은 시작(a)** 을 중복으로 보고 긴 쪽만
+                 남깁니다. 정상 기록은 시작이 겹칠 수 없습니다 — 새 구간은
+                 늘 앞 구간이 끝난 지점에서 시작하니까요. */
+            const best = {};
             Object.values(segs[d] || {}).forEach(sg => {
               if (!sg || !(sg.b > sg.a)) return;
-              const k = `${sg.s}|${sg.a}|${sg.b}`;
-              if (seen.has(k)) return;
-              seen.add(k);
-              ms += sg.b - sg.a;
+              const k = `${sg.s}|${sg.a}`;
+              if (!best[k] || sg.b > best[k].b) best[k] = sg;
             });
+            let ms = 0;
+            Object.values(best).forEach(sg => { ms += sg.b - sg.a; });
             per[d] = ms / 60000;
           });
           minsByNick[n] = per;
@@ -807,14 +811,15 @@
     let segs = [];
     try {
       const v = (await db.ref(`users/${nick}/timeSegs/${dk}`).once("value")).val() || {};
-      segs = Object.values(v).filter(s => s && s.b > s.a).sort((x, y) => x.a - y.a);
-      /* 같은 구간이 두 번 적힌 흉터 — 돋보기에서도 한 번만 보여줍니다 */
-      const seen = new Set();
-      segs = segs.filter(s => {
-        const k = `${s.s}|${s.a}|${s.b}`;
-        if (seen.has(k)) return false;
-        seen.add(k); return true;
+      segs = Object.values(v).filter(s => s && s.b > s.a);
+      /* 같은 구간이 두 번 적힌 흉터 — 같은 상태·같은 시작이면 중복.
+         끝은 몇 초 어긋나 있으니 긴 쪽만 남깁니다 (합계와 같은 규칙) */
+      const best = {};
+      segs.forEach(s => {
+        const k = `${s.s}|${s.a}`;
+        if (!best[k] || s.b > best[k].b) best[k] = s;
       });
+      segs = Object.values(best).sort((x, y) => x.a - y.a);
     } catch (e) {}
 
     const GAP_MS = 5 * 60 * 1000;

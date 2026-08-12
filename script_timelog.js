@@ -446,16 +446,22 @@
       const resetAt = applyReset ? Number(resetAll[key] || 0) : 0;
       const resetAtRaw = Number(resetAll[key] || 0);   // 안내 문구용 (자르지는 않음)
 
-      const bucket = segsAll[key] || {};
-      /* [2026-08-13] 똑같은 구간(같은 상태·시작·끝)이 두 번 적힌 날이
-         있습니다 — 저장·지우기가 두 번의 쓰기이던 시절의 흉터예요.
-         원인은 고쳤지만 이미 적힌 흉터는 남아 있으니, 셀 때 한 번만 셉니다. */
-      const 본것 = new Set();
+      const rawBucket = segsAll[key] || {};
+      /* [2026-08-13] 같은 구간이 두 번 적힌 날이 있습니다 — 저장·지우기가
+         두 번의 쓰기이던 시절의 흉터예요. 끝(b)은 몇 초 어긋난 채라
+         "완전히 같은 것" 으로는 못 걸러서, **같은 상태 + 같은 시작(a)**
+         을 중복으로 보고 긴 쪽만 남깁니다. 정상 기록은 시작이 겹칠 수
+         없습니다 — 새 구간은 늘 앞 구간이 끝난 지점에서 시작하니까요. */
+      const 고른것 = {};
+      for (const k in rawBucket) {
+        const sg = rawBucket[k] || {};
+        if (!(Number(sg.b) > Number(sg.a))) continue;
+        const 도장 = `${sg.s}|${sg.a}`;
+        if (!고른것[도장] || Number(sg.b) > Number(고른것[도장].b)) 고른것[도장] = sg;
+      }
+      const bucket = 고른것;
       for (const k in bucket) {
         const seg = bucket[k] || {};
-        const 도장 = `${seg.s}|${seg.a}|${seg.b}`;
-        if (본것.has(도장)) continue;
-        본것.add(도장);
         const s = normStatus(seg.s);
         /* 표시보다 앞선 부분은 잘라냅니다. 표시를 걸친 구간은 뒤쪽만 셉니다 */
         const a = Math.max(Number(seg.a || 0), resetAt);
