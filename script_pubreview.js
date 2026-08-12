@@ -165,12 +165,20 @@
     const ta = document.querySelector(`[data-pub-input="${CSS.escape(pid)}"]`);
     const text = (ta?.value || "").trim().slice(0, MAX_TEXT);
     if (!text) return;
+    /* ★ 글칸은 **보내기 전에** 비웁니다 (고침 2026-08-12).
+       서버에 올라가면 listener 가 그 자리에서 판을 다시 그리는데,
+       다시 그리기는 "쓰던 글 지키기" 로 글칸 내용을 살려 둡니다.
+       그 뒤에 비우려 하면 이미 갈아 끼워진 **옛 글칸**을 비우는 꼴이라,
+       화면에는 보낸 글이 그대로 남아 있었어요. 실패하면 되살립니다. */
+    if (ta) ta.value = "";
     try {
       const ref = window.db.ref("pubreview/" + pid).push();
       await ref.set({ text, at: Date.now(), hearts: 0 });
       _addMine(MINE_KEY, ref.key);
-      if (ta) ta.value = "";
+      render();   // ✕ 가 바로 보이게 (키를 기억한 **뒤에** 한 번 더)
     } catch (e) {
+      const ta2 = document.querySelector(`[data-pub-input="${CSS.escape(pid)}"]`);
+      if (ta2) ta2.value = text;   // 쓴 글이 날아가면 안 되니까요
       console.warn("[품평] 올리지 못했어요", e);
       window.showCommandToast?.("품평을 올리지 못했어요. 잠시 뒤 다시 시도해 주세요.");
     }
