@@ -7757,7 +7757,8 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 /* 수다방은 대화가 오래 이어지는 곳이라 폭도 넓힙니다 */
 
-#dock-panel-pomo{ width: min(360px, calc(100vw - 24px)); }
+/* 🍅 Pomodoro 360 → 288 (80%). 고리와 단추뿐이라 넓을 이유가 없어요 */
+#dock-panel-pomo{ width: min(288px, calc(100vw - 24px)); }
 /* 📢 공지 — 글이 짧아서 오른쪽이 휑했습니다. 460 → 356 */
 #dock-panel-notice{ width: min(356px, calc(100vw - 24px)); }
 /* 💬 챗 460 → 391 (85%) */
