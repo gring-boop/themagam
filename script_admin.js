@@ -386,7 +386,9 @@
             if ((mins[dk] || 0) < 60) cls += " short"; // 출석했는데 1일 접속 1시간 미만
           }
           if (dk === todayKey) cls += " today";
-          cells += `<td class="${cls}">${txt}</td>`;
+          /* 출석한 칸은 눌러서 그날 구간 내역을 볼 수 있습니다 (돋보기) */
+          const dig = inAt ? ` data-dig-nick="${n}" data-dig-day="${dk}"` : "";
+          cells += `<td class="${cls}"${dig}>${txt}</td>`;
         }
         /* ── 규칙 칸 ──
            ★ 남은 날에서 **앞으로 낼 휴가**는 뺍니다. 휴가는 기준에서도
@@ -416,6 +418,7 @@
 
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${head}${rows}</table></div>`;
+      bindDig(body);
     } catch (e) {
       console.warn("[adm attendance]", e);
       body.innerHTML = "불러오지 못했어요.";
@@ -760,6 +763,70 @@
     const d = new Date();
     d.setDate(d.getDate() - offset);
     return dayKey(d);
+  }
+
+  /* =====================================================================
+     🔍 출석 칸 돋보기 (2026-08-12)
+     ---------------------------------------------------------------------
+     "밤 10시에 와서 12시 넘어 나갔는데 1시간 미만이래요" — 이 물음에
+     추측 말고 **증거**로 답하려는 창구입니다. 칸을 누르면 그날의 실제
+     구간(timeSegs)을 시간표로 보여줍니다.
+
+     ★ 구간 사이 5분 넘게 빈 자리는 **끊김 줄**로 함께 보여줍니다.
+       출석 도장·접속자 창은 느슨해서(30분 유예) 접속해 있는 듯 보여도,
+       시간은 연결이 살아 있던 구간만 쌓입니다. 크롬이 탭을 재우면
+       (메모리 절약 모드) 그 순간부터 비어요 — 접속유지 가이드가 막는
+       것이 바로 이것입니다.
+     ===================================================================== */
+  const SEG_LABEL = { writing: "🔥 Write", focus: "💻 Job", rest: "☕ Break", away: "💤 Away" };
+
+  function bindDig(host) {
+    if (host.dataset.digBound === "true") return;
+    host.dataset.digBound = "true";
+    host.addEventListener("click", async (e) => {
+      const td = e.target.closest("[data-dig-nick]");
+      if (!td) return;
+      await openDig(td.dataset.digNick, td.dataset.digDay);
+    });
+  }
+
+  async function openDig(nick, dk) {
+    document.getElementById("adm-dig")?.remove();
+    const wrap = document.createElement("div");
+    wrap.id = "adm-dig";
+    wrap.innerHTML = `<div class="adm-dig-card"><div class="adm-msg">불러오는 중…</div></div>`;
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) wrap.remove(); });
+    document.body.appendChild(wrap);
+
+    let segs = [];
+    try {
+      const v = (await db.ref(`users/${nick}/timeSegs/${dk}`).once("value")).val() || {};
+      segs = Object.values(v).filter(s => s && s.b > s.a).sort((x, y) => x.a - y.a);
+    } catch (e) {}
+
+    const GAP_MS = 5 * 60 * 1000;
+    let total = 0, rows = "", prevEnd = 0;
+    segs.forEach(s => {
+      /* 앞 구간과의 빈 자리 — 여기가 "시간이 사라진" 자리입니다 */
+      if (prevEnd && s.a - prevEnd >= GAP_MS) {
+        rows += `<div class="adm-dig-gap">⚠ ${hhmm(prevEnd)} ~ ${hhmm(s.a)}
+                 <b>${stayText(s.a - prevEnd)} 끊김</b> — 탭이 잠들었거나 컴퓨터가 꺼져 있던 시간</div>`;
+      }
+      total += s.b - s.a;
+      rows += `<div class="adm-dig-row"><span>${SEG_LABEL[s.s] || s.s}</span>
+               <span>${hhmm(s.a)} ~ ${hhmm(s.b)}</span><b>${stayText(s.b - s.a) || "1분 미만"}</b></div>`;
+      prevEnd = s.b;
+    });
+
+    wrap.querySelector(".adm-dig-card").innerHTML = `
+      <div class="adm-dig-head"><b>${nick}</b> · ${dk}
+        <button type="button" class="adm-dig-x" onclick="this.closest('#adm-dig').remove()">✕</button></div>
+      ${rows || `<div class="adm-msg">이 날 기록된 구간이 없어요 — 출석 도장만 찍히고
+                 연결이 바로 끊긴 경우예요.</div>`}
+      <div class="adm-dig-sum">쌓인 시간 <b>${stayText(total) || "0분"}</b></div>
+      <div class="adm-dig-hint">출석 도장·접속자 창은 느슨하지만(30분 유예), 시간은
+        <b>연결이 살아 있던 구간</b>만 쌓여요. 끊김이 자주 보이면 그분께
+        <b>접속 유지 가이드</b>(크롬 탭 안 재우기)를 안내해 주세요.</div>`;
   }
 
   function stayText(ms) {

@@ -244,6 +244,34 @@
     .adm-att-table td.rule-c.ok{    background: #DFF0DE; color: #2E6B2B; }
     .adm-att-table td.rule-c.maybe{ background: #FBF0CE; color: #8A6A12; }
     .adm-att-table td.rule-c.bad{   background: #F8D9D6; color: #A33127; }
+
+    /* 🔍 출석 칸 돋보기 — 칸을 누르면 그날 구간 내역 */
+    .adm-att-table td[data-dig-nick]{ cursor: zoom-in; }
+    #adm-dig{
+      position: fixed; inset: 0; z-index: 90;
+      background: rgba(43,38,32,.45);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .adm-dig-card{
+      width: min(430px, 100%); max-height: 80vh; overflow: auto;
+      background: #FFFDF6; border: 1px solid rgba(150,120,80,.5);
+      border-radius: 12px; padding: 16px 18px;
+    }
+    .adm-dig-head{ display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 15px; }
+    .adm-dig-x{ margin-left: auto; border: none; background: none; cursor: pointer; font-size: 14px; color: #8A7B68; }
+    .adm-dig-row{
+      display: flex; gap: 10px; align-items: baseline;
+      padding: 6px 2px; border-bottom: 1px dashed rgba(150,120,80,.35); font-size: 13px;
+    }
+    .adm-dig-row span:first-child{ flex: 0 0 74px; }
+    .adm-dig-row b{ margin-left: auto; }
+    .adm-dig-gap{
+      margin: 6px 0; padding: 7px 10px; border-radius: 8px;
+      background: #F8D9D6; color: #A33127; font-size: 12.5px; line-height: 1.5;
+    }
+    .adm-dig-sum{ padding-top: 10px; font-size: 14px; }
+    .adm-dig-hint{ margin-top: 8px; font-size: 12px; color: #8A7B68; line-height: 1.6; }
     .adm-att-table th.name-h, .adm-att-table td.name-c{
       background: #FBEDE3; position: sticky; left: 66px; z-index: 1;
       text-align: left; font-weight: 800; max-width: 96px;
