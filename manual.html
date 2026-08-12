@@ -56,48 +56,63 @@
     <div class="title">더마감 이용 설명</div>
     <div class="sub">화면의 번호와 아래 설명 번호가 같아요.
       <b>① 입장 승인</b>은 들어오기 <b>전</b>의 일이라 그림에는 없어요.</div>
-    <div class="sub" style="font-size:11px; opacity:.8;">2026-08-12 · 입장 승인 · 업적 · 공지판 · 타이머 모양 반영</div>
+    <div class="sub" style="font-size:11px; opacity:.8;">2026-08-12 · 아래 알약 줄 배치 · 입장 승인 · 업적 · 공지판 반영</div>
   </div>
 
-  <!-- 화면 미니어처 -->
+  <!-- 화면 미니어처 — 2026-08-12 새 배치(접속자 창 + 아래 알약 줄) -->
   <div class="screen">
     <div class="topbar">
       <span class="brand">TheMagam</span>
       <span class="redpill">n명 집필 중</span>
       <span style="flex:1"></span>
-      <span class="tool">🖱️ 자동감지<span class="num" style="top:-10px; right:-8px;">3</span></span>
-      <span class="tool">🖥️ 화면 공유<span class="num" style="top:-10px; right:-8px;">4</span></span>
-      <span class="tool">🎋 대숲<span class="num" style="top:-10px; right:-8px;">6</span></span>
+      <span class="tool">🖱️ 자동감지<span class="num" style="top:-10px; right:-8px;">4</span></span>
+      <span class="tool">🖥️ 화면 공유<span class="num" style="top:-10px; right:-8px;">5</span></span>
+      <span class="tool">🎋 대숲<span class="num" style="top:-10px; right:-8px;">7</span></span>
       <span class="tool">⚙️ 설정</span>
-      <span class="tool">🚪 나가기<span class="num" style="top:-10px; right:-8px;">7</span></span>
+      <span class="tool">🚪 나가기<span class="num" style="top:-10px; right:-8px;">8</span></span>
     </div>
-    <div class="cols">
-      <div class="panel p-chat">
-        <span class="num" style="top:-8px; left:-8px;">2</span>
-        <div class="p-title">Chat · 📢 공지 · ☕ 수다방 (n명)</div>
-        <div class="bubble">안녕하세요!!</div>
-        <div class="bubble">오늘도 파이팅!</div>
-        <div class="bubble" style="margin-left:auto; background:#B3372B; color:#FFFDF6;">저도 달립니다</div>
+
+    <!-- 접속자 카드가 화면을 꽉 채웁니다 -->
+    <div class="p-cards" style="position:relative; padding:4px 0 8px;">
+      <div class="card"><span class="num" style="top:-8px; left:-8px;">10</span><div class="ph"></div><div class="st">🔥WRITE🔥</div><div class="nm" style="position:relative;">그링링<br>5h 20m · 🍅8<span class="num" style="bottom:-9px; right:-9px;">6</span></div></div>
+      <div class="card" style="border-color:#B3372B;">
+        <div class="ph" style="background:repeating-linear-gradient(45deg,#D9CDB4 0 6px,#C9BCA0 6px 12px);"></div>
+        <div class="nm" style="border-top:1px solid rgba(150,120,80,.3);">그링링의 화면 <b style="color:#B3372B;">off</b></div>
       </div>
-      <div class="panel p-cards" style="border:none; background:transparent; padding:0;">
-        <div class="card"><span class="num" style="top:-8px; left:-8px;">9</span><div class="ph"></div><div class="st">🔥WRITE🔥</div><div class="nm" style="position:relative;">그링링<br>5h 20m · 🍅8<span class="num" style="bottom:-9px; right:-9px;">5</span></div></div>
-        <div class="card" style="border-color:#B3372B;">
-          <div class="ph" style="background:repeating-linear-gradient(45deg,#D9CDB4 0 6px,#C9BCA0 6px 12px);"></div>
-          <div class="nm" style="border-top:1px solid rgba(150,120,80,.3);">그링링의 화면 <b style="color:#B3372B;">off</b></div>
-        </div>
-        <div class="card"><div class="ph"></div><div class="st" style="background:#8A8578;">💤AWAY💤</div><div class="nm">고메<br>2h 54m · 🍅6</div></div>
-        <div class="card"><div class="ph"></div><div class="st" style="background:#C6754A;">☕BREAK☕</div><div class="nm">공공<br>1h 24m · 🍅4</div></div>
+      <div class="card"><div class="ph"></div><div class="st" style="background:#8A8578;">💤AWAY💤</div><div class="nm">고메<br>2h 54m · 🍅6</div></div>
+      <div class="card"><div class="ph"></div><div class="st" style="background:#C6754A;">☕BREAK☕</div><div class="nm">공공<br>1h 24m · 🍅4</div></div>
+      <div class="card"><div class="ph"></div><div class="st">🔥WRITE🔥</div><div class="nm">벨벨<br>3h 02m · 🍅5</div></div>
+    </div>
+
+    <!-- 알약 판이 위로 펼쳐지는 모습 -->
+    <div style="position:relative; height:66px;">
+      <div style="position:absolute; left:6px; bottom:0; width:44%; height:62px;
+                  background:rgba(255,253,246,.92); border:1px solid rgba(150,120,80,.45);
+                  border-radius:8px; padding:6px 8px; font-size:10px; color:#6B5F52;">
+        <b style="color:#2B2620;">💬 Chat</b>
+        <span style="float:right; color:#8A7B68;">✕</span>
+        <div class="bubble" style="margin-top:5px; font-size:9.5px;">출근합니다~</div>
       </div>
-      <div class="p-right">
-        <div class="mini">
-          <span class="num" style="top:-8px; right:-8px;">8</span>
-          <div class="p-title">Pomodoro 🍅</div>
-          <div class="bubble" style="font-size:13px; font-weight:700;">04:48</div>
-          <div class="p-title" style="margin-top:8px;">Letters ✍️</div>
-          <div class="bubble">15,731자 · 오늘 방 전체</div>
-          <div class="bubble" style="background:#F3D9D3;">🍅 집중 세션을 시작했어요!</div>
-        </div>
+      <div style="position:absolute; right:6px; bottom:0; width:30%; height:52px;
+                  background:rgba(255,253,246,.92); border:1px solid rgba(150,120,80,.45);
+                  border-radius:8px; padding:6px 8px; font-size:10px; color:#6B5F52;">
+        <b style="color:#2B2620;">🍅 Pomodoro</b>
+        <span style="float:right; color:#8A7B68;">✕</span>
+        <div style="text-align:center; font-size:14px; font-weight:700; color:#2B2620; margin-top:4px;">24:12</div>
       </div>
+    </div>
+
+    <!-- 알약 줄 -->
+    <div class="topbar" style="justify-content:center; position:relative; margin-top:6px;">
+      <span class="num" style="top:-9px; left:-7px;">2</span>
+      <span class="tool">📢 공지</span>
+      <span class="tool">💬 Chat</span>
+      <span class="tool">☕ 수다방<span class="num" style="top:-9px; right:-7px;">3</span></span>
+      <span class="tool">📓 Letters 전체 기록</span>
+      <span class="tool" style="background:transparent; border:none;">📌 오늘 할 일 12개 중 5개</span>
+      <span class="tool">🏅 업적</span>
+      <span class="tool">🍅 Pomodoro<span class="num" style="top:-9px; right:-7px;">9</span></span>
+      <span class="tool">✍️ Letters</span>
     </div>
   </div>
 
@@ -111,6 +126,15 @@
       닉네임을 바꾸실 때도 승인이 따로 필요해요 · 화면에서 감추는 게 아니라 <b>서버가 막습니다</b>.</p>
     </div></div>
     <div class="item"><div class="dnum">2</div><div>
+      <h4>⚓ 아래 알약 줄 — 필요한 창만 꺼내 쓰기</h4>
+      <p>접속자 카드가 화면을 꽉 채우고, 나머지는 화면 <b>맨 아래 알약</b>으로 내려갔어요.
+      누르면 그 자리에서 <b>위로</b> 펼쳐집니다 —
+      <b>📢 공지 · 💬 Chat · ☕ 수다방 · 📓 Letters 전체 기록 · 📌 오늘 할 일 · 🏅 업적 · 🍅 Pomodoro · ✍️ Letters</b>.</p>
+      <p class="tip"><b>여러 개를 동시에</b> 열어도 돼요 · 머리말을 <b>잡고 끌면</b> 자리를 옮기고
+      <b>두 번 누르면</b> 제자리 · 판을 누르면 <b>맨 위로</b> 올라옵니다 ·
+      공지·Chat·수다방·Pomodoro·Letters 는 <b>바깥을 눌러도 안 닫혀요</b>(쓰던 글이 날아가지 않게).</p>
+    </div></div>
+    <div class="item"><div class="dnum">3</div><div>
       <h4>Chat · 📢 공지 · ☕ 수다방</h4>
       <p><b>Chat</b>은 작업 이야기, <b>☕ 수다방</b>은 떠드는 곳이에요. 수다방 탭을 눌러 <b>[참여하기]</b>를 누르면
       그때부터의 메시지만 보여요(지난 수다는 안 보임). 안 들어가면 알림도 안 와요.
@@ -121,18 +145,18 @@
       명령어는 <b>/운세 · /외치기</b> 둘뿐이에요. 두 방 모두 똑같이 됩니다.</p>
       <p class="tip">작업방을 나갔다 다시 들어오면 수다방은 풀려요 — 그때그때 고를 수 있게요.</p>
     </div></div>
-    <div class="item"><div class="dnum">3</div><div>
+    <div class="item"><div class="dnum">4</div><div>
       <h4>자동감지 — 자리비움 자동 전환</h4>
       <p>켜두면 키보드·마우스를 <b>20분간 안 만졌을 때</b> 자동으로 💤AWAY가 되고 작업 시간이 멈춰요. 돌아와서 마우스만 움직이면 원래 상태로 복귀! 한글·스크리브너에서 글 쓰는 중이면 사용 중으로 인정돼요. 단, <b>내가 직접 AWAY로 바꾼 건</b> 컴퓨터를 써도 그대로 유지돼요.</p>
       <p class="tip">크롬·엣지 전용 · 처음 켤 때 "허용" 팝업 한 번만 눌러주세요. 안 켜도 지금처럼 쓸 수 있어요.</p>
     </div></div>
-    <div class="item"><div class="dnum">4</div><div>
+    <div class="item"><div class="dnum">5</div><div>
       <h4>화면 공유 — 뭉갠 그림으로만</h4>
       <p>누르고 <b>창을 하나 고르면</b> 시작돼요. 내 화면이 <b>내 컴퓨터에서 먼저</b> 아주 작게 뭉개진 다음, 그 그림 한 장만 5초에 한 번 나갑니다. <b>원본은 절대 나가지 않아요.</b> 공유하는 사람의 카드 옆에 같은 크기의 카드가 하나 더 떠요. 끄려면 다시 누르거나 카드의 <b>[off]</b>.</p>
       <p class="tip">내 카드 왼쪽 위 <b>빨간 불</b>을 누르면 뭉갬 정도와 <b>[채우기 / 전체 보기]</b>를 고를 수 있어요 —
       세로로 긴 창을 통째로 보여주고 싶으면 [전체 보기] · 같이 공유 중인 사람끼리만 서로 보여요 · 크롬·엣지 PC 전용.</p>
     </div></div>
-    <div class="item"><div class="dnum">5</div><div>
+    <div class="item"><div class="dnum">6</div><div>
       <h4>나의 작업 — <b>내 카드 아래칸</b>을 누르면</h4>
       <p>왼쪽은 출석 달력이에요. 입장만 해도 붉은 <b>✓ 도장</b>이 찍히고, <b>한 번 클릭</b>하면 그 날짜를 고르고 <b>두 번 클릭</b>하면 🏖️ 휴가로 표시돼요.
       오른쪽 탭은 여섯 — <b>📌 할 일 · 🎯 목표 · ⏱️ 작업 시간 · ✍️ 글자수 · 📮 쪽지 · 🏅 업적</b>.
@@ -140,16 +164,16 @@
       <p class="tip">할 일 머리말의 <b>‹ 8월 12일 (수) ›</b> 로 하루씩 넘겨요 · 아래 칸에 넣은 건 전부 <b>🔁 매일 반복</b> ·
       지난 날짜에 못 끝낸 일에는 <b>[오늘 하기]</b> 가 붙는데, 눌러도 <b>보던 날짜에 그대로 머물러</b> 여러 개를 이어서 정리할 수 있어요.</p>
     </div></div>
-    <div class="item"><div class="dnum">6</div><div>
+    <div class="item"><div class="dnum">7</div><div>
       <h4>대숲 — 완전 익명 게시판</h4>
       <p>빈 곳을 클릭해서 아무 말이나 붙여요. 한 장에 200자, 색은 여덟 가지. <b>닉네임도 계정도 서버에 남지 않아서 방장도 누가 썼는지 몰라요.</b> ♥ 공감은 기기당 한 번, 30일이 지나면 저절로 사라집니다.</p>
       <p class="tip">내가 쓴 쪽지의 ✕는 <b>그 글을 붙인 기기에서만</b> 보여요.</p>
     </div></div>
-    <div class="item"><div class="dnum">7</div><div>
+    <div class="item"><div class="dnum">8</div><div>
       <h4>나가기 — 퇴장할 땐 꼭!</h4>
       <p>창을 그냥 닫지 말고 <b>[나가기]</b>를 눌러주세요. 작업 시간과 출석 기록이 그 시각으로 정확히 닫혀요. 깜빡하고 닫아도 시간이 증발하진 않지만, 기록이 훨씬 깔끔해져요.</p>
     </div></div>
-    <div class="item"><div class="dnum">8</div><div>
+    <div class="item"><div class="dnum">9</div><div>
       <h4>Pomodoro · Letters — 뽀모도로와 글자수</h4>
       <p><b>뽀모도로는 각자 것이에요.</b> 내가 시작하고 멈추는 게 남에게 아무 영향이 없고, 집중·휴식 시간도 마음대로 정하면 돼요. 새로고침해도 이어집니다.</p>
       <p>모양은 <b>◯ 원형</b>과 <b>▬ 가로 바</b> 중에 고를 수 있어요 —
@@ -157,7 +181,7 @@
       고른 모양은 <b>이 기기에만</b> 저장돼서, 같은 방이라도 각자 다르게 씁니다.</p>
       <p><b>글자수</b>: 지금 원고의 <b>전체 글자수</b>만 적으면 차이를 알아서 계산해 누적돼요. 이어 쓸 땐 [기준], 잘못 적었으면 [초기화], 빈 문서에서 시작하면 [새 편]. 자정을 넘겨 못 적었으면 <b>🕛</b> 로 어제 칸을 채웁니다.</p>
     </div></div>
-    <div class="item"><div class="dnum">9</div><div>
+    <div class="item"><div class="dnum">10</div><div>
       <h4>프로필 카드 · 🏅 업적</h4>
       <p>내 카드는 항상 맨 앞에 있어요. 상태 도장을 누르면 <b>🔥WRITE🔥 · 💻JOB💻 · ☕BREAK☕ · 💤AWAY💤</b> 중에 고를 수 있고,
       왼쪽 위 구석에는 <b>지금 무슨 작업인지</b>(원고·퇴고·교정·수정·개정·구상·인풋) 스티커를 붙일 수 있어요.

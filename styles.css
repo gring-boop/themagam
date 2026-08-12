@@ -7906,3 +7906,16 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   display: block; padding: var(--sp-4) var(--sp-3);
   text-align: center; color: var(--muted); font-size: var(--fs-xs);
 }
+
+/* 설명서 안의 "여기 바뀌었어요" 딱지 (2026-08-12) */
+.man-new{
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  vertical-align: 2px;
+}
