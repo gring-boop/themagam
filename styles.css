@@ -7625,3 +7625,127 @@ html[data-theme-style="ink"] .pomo-ring .ring-pom{ stroke: var(--accent); }
 html[data-theme-style="ink"] .pomo-ring .ring-day{ stroke: var(--me); }
 html[data-theme-style="ink"] .pomo-bar-track.pom i{ background: var(--accent); }
 html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
+
+/* =====================================================================
+   ⚓ 아래 알약 줄 — 리뉴얼 시험판 (index2.html 전용, 2026-08-12)
+   ---------------------------------------------------------------------
+   접속자 창을 화면 전체로 펴고, 나머지는 아래 줄로 내렸습니다.
+   알약을 누르면 그 자리에서 **위로** 펼쳐져요.
+   ★ 지금 쓰는 화면(index.html)에는 #dock 이 없어서 이 규칙이 하나도
+     걸리지 않습니다 — 섞여도 안전합니다.
+   ===================================================================== */
+.dock{
+  position: relative;
+  flex: 0 0 auto;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+}
+.dock-bar{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dock-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  background: var(--fill-1);
+  color: var(--muted-strong);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+}
+.dock-pill:hover{ color: var(--text); background: var(--fill-2); }
+/* 열려 있는 알약은 판과 이어져 보이게 */
+.dock-pill[aria-expanded="true"]{
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.dock-badge{
+  min-width: 17px; height: 17px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.dock-badge.hidden{ display: none; }
+
+/* ── 위로 펼쳐지는 판 ──
+   ★ bottom 을 기준 삼아야 위로 자랍니다. 알약 줄이 화면 맨 아래라
+     아래로 열면 화면 밖으로 나가요. */
+.dock-panels{
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(100% - var(--sp-2));
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+}
+.dock-panel{
+  pointer-events: auto;
+  width: min(460px, calc(100vw - 24px));
+  height: var(--dock-h, 430px);
+  max-height: calc(100vh - 190px);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 -6px 28px rgba(0,0,0,.16);
+  overflow: hidden;
+}
+/* 수다방은 대화가 오래 이어지는 곳이라 폭도 넓힙니다 */
+#dock-panel-chatty{ width: min(620px, calc(100vw - 24px)); }
+#dock-panel-wc,
+#dock-panel-pomo{ width: min(380px, calc(100vw - 24px)); }
+
+.dock-head{
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 9px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+.dock-title{ font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text); }
+.dock-x{
+  margin-left: auto;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent;
+  color: var(--muted); font-size: var(--fs-sm);
+  border-radius: var(--r-sm); cursor: pointer;
+}
+.dock-x:hover{ background: var(--fill-2); color: var(--text); }
+.dock-body{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+/* 옮겨 온 창들은 판을 꽉 채웁니다 (원래 칸에서 쓰던 테두리는 지우고) */
+.dock-body > .chat-sidebar,
+.dock-body > #pomo-block,
+.dock-body > #wordcount-block{
+  flex: 1 1 auto;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+.dock-body > .chat-sidebar > .header{ display: none; }   /* 판 머리말이 대신합니다 */
+.dock-body #chat-box2{ flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+/* 접속자 창이 화면을 꽉 채웁니다 */
+.dock-mode .cards-area{ border: none; border-radius: 0; box-shadow: none; }

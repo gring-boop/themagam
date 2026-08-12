@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<!-- ⚠ 이 파일은 build-index2.py 가 만듭니다. 직접 고치지 마세요 — index.html 을 고치고 다시 만드세요. -->
+<!-- TheMagam © 그링링 · 무단 복제·재배포 금지 -->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+
+  <!--
+    [변경] maximum-scale=1, user-scalable=0 제거
+    → 확대 차단은 WCAG 1.4.4(Resize Text) 위반이며, 저시력 사용자가
+      본문을 키울 수 없습니다. iOS의 "입력창 포커스 시 자동 확대" 문제는
+      CSS에서 #message의 font-size를 16px 이상으로 잡아 해결했습니다.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <meta name="description" content="TheMagam — 작가들의 실시간 공동 집필 공간" />
+  <meta name="theme-color" content="#E9EDF3" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
+
+  <!-- 아이콘 -->
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608121242">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608121242">
+
+  <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
+       설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
+  <link rel="manifest" href="manifest.json?v=202608121242">
+  <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
+       표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="작업실">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <title>[시험판] TheMagam ✍️</title>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+
+  <!-- 테마 전용 서체 — 원고와 잉크(명조 제목) · 마감 전야(모노 숫자).
+       오프라인이면 시스템 serif/monospace 로 자연스럽게 대체됩니다. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- 감자꽃(Gamja Flower) — 채팅 스티커의 크레파스 손글씨.
+       못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css?v=202608121242" />
+</head>
+
+<body class="dock-mode">
+
+<!-- =====================================================================
+     입장 모달
+     ===================================================================== -->
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="join-title">
+  <div class="modal-content">
+    <!-- [2026-08-05] 입장 창 리디자인 — B(책 표지) + C(부드러운 결) 혼합.
+         붉은 테두리 카드 · 가운데 표지식 제목 · 밑줄 입력칸. 한자 없음. -->
+    <div class="join-eyebrow">— WRITERS' ROOM —</div>
+    <h1 class="modal-title" id="join-title">더 마 감</h1>
+    <div class="join-en">THEMAGAM</div>
+    <p class="modal-sub">닉네임과 비밀번호로 들어와요. 처음 쓰는 닉네임이면 그 비밀번호로 자리가 잡힙니다.</p>
+
+    <label class="sr-only" for="nick-input">닉네임</label>
+    <input
+      type="text"
+      id="nick-input"
+      class="w-full"
+      placeholder="닉네임을 입력해 주세요"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="go"
+    >
+    <div class="spacer-sm"></div>
+
+    <label class="sr-only" for="pw-input">비밀번호</label>
+    <input
+      type="password"
+      id="pw-input"
+      class="w-full"
+      placeholder="비밀번호 (6자 이상)"
+      autocomplete="current-password"
+      enterkeyhint="go"
+    >
+
+    <div id="join-msg" class="join-msg" role="status" style="display:none"></div>
+
+    <div class="spacer-sm"></div>
+    <button id="join-btn" class="ghost-btn primary w-full" onclick="join()">입장하기</button>
+    <p class="hint">
+      비밀번호는 <b>내 닉네임을 남이 쓰지 못하게</b> 하는 자물쇠예요.
+      다른 곳에서 쓰는 비밀번호는 쓰지 마세요.<br>
+      잊어버리면 스스로 되돌릴 수 없어서, 방장에게 말해야 합니다.
+    </p>
+    <!-- [2026-08-06] 저작권 한 줄. 파일마다 주석으로도 넣어두었지만,
+         화면에도 보여야 베끼려는 사람 눈에 먼저 들어옵니다. -->
+    <p class="join-copy">TheMagam © 그링링 · 무단 복제·재배포 금지</p>
+  </div>
+</div>
+
+<!-- =====================================================================
+     퇴장 화면
+     ===================================================================== -->
+<div id="exit-screen" class="hidden" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+  <div class="modal-content" style="text-align:center;">
+    <h2 class="modal-title" id="exit-title">✅ 퇴장 완료</h2>
+    <p class="modal-sub">
+      이제 창을 닫아도 됩니다. ☕<br>
+      오늘도 집필 고생하셨습니다… 최고로 멋져요 🧡
+    </p>
+    <div class="spacer-md"></div>
+    <button class="ghost-btn primary w-full" onclick="window.close()">창 닫기</button>
+    <p class="hint">
+      ※ 브라우저 정책 때문에 버튼으로 창이 안 닫힐 수 있어요.<br>
+      그땐 그냥 탭/창을 닫아주면 됩니다 🙂
+    </p>
+  </div>
+</div>
+
+<!-- =====================================================================
+     이용 설명서 모달 (내용은 script_manual.js가 채웁니다)
+     ===================================================================== -->
+<div id="manual-modal" onclick="closeManual()" role="dialog" aria-modal="true" aria-labelledby="manual-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeManual()" aria-label="설명서 닫기" title="닫기">✕</button>
+
+    <h2 class="modal-title" id="manual-title">📖 TheMagam 설명서</h2>
+    <p class="modal-sub">처음이신가요? 위 탭을 눌러 필요한 것만 골라 보셔도 좋아요.</p>
+
+    <div class="tabs" id="manual-tabs" role="tablist" aria-label="설명서 탭"></div>
+    <div class="tab-panels" id="manual-panels"></div>
+
+  </div>
+</div>
+
+<!-- =====================================================================
+     🗂️ 나의 작업 (내 카드의 아래칸을 누르면 열립니다)
+
+     [2026-08-06] 예전의 [📅 출석부] + [🗓️ 일정] 두 창을 하나로 합쳤습니다.
+     왼쪽은 출석 달력(붉은 ✓ · 🏖️ 휴가 · 그날 할 일 점), 오른쪽은
+     📌 할 일 / 🎯 목표 / 📊 기록 세 탭입니다.
+     안쪽은 script_mywork.js 가 그립니다.
+     ===================================================================== -->
+<div id="mywork-modal" onclick="closeMyWork()" role="dialog" aria-modal="true" aria-labelledby="mywork-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeMyWork()" aria-label="나의 작업 닫기" title="닫기">✕</button>
+
+    <!-- [2026-08-11] 한글 제목(나의 작업)을 빼고 — MY DESK — 하나만 남겼습니다.
+         같은 말이 두 줄로 겹쳐 있었어요.
+
+         ★ 창의 이름표(aria-labelledby="mywork-title")가 이 줄을 가리키므로
+           id 를 여기로 옮겼습니다. 안 옮기면 화면 읽기 프로그램이 창
+           이름을 잃습니다. 다만 소리로는 "대시 마이 데스크 대시" 가 되니
+           aria-label 로 읽을 말만 따로 적어 둡니다. -->
+    <h2 class="mw-eyebrow" id="mywork-title" aria-label="나의 작업">— MY DESK —</h2>
+
+    <div class="mw-cols">
+      <!-- 왼쪽 — 출석 달력 (script_mywork.js 가 채웁니다) -->
+      <section class="mw-calwrap" id="mywork-cal" aria-label="출석 달력"></section>
+
+      <!-- 오른쪽 — 탭 세 개 -->
+      <section class="mw-side" aria-label="나의 작업">
+        <div class="mw-tabs" id="mywork-tabs" role="tablist" aria-label="나의 작업 탭">
+          <button class="mw-tab is-on" type="button" data-mw-tab="todo" role="tab" aria-selected="true"
+                  onclick="switchMyWorkTab('todo')">📌 할 일</button>
+          <button class="mw-tab" type="button" data-mw-tab="goal" role="tab" aria-selected="false"
+                  onclick="switchMyWorkTab('goal')">🎯 목표</button>
+          <button class="mw-tab" type="button" data-mw-tab="time" role="tab" aria-selected="false"
+                  onclick="switchMyWorkTab('time')">⏱️ 작업 시간</button>
+          <button class="mw-tab" type="button" data-mw-tab="wc" role="tab" aria-selected="false"
+                  onclick="switchMyWorkTab('wc')">✍️ 글자수</button>
+          <button class="mw-tab" type="button" data-mw-tab="note" role="tab" aria-selected="false"
+                  onclick="switchMyWorkTab('note')">📮 쪽지</button>
+          <button class="mw-tab" type="button" data-mw-tab="achv" role="tab" aria-selected="false"
+                  onclick="switchMyWorkTab('achv')">🏅 업적</button>
+        </div>
+
+        <!-- 📌 할 일 — 고른 날짜의 할 일 + 날짜 없는 할 일 -->
+        <div class="mw-panel is-on" id="mywork-panel-todo" role="tabpanel"></div>
+
+        <!-- 🎯 목표 — #status-block 덩어리가 이 자리로 옮겨옵니다.
+             (다시 그리지 않고 옮기기만 합니다 — 다시 그리면 저장이 끊겨요) -->
+        <div class="mw-panel" id="mywork-panel-goal" role="tabpanel">
+          <div id="mywork-goal-slot"></div>
+          <p class="mw-hint">
+            오늘 목표는 카드에 그대로 보여요(공유됨).
+            할 일은 옆의 <b>📌 할 일</b> 탭에서 날짜별로 챙깁니다.
+          </p>
+        </div>
+
+        <!-- ⏱️ 작업 시간 · ✍️ 글자수 — script_timelog.js 가 각각 그립니다.
+             [2026-08-08] 예전에는 [📊 기록] 한 탭에 둘이 함께 있었는데,
+             한 화면에 그래프가 둘이라 어느 쪽을 보는지 헷갈렸습니다. -->
+        <div class="mw-panel" id="mywork-panel-time" role="tabpanel"></div>
+        <div class="mw-panel" id="mywork-panel-wc" role="tabpanel"></div>
+
+        <!-- 📮 쪽지 — script_note.js 가 그립니다 (받은 것 / 보낸 것) -->
+        <div class="mw-panel" id="mywork-panel-note" role="tabpanel"></div>
+
+        <!-- 🏅 업적 — script_achv.js 가 그립니다 (알약을 눌러 여는 판과 같은 내용) -->
+        <div class="mw-panel" id="mywork-panel-achv" role="tabpanel"></div>
+      </section>
+    </div>
+
+    <p class="hint">
+      할 일은 <b>본인만 편집 및 열람할 수 있습니다.</b>
+    </p>
+
+  </div>
+</div>
+
+<!-- =====================================================================
+     🎋 대숲 — 익명 게시판
+
+     보드의 빈 곳을 누르면 그 자리에 쪽지 작성 카드가 열립니다.
+     보드 안쪽은 script_forest.js 가 통째로 그립니다.
+     ===================================================================== -->
+<!-- =====================================================================
+     📢 공지판 — 채팅 머리말의 [📢 공지] 로 엽니다.
+     안쪽은 script_notice.js 가 그립니다. 쓰는 사람은 방장 하나뿐이고,
+     그건 화면이 아니라 보안규칙(서버)이 막습니다.
+     ===================================================================== -->
+<div id="notice-modal" onclick="closeNoticeBoard()" role="dialog" aria-modal="true" aria-labelledby="notice-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button type="button" class="modal-x" onclick="closeNoticeBoard()" aria-label="공지판 닫기" title="닫기">✕</button>
+
+    <h2 class="nt-eyebrow" id="notice-title" aria-label="공지판">— NOTICE —</h2>
+
+    <div class="nt-board" id="notice-board" aria-label="공지 목록"></div>
+    <div id="notice-foot"></div>
+
+    <p class="hint">
+      공지는 <b>방장만 올릴 수 있어요.</b> 사진은 올릴 때 자동으로 줄여서 담습니다 —
+      원본 파일이 그대로 올라가지는 않아요.
+    </p>
+  </div>
+</div>
+
+<!-- 공지 사진 크게 보기 -->
+<div id="notice-zoom" onclick="closeNoticeBoardZoom()" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
+  <img src="" alt="공지 사진">
+</div>
+
+<!-- 🏅 남의 업적 — 카드의 **프사**를 누르면 열립니다 (닉네임 칸은 📮 쪽지) -->
+<div id="achv-other" onclick="closeAchvOther()" role="dialog" aria-modal="true" aria-labelledby="achv-other-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button type="button" class="modal-x" onclick="closeAchvOther()" aria-label="닫기" title="닫기">✕</button>
+    <h2 class="nt-eyebrow" id="achv-other-title">업적</h2>
+    <div id="achv-other-body"></div>
+    <p class="hint">딴 업적만 보여요. 몇 자 썼는지·몇 시간 일했는지는 서로 보이지 않습니다.</p>
+  </div>
+</div>
+
+<div id="forest-modal" onclick="closeForest()" role="dialog" aria-modal="true" aria-labelledby="forest-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeForest()" aria-label="대숲 닫기" title="닫기">✕</button>
+
+    <div class="fr-eyebrow">— WHISPER —</div>
+    <h2 class="modal-title" id="forest-title">대 숲</h2>
+    <p class="fr-lead">빈 곳을 클릭해서 아무 말이나 붙여요 · 누가 썼는지는 아무도 몰라요</p>
+
+    <div class="fr-board" id="forest-board" aria-label="대숲 게시판"></div>
+
+    <div class="fr-foot">
+      <span class="fr-count-label" id="forest-count"></span>
+      <span class="fr-wither">🍂 30일이 지나면 저절로 시들어요</span>
+    </div>
+
+    <p class="hint">
+      대숲에 붙인 쪽지에는 <b>닉네임도 계정도 남지 않습니다</b> — 서버에 저장되는 것은
+      글·색·자리·시각·♥ 개수뿐이에요.
+      그래서 <b>내가 쓴 쪽지의 ✕ 는 그 글을 붙인 기기에서만</b> 보입니다.
+      (다른 기기나 브라우저 저장 공간을 지운 뒤에는 보이지 않아요)
+      ♥ 도 같은 이유로 <b>기기마다 한 번씩</b>입니다.
+    </p>
+
+  </div>
+</div>
+
+<!-- =====================================================================
+     📓 전체 기록 — 방 전체의 달력
+
+     하루 칸에 그날 방이 함께 쓴 글자수와, 모두가 끝낸 🍅 집중 횟수를 얹습니다.
+     안쪽은 script_wordcount.js 가 그립니다.
+     ===================================================================== -->
+<div id="wcall-modal" onclick="closeWcAll()" role="dialog" aria-modal="true" aria-labelledby="wcall-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeWcAll()" aria-label="전체 기록 닫기" title="닫기">✕</button>
+
+    <h2 class="modal-title" id="wcall-title">📓 전체 기록</h2>
+    <div id="wcall-body"></div>
+    <p class="hint">칸에 마우스를 올리면 그날 누가 얼마나 썼는지 보여요.
+      🍅 는 그날 방 전체가 끝낸 집중 세션 수입니다.</p>
+  </div>
+</div>
+
+<!-- =====================================================================
+     📮 쪽지 쓰기 — 다른 작가님 카드를 누르면 열립니다.
+
+     실 타래로 엮지 않습니다. 답장을 눌러도 "그 사람 앞으로 새 쪽지"가
+     열릴 뿐이에요. 주고받기가 너무 편해지면 여기서 대화가 시작되고,
+     그러면 정작 채팅방이 조용해집니다.
+     ===================================================================== -->
+<div id="note-modal" onclick="closeNote()" role="dialog" aria-modal="true" aria-labelledby="note-to">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button type="button" class="modal-x" onclick="closeNote()" aria-label="쪽지 닫기" title="닫기">✕</button>
+    <h2 class="modal-title" id="note-to">📮 쪽지</h2>
+    <label class="sr-only" for="note-text">쪽지 내용</label>
+    <textarea id="note-text" class="note-text" rows="3" maxlength="80"
+              placeholder="짧게 한마디 건네보세요"></textarea>
+    <div class="note-foot">
+      <span class="hint" id="note-count">0 / 80</span>
+      <span class="hint">둘만 볼 수 있어요</span>
+      <button class="ghost-btn primary compact" type="button" id="note-send">보내기</button>
+    </div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     설정 모달
+     ===================================================================== -->
+<div id="settings-modal" onclick="closeSettings()" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <!-- [2026-08-09] 닫기는 오른쪽 위 ✕ 로. 아래 큰 버튼은 자리를 많이
+         차지했습니다 — 특히 팝업이 길 때 내용을 밀어냈어요. -->
+    <button type="button" class="modal-x" onclick="closeSettings()" aria-label="설정 닫기" title="닫기">✕</button>
+
+    <h2 class="modal-title" id="settings-title">⚙️ 대시보드 설정</h2>
+
+    <div class="tabs" role="tablist" aria-label="설정 탭">
+      <button class="tab active" data-tab="chat"    role="tab" aria-selected="true"  aria-controls="panel-chat"    onclick="openTab('chat')">💬 채팅</button>
+      <button class="tab"        data-tab="profile" role="tab" aria-selected="false" aria-controls="panel-profile" onclick="openTab('profile')">👤 프로필</button>
+      <!-- [2026-08-06] 🎯 목표·투두 탭은 없앴습니다 —
+           카드 아래칸 팝업과 🗂️ 나의 작업에서 모두 관리하니까요. -->
+      <!-- [2026-08-06] "📊 나의 작업" 탭은 뺐습니다 —
+           머리말의 [🗂️ 나의 작업] → 📊 기록 탭으로 옮겼어요. 같은 내용을
+           두 곳에 두면 한쪽만 고치는 사고가 반드시 납니다. -->
+      <!-- [2026-08-12] 🍅 뽀모 탭 — 타이머 모양과 알림음.
+           뽀모 창에 있던 [⚙️ 알림음] 단추를 이리로 옮겼습니다. 자주 안
+           바꾸는 것이 좁은 칸을 계속 차지하고 있었어요. -->
+      <button class="tab"        data-tab="pomo"    role="tab" aria-selected="false" aria-controls="panel-pomo"    onclick="openTab('pomo')">🍅 뽀모</button>
+      <button class="tab"        data-tab="theme"   role="tab" aria-selected="false" aria-controls="panel-theme"   onclick="openTab('theme')">🎨 테마</button>
+      <button class="tab"        data-tab="privacy" role="tab" aria-selected="false" aria-controls="panel-privacy" onclick="openTab('privacy')">🔒 개인정보</button>
+    </div>
+
+    <div class="tab-panels">
+
+      <!-- ── 채팅 ── -->
+      <div class="panel active" id="panel-chat" role="tabpanel" aria-labelledby="panel-chat">
+        <div class="set-block">
+          <div class="set-title" id="slot-title">칸 배치</div>
+          <!-- 실제 화면 모양 그림 -->
+          <div class="slot-map" id="slot-map"></div>
+          <div class="layout-pick" id="layout-pick">
+            <!-- TheMagam — 세로 보기는 없앴습니다. 좌우 뒤집기만 남깁니다. -->
+            <div class="pick-row" role="radiogroup" aria-label="좌우 뒤집기" style="margin-top:8px;">
+              <button type="button" class="layout-opt slim" data-side="-1" role="radio" aria-checked="true" onclick="setLayout(-1); renderLayoutPick();">
+                <span class="layout-label">그대로</span>
+              </button>
+              <button type="button" class="layout-opt slim" data-side="1" role="radio" aria-checked="false" onclick="setLayout(1); renderLayoutPick();">
+                <span class="layout-label">좌우 뒤집기</span>
+              </button>
+            </div>
+          </div>
+          <p class="hint">
+            칸 크기는 <b>칸 사이 회색 손잡이를 끌어서</b> 조절하고, 더블클릭하면 기본값입니다.
+          </p>
+          <div class="mini-row" style="margin-top:8px;">
+            <button type="button" class="ghost-btn compact" onclick="resetSplitSizes()">칸 크기 초기화</button>
+          </div>
+        </div>
+
+        <div class="set-block">
+          <div class="set-title">창이 좁아지면 보여줄 창</div>
+          <select id="set-narrow-panel" class="w-full">
+            <option value="prof">👥 접속자</option>
+            <option value="pomo">🍅 뽀모도로</option>
+            <option value="chat">💬 채팅</option>
+          </select>
+          <p class="hint">
+            창 폭이 좁아지거나 폰으로 들어오면 칸을 나누지 않고 <b>한 창만</b> 띄워요.
+            그때 처음 열릴 창입니다. 화면 위쪽 <b>탭</b>으로 언제든 다른 창으로 넘어갈 수 있어요.
+          </p>
+        </div>
+      </div>
+
+      <!-- ── 프로필 (script_profile.js가 렌더) ── -->
+      <div class="panel" id="panel-profile" role="tabpanel"></div>
+
+      <!-- ── 목표 · 투두 (내용은 script_profile.js 가 옮겨 넣습니다) ── -->
+
+
+      <!-- [2026-08-06] "나의 작업" 패널은 여기서 뺐습니다.
+           내용은 🗂️ 나의 작업 창의 ⏱️ 작업 시간 · ✍️ 글자수 탭으로 옮겼고,
+           그리는 함수(renderMyRecordPanel)는 그대로 씁니다. -->
+
+      <!-- ── 🍅 뽀모 ── -->
+      <div class="panel" id="panel-pomo" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">타이머 모양</div>
+          <p class="hint">이 기기에만 저장돼요. 같은 방이라도 각자 다른 모양을 쓸 수 있습니다.</p>
+          <div class="pomo-shape-pick" id="pomo-shape-pick" role="radiogroup" aria-label="타이머 모양">
+            <button type="button" class="pomo-shape-opt" data-shape="ring" role="radio" aria-checked="true">
+              <svg viewBox="0 0 60 60" aria-hidden="true">
+                <circle cx="30" cy="30" r="22" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="5"/>
+                <circle cx="30" cy="30" r="14" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="4"/>
+                <circle cx="30" cy="30" r="22" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="138" stroke-dashoffset="48" transform="rotate(-90 30 30)"/>
+                <circle cx="30" cy="30" r="14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"
+                        stroke-dasharray="88" stroke-dashoffset="44" transform="rotate(-90 30 30)"/>
+              </svg>
+              <span>원형</span>
+            </button>
+            <button type="button" class="pomo-shape-opt" data-shape="bar" role="radio" aria-checked="false">
+              <svg viewBox="0 0 60 60" aria-hidden="true">
+                <rect x="8" y="20" width="44" height="7" rx="3.5" fill="currentColor" fill-opacity=".22"/>
+                <rect x="8" y="20" width="30" height="7" rx="3.5" fill="currentColor"/>
+                <rect x="8" y="33" width="44" height="5" rx="2.5" fill="currentColor" fill-opacity=".22"/>
+                <rect x="8" y="33" width="14" height="5" rx="2.5" fill="currentColor"/>
+              </svg>
+              <span>가로 바</span>
+            </button>
+          </div>
+          <p class="hint">가로 바는 세로를 덜 차지해서, 아래 글자수 창이 그만큼 넓어져요.</p>
+        </div>
+
+        <div class="set-block">
+          <div class="set-title">알림음</div>
+          <p class="hint">세션이 바뀔 때 나는 소리예요. 나에게만 들립니다.</p>
+          <div id="pomo-sound-mini"></div>
+        </div>
+      </div>
+
+      <!-- ── 테마 ── -->
+      <div class="panel" id="panel-theme" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">테마 선택</div>
+          <p class="hint">동그라미는 “배경(왼쪽) + 내 말풍선(오른쪽)” 반반 미리보기예요.</p>
+          <div class="spacer-md"></div>
+          <div class="theme-grid" id="theme-palette" role="group" aria-label="테마 목록"></div>
+        </div>
+      </div>
+
+      <!-- ── 타이머 ── -->
+      <!-- ── 개인정보 ── -->
+      <div class="panel" id="panel-privacy" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">내 데이터</div>
+          <p class="hint">
+            개인 작업 영역(투두/메모/목표/오늘 누적)은 <b>Firebase</b>에 <b>닉네임 기준</b>으로 저장돼요.<br>
+            닉네임이 같으면 덮어써질 수 있으니, 중복되지 않는 닉네임을 권장해요.
+          </p>
+        </div>
+
+        <div class="set-block">
+          <!-- [2026-08-06] 여기 있던 운영용 항목들(7번 클릭 이스터에그 ·
+               핀 메시지 · 이전 채팅 불러오기 · 히스토리 노출 설정 ·
+               채팅 전체 삭제 · 오늘 글자수 초기화 · 출석부 보기)은
+               모두 뺐습니다. 같은 일을 하는 별도 페이지가 있어요. -->
+          <div class="set-title" id="reset-title">로컬 설정 초기화</div>
+          <button class="ghost-btn" onclick="resetLocalSettings()">이 기기에서 설정 초기화</button>
+          <p class="hint">테마/채팅 너비/레이아웃/타이머 표시 설정만 초기화돼요.</p>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- =====================================================================
+     메인
+     ===================================================================== -->
+<div class="container">
+
+  <!-- 화면 맨 위 · 도구 띠 -->
+  <header class="app-head" aria-label="도구">
+    <div class="mini-row work-head-row">
+
+      <!-- [2026-08-03] 방 이름 — 도장 배지와 함께 왼쪽 끝에 -->
+      <div class="brand-block">
+        <span class="brand-title">TheMagam</span><span class="brand-stamp" id="head-count">집필실</span>
+        <button class="head-notice empty" id="head-notice" type="button"
+                title="공지">📌 <span id="head-notice-text">공지</span></button>
+      </div>
+
+      <!-- 폰트 · 가이드 · 설정 · 나가기는 한 덩어리로 붙여서 오른쪽 끝에 -->
+      <!-- 창을 비우는 기능이 없어졌으므로 "치워둔 창" 자리도 없앴습니다. -->
+
+      <div class="head-tools">
+        <!-- 자리비움 자동 감지 — 크롬·엣지 전용. script_idledetect.js 가 라벨과 흐림을 관리합니다 -->
+        <button class="icon-btn labeled" type="button" id="idle-detect-btn" onclick="toggleIdleDetect()" aria-label="자리비움 자동 감지" title="무입력 20분이면 자동으로 AWAY">🖱️<span class="icon-btn-label">자동감지 OFF</span></button>
+
+        <!-- [2026-08-06] 🖥️ 화면 공유 — 내 창 하나를 뭉갠 그림으로만 보여줍니다.
+             원본은 내 컴퓨터를 벗어나지 않고, 5초에 한 장씩 아주 작게 줄인
+             그림만 나갑니다. 공유 중인 사람끼리만 서로의 화면이 보여요. -->
+        <button id="share-btn" class="icon-btn labeled" onclick="toggleScreenShare()">🖥️<span class="icon-btn-label">화면 공유</span></button>
+
+
+        <!-- [2026-08-06] 🎋 대숲 — 완전 익명 게시판.
+             누가 썼는지는 서버에도 남기지 않고, 30일이 지나면 저절로 사라져요. -->
+        <button id="forest-btn" class="icon-btn labeled" onclick="openForest()">🎋<span class="icon-btn-label">대숲</span></button>
+
+
+        <button class="icon-btn guide labeled" type="button" onclick="openManual()" aria-label="가이드" title="가이드">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.6.2-.8.7-.8 1.3v.4"/><path d="M12 17.2h.01"/>
+          </svg><span class="icon-btn-label">가이드</span>
+        </button>
+
+        <button class="icon-btn labeled" type="button" onclick="openSettings()" aria-label="설정" title="설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.2H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 8.9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>
+          </svg><span class="icon-btn-label">설정</span>
+        </button>
+
+        <div class="font-ctl">
+          <button class="font-btn" type="button" onclick="decreaseFont()" aria-label="글씨 작게">−</button>
+          <span id="font-size-pill" class="font-pill" aria-live="polite" aria-label="현재 글씨 크기">18px</span>
+          <button class="font-btn" type="button" onclick="increaseFont()" aria-label="글씨 크게">+</button>
+        </div>
+
+        <button class="icon-btn danger labeled" type="button" onclick="leaveRoom()" aria-label="나가기" title="나가기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>
+          </svg><span class="icon-btn-label">나가기</span>
+        </button>
+
+        <!-- [2026-08-06] 쓰지 않는 버튼 하나를 정리했습니다. -->
+      </div>
+    </div>
+    
+  </header>
+
+  <!-- 쪼갬 뿌리 — script_layout.js 가 이 안에 칸과 손잡이를 만듭니다 -->
+  <div id="split-root" class="split-root">
+
+
+  <!-- 채팅 -->
+  <aside class="chat-sidebar" aria-label="채팅">
+      <!-- [2026-08-04] 탭 줄을 없애고 머리말에 합쳤습니다 —
+           기존 제목("— Chat")이 그대로 메인 탭, 그 옆에 ☕ Chatty (사용자 요청) -->
+      <div class="header">
+        <div class="chat-head-left">
+          <span id="my-info" role="button" tabindex="0" title="기본 채팅 보기"
+                onclick="switchChatTab('main')">Chat</span>
+          <span id="chat-tab-badge-main" class="chat-tab-badge hidden">0</span>
+          <!-- [2026-08-11] 📢 공지 — 채팅 탭이 아니라 **팝업을 여는 단추**입니다.
+               안 읽은 공지가 있을 때만 붉은 점이 붙어요.
+               자리는 Chat 과 ☕ 수다방 사이 — 놓치면 안 되는 글이라
+               가장 먼저 눈에 걸리는 자리에 둡니다. -->
+          <button id="notice-btn" class="chat-tab" type="button"
+                  onclick="openNoticeBoard()" title="공지판 열기">📢 공지
+            <span id="notice-dot" class="notice-dot hidden" aria-label="안 읽은 공지 있음"></span>
+          </button>
+          <button id="chat-tab-chatty" class="chat-tab" type="button"
+                  onclick="switchChatTab('chatty')">☕ 수다방 <span id="chatty-tab-count">(0명)</span>
+            <span id="chat-tab-badge-chatty" class="chat-tab-badge hidden">0</span>
+          </button>
+        </div>
+        <div class="mini-row">
+          <!-- [옮김 2026-08-12] 수다방 [나가기] 는 아래 접속자 줄 오른쪽 끝으로.
+               여기 있으면 탭 줄이 길어져 ☕ 수다방 이름이 밀렸고, 무엇보다
+               "누가 있는지" 와 "나갈지" 는 같은 줄에서 보는 게 자연스러워요. -->
+          <!-- [2026-08-06] 안 쓰는 칸 하나를 정리했습니다. -->
+          <!-- [2026-08-03] 채팅 접기 — 접으면 왼쪽에 얇은 손잡이(레일)가 남습니다 -->
+          <button id="chat-collapse-btn" class="icon-btn" type="button"
+                  aria-expanded="true" aria-label="채팅 접기" title="채팅 접기">❮</button>
+        </div>
+      </div>
+
+      <!-- 핀 배너 전용 고정 슬롯 -->
+      <div id="pin-banner-slot"></div>
+
+      <!-- ☕ Chatty 접속자 줄 — 핀 배너 자리처럼 머리말 바로 아래, Chatty 탭에서만 -->
+      <div id="chatty-online-bar" class="hidden">
+        <span id="chatty-who" class="chatty-who"></span>
+        <button id="chatty-leave-btn" class="chatty-leave-btn hidden" type="button"
+                onclick="leaveChatty()" aria-label="수다방 나가기" title="수다방 나가기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>
+          </svg>
+        </button>
+      </div>
+
+      <div id="chat-box" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <!-- ☕ Chatty Chat 로그 — 탭 전환으로 chat-box와 자리를 바꿉니다 -->
+      <div id="chat-box2" class="hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+
+      <button id="new-msg-float" class="new-msg-float hidden" type="button">
+        새 메시지 <span id="new-msg-count">0</span>개 ↓
+      </button>
+
+      <!-- 멘션 자동완성 -->
+      <div id="mention-dropdown" role="listbox" aria-label="멘션 대상 선택"></div>
+
+      <!-- 답장 미리보기 -->
+      <div id="reply-preview-bar" class="reply-preview-bar hidden">
+        <div class="reply-preview-body">
+          <div class="reply-preview-label" id="reply-preview-label"></div>
+          <div class="reply-preview-excerpt" id="reply-preview-excerpt"></div>
+        </div>
+        <button type="button" id="reply-preview-close" class="reply-preview-close" aria-label="답장 취소">✕</button>
+      </div>
+
+      <div class="input-area">
+        <label class="sr-only" for="message">메시지 입력</label>
+        <!-- [2026-08-10] 🖍️ 를 입력칸 **안쪽** 오른편에 얹습니다.
+             칸 밖에 두면 입력칸이 그만큼 좁아지는데, 채팅 칸이 좁을 때
+             그 44px 이 꽤 아까웠어요. 감싸는 상자를 하나 두고 그 안에서
+             띄웁니다. 입력칸에는 오른쪽 여백을 줘서 글자가 단추 밑으로
+             들어가지 않게 했습니다. -->
+        <div class="input-wrap">
+          <textarea id="message" rows="1" placeholder="메시지를 입력하세요"></textarea>
+          <button id="sticker-btn" class="sticker-btn" type="button"
+                  onclick="toggleStickerPicker()" aria-label="스티커 보내기" title="스티커 (/토닥)">🖍️</button>
+        </div>
+        <button class="send-btn" onclick="send()" aria-label="메시지 보내기">↑</button>
+      </div>
+    </aside>
+
+  <!-- 오른쪽 줄을 접었을 때 남는 얇은 손잡이 -->
+  <div id="chat-rail" class="side-rail chat-rail hidden">
+    <button id="chat-rail-btn" class="side-rail-btn" type="button"
+            aria-label="채팅 펼치기" title="채팅 펼치기">❯</button>
+    <span id="chat-rail-badge" class="side-rail-badge hidden" aria-live="polite">0</span>
+    <span class="side-rail-label" aria-hidden="true">펼치기</span>
+  </div>
+
+  <!-- 뽀모·글자수 줄을 접었을 때 남는 얇은 손잡이 -->
+  <div id="pomo-rail" class="side-rail hidden">
+    <button class="side-rail-btn" type="button" onclick="toggleSideCollapsed()"
+            aria-label="뽀모·글자수 펼치기" title="펼치기">❮</button>
+    <span class="side-rail-label" aria-hidden="true">펼치기</span>
+  </div>
+
+
+  <!-- 접속자 프로필 -->
+  <main class="cards-area" aria-label="공동 집필 현황">
+    <h2 class="sr-only">공동 집필 현황</h2>
+    <div class="user-cards-grid" id="user-cards" aria-live="polite"></div>
+
+    <!-- [2026-08-10] 📌 방 전체 할 일 진척 — 명단 맨 아래 가운데 한 줄.
+
+         글자수 36,000자가 잘 먹히는 이유와 같은 결입니다. 혼자 적는
+         숫자가 아니라 다 같이 쌓이는 숫자라서요. 할 일은 원래 혼자
+         보는 기능이라 아무 반향이 없었는데, 합계만 내걸면 그 감각이
+         생깁니다. **개수만** 모으고 내용은 올라가지 않습니다.
+
+         아무도 안 적은 날에는 줄 자체가 뜨지 않습니다(hidden). -->
+    <!-- [2026-08-11] 🏅 업적 알약을 같은 줄 오른쪽에 나란히.
+
+         ★ 왼쪽 할 일 알약은 **방 전체** 숫자이고, 오른쪽 업적은 **내 것**
+           입니다. 나란히 두면 둘 다 방 전체로 읽히기 쉬워서, 업적 쪽에는
+           작은 아이콘과 딴 개수를 붙이고 사이에 옅은 선을 하나 뒀습니다.
+
+         판은 **위로** 펼쳐집니다 — 이 줄이 이미 명단 맨 아래라 아래로
+         열면 화면 밖으로 나갑니다. -->
+    <div class="room-foot">
+      <!-- [2026-08-11] 📓 Letters 전체 기록 — 뽀모 창에서 옮겨 왔습니다.
+           방 전체의 달력이라 "혼자 보는 것" 이 아니어서, 방 전체 할 일 줄
+           옆이 오히려 제자리예요. -->
+      <button type="button" class="room-pill" id="wcall-pill"
+              title="방 전체의 달력 기록 보기">📓 Letters 전체 기록</button>
+      <span class="room-foot-sep" aria-hidden="true"></span>
+
+      <div class="room-todo" id="room-todo" hidden>
+        <span class="room-todo-pill" id="room-todo-pill"></span>
+      </div>
+
+      <!-- 둘 사이 옅은 선 — 할 일 줄이 없는 날에는 CSS 가 함께 감춥니다 -->
+      <span class="room-foot-sep" aria-hidden="true"></span>
+
+      <div class="achv-bar" id="achv-bar">
+        <div class="achv-pop" id="achv-panel" hidden></div>
+        <button type="button" class="achv-pill" id="achv-pill"
+                aria-expanded="false" aria-controls="achv-panel" hidden
+                title="내 업적 보기"></button>
+      </div>
+    </div>
+  </main>
+
+
+
+
+
+  <!-- 뽀모도로 -->
+  <section class="pane pane-pomo" id="pomo-block" aria-label="뽀모도로">
+    <h4 class="personal-title pomo-pane-title">
+      <span>Pomodoro 🍅</span>
+      <!-- [뺌 2026-08-12] "집중 중 · 오늘 n회" 는 없앴습니다.
+           이 방에서는 🍅 를 **수확**합니다 — 카드에도, 업적에도 이미
+           오늘 딴 토마토가 나와요. 같은 것을 한 번 더 세어 보여주면
+           숫자만 늘고 뜻은 안 늡니다.
+           ※ 세는 일 자체는 그대로입니다 (🌾 토마토 수확왕이 씁니다). -->
+      <button id="side-fold-btn" class="icon-btn side-fold" type="button"
+              onclick="toggleSideCollapsed()" aria-label="뽀모·글자수 접기" title="뽀모·글자수 접기">❯</button>
+    </h4>
+    <div id="timer-wrap">
+      <!-- =====================================================================
+           [1줄] 두 겹 고리 — 2026-08-11
+           바깥 = 오늘 작업 시간(목표 대비) · 안쪽 = 지금 뽀모
+           ---------------------------------------------------------------------
+           예전에는 큰 숫자 한 줄 + 가로 진행 바 한 줄이었습니다.
+           "오늘 얼마나 했나" 는 카드에만 있어서, 뽀모를 보는 동안에는
+           안 보였어요. 둘을 한자리에 겹쳤습니다.
+
+           ★ 전환 단추를 두지 않은 이유 — 뽀모를 감추면 "멈췄나?" 하고
+             헷갈립니다. 겹쳐 두면 늘 둘 다 보여요.
+
+           ★ 색은 테마의 포인트 **두 가지**를 그대로 씁니다.
+             바깥은 --accent, 안쪽은 --me(내 말풍선 색). 테마를 바꾸면
+             고리 색도 따라 바뀝니다.
+
+           ★ 목표를 안 정했으면 바깥 고리는 그리지 않습니다(.no-goal).
+             빈 고리를 보여주면 못 채운 것처럼 보이니까요.
+           ===================================================================== -->
+      <!-- [2026-08-12] 그림을 누르면 ⚙️ 설정 → 🍅 뽀모 로 갑니다.
+           카드 프사를 눌러 편집창이 열리는 것과 같은 결이에요 —
+           "이 모양을 바꾸고 싶다" 는 생각이 드는 자리가 바로 여기입니다. -->
+      <div class="pomo-row pomo-ringrow pomo-shape-hit" role="button" tabindex="0"
+           title="타이머 모양·알림음 설정 열기" aria-label="타이머 모양·알림음 설정 열기">
+        <div class="pomo-ring-wrap" id="pomo-ring-wrap">
+          <svg class="pomo-ring" viewBox="0 0 200 200" aria-hidden="true">
+            <circle class="ring-bg"  cx="100" cy="100" r="86"/>
+            <circle class="ring-day" cx="100" cy="100" r="86" id="ring-day"/>
+            <circle class="ring-bg"  cx="100" cy="100" r="66"/>
+            <circle class="ring-pom" cx="100" cy="100" r="66" id="ring-pom"/>
+          </svg>
+          <div class="pomo-ring-mid">
+            <div id="timer-pill" role="status" aria-live="polite" data-phase="idle">
+              <span id="timer-text" class="pill-muted">25:00</span>
+            </div>
+            <div class="pomo-ring-sub" id="pomo-ring-sub"></div>
+          </div>
+        </div>
+        <!-- [뺌 2026-08-12] "● 오늘 작업 / ● 뽀모" 색 설명 줄.
+             안쪽 고리는 숫자와 함께 도니 그게 뽀모라는 게 저절로 읽히고,
+             바깥은 아래 "오늘 1h 14m / 8h" 가 이미 말해 줍니다.
+             설명이 필요 없는 그림에 설명을 붙이면 그림이 작아 보여요.
+             ※ 가로 바에도 처음부터 이런 줄은 없었습니다 — 이제 두 모양이
+               같은 결입니다. -->
+      </div>
+
+      <!-- =====================================================================
+           [1줄·다른 모양] 가로 바 — 2026-08-12
+           ---------------------------------------------------------------------
+           ⚙️ 설정 → 🍅 뽀모 에서 고릅니다. 원형과 **같은 값**을 보여줘요 —
+           위 바는 오늘 작업 시간(목표 대비), 아래 바는 지금 뽀모입니다.
+
+           ★ 두 모양을 각각 그리지 않습니다. 화면에는 둘 다 들어 있고
+             CSS 가 한쪽만 보여줘요. 값을 넣는 코드는 한 벌이라, 한쪽만
+             고쳐서 어긋나는 일이 없습니다.
+
+           ★ 세로를 원형보다 덜 먹습니다(약 55px). 그만큼 아래 글자수
+             창이 넓어져요 — 가로 바를 고르는 이유가 대개 이것입니다.
+           ===================================================================== -->
+      <div class="pomo-row pomo-barrow pomo-shape-hit" role="button" tabindex="0"
+           title="타이머 모양·알림음 설정 열기" aria-label="타이머 모양·알림음 설정 열기">
+        <div class="pomo-bar-time" id="pomo-bar-time">25:00</div>
+        <div class="pomo-bar-track pom"><i id="pomo-bar-pom"></i></div>
+        <div class="pomo-bar-track day"><i id="pomo-bar-day"></i></div>
+        <div class="pomo-bar-sub" id="pomo-bar-sub"></div>
+      </div>
+
+      <!-- [3줄] 시간 설정 (뽀모 / 휴식)
+
+           [변경] 예전에는 시간 설정과 버튼이 한 줄에 있었습니다.
+           칸 폭이 좁아지면서 서로 밀려 답답해져서, 줄을 나눴어요. -->
+      <!-- [3줄] 설정 — 🍅 집중 / ☕ 휴식 / ⚙️ 알림음 -->
+      <div class="pomo-row pomo-setrow" id="pomo-setrow" data-state="idle">
+        <label class="pomo-setup-field" for="pomo-work-min" title="집중 시간(분)">
+          <span class="pomo-setup-label" aria-hidden="true">🍅</span>
+          <input id="pomo-work-min" type="number" min="1" max="180" step="1" value="25"
+                 inputmode="numeric" aria-label="집중 시간(분)">
+        </label>
+        <label class="pomo-setup-field" for="pomo-rest-min" title="휴식 시간(분)">
+          <span class="pomo-setup-label" aria-hidden="true">☕</span>
+          <input id="pomo-rest-min" type="number" min="1" max="60" step="1" value="5"
+                 inputmode="numeric" aria-label="휴식 시간(분)">
+        </label>
+        <!-- [2026-08-12] [⚙️ 알림음] 단추는 ⚙️ 설정 → 🍅 뽀모 로 옮겼습니다.
+             자주 안 바꾸는 것이 좁은 칸을 계속 차지하고 있었어요.
+             빈자리만큼 🍅 ☕ 두 칩을 키웠습니다 (셋일 때는 좁아서 작았어요). -->
+      </div>
+
+      <!-- [4줄] 조작 — 시작(↔일시정지) · 정지 · 알림음 켜고 끄기.
+           [■ 정지] 는 도는 중에만 나타납니다 (data-state 로 갈라집니다). -->
+      <div class="pomo-row pomo-bar" id="pomo-controls" data-state="idle">
+        <button id="pomo-run-btn" class="pomo-run-btn start" type="button"
+                onclick="togglePomoRun()"
+                aria-label="뽀모도로 시작" title="내 타이머를 시작해요 (남에게는 영향 없어요)">
+          <svg class="ic-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M8 5.5v13l11-6.5z"/></svg>
+          <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="7" y="6" width="3.6" height="12" rx="1.2"/>
+            <rect x="13.4" y="6" width="3.6" height="12" rx="1.2"/></svg>
+        </button>
+
+        <button id="pomo-stop-btn" class="pomo-run-btn stop" type="button" onclick="stopPomodoro()"
+                aria-label="뽀모도로 정지" title="내 타이머만 멈춰요">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>
+        </button>
+
+        <button id="pomo-sound-btn" type="button"
+                onclick="togglePomodoroParticipation()" aria-pressed="true"
+                aria-label="알림음 켜고 끄기" title="세션이 바뀔 때 소리를 낼지 정해요">♪</button>
+      </div>
+
+      <!-- [2026-08-12] 접었다 펴던 '뽀모 상세 설정' 상자는 없앴습니다.
+           안에 있던 알림음이 ⚙️ 설정 → 🍅 뽀모 로 갔거든요. -->
+          </div>
+
+    <!-- =================================================================
+         글자수 기록 — 뽀모 아래 칸
+
+         뽀모와 한 줄에 세로로 붙어 있습니다. 자리를 따로 만들지 않은
+         이유는, 칸이 넷이 되면 배치 고르기가 복잡해지기 때문이에요.
+         "뽀모 줄" 하나에 시계와 글자수가 같이 사는 편이 단순합니다.
+         ================================================================= */ -->
+    <div id="wordcount-block" class="wc-block">
+      <div class="wc-head">
+        <span class="wc-title">Letters ✍️</span>
+        <div class="wc-tabs" role="tablist" aria-label="글자수 보기">
+          <button class="wc-tab on" type="button" data-wc-tab="today" role="tab" aria-selected="true">오늘</button>
+          <button class="wc-tab" type="button" data-wc-tab="me"    role="tab" aria-selected="false">내 기록</button>
+          <!-- [옮김 2026-08-11] [전체 기록] 은 접속자 명단 맨 아래 줄로 갔습니다.
+               칸을 좁히면 탭 셋이 두 줄로 접혀 "오늘 / 내 기록" 이 흩어졌어요.
+               둘만 남으니 어지간히 좁혀도 한 줄로 버팁니다. -->
+        </div>
+      </div>
+
+      <div class="wc-mine">
+        <span class="wc-big" id="wc-big">0</span>
+        <span class="wc-unit" id="wc-unit">자</span>
+      </div>
+
+      <div class="wc-rows" id="wc-rows"></div>
+
+      <p class="wc-log" id="wc-log" role="status" aria-live="polite"></p>
+
+      <div class="wc-inputline">
+        <label class="sr-only" for="wc-input">지금 원고의 전체 글자수</label>
+        <input type="number" id="wc-input" placeholder="지금 전체 글자수" inputmode="numeric" min="0" step="1">
+        <button class="ghost-btn compact primary" type="button" id="wc-send">기록</button>
+        <!-- [2026-08-10] 자정을 놓쳤을 때 어제 칸을 메웁니다.
+             아래 작은 버튼 줄이 아니라 여기 붙인 이유는, 그 줄이 이미
+             빠듯해서 좁은 칸에서 두 줄로 접히기 때문입니다. -->
+        <button class="ghost-btn compact wc-yday-btn" type="button" id="wc-yday-btn"
+                aria-expanded="false" aria-controls="wc-yday"
+                title="어제 기록 채우기 — 자정 넘겨 못 적은 만큼">🕛</button>
+      </div>
+
+      <div class="wc-minirow">
+        <button class="ghost-btn compact" type="button" id="wc-base"  title="지금 글자수를 출발선으로 삼아요">▶ 기준</button>
+        <button class="ghost-btn compact" type="button" id="wc-reset" title="오늘 누적을 0으로 되돌려요">🧹 초기화</button>
+        <button class="ghost-btn compact" type="button" id="wc-fresh" title="빈 문서에서 새로 시작해요">🆕 새 편</button>
+      </div>
+
+      <!-- 🕛 어제 채우기 — 평소에는 접혀 있습니다.
+           저장 전에 결과를 한 줄로 미리 보여주는 게 핵심이에요.
+           체크를 잘못 눌러도 숫자가 눈에 먼저 보이니까요. -->
+      <div class="wc-yday" id="wc-yday" hidden>
+        <div class="wc-yday-t" id="wc-yday-title">🕛 어제 채우기</div>
+        <div class="wc-inputline">
+          <label class="sr-only" for="wc-yday-input">어제 마지막 전체 글자수</label>
+          <input type="number" id="wc-yday-input" placeholder="어제 마지막 글자수"
+                 inputmode="numeric" min="0" step="1">
+          <button class="ghost-btn compact primary" type="button" id="wc-yday-save">저장</button>
+        </div>
+        <label class="wc-yday-new" for="wc-yday-new">
+          <input type="checkbox" id="wc-yday-new">
+          <span>🆕 새 편이었어요 <small>(적은 숫자를 통째로 더해요)</small></span>
+        </label>
+        <p class="wc-yday-pre" id="wc-yday-pre" role="status" aria-live="polite"></p>
+      </div>
+
+      <p class="hint" id="wc-hint"></p>
+    </div>
+  </section>
+
+  <!-- 오늘 목표 / 상태 -->
+  <section class="pane pane-status" id="status-block" aria-label="오늘 목표와 상태">
+    <div class="goal-wrap">
+    <h4 class="personal-title">🎯 Today's goal</h4>
+    <div class="stack" style="gap:10px;">
+      <label class="sr-only" for="db-today-goal-text">오늘의 한줄 목표</label>
+    <input
+      type="text"
+      id="db-today-goal-text"
+      class="w-full"
+      maxlength="52"
+      oninput="savePersonalDataDebounced()"
+      placeholder="오늘의 한줄 목표(공유됨)"
+    >
+
+    <!-- [2026-08-11] 하루 목표 작업 시간 — 뽀모 창 바깥 고리가 이 값을 향해 찹니다.
+         비워두면 고리 없이 숫자만 보여요(못 채운 것처럼 보이지 않게). -->
+    <label class="goal-hr" for="db-goal-hours">
+      <span>오늘 목표 작업 시간</span>
+      <input type="number" id="db-goal-hours" min="0" max="24" step="0.5"
+             inputmode="decimal" placeholder="—" oninput="saveGoalHours()">
+      <span class="goal-hr-unit">시간</span>
+    </label>
+
+    <!-- 상태는 이제 카드의 상태표를 눌러서 바꿉니다.
+
+         이 <select> 는 화면에서 감추되 지우지는 않았습니다. 저장과 시간
+         집계가 전부 이 값을 읽고 있어서, 지우면 그 흐름을 따로 다시
+         만들어야 합니다. 상태 고르기 판이 이 값을 대신 조작합니다.
+         (보이지 않는 중계기라고 생각하시면 됩니다) -->
+    <label class="sr-only" for="db-status">내 스테이터스</label>
+    <select id="db-status" class="w-full hidden"
+            oninput="savePersonalDataDebounced(); window.renderQuickStatusBtn?.()">
+      <option value="" disabled selected>내 스테이터스(공유됨)</option>
+      <option value="writing">WORK</option>
+      <option value="focus">🔥초집중🔥</option>
+      <option value="rest">휴식</option>
+      <option value="away">자리비움</option>
+    </select>
+
+    <!-- 저장 버튼은 없앴습니다. 목표와 상태는 입력하는 즉시 저장돼요. -->
+    <!-- WORK 시작 버튼도 감춥니다 — 상태표를 눌러서 바꾸니까요.
+         renderQuickStatusBtn 이 이 버튼을 찾으므로 지우지 않습니다. -->
+    <div class="mini-row end hidden">
+      <button id="status-quick-btn" class="ghost-btn primary compact" onclick="toggleWritingStatus()">✍️ WORK 시작!</button>
+    </div>
+    </div>
+    </div>
+
+    <!-- [2026-08-04] 오늘 작업 시간 리셋 — 내 timeSegs(오늘)와 열린 구간을
+         지금 시각 기준으로 되돌립니다. 실수 방지로 confirm 을 거칩니다. -->
+    <div class="mini-row" style="margin-top:10px;">
+      <!-- [2026-08-09] 두 줄 버튼. 윗줄은 무엇을 하는지, 아랫줄은 눌렀을 때
+           벌어지는 일. **카드의 타이머만** 0이 되고, 나의 작업의 기록은
+           손대지 않습니다 — 그래서 "초기화" 가 아니라 "리셋" 이라고 씁니다. -->
+      <button class="ghost-btn w-full btn-2line" type="button" onclick="resetTodayWorkTime()">
+        <span class="btn-2line-main">⏱️ 타이머 리셋</span>
+        <span class="btn-2line-sub">지금부터 다시 count!</span>
+      </button>
+      <!-- 리셋했을 때만 나타납니다 (script_timelog.js 가 채웁니다) -->
+      <p class="hint timer-reset-note" id="timer-reset-note" hidden></p>
+    </div>
+  </section>
+
+  </div><!-- /split-root -->
+
+  <!-- =================================================================
+       ⚓ 아래 알약 줄 — 리뉴얼 시험판
+       판 안의 내용은 script_dock.js 가 원래 있던 요소를 **옮겨** 채웁니다.
+       (새로 그리면 채팅의 멘션·답장·스티커가 따라오지 않아요)
+       ================================================================= -->
+  <div id="dock" class="dock">
+    <div class="dock-panels" id="dock-panels"></div>
+    <div class="dock-bar" id="dock-bar"></div>
+  </div>
+
+
+  <!-- 치워둔 창을 잠시 넣어두는 곳 (화면에는 안 보입니다) -->
+  <div id="panel-attic" hidden></div>
+</div>
+
+<!-- 멘션 토스트 -->
+<div id="mention-toast" role="alert" aria-live="polite">
+  <span class="toast-dot" aria-hidden="true"></span>
+  <span id="mention-toast-text">누군가 나를 멘션했어요!</span>
+</div>
+
+<!-- Core → UI → Chat → Data → Realtime → Profile 순서 -->
+<!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
+<!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
+     부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
+<script src="script_demo.js?v=202608121242"></script>
+<script src="fortune_data.js?v=202608121242"></script>
+<script src="script_core.js?v=202608121242"></script>
+<script src="script_auth.js?v=202608121242"></script>
+<script src="script_ui.js?v=202608121242"></script>
+<script src="script_chat.js?v=202608121242"></script>
+<script src="script_chatty.js?v=202608121242"></script>
+<script src="script_data.js?v=202608121242"></script>
+<script src="script_realtime.js?v=202608121242"></script>
+<script src="script_dock.js?v=0"></script>
+<script src="script_wordcount.js?v=202608121242"></script>
+<script src="script_timelog.js?v=202608121242"></script>
+<script src="script_idledetect.js?v=202608121242"></script>
+<script src="script_profile.js?v=202608121242"></script>
+<script src="script_mywork.js?v=202608121242"></script>
+<script src="script_forest.js?v=202608121242"></script>
+<script src="script_notice.js?v=202608121242"></script>
+<script src="script_achv.js?v=202608121242"></script>
+<script src="script_reactions.js?v=202608121242"></script>
+<script src="script_note.js?v=202608121242"></script>
+<!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
+     카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
+     그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
+<script src="script_worktag.js?v=202608121242"></script>
+<!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
+<script src="script_sticker.js?v=202608121242"></script>
+<script src="script_share.js?v=202608121242"></script>
+<script src="script_manual.js?v=202608121242"></script>
+<script src="script_guard.js?v=202608121242"></script>
+
+<script>
+  window.addEventListener("load", () => {
+    try {
+      if (typeof window.init === "function") window.init();
+    } catch (e) {
+      console.error("[init error]", e);
+      alert("초기화 중 오류가 발생했어요. 콘솔(F12) 로그를 확인해 주세요.");
+    }
+
+    // ── 로드 자가진단 ──────────────────────────────────────────────
+    // 스크립트 파일이 하나라도 빠지면 그 기능만 조용히 사라져서
+    // "버튼은 있는데 눌러도 아무 일이 없는" 상태가 됩니다.
+    // 그럴 때 원인을 화면과 콘솔에 분명히 남깁니다.
+    const required = {
+      "script_core.js":     "join",
+      "script_ui.js":       "openTab",
+      "script_chat.js":     "renderChatMessage",
+      "script_chatty.js":   "startChatty",
+      "script_data.js":     "loadPersonalData",
+      "script_realtime.js": "listenStatus",
+      "script_profile.js":  "renderProfilePanel",
+      "script_mywork.js":   "openMyWork",
+      "script_forest.js":   "openForest",
+      "script_notice.js":   "openNoticeBoard",
+      "script_achv.js":     "startAchv",
+      "script_reactions.js":"toggleReaction",
+      "script_share.js":   "toggleScreenShare",
+      "script_note.js":    "openNoteTo",
+      "script_worktag.js": "openWorkTagPicker",
+      "script_sticker.js": "toggleStickerPicker",
+      "script_manual.js":   "openManual",
+      "script_layout.js":   "applyLayout",
+      "script_timelog.js":  "renderMyRecordPanel",
+      "script_idledetect.js": "toggleIdleDetect"
+    };
+    const missing = Object.entries(required)
+      .filter(([, fn]) => typeof window[fn] !== "function")
+      .map(([file]) => file);
+
+    if (missing.length) {
+      console.error(
+        "[더마감] 다음 스크립트가 로드되지 않았어요:", missing,
+        "\n→ index.html과 같은 폴더에 파일이 모두 있는지 확인해 주세요.",
+        "\n→ 개발자도구 Network 탭에서 404가 뜨는 파일을 볼 수 있어요."
+      );
+
+      const panel = document.getElementById("panel-profile");
+      if (panel && missing.includes("script_profile.js")) {
+        panel.innerHTML =
+          '<div class="set-block">' +
+          '<div class="set-title">⚠️ 프로필 기능을 불러오지 못했어요</div>' +
+          '<p class="hint"><b>script_profile.js</b> 파일이 index.html과 같은 폴더에 없어요.<br>' +
+          '압축을 풀 때 파일이 누락됐을 수 있어요. 폴더 안에 아래 9개가 모두 있어야 합니다.<br><br>' +
+          'index.html · styles.css · fortune_data.js · script_core.js ·<br>' +
+          'script_ui.js · script_chat.js · script_data.js ·<br>' +
+          'script_realtime.js · <b>script_profile.js</b></p></div>';
+      }
+    }
+  });
+</script>
+
+<!-- =====================================================================
+     서비스 워커 정리 — 예전에 등록해 둔 것을 걷어냅니다.
+
+     [왜 있었고, 왜 없앴나]
+     앱처럼 설치되려면 "fetch 처리기가 있는 서비스 워커"가 필요하던 시절이
+     있었습니다. 그래서 아무 일도 하지 않는 빈 처리기를 하나 두었어요.
+     그런데 크롬이 그 조건을 없앴습니다 — 휴대폰은 108, 데스크톱은 112
+     버전부터 **manifest 와 HTTPS 만 있으면 설치됩니다.** 오히려 빈 처리기가
+     페이지를 열 때마다 군더더기가 된다고 크롬이 경고를 띄우기 시작했고요.
+     ("Fetch event handler is recognized as no-op…")
+
+     그래서 서비스 워커를 아예 없앴습니다. 설치 기능은 그대로예요.
+     다만 예전에 방문한 사람의 브라우저에는 등록이 남아 있어서, 스스로
+     정리되도록 여기서 한 번 지웁니다. 나중에 오프라인 기능을 만들게 되면
+     그때 제대로 된 워커를 새로 두면 됩니다.
+     ===================================================================== -->
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.getRegistrations?.()
+        .then(rs => rs.forEach(r => r.unregister()))
+        .catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>
