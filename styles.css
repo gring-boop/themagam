@@ -7956,6 +7956,30 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   pointer-events: none;
 }
 
+/* =====================================================================
+   📢 공지 판 — 판 안에 또 판이 있었습니다 (2026-08-12)
+   ---------------------------------------------------------------------
+   원래는 가운데 창이라, 알맹이(.modal-content)가 제 흰 바탕과 테두리·
+   그림자를 갖고 있었어요. 그대로 알약 판 안으로 들어오니 **하얀 상자가
+   하나 더** 겹쳐서, 판이 어렵게 얻은 반투명이 통째로 가려졌습니다.
+   여기서는 바탕을 걷어내 원고지 격자가 은은히 비치게 둡니다.
+
+   제목 "— NOTICE —" 도 뺍니다 — 판 머리말에 이미 📢 공지 라고 적혀
+   있어서, 같은 말이 두 번 겹쳐 자리만 먹었어요.
+   ===================================================================== */
+#dock-body-notice > .modal-content{
+  width: auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+}
+#dock-body-notice .nt-eyebrow{ display: none; }
+/* 공지 한 칸은 격자 위에 얹히는 종이라 살짝 불투명하게 —
+   그래야 글이 격자에 묻히지 않습니다 */
+#dock-body-notice .nt-item{ background: var(--glass2); }
+
 /* 📢 공지 — 겉창(어두운 막)은 안 씁니다.
    알맹이(.modal-content)는 알약 판으로 옮겨 갔고, 남은 겉창은 빈
    껍데기입니다. 그런데 openNoticeBoard() 가 그것을 display:flex 로
