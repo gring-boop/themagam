@@ -289,8 +289,14 @@
           const per = {};
           Object.keys(segs).forEach(d => {
             let ms = 0;
+            /* 같은 구간이 두 번 적힌 흉터는 한 번만 셉니다 (2026-08-13) */
+            const seen = new Set();
             Object.values(segs[d] || {}).forEach(sg => {
-              if (sg && sg.b > sg.a) ms += sg.b - sg.a;
+              if (!sg || !(sg.b > sg.a)) return;
+              const k = `${sg.s}|${sg.a}|${sg.b}`;
+              if (seen.has(k)) return;
+              seen.add(k);
+              ms += sg.b - sg.a;
             });
             per[d] = ms / 60000;
           });
@@ -802,6 +808,13 @@
     try {
       const v = (await db.ref(`users/${nick}/timeSegs/${dk}`).once("value")).val() || {};
       segs = Object.values(v).filter(s => s && s.b > s.a).sort((x, y) => x.a - y.a);
+      /* 같은 구간이 두 번 적힌 흉터 — 돋보기에서도 한 번만 보여줍니다 */
+      const seen = new Set();
+      segs = segs.filter(s => {
+        const k = `${s.s}|${s.a}|${s.b}`;
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      });
     } catch (e) {}
 
     const GAP_MS = 5 * 60 * 1000;

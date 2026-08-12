@@ -130,30 +130,54 @@
     } catch (e) {}
   }
 
-  /** 하루를 넘기는 구간은 날짜별로 쪼개서 저장합니다 */
-  async function pushSegment(status, from, to) {
-    if (!myNick) return;
-    if (!(to > from)) return;
+  /* =====================================================================
+     구간 저장 — **한 번의 쓰기**로 (고침 2026-08-13)
+     ---------------------------------------------------------------------
+     [무엇이 잘못됐었나]
+     "구간 저장"과 "timeCur 갱신"이 **따로따로 두 번** 서버로 갔습니다.
+     평소엔 문제가 없는데, 나가기 직전이 위험했어요 — 창이 닫히는 찰나에
+     저장만 도착하고 지우기가 유실되면, 서버에는 이미 저장된 구간이
+     timeCur 에도 그대로 남습니다. 다음 입장이 그걸 "못 닫은 구간" 으로
+     보고 **한 번 더** 닫아요. 실제로 한 분의 13일 기록에 Job 00:16~00:32
+     가 두 번 적혀 있었습니다.
 
+     [고침]
+     구간과 timeCur 를 **update() 한 번**에 함께 씁니다. 원자적이라
+     "저장은 됐는데 지우기만 유실" 이라는 어긋난 중간 상태가 아예
+     없습니다 — 둘 다 도착하거나, 둘 다 안 도착하거나. 안 도착하면
+     다음 입장이 disc 시각까지 닫아 주니 그래도 한 번만 잡힙니다.
+     ===================================================================== */
+
+  /** 하루를 넘기는 구간을 날짜별로 쪼개, update() 에 넣을 꾸러미로 만듭니다 */
+  function segUpdates(status, from, to) {
+    const u = {};
+    if (!myNick || !(to > from)) return u;
     // 한 구간이 지나치게 길면 잘라냅니다 (잠든 사이가 통째로 잡히는 경우)
     if (to - from > SEG_CAP_MS) to = from + SEG_CAP_MS;
-
     let a = from;
     while (a < to) {
       const end = Math.min(to, dayStart(a) + 24 * 60 * 60 * 1000);
-      const seg = { s: normStatus(status), a, b: end };
-      try {
-        await db.ref(`users/${myNick}/timeSegs/${ymd(a)}`).push(seg);
-      } catch (e) { /* 저장 실패는 조용히 넘깁니다 */ }
-
-      /* [뺌 2026-08-09] users/{닉}/workMsTotal 누적 — 없앴습니다.
-
-         삭제된 펫 기능이 밥으로 쓰던 값입니다. 펫이 사라진 뒤로는
-         **아무도 읽지 않으면서 구간이 닫힐 때마다 트랜잭션만 한 번씩**
-         돌고 있었어요. 쓰기만 하고 읽지 않는 값은 늘어나기만 합니다.
-         작업 시간이 필요하면 timeSegs 를 더해 쓰면 됩니다. */
+      const key = db.ref().push().key;   // 서버에 쓰지 않고 키만 뽑습니다
+      u[`timeSegs/${ymd(a)}/${key}`] = { s: normStatus(status), a, b: end };
       a = end;
     }
+    return u;
+  }
+
+  /** 구간 + timeCur 를 한 번에 씁니다. cur 는 새 구간이거나 null(지움) */
+  async function commitSegs(updates, cur) {
+    if (!myNick) return;
+    const u = Object.assign({}, updates);
+    if (cur !== undefined) u.timeCur = cur;
+    if (!Object.keys(u).length) return;
+    try {
+      await db.ref(`users/${myNick}`).update(u);
+    } catch (e) { /* 저장 실패는 조용히 넘깁니다 */ }
+  }
+
+  /** 예전 이름을 쓰는 곳을 위한 겉옷 — 구간만 저장 (timeCur 는 안 건드림) */
+  async function pushSegment(status, from, to) {
+    await commitSegs(segUpdates(status, from, to));
   }
 
   /* [추가 2026-08-02] 구간을 뺏겼으면 되찾습니다.
@@ -176,14 +200,16 @@
     try {
       const t = nowMs();
       const v = _remoteCur;
+      let closes = {};
       if (v && v.sid && v.sid !== SID && Number(v.a) > 0) {
         const cut = Math.min(t, Math.max(
           Number(v.a), Number(v.alive) || 0, Number(v.disc) || 0));
-        await pushSegment(v.s, Number(v.a), cut);
+        closes = segUpdates(v.s, Number(v.a), cut);
       }
       _lastSeenStatus = currentUiStatus();
       _cur = { s: _lastSeenStatus, a: t, sid: SID };
-      await curRef().set(_cur);
+      /* 상대 구간 닫기와 내 구간 열기를 **한 번에** — 사이가 없습니다 */
+      await commitSegs(closes, _cur);
       markAlive();
       armDisc();
     } catch (e) {}
@@ -202,8 +228,7 @@
       const at = nowMs();
       const prev = _cur;
       _cur = { s: prev.s, a: at, sid: SID };
-      await pushSegment(prev.s, prev.a, at);
-      await curRef().set(_cur);
+      await commitSegs(segUpdates(prev.s, prev.a, at), _cur);
     } catch (e) {}
     _ckptBusy = false;
   }
@@ -215,10 +240,9 @@
 
     if (_cur && _cur.s === next) return;      // 같은 상태면 그대로
 
-    if (_cur) await pushSegment(_cur.s, _cur.a, t);
-
+    const closes = _cur ? segUpdates(_cur.s, _cur.a, t) : {};
     _cur = { s: next, a: t, sid: SID };
-    try { await curRef().set(_cur); } catch (e) {}
+    await commitSegs(closes, _cur);
   }
 
   /* ---------------------------------------------------------------
@@ -250,9 +274,9 @@
       const gone = nowMs() - _offlineSince;
       if (gone >= OFFLINE_MIN_MS && _cur) {
         // 끊긴 시각까지만 인정하고, 그 뒤부터 다시 시작 (그 사이는 안 셈)
-        await pushSegment(_cur.s, _cur.a, _offlineSince);
+        const closes = segUpdates(_cur.s, _cur.a, _offlineSince);
         _cur = { s: _cur.s, a: nowMs(), sid: SID };
-        try { await curRef().set(_cur); } catch (e) {}
+        await commitSegs(closes, _cur);
       }
       _offlineSince = 0;
 
@@ -299,7 +323,10 @@
           Number(prev.disc) || 0,
           lastAlive() || 0
         ));
-        await pushSegment(prev.s, Number(prev.a), cut);
+        /* ★ 닫기와 timeCur 비우기를 한 번에 — 여기서도 사이가 벌어지면
+           (닫고 나서 새 구간을 열기 전에 창이 죽으면) 다음 입장이 같은
+           구간을 또 닫습니다. */
+        await commitSegs(segUpdates(prev.s, Number(prev.a), cut), null);
       }
     } catch (e) {}
 
@@ -420,8 +447,15 @@
       const resetAtRaw = Number(resetAll[key] || 0);   // 안내 문구용 (자르지는 않음)
 
       const bucket = segsAll[key] || {};
+      /* [2026-08-13] 똑같은 구간(같은 상태·시작·끝)이 두 번 적힌 날이
+         있습니다 — 저장·지우기가 두 번의 쓰기이던 시절의 흉터예요.
+         원인은 고쳤지만 이미 적힌 흉터는 남아 있으니, 셀 때 한 번만 셉니다. */
+      const 본것 = new Set();
       for (const k in bucket) {
         const seg = bucket[k] || {};
+        const 도장 = `${seg.s}|${seg.a}|${seg.b}`;
+        if (본것.has(도장)) continue;
+        본것.add(도장);
         const s = normStatus(seg.s);
         /* 표시보다 앞선 부분은 잘라냅니다. 표시를 걸친 구간은 뒤쪽만 셉니다 */
         const a = Math.max(Number(seg.a || 0), resetAt);
@@ -687,11 +721,13 @@
   window.finalizeTimelogOnLeave = async function () {
     if (!myNick) return;
     try {
-      if (_cur && Number(_cur.a) > 0) {
-        await pushSegment(_cur.s, Number(_cur.a), nowMs());
-      }
+      /* ★ 저장과 지우기를 **한 번에** (2026-08-13). 따로 보내면 창이
+         닫히는 찰나에 저장만 도착하는 수가 있고, 그 남은 timeCur 를
+         다음 입장이 또 닫아서 같은 구간이 두 번 잡혔습니다. */
+      const closes = (_cur && Number(_cur.a) > 0)
+        ? segUpdates(_cur.s, Number(_cur.a), nowMs()) : {};
       _cur = null;
-      await curRef().remove();
+      await commitSegs(closes, null);
     } catch (e) { console.warn("[finalizeTimelogOnLeave]", e); }
     _tlStarted = false;   // 같은 화면에서 다시 입장하면 새로 시작
   };
