@@ -7946,28 +7946,28 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 .pub-rev{ padding-top: 8px; }
 .pub-rev-text{
+  position: relative;   /* ✕ 가 오른쪽 끝에 앉는 기준 */
   background: var(--fill-1);
   border-radius: 0 var(--r-md) var(--r-md) var(--r-md);
-  padding: 8px 11px;
+  padding: 8px 26px 8px 11px;   /* 오른쪽은 ✕ 자리만큼 비워 둡니다 */
   font-size: var(--fs-sm); line-height: 1.6;
   white-space: pre-wrap; word-break: break-word;
 }
-.pub-rev-meta{
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 3px; padding-left: 4px;
-  font-size: var(--fs-xs); color: var(--muted);
-}
-.pub-heart{
-  border: none; background: none; cursor: pointer;
-  font-size: var(--fs-xs); color: var(--muted);
-  padding: 2px 4px;
-}
-.pub-heart.on{ color: var(--danger); }
+/* ✕ — 글쓴이(이 기기)에게만 그려지고, 말풍선에 커서를 올려야 보입니다.
+   늘 보이면 익명 게시판에서 "이 글은 누가 썼구나" 가 옆 사람 화면
+   훔쳐보기로 드러나요. 실수로 눌리는 것도 막고요.
+   ★ 폰에는 hover 가 없어서 늘 옅게 보입니다 — 안 그러면 지울 길이 없어요. */
 .pub-del{
+  position: absolute; top: 6px; right: 6px;
   border: none; background: none; cursor: pointer;
   font-size: var(--fs-xs); color: var(--muted); padding: 2px 4px;
+  opacity: 0;
+  transition: opacity .12s ease;
 }
+.pub-rev-text:hover .pub-del,
+.pub-del:focus-visible{ opacity: 1; }
 .pub-del:hover{ color: var(--danger); }
+@media (hover: none){ .pub-del{ opacity: .45; } }
 .pub-write{ display: flex; gap: 6px; align-items: flex-end; margin-top: 4px; }
 .pub-input{
   flex: 1; resize: none;

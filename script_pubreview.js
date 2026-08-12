@@ -39,8 +39,9 @@
   const MAX_NAME = 40;
 
   /* 이 기기에만 남는 기록 (서버에는 절대 올라가지 않습니다) */
-  const MINE_KEY  = "pubMine";     // 내가 쓴 품평 키
-  const HEART_KEY = "pubHearts";   // ♥ 를 누른 품평 키
+  const MINE_KEY = "pubMine";   // 내가 쓴 품평 키
+  /* ♥ 공감은 2026-08-12 에 화면에서 뺐습니다 — hearts 필드는 서버에
+     남아 있으니, 되살리고 싶으면 그리는 쪽만 다시 붙이면 됩니다. */
 
   /* 명패 고치기·지우기는 **방장만**입니다 (보안규칙도 그렇게 잠겨 있어요).
      댓글이 잔뜩 달린 명패를 아무나 고치면, 품평이 통째로 엉뚱한 회사에
@@ -109,26 +110,18 @@
   /* =====================================================================
      그리기
      ===================================================================== */
-  function fmtDay(t) {
-    const d = new Date(Number(t) || 0);
-    return (d.getMonth() + 1) + "/" + d.getDate();
-  }
-
+  /* 품평 한 줄 — 글만 남겼습니다 (2026-08-12, 콩의 결정).
+     "익명 · 날짜 · ♥" 줄은 다 뺐어요. 어차피 전부 익명이라 적으나 마나고,
+     날짜도 품평의 값어치와 상관없다는 판단. 서버의 at·hearts 는 그대로
+     둡니다 — 화면에서만 뺀 것이라 언제든 되살릴 수 있어요.
+     ✕ 는 글쓴이(이 기기)에게만, 말풍선에 커서를 올렸을 때 오른쪽 끝에. */
   function revHtml(pid, rid, r) {
     const mine = _mine(MINE_KEY).includes(rid);
-    const hearted = _mine(HEART_KEY).includes(rid);
-    const n = Math.max(0, Number(r.hearts) || 0);
     return `
       <div class="pub-rev">
-        <div class="pub-rev-text">${esc(r.text)}</div>
-        <div class="pub-rev-meta">
-          <span>🖋️ 익명 · ${fmtDay(r.at)}</span>
-          <button type="button" class="pub-heart${hearted ? " on" : ""}"
-                  data-pub-heart="${esc(pid)}:${esc(rid)}"
-                  aria-label="공감">♥ ${n || ""}</button>
-          ${mine ? `<button type="button" class="pub-del" data-pub-del="${esc(pid)}:${esc(rid)}"
-                            aria-label="내 품평 지우기" title="지우기 (이 기기에서 쓴 것만)">✕</button>` : ""}
-        </div>
+        <div class="pub-rev-text">${esc(r.text)}${
+          mine ? `<button type="button" class="pub-del" data-pub-del="${esc(pid)}:${esc(rid)}"
+                          aria-label="내 품평 지우기" title="지우기 (이 기기에서 쓴 것만)">✕</button>` : ""}</div>
       </div>`;
   }
 
@@ -302,15 +295,6 @@
     }
   }
 
-  async function heart(pid, rid) {
-    if (_mine(HEART_KEY).includes(rid)) return;   // 이 기기에서 한 번
-    _addMine(HEART_KEY, rid);
-    try {
-      await window.db.ref(`pubreview/${pid}/${rid}/hearts`)
-        .transaction(n => (Number(n) || 0) + 1);
-    } catch (e) { console.warn("[품평] ♥ 실패", e); }
-  }
-
   async function delMine(pid, rid) {
     if (!_mine(MINE_KEY).includes(rid)) return;   // 화면에서도 이미 안 보입니다
     if (!confirm("이 품평을 지울까요?")) return;
@@ -337,8 +321,6 @@
       if (e.target.closest("[data-pub-add]")) { addPub(); return; }
       const send = e.target.closest("[data-pub-send]");
       if (send) { sendReview(send.dataset.pubSend); return; }
-      const h = e.target.closest("[data-pub-heart]");
-      if (h) { const [pid, rid] = h.dataset.pubHeart.split(":"); heart(pid, rid); return; }
       const d = e.target.closest("[data-pub-del]");
       if (d) { const [pid, rid] = d.dataset.pubDel.split(":"); delMine(pid, rid); return; }
       const ed = e.target.closest("[data-pub-edit]");
