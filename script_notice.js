@@ -332,7 +332,16 @@
        ※ 이 사고는 🗂️ 나의 작업 창에서 2026-08-06 에 이미 한 번 났고
          거기 주석으로도 남겨 두었는데, 새 창을 만들며 그대로 되풀이했습니다.
          그래서 이번엔 검사(checks.js)로 못 박아 둡니다. */
-    const box = modal.querySelector(".modal-content") || modal;
+    /* ★ [고침 2026-08-12] 그 안쪽 상자가 **이사를 갔습니다.**
+       알약 줄 배치(script_dock.js)가 .modal-content 를 통째로 알약 판
+       (#dock-body-notice)으로 옮겨 갑니다. 그런데 여기서는 여전히
+       "겉창 안에서" 찾고 있었으니 못 찾고, 대비책으로 **빈 껍데기**에
+       리스너를 달았어요. 상자는 판 안에 있는데 손가락은 빈 껍데기를
+       지키고 있었으니 [＋ 새 공지] 가 또 침묵했습니다 — 같은 자리에서
+       세 번째 사고입니다 (0806 나의작업 → 0811 공지 → 오늘).
+       이제 상자가 어디로 이사 갔든 **상자 자신**을 찾아서 답니다. */
+    const box = document.querySelector("#dock-body-notice .modal-content")
+             || modal.querySelector(".modal-content") || modal;
 
     box.addEventListener("click", async ev => {
       const btn = ev.target.closest("[data-nt]");
