@@ -142,9 +142,18 @@
     bindLayoutPick();
   }
 
+  /* 좁은 화면으로 넘어가는 문턱.
+
+     [2026-08-12] 980 → 833 (85%).
+     알약 줄 배치로 오면서 좁은 화면에서도 카드가 꽤 잘 보이게 됐습니다.
+     예전 기준이면 아직 넓게 써도 될 창까지 "한 번에 하나" 로 접혔어요.
+     15인치 작은 모니터에서도 겹쳐 쓸 수 있게 문턱을 낮춥니다. */
+  const NARROW_W = 833;
+  window.NARROW_W = NARROW_W;
+
   function applyNarrowChatFocus() {
     const w = window.innerWidth || document.documentElement.clientWidth;
-    const on = w <= 980;
+    const on = w <= NARROW_W;
     const was = document.body.classList.contains("narrow-chat-focus");
     document.body.classList.toggle("narrow-chat-focus", on);
 

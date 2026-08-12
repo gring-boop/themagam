@@ -48,13 +48,31 @@
             false = 스쳐 보는 판 (바깥 누르면 닫힘)
      size : 판 크기. 업적 판을 1 로 보고 견준 값입니다.
      move : 원래 화면에서 옮겨 올 요소 (없으면 판을 새로 채웁니다)
+     panel: 제 판을 안 갖고 **남의 판을 같이 쓰는** 알약 (수다방)
+     tab  : 그 판에서 켜 둘 탭
      ===================================================================== */
   const DOCK = [
     { id: "notice", label: "📢 공지",            stay: true,  size: 1.2, move: null },
-    { id: "chat",   label: "💬 Chat",            stay: true,  size: 1.2, move: ".chat-sidebar", drag: true },
-    /* 수다방은 뜨거울 때만 뜨겁고 조용할 땐 절간이라, 처음 잡은 1.8 에서
-       75% 로 낮췄습니다 (1.35). 빈 판이 크면 더 허전해 보여요. */
-    { id: "chatty", label: "☕ 수다방",           stay: true,  size: 1.35, move: null, drag: true },
+    { id: "chat",   label: "💬 Chat",            stay: true,  size: 1.2, move: ".chat-sidebar", drag: true, tab: "main" },
+    /* =====================================================================
+       ☕ 수다방은 **챗과 같은 판의 다른 탭**입니다 (고침 2026-08-12)
+       ---------------------------------------------------------------------
+       [무엇이 잘못됐었나]
+       알약을 눌러도 수다방이 **텅 빈 판**으로 떴습니다. 두 가지가 겹쳤어요.
+
+         ① #chat-box2 는 switchChatTab("chatty") 가 .hidden 을 떼기
+            전까지 감춰져 있습니다. 알약은 판만 열 뿐 탭을 안 켰으니,
+            안에 든 것이 계속 숨어 있었어요.
+         ② 더 근본은 **글칸이 하나**라는 것입니다. #message 와 보내기
+            단추는 챗과 수다방이 함께 씁니다. script_chat.js 의 send()
+            가 "지금 켜진 탭" 을 보고 messages / messages2 로 갈라
+            보내거든요.
+
+       그래서 둘을 따로 띄우면, 어느 한쪽은 반드시 **글칸이 없는 판**이
+       됩니다. 원래 앱이 이것을 탭으로 만든 이유가 그거였어요.
+       알약은 둘로 두되(찾기 쉬우니까) 판은 하나를 나눠 씁니다.
+       ===================================================================== */
+    { id: "chatty", label: "☕ 수다방", stay: true, size: 1.35, move: null, panel: "chat", tab: "chatty" },
     { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다. */
@@ -69,6 +87,16 @@
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */
   const BASE_H = 430;
+
+  /* 알약 id → 그 알약이 여는 판의 id.
+     수다방만 남의 판(chat)을 가리키고, 나머지는 제 이름 그대로입니다.
+     _open · 자리 기억 · 맨 위로 올리기 모두 **판 id** 로 셈합니다. */
+  const _PANEL = {};
+  DOCK.forEach(d => { _PANEL[d.id] = d.panel || d.id; });
+  const panelOf = (id) => _PANEL[id] || id;
+
+  /** 지금 챗 판이 어느 탭인지 ("main" | "chatty") */
+  let _tab = "main";
 
   /* =====================================================================
      판이 뜨는 자리 (2026-08-12)
@@ -102,9 +130,10 @@
     try { window.AppStore?.removeItem(POS_KEY + ":" + id); } catch (e) {}
   }
 
-  /** 제 알약 위 — 판 가운데가 알약 가운데에 오게 */
-  function defaultPos(id) {
-    const pill = el("dock-pill-" + id);
+  /** 누른 알약 위 — 판 가운데가 알약 가운데에 오게
+      (수다방처럼 남의 판을 여는 알약은 **누른 쪽** 위에서 뜹니다) */
+  function defaultPos(id, pillId) {
+    const pill = el("dock-pill-" + (pillId || id));
     const p = el("dock-panel-" + id);
     const host = el("dock-panels");
     if (!pill || !p || !host) return { x: 0, y: 0 };
@@ -202,6 +231,7 @@
         return;
       }
       if (d.modal) return;   // 가운데 창은 판을 안 만듭니다
+      if (d.panel) return;   // 남의 판을 같이 쓰는 알약 (수다방)
 
       /* 판 */
       const p = document.createElement("div");
@@ -252,18 +282,32 @@
       ntBody.appendChild(nt);
     }
 
-    /* 🏅 업적 — 판 내용은 script_achv.js 가 만들어 줍니다 */
+    /* =====================================================================
+       🏅 업적 — 원래 칸을 **지우지 말고 숨겨 둡니다** (고침 2026-08-12)
+       ---------------------------------------------------------------------
+       achvPanelHtml() 은 이렇게 돕니다.
+
+           renderPanel();                        // #achv-panel 에 그리고
+           return el("achv-panel")?.innerHTML;   // 그 알맹이를 돌려준다
+
+       그런데 #achv-panel 은 .room-foot 안에 살고 있었습니다. 아래에서
+       .room-foot 을 통째로 치우는 바람에 그릴 자리가 사라졌고,
+       achvPanelHtml() 은 조용히 **빈 문자열**을 돌려줬어요.
+       그래서 업적 알약이 새하얀 판으로 떴습니다.
+
+       ★ 지우지 않고 화면 밖으로 옮겨 둡니다. script_mywork.js 의
+         🏅 업적 탭도 같은 창구를 쓰므로, 살려 둬야 둘 다 삽니다.
+       ===================================================================== */
+    const achvBar = el("achv-bar");
+    if (achvBar) {
+      achvBar.classList.add("dock-offstage");
+      document.body.appendChild(achvBar);
+    }
     const achvBody = el("dock-body-achv");
     if (achvBody && window.achvPanelHtml) achvBody.innerHTML = window.achvPanelHtml();
 
-    /* ☕ 수다방 — 접속자 줄과 대화 상자를 옮겨 옵니다 */
-    const chattyBody = el("dock-body-chatty");
-    if (chattyBody) {
-      ["chatty-online-bar", "chat-box2"].forEach(id => {
-        const n = el(id);
-        if (n) chattyBody.appendChild(n);
-      });
-    }
+    /* ☕ 수다방은 옮길 것이 없습니다 — #chatty-online-bar 와 #chat-box2 는
+       원래부터 .chat-sidebar 안에 있어서 챗 판과 함께 따라왔습니다. */
 
     /* 📌 오늘 할 일 — 방 전체 진척을 알약 자리에 **글자로** 놓습니다.
        원래 줄(.room-foot)에는 전체기록·업적 알약도 함께 들어 있었는데,
@@ -280,6 +324,41 @@
   }
 
   /* =====================================================================
+     좁은 화면 — 한 번에 한 판만 (2026-08-12)
+     ---------------------------------------------------------------------
+     예전 세 칸 배치에는 "폭이 좁으면 창 하나만" 규칙이 있었습니다
+     (body.narrow-chat-focus). 알약 줄로 오면서 그 규칙이 갈 곳을 잃었어요.
+     여기서 이어 받습니다 — 좁으면 판이 화면 폭을 다 쓰고, 새로 열면
+     먼저 열려 있던 판은 닫힙니다. 손바닥만 한 화면에 판 두 개를 겹쳐
+     놓아 봐야 둘 다 못 읽으니까요.
+
+     기준 너비는 script_ui.js 의 applyNarrowChatFocus() 가 정합니다.
+     ===================================================================== */
+  function isNarrow() {
+    return document.body.classList.contains("narrow-chat-focus");
+  }
+
+  /** 알약의 눌린 표시를 지금 상태에 맞춥니다 (수다방은 탭까지 봅니다) */
+  function syncPills() {
+    DOCK.forEach(d => {
+      if (d.inline || d.modal) return;
+      const on = _open.has(panelOf(d.id)) && (!d.tab || _tab === d.tab);
+      el("dock-pill-" + d.id)?.setAttribute("aria-expanded", on ? "true" : "false");
+    });
+  }
+
+  /** 챗 판의 머리말과 높이를 지금 탭에 맞춥니다 */
+  function applyChatTab() {
+    const p = el("dock-panel-chat");
+    if (!p) return;
+    const d = DOCK.find(x => x.tab === _tab && panelOf(x.id) === "chat");
+    if (!d) return;
+    p.querySelector(".dock-title") && (p.querySelector(".dock-title").textContent = d.label);
+    p.querySelector(".dock-x")?.setAttribute("aria-label", d.label + " 닫기");
+    p.style.setProperty("--dock-h", Math.round(BASE_H * d.size) + "px");
+  }
+
+  /* =====================================================================
      여닫기
      ===================================================================== */
   function open(id) {
@@ -291,39 +370,66 @@
          켜져 있어도 아쉬울 게 없어요. */
     if (d.modal) { window.openWcAll?.(); return; }
 
-    if (_open.has(id)) { close(id); return; }
+    const pid = panelOf(id);
 
-    const p = el("dock-panel-" + id);
+    /* 같은 알약을 다시 누르면 닫힙니다.
+       ★ 챗·수다방은 **탭까지 같을 때만** 닫습니다. 챗을 보다가 수다방을
+         누른 것은 "닫아 줘" 가 아니라 "옮겨 줘" 니까요. */
+    if (_open.has(pid) && (!d.tab || _tab === d.tab)) { close(pid); return; }
+
+    const p = el("dock-panel-" + pid);
     if (!p) return;
+
+    /* 판의 주인 — 수다방처럼 남의 판을 쓰는 알약이라도, 크기·끌기·
+       자리 기억은 **판 주인**의 것을 따라야 합니다. */
+    const own = DOCK.find(x => !x.panel && panelOf(x.id) === pid) || d;
+    const 이미열림 = _open.has(pid);
+
+    /* 좁은 화면이면 먼저 열려 있던 판을 접습니다 */
+    if (isNarrow()) [..._open].forEach(o => { if (o !== pid) close(o); });
+
+    if (d.tab) { _tab = d.tab; window.switchChatTab?.(d.tab); applyChatTab(); }
+
     p.hidden = false;
-    _open.add(id);
-    /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위 */
-    place(id, (d.drag && loadPos(id)) || defaultPos(id));
-    raise(id);                       // 방금 연 것이 맨 위로
-    el("dock-pill-" + id)?.setAttribute("aria-expanded", "true");
+    _open.add(pid);
+    /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위.
+       ★ 이미 열려 있던 판(탭만 갈아탄 경우)은 **안 옮깁니다.** 애써
+         끌어다 놓은 자리가 탭 한 번에 튕겨 나가면 안 되니까요. */
+    if (!이미열림) place(pid, (own.drag && loadPos(pid)) || defaultPos(pid, id));
+    raise(pid);                      // 방금 연 것이 맨 위로
+    syncPills();
     document.getElementById("dock")?.setAttribute("data-open", [..._open].join(" "));
 
     /* 판마다 열 때 해줄 일 */
-    if (id === "achv") {
+    if (pid === "achv") {
       const body = el("dock-body-achv");
       if (body && window.achvPanelHtml) body.innerHTML = window.achvPanelHtml();
     }
-    if (id === "notice") window.listenNoticeBoard?.();
-    if (id === "chat")   window.scrollChatToBottom?.(true);
-    if (id === "chatty") window.scrollChattyToBottom?.();
+    /* 📢 공지 — **여는 일은 공지판 제 손으로** 시킵니다 (고침 2026-08-12).
+       render() 는 #notice-modal 의 display 가 flex 일 때만 도는데,
+       알약은 그 값을 건드리지 않아서 목록이 영영 안 그려졌습니다.
+       ("아직 공지가 없어요" 도 아니고 아예 빈 칸이었어요 — 그리는
+        일 자체가 없었으니까요.) 겉창은 CSS 로 감춰 뒀습니다. */
+    if (pid === "notice") { window.listenNoticeBoard?.(); window.openNoticeBoard?.(); }
+    if (pid === "chat") {
+      if (_tab === "chatty") window.scrollChattyToBottom?.();
+      else window.scrollChatToBottom?.(true);
+    }
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
     dot(id, false);
   }
 
-  /** 하나만 닫기 */
+  /** 하나만 닫기 — **판** id 를 받습니다 */
   function close(id) {
-    const p = el("dock-panel-" + id);
+    const pid = panelOf(id);
+    const p = el("dock-panel-" + pid);
     if (p) p.hidden = true;
+    if (pid === "notice") window.closeNoticeBoard?.();
     setTimeout(syncBadges, 0);      // 닫으면 다시 쌓이기 시작합니다
-    el("dock-pill-" + id)?.setAttribute("aria-expanded", "false");
-    _open.delete(id);
+    _open.delete(pid);
+    syncPills();
     const dock = document.getElementById("dock");
     if (!dock) return;
     if (_open.size) dock.setAttribute("data-open", [..._open].join(" "));
@@ -334,19 +440,19 @@
   function closeAll() {
     [..._open].forEach(close);
     DOCK.forEach(d => {
-      const p = el("dock-panel-" + d.id);
+      const p = el("dock-panel-" + panelOf(d.id));
       if (p) p.hidden = true;
-      el("dock-pill-" + d.id)?.setAttribute("aria-expanded", "false");
     });
     _open.clear();
+    syncPills();
     document.getElementById("dock")?.removeAttribute("data-open");
   }
 
   /** 스쳐 보는 판만 닫기 — 바깥을 눌렀을 때 */
   function closeGlances() {
-    [..._open].forEach(id => {
-      const d = DOCK.find(x => x.id === id);
-      if (d && !d.stay) close(id);
+    [..._open].forEach(pid => {
+      const d = DOCK.find(x => panelOf(x.id) === pid && !x.panel);
+      if (d && !d.stay) close(pid);
     });
   }
 
@@ -387,8 +493,11 @@
       if (n.classList.contains("hidden")) return 0;
       return parseInt(String(n.textContent).replace(/\D/g, ""), 10) || 0;
     };
-    badge("chat",   _open.has("chat")   ? 0 : 읽기("chat-tab-badge-main"));
-    badge("chatty", _open.has("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
+    /* ★ 챗과 수다방은 한 판을 나눠 쓰므로, 판이 열려 있는 것만으로는
+         부족합니다 — **지금 보고 있는 탭**의 표시만 지웁니다. */
+    const 보는중 = (tab) => _open.has("chat") && _tab === tab;
+    badge("chat",   보는중("main")   ? 0 : 읽기("chat-tab-badge-main"));
+    badge("chatty", 보는중("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
     const nd = el("notice-dot");
     dot("notice", !_open.has("notice") && !!nd && !nd.classList.contains("hidden"));
   }
@@ -505,6 +614,29 @@
       closeGlances();
     });
 
+    /* 판 **안**의 탭 단추(제목 = 메인, ☕ 수다방)로 넘어갔을 때도
+       알약 표시를 맞춥니다. 저쪽이 켠 탭을 여기서 다시 물어봐요 —
+       탭을 켜는 일은 script_chatty.js 하나만 맡게 두려는 것입니다. */
+    document.addEventListener("click", () => {
+      setTimeout(() => {
+        const t = window.isChattyActive?.() ? "chatty" : "main";
+        if (t === _tab) return;
+        _tab = t;
+        applyChatTab();
+        syncPills();
+        syncBadges();
+      }, 0);
+    });
+
+    /* 넓다가 좁아지면 여러 판이 겹쳐 남습니다 — 맨 위 하나만 남깁니다 */
+    window.addEventListener("resize", () => {
+      if (!isNarrow() || _open.size < 2) return;
+      const 남길 = [..._open].sort((a, b) =>
+        (Number(el("dock-panel-" + a)?.style.zIndex) || 0) -
+        (Number(el("dock-panel-" + b)?.style.zIndex) || 0)).pop();
+      [..._open].forEach(o => { if (o !== 남길) close(o); });
+    });
+
     /* Esc 는 어느 판이든 닫습니다 — 빠져나갈 길은 늘 있어야 하니까요.
        ★ 다만 글을 쓰는 중이면 한 번은 봐줍니다 (실수로 날리지 않게) */
     document.addEventListener("keydown", (e) => {
@@ -522,6 +654,8 @@
     bind();
     bindDrag();
     watchBadges();
+    _tab = window.isChattyActive?.() ? "chatty" : "main";
+    applyChatTab();
     /* 처음에는 다 닫아 둡니다 — 카드가 제일 넓게 보이는 상태 */
     closeAll();
     console.log("[dock] 알약 " + DOCK.length + "개 준비 완료");
