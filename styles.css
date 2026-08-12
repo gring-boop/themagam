@@ -8017,6 +8017,44 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   color: var(--on-accent-btn, #fff);
 }
 
+/* 숫자 줄 + 정렬 토글 — 장르 칩 아래 */
+.pub-sortbar{
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 2px 7px;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--fs-xs); color: var(--muted-strong);
+}
+.pub-tally b{ color: var(--text); }
+.pub-sort{
+  margin-left: auto; display: flex; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--r-full);
+}
+.pub-sort-btn{
+  border: none; background: var(--glass2); cursor: pointer;
+  padding: 4px 11px; font-size: var(--fs-xs); color: var(--muted-strong);
+}
+.pub-sort-btn.on{ background: var(--accent); color: var(--on-accent-btn, #fff); }
+
+/* 🏢 같은 출판사 묶음 — / 앞이 같으면 한 지붕 */
+.pub-group{
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--fill-1);
+  flex: 0 0 auto;
+}
+.pub-group.is-open{ border-color: var(--accent); }
+.pub-co-head{
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; background: none; border: none; cursor: pointer;
+  color: var(--text); text-align: left; font-size: var(--fs-sm);
+}
+.pub-group.is-open .pub-co-head{ border-bottom: 1px dashed var(--border); }
+.pub-group-body{
+  padding: 6px 8px 8px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.pub-group-body .pub-item{ margin-left: 14px; background: var(--glass2); }
+
 /* 방장 전용 줄 — 명패 고치기·지우기 */
 .pub-admin{ display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
 .pub-tool{

@@ -59,6 +59,28 @@
   let _query = "";       // 찾는 말
   let _genre = null;     // 골라 둔 장르 칩
 
+  /* ── 정렬 (2026-08-13) — 가나다순 / 💬 많은 순. 고른 쪽은 이 기기에 남습니다 */
+  const SORT_KEY = "pubSort";
+  let _sort = "abc";     // "abc" | "talk"
+  try { if (window.AppStore?.getItem(SORT_KEY) === "talk") _sort = "talk"; } catch (e) {}
+
+  /* ── 🏢 같은 출판사 묶기 (2026-08-13) ──
+     등록 규칙이 "출판사 / 레이블" 이라, / 앞이 같으면 한 지붕입니다.
+       "대원씨아이 / 모드, 클로젯"     ┐
+       "대원씨아이 / 폴라리스, 플로레뜨" ┘→ 🏢 대원씨아이 (레이블 2)
+     레이블 여러 개를 쉼표로 묶어 적은 것은 그냥 이름의 일부 — 안 가릅니다.
+     / 가 없거나 그 출판사 명패가 하나뿐이면 지금처럼 낱장입니다. */
+  let _openCos = new Set();   // 펼쳐 둔 묶음 (여러 개 가능)
+
+  function 회사쪼개기(name) {
+    const i = String(name || "").indexOf("/");
+    if (i < 0) return { co: null, label: String(name || "").trim() };
+    return {
+      co: String(name).slice(0, i).trim(),
+      label: String(name).slice(i + 1).trim()
+    };
+  }
+
   /** 띄어쓰기·대소문자를 무시하고 견줍니다 — "페일 블루" 로도 "페일블루" 가 잡히게 */
   function _folded(s) {
     return String(s || "").toLowerCase().replace(/\s+/g, "");
@@ -125,7 +147,7 @@
       </div>`;
   }
 
-  function pubHtml(pid, p) {
+  function pubHtml(pid, p, 표시이름) {
     const revs = _revs[pid] || {};
     const rids = Object.keys(revs).sort((a, b) => (revs[a].at || 0) - (revs[b].at || 0));
     const open = _openPub === pid;
@@ -133,7 +155,7 @@
       <article class="pub-item${open ? " is-open" : ""}" data-pid="${esc(pid)}">
         <button type="button" class="pub-head" data-pub-open="${esc(pid)}"
                 aria-expanded="${open}">
-          <b class="pub-name">${esc(p.name)}</b>
+          <b class="pub-name">${esc(표시이름 || p.name)}</b>
           ${p.genre ? `<span class="pub-genre">${esc(p.genre)}</span>` : ""}
           <span class="pub-count">💬 ${rids.length}</span>
           <span class="pub-arrow" aria-hidden="true">${open ? "▾" : "▸"}</span>
@@ -191,6 +213,61 @@
     const 칩들 = [...new Set(전체.flatMap(pid => _genreTokens(_pubs[pid].genre)))]
       .sort((a, b) => 견줌.compare(a, b));
 
+    /* ── 🏢 같은 출판사끼리 묶기 — / 앞이 같으면 한 지붕 ── */
+    const 품평수 = (pid) => Object.keys(_revs[pid] || {}).length;
+    const 묶음맵 = {};                        // coKey → { co, pids }
+    const 단위들 = [];                        // { name, pids, co? } — 낱장 또는 묶음
+    pids.forEach(pid => {
+      const { co } = 회사쪼개기(_pubs[pid].name);
+      const key = co ? _folded(co) : null;    // 띄어쓰기 달라도 같은 지붕
+      if (!key) { 단위들.push({ name: _pubs[pid].name, pids: [pid] }); return; }
+      if (!묶음맵[key]) { 묶음맵[key] = { co, pids: [] }; 단위들.push(묶음맵[key]); }
+      묶음맵[key].pids.push(pid);
+    });
+    단위들.forEach(u => {
+      if (u.co && u.pids.length === 1) {      // 그 출판사 명패가 하나뿐 → 낱장
+        u.name = _pubs[u.pids[0]].name;
+        u.co = null;
+      } else if (u.co) {
+        u.name = u.co;
+      }
+      u.talk = u.pids.reduce((a, pid) => a + 품평수(pid), 0);
+    });
+
+    /* ── 정렬 — 가나다순 / 💬 많은 순 (수가 같으면 그 안에서 가나다) ── */
+    const 이름견줌 = (a, b) => 견줌.compare(String(a.name).trim(), String(b.name).trim());
+    단위들.sort(_sort === "talk"
+      ? (a, b) => (b.talk - a.talk) || 이름견줌(a, b)
+      : 이름견줌);
+    const 안견줌 = (a, b) => {
+      if (_sort === "talk") { const d = 품평수(b) - 품평수(a); if (d) return d; }
+      return 견줌.compare(회사쪼개기(_pubs[a].name).label, 회사쪼개기(_pubs[b].name).label);
+    };
+
+    /* 찾는 중에는 걸린 묶음을 저절로 펼칩니다 — 접힌 채면 찾은 보람이 없어요 */
+    const 강제펼침 = !!(q || _genre);
+
+    const 전체품평 = pids.reduce((a, pid) => a + 품평수(pid), 0);
+    const 줄 = 단위들.map(u => {
+      if (!u.co) return pubHtml(u.pids[0], _pubs[u.pids[0]], u.name);
+      const coKey = _folded(u.co);
+      const 펼침 = 강제펼침 || _openCos.has(coKey);
+      return `
+        <section class="pub-group${펼침 ? " is-open" : ""}">
+          <button type="button" class="pub-co-head" data-pub-co="${esc(coKey)}"
+                  aria-expanded="${펼침}">
+            <b class="pub-name">🏢 ${esc(u.co)}</b>
+            <span class="pub-genre">레이블 ${u.pids.length}</span>
+            <span class="pub-count">💬 ${u.talk}</span>
+            <span class="pub-arrow" aria-hidden="true">${펼침 ? "▾" : "▸"}</span>
+          </button>
+          ${펼침 ? `<div class="pub-group-body">${
+            u.pids.sort(안견줌).map(pid =>
+              pubHtml(pid, _pubs[pid], 회사쪼개기(_pubs[pid].name).label)).join("")
+          }</div>` : ""}
+        </section>`;
+    }).join("");
+
     box.innerHTML =
       `<div class="pub-find">
          <input type="search" class="pub-search" id="pub-search"
@@ -199,9 +276,19 @@
          ${칩들.length ? `<div class="pub-chips">${칩들.map(g => `
            <button type="button" class="pub-chip${_genre === g ? " on" : ""}"
                    data-pub-genre="${esc(g)}">${esc(g)}</button>`).join("")}</div>` : ""}
+         <div class="pub-sortbar">
+           <span class="pub-tally"><b>${단위들.length}곳</b>${
+             pids.length > 단위들.length ? ` · 레이블 ${pids.length}` : ""} · 품평 <b>${전체품평}</b>개</span>
+           <span class="pub-sort" role="group" aria-label="정렬">
+             <button type="button" class="pub-sort-btn${_sort === "abc" ? " on" : ""}"
+                     data-pub-sort="abc">가나다순</button>
+             <button type="button" class="pub-sort-btn${_sort === "talk" ? " on" : ""}"
+                     data-pub-sort="talk">💬 많은 순</button>
+           </span>
+         </div>
        </div>` +
       (pids.length
-        ? pids.map(pid => pubHtml(pid, _pubs[pid])).join("")
+        ? 줄
         : 전체.length
           ? `<p class="pub-empty">"${esc(_query || _genre || "")}" 에 맞는 곳이 없어요.</p>`
           : `<p class="pub-empty">아직 등록된 출판사가 없어요.</p>`) +
@@ -331,6 +418,20 @@
       if (chip) {
         /* 같은 칩을 다시 누르면 풀립니다 */
         _genre = _genre === chip.dataset.pubGenre ? null : chip.dataset.pubGenre;
+        render();
+        return;
+      }
+      const co = e.target.closest("[data-pub-co]");
+      if (co) {
+        const k = co.dataset.pubCo;
+        if (_openCos.has(k)) _openCos.delete(k); else _openCos.add(k);
+        render();
+        return;
+      }
+      const srt = e.target.closest("[data-pub-sort]");
+      if (srt) {
+        _sort = srt.dataset.pubSort === "talk" ? "talk" : "abc";
+        try { window.AppStore?.setItem(SORT_KEY, _sort); } catch (err) {}
         render();
       }
     });
