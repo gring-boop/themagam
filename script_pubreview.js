@@ -42,6 +42,14 @@
   const MINE_KEY  = "pubMine";     // 내가 쓴 품평 키
   const HEART_KEY = "pubHearts";   // ♥ 를 누른 품평 키
 
+  /* 명패 고치기·지우기는 **방장만**입니다 (보안규칙도 그렇게 잠겨 있어요).
+     댓글이 잔뜩 달린 명패를 아무나 고치면, 품평이 통째로 엉뚱한 회사에
+     붙습니다. 잘못 등록된 명패는 방장에게 말해서 정리하는 걸로요. */
+  const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
+  const isAdmin = () => {
+    try { return firebase.auth().currentUser?.uid === ADMIN_UID; } catch (e) { return false; }
+  };
+
   let _pubs = {};        // pid → { name, genre, at }
   let _revs = {};        // pid → { rid → { text, at, hearts } }
   let _openPub = null;   // 펼쳐진 명패 — 한 번에 하나 (목록이 길어지니까)
@@ -121,6 +129,11 @@
         </button>
         ${!open ? "" : `
         <div class="pub-body">
+          ${isAdmin() ? `
+          <div class="pub-admin">
+            <button type="button" class="pub-tool" data-pub-edit="${esc(pid)}">✏️ 명패 고치기</button>
+            <button type="button" class="pub-tool" data-pub-remove="${esc(pid)}">🗑 명패 지우기</button>
+          </div>` : ""}
           ${rids.length
             ? rids.map(rid => revHtml(pid, rid, revs[rid])).join("")
             : `<p class="pub-empty">아직 품평이 없어요. 첫 경험담을 남겨 주세요.</p>`}
@@ -142,8 +155,12 @@
     const ta = box.querySelector("[data-pub-input]");
     const draft = ta ? ta.value : "";
 
+    /* 명패는 늘 **가나다순** — 등록한 차례가 아닙니다.
+       찾는 사람 입장에서는 "ㅅ이니까 중간쯤" 이 통해야 하니까요.
+       numeric: "2사" 가 "10사" 앞에 오게 (글자 아닌 숫자로 견줌) */
+    const 견줌 = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
     const pids = Object.keys(_pubs).sort((a, b) =>
-      String(_pubs[a].name).localeCompare(String(_pubs[b].name), "ko"));
+      견줌.compare(String(_pubs[a].name).trim(), String(_pubs[b].name).trim()));
     box.innerHTML =
       (pids.length
         ? pids.map(pid => pubHtml(pid, _pubs[pid])).join("")
@@ -201,6 +218,39 @@
     }
   }
 
+  /* ── 방장 전용 — 명패 고치기·지우기 ── */
+  async function editPub(pid) {
+    const p = _pubs[pid];
+    if (!p) return;
+    const name = (prompt("출판사 이름", p.name) || "").trim().slice(0, MAX_NAME);
+    if (!name) return;
+    const genre = (prompt("주요 장르 — 없으면 비워 두세요", p.genre || "") || "").trim().slice(0, 30);
+    try {
+      await window.db.ref("pubs/" + pid)
+        .set(genre ? { name, genre, at: p.at || Date.now() } : { name, at: p.at || Date.now() });
+    } catch (e) {
+      console.warn("[품평] 명패를 고치지 못했어요", e);
+      window.showCommandToast?.("명패를 고치지 못했어요.");
+    }
+  }
+
+  async function removePub(pid) {
+    const p = _pubs[pid];
+    if (!p) return;
+    const n = Object.keys(_revs[pid] || {}).length;
+    if (!confirm(`"${p.name}" 명패를 지울까요?` + (n ? `\n달려 있는 품평 ${n}개도 함께 사라져요.` : ""))) return;
+    try {
+      /* ★ 품평을 먼저, 명패를 나중에 지웁니다. 반대로 하면 명패 없는
+         품평이 서버에 고아로 남아요 — 화면에는 안 보여서 못 찾습니다. */
+      await window.db.ref("pubreview/" + pid).remove();
+      await window.db.ref("pubs/" + pid).remove();
+      if (_openPub === pid) _openPub = null;
+    } catch (e) {
+      console.warn("[품평] 명패를 지우지 못했어요", e);
+      window.showCommandToast?.("명패를 지우지 못했어요.");
+    }
+  }
+
   async function heart(pid, rid) {
     if (_mine(HEART_KEY).includes(rid)) return;   // 이 기기에서 한 번
     _addMine(HEART_KEY, rid);
@@ -239,7 +289,11 @@
       const h = e.target.closest("[data-pub-heart]");
       if (h) { const [pid, rid] = h.dataset.pubHeart.split(":"); heart(pid, rid); return; }
       const d = e.target.closest("[data-pub-del]");
-      if (d) { const [pid, rid] = d.dataset.pubDel.split(":"); delMine(pid, rid); }
+      if (d) { const [pid, rid] = d.dataset.pubDel.split(":"); delMine(pid, rid); return; }
+      const ed = e.target.closest("[data-pub-edit]");
+      if (ed) { editPub(ed.dataset.pubEdit); return; }
+      const rm = e.target.closest("[data-pub-remove]");
+      if (rm) { removePub(rm.dataset.pubRemove); }
     });
 
     /* Enter 로 올리기 (Shift+Enter 는 줄바꿈 — 채팅과 같은 손맛) */

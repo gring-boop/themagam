@@ -7988,6 +7988,14 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 .pub-add:hover{ border-color: var(--accent); color: var(--accent); }
 .pub-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); padding: 10px 0; margin: 0; }
+/* 방장 전용 줄 — 명패 고치기·지우기 */
+.pub-admin{ display: flex; gap: 8px; justify-content: flex-end; padding-top: 8px; }
+.pub-tool{
+  border: 1px solid var(--border); border-radius: var(--r-full);
+  background: none; color: var(--muted-strong); cursor: pointer;
+  padding: 3px 10px; font-size: var(--fs-xs);
+}
+.pub-tool:hover{ border-color: var(--danger); color: var(--danger); }
 .pub-hint{ font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; margin: 2px 2px 0; }
 
 /* =====================================================================
