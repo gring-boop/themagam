@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- 📦 예전 세 칸 배치 (2026-08-12 이전). 되돌릴 일이 생기면
+     이 파일을 index.html 로 이름만 바꾸면 됩니다. -->
 <!-- TheMagam © 그링링 · 무단 복제·재배포 금지 -->
 <html lang="ko">
 <head>
@@ -17,12 +19,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608121443">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608121443">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608121411">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608121411">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608121443">
+  <link rel="manifest" href="manifest.json?v=202608121411">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -30,7 +32,7 @@
   <meta name="apple-mobile-web-app-title" content="작업실">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <title>TheMagam ✍️</title>
+  <title>[예전 배치] TheMagam ✍️</title>
 
   <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -45,10 +47,10 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608121443" />
+  <link rel="stylesheet" href="styles.css?v=202608121411" />
 </head>
 
-<body class="dock-mode">
+<body>
 
 <!-- =====================================================================
      입장 모달
@@ -357,11 +359,7 @@
 
       <!-- ── 채팅 ── -->
       <div class="panel active" id="panel-chat" role="tabpanel" aria-labelledby="panel-chat">
-        <!-- [2026-08-12] 칸 배치·좌우 뒤집기·칸 크기 — 세 칸으로 나누던
-             시절의 설정입니다. 이제 접속자 창 하나에 아래 알약 줄이라
-             조절할 칸이 없어요. 코드는 남겨 두고 화면에서만 감춥니다
-             (되돌릴 때 그대로 살아납니다). -->
-        <div class="set-block" hidden>
+        <div class="set-block">
           <div class="set-title" id="slot-title">칸 배치</div>
           <!-- 실제 화면 모양 그림 -->
           <div class="slot-map" id="slot-map"></div>
@@ -964,17 +962,6 @@
 
   </div><!-- /split-root -->
 
-  <!-- =================================================================
-       ⚓ 아래 알약 줄 (2026-08-12 리뉴얼)
-       접속자 창을 화면 전체로 펴고, 나머지는 알약으로 내렸습니다.
-       판 안의 내용은 script_dock.js 가 원래 있던 요소를 **옮겨** 채웁니다.
-       ================================================================= -->
-  <div id="dock" class="dock">
-    <div class="dock-panels" id="dock-panels"></div>
-    <div class="dock-bar" id="dock-bar"></div>
-  </div>
-
-
   <!-- 치워둔 창을 잠시 넣어두는 곳 (화면에는 안 보입니다) -->
   <div id="panel-attic" hidden></div>
 </div>
@@ -989,35 +976,35 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608121443"></script>
-<script src="fortune_data.js?v=202608121443"></script>
-<script src="script_core.js?v=202608121443"></script>
-<script src="script_auth.js?v=202608121443"></script>
-<script src="script_ui.js?v=202608121443"></script>
-<script src="script_chat.js?v=202608121443"></script>
-<script src="script_chatty.js?v=202608121443"></script>
-<script src="script_data.js?v=202608121443"></script>
-<script src="script_realtime.js?v=202608121443"></script>
-<script src="script_dock.js?v=202608121443"></script>
-<script src="script_wordcount.js?v=202608121443"></script>
-<script src="script_timelog.js?v=202608121443"></script>
-<script src="script_idledetect.js?v=202608121443"></script>
-<script src="script_profile.js?v=202608121443"></script>
-<script src="script_mywork.js?v=202608121443"></script>
-<script src="script_forest.js?v=202608121443"></script>
-<script src="script_notice.js?v=202608121443"></script>
-<script src="script_achv.js?v=202608121443"></script>
-<script src="script_reactions.js?v=202608121443"></script>
-<script src="script_note.js?v=202608121443"></script>
+<script src="script_demo.js?v=202608121411"></script>
+<script src="fortune_data.js?v=202608121411"></script>
+<script src="script_core.js?v=202608121411"></script>
+<script src="script_auth.js?v=202608121411"></script>
+<script src="script_ui.js?v=202608121411"></script>
+<script src="script_chat.js?v=202608121411"></script>
+<script src="script_chatty.js?v=202608121411"></script>
+<script src="script_data.js?v=202608121411"></script>
+<script src="script_realtime.js?v=202608121411"></script>
+<script src="script_layout.js?v=202608121411"></script>
+<script src="script_wordcount.js?v=202608121411"></script>
+<script src="script_timelog.js?v=202608121411"></script>
+<script src="script_idledetect.js?v=202608121411"></script>
+<script src="script_profile.js?v=202608121411"></script>
+<script src="script_mywork.js?v=202608121411"></script>
+<script src="script_forest.js?v=202608121411"></script>
+<script src="script_notice.js?v=202608121411"></script>
+<script src="script_achv.js?v=202608121411"></script>
+<script src="script_reactions.js?v=202608121411"></script>
+<script src="script_note.js?v=202608121411"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608121443"></script>
+<script src="script_worktag.js?v=202608121411"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608121443"></script>
-<script src="script_share.js?v=202608121443"></script>
-<script src="script_manual.js?v=202608121443"></script>
-<script src="script_guard.js?v=202608121443"></script>
+<script src="script_sticker.js?v=202608121411"></script>
+<script src="script_share.js?v=202608121411"></script>
+<script src="script_manual.js?v=202608121411"></script>
+<script src="script_guard.js?v=202608121411"></script>
 
 <script>
   window.addEventListener("load", () => {
