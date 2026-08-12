@@ -62,7 +62,8 @@
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
     { id: "pomo",   label: "🍅 Pomodoro",         stay: true,  size: 0.77, move: "#pomo-block", drag: true },
-    { id: "wc",     label: "✍️ Letters",          stay: true,  size: 1.45, move: "#wordcount-block", drag: true }
+    /* 글자수만 유독 높아서 카드 맨 윗줄까지 올라왔습니다. 1.45 → 1.23 (85%) */
+    { id: "wc",     label: "✍️ Letters",          stay: true,  size: 1.23, move: "#wordcount-block", drag: true }
   ];
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */

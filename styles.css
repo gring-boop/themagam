@@ -7752,6 +7752,8 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 /* 수다방은 대화가 오래 이어지는 곳이라 폭도 넓힙니다 */
 
 #dock-panel-pomo{ width: min(360px, calc(100vw - 24px)); }
+/* 📢 공지 — 글이 짧아서 오른쪽이 휑했습니다. 460 → 356 */
+#dock-panel-notice{ width: min(356px, calc(100vw - 24px)); }
 /* 💬 챗 460 → 391 (85%) */
 #dock-panel-chat{ width: min(391px, calc(100vw - 24px)); }
 /* ☕ 수다방 520 → 416 (80%) */
@@ -7884,6 +7886,9 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 .dock-body .wc-block{ border-top: none; margin-top: 0; }
 .dock-body .wc-title{ display: none; }          /* 판 머리말이 대신합니다 */
+/* [오늘][내 기록] — 제목이 빠졌으니 왼쪽에 덩그러니 남습니다.
+   오른쪽으로 몰아 두면 아래 숫자와 세로선이 맞아 단정해요. */
+.dock-body .wc-head{ justify-content: flex-end; }
 
 /* ☕ 수다방 — 조용할 때 허전하지 않게 폭도 함께 낮춤 */
 .dock-body #chat-box2:empty::before{
