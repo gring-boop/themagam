@@ -93,6 +93,37 @@
     draw("chat-tab-badge-chatty", _tabUnread.chatty);
   }
 
+  /* =====================================================================
+     "이 방의 대화가 지금 눈에 보이는가"
+     ---------------------------------------------------------------------
+     [무엇이 잘못됐었나 · 2026-08-12]
+     안 읽음을 세는 조건이 줄곧 **"저쪽 탭이 켜져 있나"** 였습니다.
+     칸이 하나뿐이던 시절엔 그게 곧 "안 보인다" 였으니 맞는 말이었어요.
+
+     알약 줄 배치에서는 챗과 수다방이 **따로 뜨는 판**입니다. 그래서
+       · 챗을 보는 중이고 수다방 판은 닫혀 있어도 → 옛 조건은 "수다방이
+         활성이 아니니 세라" 가 아니라 "챗이 활성이니 세지 마라" 가 되고,
+       · 반대쪽도 마찬가지라, **양쪽 다 배지가 한 번도 안 떴습니다.**
+
+     그래서 "보이나?" 를 화면 배치에게 물어봅니다. 세는 일은 여전히
+     여기 한 곳에서만 해요 — 두 벌로 세면 언젠가 어긋나니까요.
+     ===================================================================== */
+  function _seeing(room) {
+    const r = room === "chatty" ? "chatty" : "main";
+    if (typeof window.dockSeeing === "function") return !!window.dockSeeing(r);
+    /* 예전 세 칸 배치 — 켜진 탭이 곧 보이는 방 (접혀 있으면 아무것도 안 보임) */
+    return _activeChatTab === r
+        && !document.body.classList.contains("chat-collapsed");
+  }
+
+  /** 그 방을 읽은 것으로 — 판을 열었을 때 화면 배치가 부릅니다 */
+  function markChatRead(room) {
+    const r = room === "chatty" ? "chatty" : "main";
+    if (!_tabUnread[r]) return;
+    _tabUnread[r] = 0;
+    _renderTabBadges();
+  }
+
   // =====================================================
   // ✅ 탭 전환 — chat-box ↔ chat-box2
   //    입력창은 공유하므로 화면(로그 영역)만 갈아끼웁니다.
@@ -117,8 +148,10 @@
        가리킨 채 Chatty 로 보내는(또는 그 반대) 어긋남 방지 */
     window.cancelReply?.();
 
-    // 연 탭의 안 읽음은 그 자리에서 0으로
-    _tabUnread[_activeChatTab] = 0;
+    /* 연 탭의 안 읽음은 그 자리에서 0으로.
+       ★ 단 **그 방이 실제로 보일 때만.** 알약 줄 배치에서는 판을 닫아
+         둔 채 글칸만 옮길 수 있는데, 그건 읽은 게 아닙니다. */
+    if (_seeing(_activeChatTab)) _tabUnread[_activeChatTab] = 0;
     _renderTabBadges();
     _renderChattyLeaveBtn();
 
@@ -266,12 +299,11 @@
       const isMine = (data.user && data.user === myNick);
       const isSystemLike = (data.type === "system" || data.type === "fx");
 
-      if (_activeChatTab === "chatty") {
+      if (_seeing("chatty")) {
         /* 내가 보낸 것은 무조건 따라 내려갑니다 — 방금 쓴 말은 보여야죠 */
         _scrollChattyToBottom(isMine);
-      } else if (!isMine && !isSystemLike
-                 && !document.body.classList.contains("chat-collapsed")) {
-        // 패널이 열려 있고 다른 탭을 보는 중 → Chatty 탭에 배지
+      } else if (!isMine && !isSystemLike) {
+        // 수다방이 안 보이는 중 → ☕ 수다방에 안 읽음 배지
         _tabUnread.chatty += 1;
         _renderTabBadges();
       }
@@ -422,8 +454,7 @@
       const r = orig.apply(this, arguments);
       try {
         if (box && box.id === "chat-box"
-            && _activeChatTab === "chatty"
-            && !document.body.classList.contains("chat-collapsed")
+            && !_seeing("main")
             && data && data.type !== "system" && data.type !== "fx"
             && data.user && data.user !== myNick) {
           _tabUnread.main += 1;
@@ -448,3 +479,5 @@
   /* [2026-08-05] 메인 send()·reactions 가 활성 방을 알아볼 때 씁니다 */
   window.isChattyActive = () => _activeChatTab === "chatty";
   window.scrollChattyToBottom = _scrollChattyToBottom;
+  /* 화면 배치가 판을 열었을 때 부릅니다 — 세는 일은 이 파일 한 곳에서만 */
+  window.markChatRead = markChatRead;

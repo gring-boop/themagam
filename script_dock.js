@@ -391,6 +391,18 @@
     });
   }
 
+  /* =====================================================================
+     "그 방이 지금 보이나?" — script_chatty.js 가 물어봅니다
+     ---------------------------------------------------------------------
+     안 읽음을 세는 조건이 원래 "저쪽 탭이 켜져 있나" 였습니다. 칸이
+     하나뿐이던 시절엔 그게 곧 "안 보인다" 였지만, 지금은 판이 따로
+     떠서 **글칸이 어디 있든 판만 열려 있으면 보입니다.**
+
+     ★ 세는 일은 저쪽이 그대로 맡습니다 — 여기서 또 세면 두 벌이 되어
+       언젠가 어긋나요. 이 창구는 "보이나?" 한 마디만 답합니다.
+     ===================================================================== */
+  window.dockSeeing = (room) => _open.has(room === "chatty" ? "chatty" : "chat");
+
   /** 지금 글을 쓰는 방을 정합니다 (탭 전환 + 글칸 이사) */
   function setTab(tab) {
     const t = tab === "chatty" ? "chatty" : "main";
@@ -518,8 +530,11 @@
        ("아직 공지가 없어요" 도 아니고 아예 빈 칸이었어요 — 그리는
         일 자체가 없었으니까요.) 겉창은 CSS 로 감춰 뒀습니다. */
     if (pid === "notice") { window.listenNoticeBoard?.(); window.openNoticeBoard?.(); }
-    if (pid === "chat")   window.scrollChatToBottom?.(true);
-    if (pid === "chatty") window.scrollChattyToBottom?.();
+    /* 판을 열면 그 방은 읽은 것으로 — 쌓여 있던 숫자를 털어 냅니다.
+       ★ 알약의 배지만 지우면 안 됩니다. 숫자는 script_chatty.js 가
+         들고 있어서, 판을 닫는 순간 옛 숫자가 도로 올라와요. */
+    if (pid === "chat")   { window.markChatRead?.("main");   window.scrollChatToBottom?.(true); }
+    if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
