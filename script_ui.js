@@ -1620,15 +1620,26 @@
 
     let 조합중 = false, 칸 = null;
 
+    const 신고 = (왜) => {
+      console.warn("🚨 " + 왜 + " — 직전 기록:");
+      console.log(기록.slice(-30).join("\n"));
+      console.log("── 이 내용을 통째로 캡쳐해 주세요 ──");
+    };
+
     const onStart = (e) => { 조합중 = true; 칸 = e.target; 적기(`조합 시작 @${이름(e.target)}`); };
     const onUpd   = (e) => 적기(`조합 중 "${e.data}"`);
     const onEnd   = (e) => {
       조합중 = false;
       적기(`조합 끝 "${e.data}" @${이름(e.target)}`);
+      if (/^[ㄱ-ㅎㅏ-ㅣ]$/.test(e.data || "")) 신고("조합이 자모 낱개로 끊겼습니다!");
+    };
+    /* ★ 그물 둘 — 조합을 **거치지도 않고** 자모가 낱개로 박히는 경우.
+       (조합이 끊기는 게 아니라 시작조차 못 하는 형태면 위 그물엔 안 걸려요) */
+    const onInput = (e) => {
+      if (e.isComposing) return;
       if (/^[ㄱ-ㅎㅏ-ㅣ]$/.test(e.data || "")) {
-        console.warn("🚨 조합이 자모 낱개로 끊겼습니다! 직전 기록:");
-        console.log(기록.slice(-30).join("\n"));
-        console.log("── 이 내용을 통째로 캡쳐해 주세요 ──");
+        적기(`조합 없이 자모 입력 "${e.data}" @${이름(e.target)}`);
+        신고("자모가 조합 없이 낱개로 들어왔습니다!");
       }
     };
     const onFocus = (e) => { if (e.target?.tagName === "TEXTAREA" || e.target?.tagName === "INPUT") 적기(`focus → ${이름(e.target)}`); };
@@ -1648,6 +1659,7 @@
     document.addEventListener("compositionstart", onStart, true);
     document.addEventListener("compositionupdate", onUpd, true);
     document.addEventListener("compositionend", onEnd, true);
+    document.addEventListener("input", onInput, true);
     document.addEventListener("focusin", onFocus, true);
     document.addEventListener("focusout", onBlur, true);
     document.addEventListener("selectionchange", onSel, true);
@@ -1657,15 +1669,27 @@
       document.removeEventListener("compositionstart", onStart, true);
       document.removeEventListener("compositionupdate", onUpd, true);
       document.removeEventListener("compositionend", onEnd, true);
+      document.removeEventListener("input", onInput, true);
       document.removeEventListener("focusin", onFocus, true);
       document.removeEventListener("focusout", onBlur, true);
       document.removeEventListener("selectionchange", onSel, true);
       window._imeDiagStop = null;
-      console.log("[imeDiag] 껐습니다.");
+      try { window.AppStore?.removeItem("imeDiagOn"); } catch (e) {}
+      console.log("[imeDiag] 껐습니다. (다음 접속에도 안 켜집니다)");
     };
+    /* ★ 증상이 드물게 나서, 한 번 켜면 **다음 접속에도 켜진 채**로 둡니다.
+       그날그날 콘솔을 다시 열 필요 없이, 걸리는 순간만 기다리면 돼요. */
+    try { window.AppStore?.setItem("imeDiagOn", "1"); } catch (e) {}
     console.log("[imeDiag] 지켜보는 중 — 한글을 쳐서 증상을 재현해 주세요. 끄기: _imeDiagStop()");
     return "켜짐";
   };
+
+  /* 지난번에 켜 뒀으면 입장하자마자 다시 켭니다 */
+  try {
+    if (window.AppStore?.getItem("imeDiagOn") === "1") {
+      setTimeout(() => window.imeDiag(), 800);
+    }
+  } catch (e) {}
 
   window.updatePomoProgressBar = updatePomoProgressBar;
   window.incrementTodayFocusSessions = incrementTodayFocusSessions;
