@@ -1691,6 +1691,32 @@
     }
   } catch (e) {}
 
+  /* =====================================================================
+     ⇪ Caps Lock 지킴이 (2026-08-13)
+     ---------------------------------------------------------------------
+     맥에서 한/영 전환을 Caps Lock 으로 하다 보면, 실수로 Shift+Caps Lock
+     을 눌러 **진짜 대문자 잠금**이 걸릴 때가 있습니다. 맥 한글 입력기는
+     Caps Lock 이 켜진 채면 자모를 조합하지 않고 낱개로 풀어 칩니다 —
+     "베" 가 "ㅂㅔ" 로. (방장이 겪은 "타자가 풀려요" 의 정체)
+
+     증상만 보면 고장 같아서 키보드 탓, 사이트 탓을 하게 되니,
+     입력칸에서 그 상태로 치는 순간 **방이 먼저 알려줍니다.**
+     ★ 켜져 있는 동안 한 번만 — 매 타자마다 울리면 그게 더 시끄러워요.
+     ===================================================================== */
+  let _capsWarned = false;
+  document.addEventListener("keydown", (e) => {
+    const t = e.target;
+    if (!t || (t.tagName !== "TEXTAREA" && t.tagName !== "INPUT")) return;
+    let on = false;
+    try { on = e.getModifierState && e.getModifierState("CapsLock"); } catch (err) { return; }
+    if (!on) { _capsWarned = false; return; }   // 풀리면 다음에 또 알려줄 수 있게
+    if (_capsWarned) return;
+    /* Caps Lock 키 자체를 누르는 중이면 넘어갑니다 — 막 끄는 참일 수 있어요 */
+    if (e.key === "CapsLock") return;
+    _capsWarned = true;
+    window.showCommandToast?.("⇪ Caps Lock이 켜져 있어요 — 한글이 ㅂㅔ처럼 풀려서 쳐져요! (Shift+Caps Lock을 누르셨을 수 있어요)");
+  }, true);
+
   window.updatePomoProgressBar = updatePomoProgressBar;
   window.incrementTodayFocusSessions = incrementTodayFocusSessions;
   window.renderTodaySessionCount = renderTodaySessionCount;
