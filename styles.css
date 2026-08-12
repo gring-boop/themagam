@@ -7978,7 +7978,38 @@ body.narrow-chat-focus .dock-panel{
   max-width: none !important;
 }
 body.narrow-chat-focus .dock-panel.can-drag .dock-head{ cursor: default; }
-body.narrow-chat-focus .dock-bar{ overflow-x: auto; flex-wrap: nowrap; }
+
+/* =====================================================================
+   좁은 화면의 알약 줄 — 옆으로 밀어서 봅니다
+   ---------------------------------------------------------------------
+   [무엇이 잘못됐었나 · 2026-08-12]
+   왼쪽으로 밀면 ✍️ Letters 까지 잘 보이는데, 오른쪽으로는 아무리 밀어도
+   💬 Chat 끄트머리에서 멎고 📢 공지는 아예 못 봤습니다.
+
+   범인은 `justify-content: center` 였어요. 가운데로 모으는 줄이 넘치면
+   **넘친 몫이 양쪽으로 똑같이** 삐져나갑니다. 그런데 스크롤은 0 보다
+   작아질 수 없어서, 왼쪽으로 삐져나간 만큼은 영영 못 잡습니다.
+   오른쪽만 잡히던 게 그 때문이에요.
+
+   [고침]
+   줄은 **왼쪽부터** 채우고, 가운데 정렬은 auto 여백에 맡깁니다.
+   auto 여백은 남는 자리가 있을 때만 벌어져요 — 다 들어가면 가운데로
+   모이고, 넘치면 0 이 되어 왼쪽에 붙습니다. 둘 다 공짜로 얻습니다.
+   ===================================================================== */
+body.narrow-chat-focus .dock-bar{
+  flex-wrap: nowrap;
+  justify-content: flex-start;   /* ★ center 면 왼쪽 넘침을 못 잡습니다 */
+  overflow-x: auto;
+  /* ★ overflow-x 를 켜면 세로도 함께 잘립니다 — 알약 위로 튀어나온
+     안 읽음 배지가 잘려요. 위쪽에 자리를 내주고 그만큼 끌어올립니다. */
+  overflow-y: hidden;
+  margin-top: -8px;
+  padding: 8px 2px 2px;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;   /* 끝까지 밀어도 뒤 화면이 안 밀립니다 */
+}
+body.narrow-chat-focus .dock-bar > :first-child{ margin-left: auto; }
+body.narrow-chat-focus .dock-bar > :last-child{ margin-right: auto; }
 
 /* 예전 배치에서는 좁아지면 머리띠(도구 줄)를 감췄습니다 — 창 하나가
    화면을 다 쓰던 시절의 규칙이에요. 알약 줄 배치에서는 자동감지·공유·
