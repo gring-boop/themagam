@@ -51,12 +51,18 @@
   const DOCK = [
     { id: "notice", label: "📢 공지",            stay: true,  size: 1.2, move: null },
     { id: "chat",   label: "💬 챗",              stay: true,  size: 1.2, move: ".chat-sidebar" },
-    { id: "chatty", label: "☕ 수다방",           stay: true,  size: 1.8, move: null },
+    /* 수다방은 뜨거울 때만 뜨겁고 조용할 땐 절간이라, 처음 잡은 1.8 에서
+       75% 로 낮췄습니다 (1.35). 빈 판이 크면 더 허전해 보여요. */
+    { id: "chatty", label: "☕ 수다방",           stay: true,  size: 1.35, move: null },
     { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
-    { id: "todo",   label: "📌 오늘 할 일",        stay: false, size: 0.7, move: null },
+    /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
+       뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다. */
+    { id: "todo",   label: "",                   stay: false, size: 0, move: null, inline: true },
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
-    { id: "pomo",   label: "🍅 뽀모도로",          stay: true,  size: 1.1, move: "#pomo-block" },
-    { id: "wc",     label: "✍️ 글자수",           stay: true,  size: 1.2, move: "#wordcount-block" }
+    /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
+       CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
+    { id: "pomo",   label: "🍅 뽀모도로",          stay: true,  size: 0.77, move: "#pomo-block" },
+    { id: "wc",     label: "✍️ 글자수",           stay: true,  size: 1.45, move: "#wordcount-block" }
   ];
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */
@@ -84,6 +90,14 @@
                     `<span class="dock-badge hidden" id="dock-badge-${d.id}">0</span>`;
       bar.appendChild(b);
 
+      if (d.inline) {
+        /* 판이 없는 것 — 누르는 단추가 아니라 **보여주는 글자**입니다 */
+        b.classList.add("dock-inline");
+        b.removeAttribute("aria-expanded");
+        delete b.dataset.dock;
+        b.disabled = true;
+        return;
+      }
       if (d.modal) return;   // 가운데 창은 판을 안 만듭니다
 
       /* 판 */
@@ -148,10 +162,18 @@
       });
     }
 
-    /* 📌 오늘 할 일 — 방 전체 진척 줄을 그대로 */
-    const todoBody = el("dock-body-todo");
-    const foot = document.querySelector(".room-foot");
-    if (todoBody && foot) todoBody.appendChild(foot);
+    /* 📌 오늘 할 일 — 방 전체 진척을 알약 자리에 **글자로** 놓습니다.
+       원래 줄(.room-foot)에는 전체기록·업적 알약도 함께 들어 있었는데,
+       그것들은 이제 아래 알약 줄이 맡으므로 진척 칸만 꺼내 옵니다. */
+    const pillTodo = el("dock-pill-todo");
+    const roomTodo = el("room-todo");
+    if (pillTodo && roomTodo) {
+      pillTodo.innerHTML = "";
+      pillTodo.appendChild(roomTodo);
+      roomTodo.hidden = false;
+    }
+    /* 남은 껍데기는 치웁니다 — 화면 어딘가에 떠 있으면 안 되니까요 */
+    document.querySelector(".room-foot")?.remove();
   }
 
   /* =====================================================================

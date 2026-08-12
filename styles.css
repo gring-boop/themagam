@@ -7692,6 +7692,11 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   display: flex;
   justify-content: center;
 }
+/* ★★ [고침 2026-08-12] 판을 감추는 규칙. 이게 없으면 **여덟 개가 한꺼번에**
+   가로로 늘어섭니다 — 처음 열었을 때 실제로 그랬어요.
+   hidden 은 브라우저 기본으로 display:none 이지만, 아래 display:flex 가
+   더 세서 그냥 이깁니다. 못 박아 둬야 합니다. */
+.dock-panel[hidden]{ display: none !important; }
 .dock-panel{
   pointer-events: auto;
   width: min(460px, calc(100vw - 24px));
@@ -7707,8 +7712,7 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 /* 수다방은 대화가 오래 이어지는 곳이라 폭도 넓힙니다 */
 #dock-panel-chatty{ width: min(620px, calc(100vw - 24px)); }
-#dock-panel-wc,
-#dock-panel-pomo{ width: min(380px, calc(100vw - 24px)); }
+#dock-panel-pomo{ width: min(360px, calc(100vw - 24px)); }
 
 .dock-head{
   flex: 0 0 auto;
@@ -7747,5 +7751,51 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-body > .chat-sidebar > .header{ display: none; }   /* 판 머리말이 대신합니다 */
 .dock-body #chat-box2{ flex: 1 1 auto; min-height: 0; overflow: auto; }
 
-/* 접속자 창이 화면을 꽉 채웁니다 */
-.dock-mode .cards-area{ border: none; border-radius: 0; box-shadow: none; }
+/* ── 접속자 창이 화면을 꽉 채웁니다 ──
+   ★ 세 칸 배치(script_layout.js)를 안 싣기 때문에, 칸 크기를 정해 주던
+     코드도 없습니다. 여기서 직접 펴 줍니다. */
+.dock-mode #split-root{ display: flex; }
+.dock-mode #split-root > .cards-area{
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none; border-radius: 0; box-shadow: none;
+}
+/* 알약 판이 데려갈 것들 — 판으로 옮기기 전까지 잠깐 안 보이게.
+   ★ 안 감추면 화면 열자마자 채팅·뽀모·목표 상자가 카드 옆에 널브러집니다. */
+.dock-mode #split-root > .chat-sidebar,
+.dock-mode #split-root > #pomo-block,
+.dock-mode #split-root > .goal-wrap,
+.dock-mode #split-root > .pane:not(.cards-area){ display: none; }
+/* 판 안으로 들어온 뒤에는 다시 보여야 합니다 */
+.dock-mode .dock-body > .chat-sidebar,
+.dock-mode .dock-body > #pomo-block{ display: flex; }
+
+/* 📌 오늘 할 일 — 판이 없는 '보여주는 글자' */
+.dock-pill.dock-inline{
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+}
+.dock-pill.dock-inline:hover{ background: transparent; }
+.dock-pill.dock-inline .room-todo{ padding: 0; }
+
+/* 🍅 뽀모 판 — 고리가 자리를 많이 먹어서 줄입니다.
+   ★ 판 높이만 줄이면 안이 잘려요. 고리부터 줄여야 합니다. */
+.dock-body .pomo-ring-wrap{ max-width: 148px; }
+.dock-body #pomo-block{ padding: 0 var(--sp-2) var(--sp-2); }
+.dock-body .pomo-pane-title{ display: none; }   /* 판 머리말이 대신합니다 */
+.dock-body #side-fold-btn{ display: none; }     /* 접기 단추는 뜻이 없습니다 */
+
+/* ✍️ 글자수 판 — [초기화] 가 두 줄이 되지 않게 폭을 넓혔습니다 */
+#dock-panel-wc{ width: min(440px, calc(100vw - 24px)); }
+.dock-body .wc-block{ border-top: none; margin-top: 0; }
+.dock-body .wc-title{ display: none; }          /* 판 머리말이 대신합니다 */
+
+/* ☕ 수다방 — 조용할 때 허전하지 않게 폭도 함께 낮춤 */
+#dock-panel-chatty{ width: min(520px, calc(100vw - 24px)); }
+.dock-body #chat-box2:empty::before{
+  content: "아직 조용해요. 먼저 말을 걸어보세요.";
+  display: block; padding: var(--sp-4) var(--sp-3);
+  text-align: center; color: var(--muted); font-size: var(--fs-xs);
+}
