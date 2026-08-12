@@ -53,26 +53,26 @@
      ===================================================================== */
   const DOCK = [
     { id: "notice", label: "📢 공지",            stay: true,  size: 1.2, move: null },
-    { id: "chat",   label: "💬 Chat",            stay: true,  size: 1.2, move: ".chat-sidebar", drag: true, tab: "main" },
+    { id: "chat",   label: "💬 Chat",  stay: true, size: 1.2, move: ".chat-sidebar", drag: true, tab: "main", resize: true },
     /* =====================================================================
-       ☕ 수다방은 **챗과 같은 판의 다른 탭**입니다 (고침 2026-08-12)
+       ☕ 수다방 — 제 판을 갖습니다 (2026-08-12, 두 번째 고침)
        ---------------------------------------------------------------------
-       [무엇이 잘못됐었나]
-       알약을 눌러도 수다방이 **텅 빈 판**으로 떴습니다. 두 가지가 겹쳤어요.
+       [처음에 왜 한 판으로 묶었나]
+       글 쓰는 칸(#message)과 보내기 단추가 **하나뿐**입니다. send() 가
+       "지금 켜진 방" 을 보고 messages / messages2 로 갈라 보내요.
+       그래서 판을 둘로 나누면 한쪽은 글칸 없는 판이 됩니다.
 
-         ① #chat-box2 는 switchChatTab("chatty") 가 .hidden 을 떼기
-            전까지 감춰져 있습니다. 알약은 판만 열 뿐 탭을 안 켰으니,
-            안에 든 것이 계속 숨어 있었어요.
-         ② 더 근본은 **글칸이 하나**라는 것입니다. #message 와 보내기
-            단추는 챗과 수다방이 함께 씁니다. script_chat.js 의 send()
-            가 "지금 켜진 탭" 을 보고 messages / messages2 로 갈라
-            보내거든요.
+       [그런데 한 판으로 묶으니]
+       챗을 열어 둔 채 수다방을 누르면 **같은 판이 키만 커지면서** 수다방이
+       됐습니다. 둘이 따로 놀지도 않고, 돌아갈 길도 안 보였어요.
 
-       그래서 둘을 따로 띄우면, 어느 한쪽은 반드시 **글칸이 없는 판**이
-       됩니다. 원래 앱이 이것을 탭으로 만든 이유가 그거였어요.
-       알약은 둘로 두되(찾기 쉬우니까) 판은 하나를 나눠 씁니다.
+       [그래서 — 창은 둘, 펜은 하나]
+       판은 각자 띄웁니다. 지난 이야기도 **둘 다 동시에 보입니다.**
+       다만 **글칸은 방금 누른 판으로 옮겨 갑니다.** 책상에 공책 두 권을
+       펴 두고 펜 하나로 번갈아 쓰는 셈이에요. 글칸이 없는 쪽에는
+       "여기에 쓰기" 줄이 남아서, 누르면 펜이 그리로 옵니다.
        ===================================================================== */
-    { id: "chatty", label: "☕ 수다방", stay: true, size: 1.35, move: null, panel: "chat", tab: "chatty" },
+    { id: "chatty", label: "☕ 수다방", stay: true, size: 1.35, move: null, drag: true, tab: "chatty", resize: true },
     { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다. */
@@ -240,6 +240,9 @@
       p.hidden = true;
       p.style.setProperty("--dock-h", Math.round(BASE_H * d.size) + "px");
       p.innerHTML =
+        (d.resize ? `<div class="dock-grip" data-dock-grip="${d.id}"
+                          role="separator" aria-orientation="horizontal"
+                          title="위로 끌면 커져요 · 두 번 누르면 원래대로"></div>` : "") +
         `<div class="dock-head">
            <span class="dock-title">${d.label}</span>
            <button type="button" class="dock-x" data-dock-close="${d.id}"
@@ -306,8 +309,29 @@
     const achvBody = el("dock-body-achv");
     if (achvBody && window.achvPanelHtml) achvBody.innerHTML = window.achvPanelHtml();
 
-    /* ☕ 수다방은 옮길 것이 없습니다 — #chatty-online-bar 와 #chat-box2 는
-       원래부터 .chat-sidebar 안에 있어서 챗 판과 함께 따라왔습니다. */
+    /* ☕ 수다방 — 접속자 줄과 대화 상자를 제 판으로 떼어 옵니다.
+       (원래는 .chat-sidebar 안에서 챗과 자리를 바꿔 가며 살았어요) */
+    const chattyBody = el("dock-body-chatty");
+    if (chattyBody) {
+      ["chatty-online-bar", "chat-box2"].forEach(id => {
+        const n = el(id);
+        if (n) chattyBody.appendChild(n);
+      });
+    }
+
+    /* ✍️ 글칸이 앉을 자리 — 두 판에 하나씩. 글칸은 이 둘 사이를 오갑니다. */
+    const 자리 = (host, id, hint) => {
+      if (!host) return;
+      const s = document.createElement("div");
+      s.className = "dock-write";
+      s.id = id;
+      s.dataset.hint = hint;
+      host.appendChild(s);
+    };
+    자리(document.querySelector("#dock-body-chat .chat-sidebar") || el("dock-body-chat"),
+         "dock-write-chat", "✍️ 여기에 쓰기");
+    자리(chattyBody, "dock-write-chatty", "✍️ 수다방에 쓰기");
+    moveInput("main");
 
     /* 📌 오늘 할 일 — 방 전체 진척을 알약 자리에 **글자로** 놓습니다.
        원래 줄(.room-foot)에는 전체기록·업적 알약도 함께 들어 있었는데,
@@ -338,24 +362,101 @@
     return document.body.classList.contains("narrow-chat-focus");
   }
 
+  /* =====================================================================
+     ✍️ 펜 하나, 공책 둘 — 글칸 옮기기
+     ---------------------------------------------------------------------
+     #message · 보내기 · 답장 미리보기는 챗과 수다방이 **함께 씁니다.**
+     그래서 물건 자체를 방금 누른 판으로 옮겨 놓습니다. 비어 있는 쪽에는
+     "여기에 쓰기" 줄이 남고, 그 줄을 누르면 펜이 그리로 옵니다.
+
+     ★ 스티커 판은 안 옮겨도 됩니다 — 누른 단추 자리를 재서 body 에
+       띄우는 방식이라 글칸이 어디 있든 그 옆에 붙어요.
+     ===================================================================== */
+  const 펜 = ["reply-preview-bar"];      // 글칸과 함께 다니는 것들
+
+  function moveInput(tab) {
+    const 이쪽 = tab === "chatty" ? "chatty" : "chat";
+    const host = el("dock-write-" + 이쪽);
+    if (!host) return;
+    펜.forEach(id => { const n = el(id); if (n) host.appendChild(n); });
+    const ia = document.querySelector(".input-area");
+    if (ia) host.appendChild(ia);
+    /* 빈 자리 표시 — :empty 를 못 쓰는 이유는 답장 미리보기가 늘 붙어
+       다녀서입니다 (감춰져 있어도 자식은 자식이라 :empty 가 아니에요) */
+    ["chat", "chatty"].forEach(k => {
+      const h = el("dock-write-" + k);
+      if (!h) return;
+      if (k === 이쪽) delete h.dataset.empty;
+      else h.dataset.empty = "1";
+    });
+  }
+
+  /** 지금 글을 쓰는 방을 정합니다 (탭 전환 + 글칸 이사) */
+  function setTab(tab) {
+    const t = tab === "chatty" ? "chatty" : "main";
+    if (_tab === t) return;
+    _tab = t;
+    window.switchChatTab?.(t);
+    moveInput(t);
+    syncPills();
+    syncBadges();
+  }
+  window.dockSetTab = setTab;
+
+  /* =====================================================================
+     판 높이 늘이기 — 챗과 수다방만 (2026-08-12)
+     ---------------------------------------------------------------------
+     대화가 길어지면 더 보고 싶고, 조용하면 자리만 먹습니다.
+     머리말 **위 가장자리**를 잡고 위로 끌면 커져요. 판은 바닥에 붙어
+     자라므로 위로 끄는 것이 곧 "키우기" 입니다.
+
+     ★ 지금 높이보다 **작아지지는 않습니다.** 더 줄이면 말풍선 두어 줄만
+       남아서 읽을 수가 없어요. 두 번 누르면 원래 높이로 돌아갑니다.
+     ===================================================================== */
+  const H_KEY = "dockH";
+
+  function baseH(pid) {
+    const d = DOCK.find(x => x.id === pid);
+    return Math.round(BASE_H * (d ? d.size : 1));
+  }
+  /* CSS 의 max-height 와 같은 값이어야 합니다 — 어긋나면 끌리는 대로
+     안 커지고 어중간한 데서 멎어 고장 난 것처럼 보여요. */
+  function maxH() {
+    return Math.max(240, (window.innerHeight || 800) - 190);
+  }
+  function setH(pid, h) {
+    const p = el("dock-panel-" + pid);
+    if (!p) return;
+    const v = Math.round(Math.max(baseH(pid), Math.min(maxH(), h)));
+    p.style.setProperty("--dock-h", v + "px");
+    return v;
+  }
+  function loadH(pid) {
+    const v = Number(window.AppStore?.getItem(H_KEY + ":" + pid) || 0);
+    return Number.isFinite(v) && v > 0 ? v : baseH(pid);
+  }
+  function saveH(pid, h) {
+    try { window.AppStore?.setItem(H_KEY + ":" + pid, String(h)); } catch (e) {}
+  }
+  function clearH(pid) {
+    try { window.AppStore?.removeItem(H_KEY + ":" + pid); } catch (e) {}
+    setH(pid, baseH(pid));
+  }
+
   /** 알약의 눌린 표시를 지금 상태에 맞춥니다 (수다방은 탭까지 봅니다) */
   function syncPills() {
     DOCK.forEach(d => {
       if (d.inline || d.modal) return;
-      const on = _open.has(panelOf(d.id)) && (!d.tab || _tab === d.tab);
-      el("dock-pill-" + d.id)?.setAttribute("aria-expanded", on ? "true" : "false");
+      el("dock-pill-" + d.id)?.setAttribute(
+        "aria-expanded", _open.has(panelOf(d.id)) ? "true" : "false");
+      /* 지금 펜이 놓인 방에는 옅은 표시를 둡니다 — 어디로 보내지는지
+         알약만 봐도 알 수 있게요. */
+      if (d.tab) el("dock-pill-" + d.id)?.classList.toggle("writing", _tab === d.tab);
     });
-  }
-
-  /** 챗 판의 머리말과 높이를 지금 탭에 맞춥니다 */
-  function applyChatTab() {
-    const p = el("dock-panel-chat");
-    if (!p) return;
-    const d = DOCK.find(x => x.tab === _tab && panelOf(x.id) === "chat");
-    if (!d) return;
-    p.querySelector(".dock-title") && (p.querySelector(".dock-title").textContent = d.label);
-    p.querySelector(".dock-x")?.setAttribute("aria-label", d.label + " 닫기");
-    p.style.setProperty("--dock-h", Math.round(BASE_H * d.size) + "px");
+    ["chat", "chatty"].forEach(k => {
+      const p = el("dock-panel-" + k);
+      if (p) p.classList.toggle("writing", _tab === (k === "chatty" ? "chatty" : "main"));
+    });
   }
 
   /* =====================================================================
@@ -373,29 +474,29 @@
     const pid = panelOf(id);
 
     /* 같은 알약을 다시 누르면 닫힙니다.
-       ★ 챗·수다방은 **탭까지 같을 때만** 닫습니다. 챗을 보다가 수다방을
-         누른 것은 "닫아 줘" 가 아니라 "옮겨 줘" 니까요. */
-    if (_open.has(pid) && (!d.tab || _tab === d.tab)) { close(pid); return; }
+       ★ 다만 챗·수다방은 **펜이 저쪽에 있으면 먼저 펜을 데려옵니다.**
+         한 번 눌러서 아무 일도 안 일어나거나, 보려던 판이 닫혀 버리면
+         둘 다 당황스러우니까요. 한 번 더 누르면 그때 닫힙니다. */
+    if (_open.has(pid)) {
+      if (d.tab && _tab !== d.tab) { setTab(d.tab); raise(pid); return; }
+      close(pid);
+      return;
+    }
 
     const p = el("dock-panel-" + pid);
     if (!p) return;
 
-    /* 판의 주인 — 수다방처럼 남의 판을 쓰는 알약이라도, 크기·끌기·
-       자리 기억은 **판 주인**의 것을 따라야 합니다. */
-    const own = DOCK.find(x => !x.panel && panelOf(x.id) === pid) || d;
-    const 이미열림 = _open.has(pid);
-
     /* 좁은 화면이면 먼저 열려 있던 판을 접습니다 */
     if (isNarrow()) [..._open].forEach(o => { if (o !== pid) close(o); });
 
-    if (d.tab) { _tab = d.tab; window.switchChatTab?.(d.tab); applyChatTab(); }
+    /* 방금 연 방으로 펜을 옮깁니다 */
+    if (d.tab) setTab(d.tab);
 
     p.hidden = false;
     _open.add(pid);
-    /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위.
-       ★ 이미 열려 있던 판(탭만 갈아탄 경우)은 **안 옮깁니다.** 애써
-         끌어다 놓은 자리가 탭 한 번에 튕겨 나가면 안 되니까요. */
-    if (!이미열림) place(pid, (own.drag && loadPos(pid)) || defaultPos(pid, id));
+    if (d.resize) setH(pid, loadH(pid));       // 늘려 뒀던 키를 되살립니다
+    /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위 */
+    place(pid, (d.drag && loadPos(pid)) || defaultPos(pid, id));
     raise(pid);                      // 방금 연 것이 맨 위로
     syncPills();
     document.getElementById("dock")?.setAttribute("data-open", [..._open].join(" "));
@@ -404,6 +505,12 @@
     if (pid === "achv") {
       const body = el("dock-body-achv");
       if (body && window.achvPanelHtml) body.innerHTML = window.achvPanelHtml();
+      /* 제목이 두 줄이었습니다 — 판 머리말 "🏅 업적" 과 그 바로 아래
+         "🏅 나의 업적". 안쪽 것은 CSS 로 감추고, 거기 붙어 있던
+         **개수만** 머리말로 끌어올립니다 (11 / 49 는 아까우니까요). */
+      const n = body?.querySelector(".achv-head span")?.textContent || "";
+      const t = el("dock-panel-achv")?.querySelector(".dock-title");
+      if (t) t.innerHTML = "🏅 업적" + (n ? ` <span class="dock-count">${n}</span>` : "");
     }
     /* 📢 공지 — **여는 일은 공지판 제 손으로** 시킵니다 (고침 2026-08-12).
        render() 는 #notice-modal 의 display 가 flex 일 때만 도는데,
@@ -411,10 +518,8 @@
        ("아직 공지가 없어요" 도 아니고 아예 빈 칸이었어요 — 그리는
         일 자체가 없었으니까요.) 겉창은 CSS 로 감춰 뒀습니다. */
     if (pid === "notice") { window.listenNoticeBoard?.(); window.openNoticeBoard?.(); }
-    if (pid === "chat") {
-      if (_tab === "chatty") window.scrollChattyToBottom?.();
-      else window.scrollChatToBottom?.(true);
-    }
+    if (pid === "chat")   window.scrollChatToBottom?.(true);
+    if (pid === "chatty") window.scrollChattyToBottom?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
@@ -429,6 +534,10 @@
     if (pid === "notice") window.closeNoticeBoard?.();
     setTimeout(syncBadges, 0);      // 닫으면 다시 쌓이기 시작합니다
     _open.delete(pid);
+    /* ✍️ 펜이 놓여 있던 판을 닫으면 펜은 다른 방으로 옮겨 둡니다 —
+       안 그러면 글칸이 감춰진 판에 갇혀 아무 데도 못 씁니다. */
+    if (pid === "chatty" && _tab === "chatty") setTab("main");
+    if (pid === "chat" && _tab === "main" && _open.has("chatty")) setTab("chatty");
     syncPills();
     const dock = document.getElementById("dock");
     if (!dock) return;
@@ -493,11 +602,10 @@
       if (n.classList.contains("hidden")) return 0;
       return parseInt(String(n.textContent).replace(/\D/g, ""), 10) || 0;
     };
-    /* ★ 챗과 수다방은 한 판을 나눠 쓰므로, 판이 열려 있는 것만으로는
-         부족합니다 — **지금 보고 있는 탭**의 표시만 지웁니다. */
-    const 보는중 = (tab) => _open.has("chat") && _tab === tab;
-    badge("chat",   보는중("main")   ? 0 : 읽기("chat-tab-badge-main"));
-    badge("chatty", 보는중("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
+    /* ★ 판이 떠 있으면 대화가 보이는 것이니 곧 읽은 것입니다.
+         펜이 저쪽에 있어도 눈은 여기 있으니까요. */
+    badge("chat",   _open.has("chat")   ? 0 : 읽기("chat-tab-badge-main"));
+    badge("chatty", _open.has("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
     const nd = el("notice-dot");
     dot("notice", !_open.has("notice") && !!nd && !nd.classList.contains("hidden"));
   }
@@ -531,6 +639,50 @@
        손가락이 판 밖으로 나가면서 끌기가 끊깁니다.
      ===================================================================== */
   let _drag = null;
+
+  /* =====================================================================
+     위 가장자리를 잡고 키우기 (챗 · 수다방)
+     ---------------------------------------------------------------------
+     ★ 지금 높이보다 작아지지 않습니다. 아래로 끌어도 제자리에서 멈춰요.
+     ★ 늘린 키는 이 기기에 남습니다. 두 번 누르면 원래대로.
+     ===================================================================== */
+  let _grip = null;
+
+  function bindResize() {
+    document.addEventListener("pointerdown", (e) => {
+      const g = e.target.closest?.("[data-dock-grip]");
+      if (!g) return;
+      const pid = g.dataset.dockGrip;
+      const p = el("dock-panel-" + pid);
+      if (!p) return;
+      _grip = { pid, y: e.clientY, h: p.getBoundingClientRect().height };
+      p.classList.add("resizing");
+      g.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    });
+
+    document.addEventListener("pointermove", (e) => {
+      if (!_grip) return;
+      /* 위로 끌수록(=clientY 가 작아질수록) 커집니다 */
+      setH(_grip.pid, _grip.h + (_grip.y - e.clientY));
+    });
+
+    const 놓기 = () => {
+      if (!_grip) return;
+      const p = el("dock-panel-" + _grip.pid);
+      p?.classList.remove("resizing");
+      const h = Math.round(p?.getBoundingClientRect().height || 0);
+      if (h) saveH(_grip.pid, h);
+      _grip = null;
+    };
+    document.addEventListener("pointerup", 놓기);
+    document.addEventListener("pointercancel", 놓기);
+
+    document.addEventListener("dblclick", (e) => {
+      const g = e.target.closest?.("[data-dock-grip]");
+      if (g) clearH(g.dataset.dockGrip);
+    });
+  }
 
   function bindDrag() {
     document.addEventListener("pointerdown", (e) => {
@@ -614,19 +766,15 @@
       closeGlances();
     });
 
-    /* 판 **안**의 탭 단추(제목 = 메인, ☕ 수다방)로 넘어갔을 때도
-       알약 표시를 맞춥니다. 저쪽이 켠 탭을 여기서 다시 물어봐요 —
-       탭을 켜는 일은 script_chatty.js 하나만 맡게 두려는 것입니다. */
-    document.addEventListener("click", () => {
-      setTimeout(() => {
-        const t = window.isChattyActive?.() ? "chatty" : "main";
-        if (t === _tab) return;
-        _tab = t;
-        applyChatTab();
-        syncPills();
-        syncBadges();
-      }, 0);
-    });
+    /* ✍️ 누른 판이 곧 쓰는 방 — 판 안을 누르면 글칸이 그리로 옵니다.
+       ★ ✕ 위에서는 안 됩니다 (닫으려는 것이니까요)
+       ★ 지금 글칸을 만지는 중이면 옮기지 않습니다 — 제자리 클릭이라 */
+    document.addEventListener("pointerdown", (e) => {
+      if (e.target.closest?.("[data-dock-close], [data-dock-grip]")) return;
+      const p = e.target.closest?.("#dock-panel-chat, #dock-panel-chatty");
+      if (!p) return;
+      setTab(p.id === "dock-panel-chatty" ? "chatty" : "main");
+    }, true);
 
     /* 넓다가 좁아지면 여러 판이 겹쳐 남습니다 — 맨 위 하나만 남깁니다 */
     window.addEventListener("resize", () => {
@@ -653,9 +801,9 @@
     relocate();
     bind();
     bindDrag();
+    bindResize();
     watchBadges();
-    _tab = window.isChattyActive?.() ? "chatty" : "main";
-    applyChatTab();
+    syncPills();
     /* 처음에는 다 닫아 둡니다 — 카드가 제일 넓게 보이는 상태 */
     closeAll();
     console.log("[dock] 알약 " + DOCK.length + "개 준비 완료");

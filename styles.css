@@ -7866,6 +7866,76 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   background: var(--modal-bg, #fff);
 }
 #dock-body-achv{ padding: 10px; }
+/* 제목이 두 줄이었습니다 — 머리말 "🏅 업적" 바로 아래 "🏅 나의 업적".
+   안쪽 것은 감추고 개수만 머리말로 올렸어요 (JS 가 옮깁니다). */
+#dock-body-achv .achv-head{ display: none; }
+.dock-count{
+  font-weight: var(--fw-normal, 400);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* =====================================================================
+   ✍️ 챗과 수다방 — 창은 둘, 펜은 하나 (2026-08-12)
+   ---------------------------------------------------------------------
+   글칸(#message)이 하나뿐이라 판마다 둘 수가 없습니다. 그래서 글칸을
+   방금 누른 판으로 **옮겨** 놓고, 비어 있는 쪽에는 "여기에 쓰기" 줄을
+   남깁니다. 그 줄을 누르면 펜이 그리로 옵니다.
+   ===================================================================== */
+.dock-write{ flex: 0 0 auto; }
+.dock-write[data-empty]{
+  cursor: text;
+  padding: 10px var(--sp-3);
+  border-top: 1px solid var(--border);
+  background: var(--glass2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.dock-write[data-empty]::before{ content: attr(data-hint); }
+.dock-write[data-empty]:hover{ color: var(--text); }
+
+/* 지금 쓰는 방을 옅게 표시합니다 — 어디로 보내지는지 한눈에 */
+.dock-panel.writing{ border-color: var(--accent); }
+.dock-pill.writing{ border-color: var(--accent); color: var(--accent); }
+
+/* ★★ 두 판이 **동시에** 보여야 합니다.
+   switchChatTab() 은 원래 한 칸에서 자리를 바꾸던 것이라, 안 보는 쪽에
+   .hidden 을 붙입니다. 판이 갈라진 지금은 그 감춤이 필요 없어요.
+   ※ 저쪽 코드는 안 건드립니다 — 보내기 갈래(messages/messages2)가
+     그 상태를 그대로 쓰거든요. 여기서는 **보이기만** 되돌립니다. */
+.dock-mode #dock-body-chat #chat-box.hidden{ display: flex !important; }
+.dock-mode #dock-body-chatty #chat-box2.hidden{ display: flex !important; }
+.dock-mode #dock-body-chatty #chatty-online-bar.hidden{ display: flex !important; }
+.dock-mode #dock-body-chat #pin-banner-slot.hidden{ display: block !important; }
+/* 수다방을 보는 중이라고 챗 제목을 흐리지 않습니다 (제목은 머리말이 맡아요) */
+.dock-mode #my-info.tab-off{ opacity: 1; }
+
+/* =====================================================================
+   판 키우기 손잡이 — 위 가장자리 (챗 · 수다방)
+   ---------------------------------------------------------------------
+   판은 바닥에 붙어 자라므로 **위로** 끄는 것이 곧 키우기입니다.
+   ★ 지금 높이보다 작아지지는 않습니다 — 더 줄이면 말풍선 두어 줄만
+     남아서 읽을 수가 없어요.
+   ===================================================================== */
+.dock-grip{
+  flex: 0 0 auto;
+  height: 10px;
+  margin: -1px -1px 0;
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.dock-grip::before{
+  content: "";
+  width: 34px; height: 3px;
+  border-radius: var(--r-full);
+  background: var(--border);
+  transition: background .12s ease;
+}
+.dock-grip:hover::before{ background: var(--accent); }
+.dock-panel.resizing{ user-select: none; }
+.dock-panel.resizing .dock-grip::before{ background: var(--accent); }
 
 /* =====================================================================
    화면 밖 대기석 (2026-08-12)
