@@ -50,10 +50,10 @@
      ===================================================================== */
   const DOCK = [
     { id: "notice", label: "📢 공지",            stay: true,  size: 1.2, move: null },
-    { id: "chat",   label: "💬 챗",              stay: true,  size: 1.2, move: ".chat-sidebar" },
+    { id: "chat",   label: "💬 Chat",            stay: true,  size: 1.2, move: ".chat-sidebar", drag: true },
     /* 수다방은 뜨거울 때만 뜨겁고 조용할 땐 절간이라, 처음 잡은 1.8 에서
        75% 로 낮췄습니다 (1.35). 빈 판이 크면 더 허전해 보여요. */
-    { id: "chatty", label: "☕ 수다방",           stay: true,  size: 1.35, move: null },
+    { id: "chatty", label: "☕ 수다방",           stay: true,  size: 1.35, move: null, drag: true },
     { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다. */
@@ -61,12 +61,77 @@
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
-    { id: "pomo",   label: "🍅 뽀모도로",          stay: true,  size: 0.77, move: "#pomo-block" },
-    { id: "wc",     label: "✍️ 글자수",           stay: true,  size: 1.45, move: "#wordcount-block" }
+    { id: "pomo",   label: "🍅 Pomodoro",         stay: true,  size: 0.77, move: "#pomo-block", drag: true },
+    { id: "wc",     label: "✍️ Letters",          stay: true,  size: 1.45, move: "#wordcount-block", drag: true }
   ];
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */
   const BASE_H = 430;
+
+  /* =====================================================================
+     판이 뜨는 자리 (2026-08-12)
+     ---------------------------------------------------------------------
+     [기본] **제 알약 바로 위**에서 뜹니다.
+       알약 차례가 공지·챗·수다방 … 뽀모·글자수 이므로, 그것만으로
+       "공지·챗·수다방은 왼쪽, 뽀모·글자수는 오른쪽, 업적은 업적 위"가
+       저절로 지켜집니다. 규칙을 따로 적을 필요가 없어요.
+
+     [옮기기] 머리말을 잡고 끌면 원하는 자리에 놓입니다 (챗·수다방·
+       뽀모·글자수 넷). 놓은 자리는 **이 기기에** 남아요.
+       머리말을 두 번 누르면 제자리로 돌아갑니다.
+
+     ★ 화면 밖으로 못 나갑니다. 끌다가 놓쳐서 판이 사라지면 되찾을
+       길이 없으니까요 — 늘 8px 은 화면 안에 남습니다.
+     ===================================================================== */
+  const POS_KEY = "dockPos";
+  const EDGE = 8;
+
+  function loadPos(id) {
+    try {
+      const raw = window.AppStore?.getItem(POS_KEY + ":" + id);
+      const v = raw ? JSON.parse(raw) : null;
+      return (v && Number.isFinite(v.x) && Number.isFinite(v.y)) ? v : null;
+    } catch (e) { return null; }
+  }
+  function savePos(id, x, y) {
+    try { window.AppStore?.setItem(POS_KEY + ":" + id, JSON.stringify({ x, y })); } catch (e) {}
+  }
+  function clearPos(id) {
+    try { window.AppStore?.removeItem(POS_KEY + ":" + id); } catch (e) {}
+  }
+
+  /** 제 알약 위 — 판 가운데가 알약 가운데에 오게 */
+  function defaultPos(id) {
+    const pill = el("dock-pill-" + id);
+    const p = el("dock-panel-" + id);
+    const host = el("dock-panels");
+    if (!pill || !p || !host) return { x: 0, y: 0 };
+    const pr = pill.getBoundingClientRect();
+    const hr = host.getBoundingClientRect();
+    const w = p.offsetWidth || 360;
+    return { x: (pr.left + pr.width / 2) - hr.left - w / 2, y: 0 };
+  }
+
+  /** 화면 밖으로 나가지 않게 */
+  function clampPos(p, x, y) {
+    const host = el("dock-panels");
+    const hr = host.getBoundingClientRect();
+    const w = p.offsetWidth || 360, h = p.offsetHeight || 300;
+    const maxX = hr.width - w - EDGE;
+    const maxY = hr.top - EDGE;              // 위로 화면 끝까지
+    return {
+      x: Math.max(EDGE - hr.left, Math.min(maxX, x)),
+      y: Math.max(0, Math.min(maxY, y))
+    };
+  }
+
+  function place(id, pos) {
+    const p = el("dock-panel-" + id);
+    if (!p) return;
+    const c = clampPos(p, pos.x, pos.y);
+    p.style.left = Math.round(c.x) + "px";
+    p.style.bottom = Math.round(c.y) + "px";
+  }
 
   /* =====================================================================
      열린 판들 — **여럿을 동시에** 열 수 있습니다 (2026-08-12)
@@ -109,7 +174,7 @@
 
       /* 판 */
       const p = document.createElement("div");
-      p.className = "dock-panel";
+      p.className = "dock-panel" + (d.drag ? " can-drag" : "");
       p.id = "dock-panel-" + d.id;
       p.hidden = true;
       p.style.setProperty("--dock-h", Math.round(BASE_H * d.size) + "px");
@@ -201,6 +266,8 @@
     if (!p) return;
     p.hidden = false;
     _open.add(id);
+    /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위 */
+    place(id, (d.drag && loadPos(id)) || defaultPos(id));
     el("dock-pill-" + id)?.setAttribute("aria-expanded", "true");
     document.getElementById("dock")?.setAttribute("data-open", [..._open].join(" "));
 
@@ -265,6 +332,69 @@
      ★ 머무는 판은 바깥을 눌러도 안 닫힙니다. 채팅에서 쓰던 글이 날아가는
        일을 막으려는 것이라, 이 규칙이 이 화면의 핵심입니다.
      ===================================================================== */
+  /* =====================================================================
+     머리말을 잡고 끌기
+     ---------------------------------------------------------------------
+     ★ ✕ 위에서는 안 잡힙니다 — 닫으려다 끌려가면 안 되니까요.
+     ★ pointer 를 잡아 둡니다(setPointerCapture). 안 그러면 빨리 끌 때
+       손가락이 판 밖으로 나가면서 끌기가 끊깁니다.
+     ===================================================================== */
+  let _drag = null;
+
+  function bindDrag() {
+    document.addEventListener("pointerdown", (e) => {
+      const head = e.target.closest(".dock-head");
+      if (!head || e.target.closest("[data-dock-close]")) return;
+      const panel = head.closest(".dock-panel");
+      if (!panel) return;
+      const id = panel.id.replace("dock-panel-", "");
+      const d = DOCK.find(x => x.id === id);
+      if (!d || !d.drag) return;                 // 옮길 수 있는 판만
+
+      const r = panel.getBoundingClientRect();
+      const host = el("dock-panels").getBoundingClientRect();
+      _drag = {
+        id, panel,
+        dx: e.clientX - r.left,
+        dy: r.bottom - e.clientY,
+        hostLeft: host.left, hostBottom: host.bottom
+      };
+      panel.classList.add("dragging");
+      head.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    });
+
+    document.addEventListener("pointermove", (e) => {
+      if (!_drag) return;
+      place(_drag.id, {
+        x: e.clientX - _drag.dx - _drag.hostLeft,
+        y: _drag.hostBottom - (e.clientY + _drag.dy)
+      });
+    });
+
+    const 놓기 = () => {
+      if (!_drag) return;
+      const p = _drag.panel;
+      p.classList.remove("dragging");
+      savePos(_drag.id, parseFloat(p.style.left) || 0, parseFloat(p.style.bottom) || 0);
+      _drag = null;
+    };
+    document.addEventListener("pointerup", 놓기);
+    document.addEventListener("pointercancel", 놓기);
+
+    /* 머리말을 두 번 누르면 제자리로 — 끌다가 이상해졌을 때의 되돌리기 */
+    document.addEventListener("dblclick", (e) => {
+      const head = e.target.closest(".dock-head");
+      if (!head) return;
+      const panel = head.closest(".dock-panel");
+      if (!panel) return;
+      const id = panel.id.replace("dock-panel-", "");
+      if (!DOCK.find(x => x.id === id)?.drag) return;
+      clearPos(id);
+      place(id, defaultPos(id));
+    });
+  }
+
   function bind() {
     document.addEventListener("click", (e) => {
       const pill = e.target.closest("[data-dock]");
@@ -297,6 +427,7 @@
     build();
     relocate();
     bind();
+    bindDrag();
     /* 처음에는 다 닫아 둡니다 — 카드가 제일 넓게 보이는 상태 */
     closeAll();
     console.log("[dock] 알약 " + DOCK.length + "개 준비 완료");
