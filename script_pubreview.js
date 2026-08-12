@@ -81,6 +81,16 @@
     };
   }
 
+  /* 레이블 몇 개인가 — "모드, 클로젯" 은 2 입니다 (콩의 지적 2026-08-13).
+     명패 수로 세면 쉼표로 묶어 적은 레이블이 하나로 잡혀 숫자가 거짓말을
+     해요. / 가 없는 명패는 출판사가 곧 한 자리이니 1 로 셉니다. */
+  function 레이블수(name) {
+    const { co, label } = 회사쪼개기(name);
+    if (!co) return 1;
+    const n = label.split(",").map(t => t.trim()).filter(Boolean).length;
+    return n || 1;
+  }
+
   /** 띄어쓰기·대소문자를 무시하고 견줍니다 — "페일 블루" 로도 "페일블루" 가 잡히게 */
   function _folded(s) {
     return String(s || "").toLowerCase().replace(/\s+/g, "");
@@ -232,6 +242,7 @@
         u.name = u.co;
       }
       u.talk = u.pids.reduce((a, pid) => a + 품평수(pid), 0);
+      u.labels = u.pids.reduce((a, pid) => a + 레이블수(_pubs[pid].name), 0);
     });
 
     /* ── 정렬 — 가나다순 / 💬 많은 순 (수가 같으면 그 안에서 가나다) ── */
@@ -257,7 +268,7 @@
           <button type="button" class="pub-co-head" data-pub-co="${esc(coKey)}"
                   aria-expanded="${펼침}">
             <b class="pub-name">🏢 ${esc(u.co)}</b>
-            <span class="pub-genre">레이블 ${u.pids.length}</span>
+            <span class="pub-genre">레이블 ${u.labels}</span>
             <span class="pub-count">💬 ${u.talk}</span>
             <span class="pub-arrow" aria-hidden="true">${펼침 ? "▾" : "▸"}</span>
           </button>
@@ -277,8 +288,10 @@
            <button type="button" class="pub-chip${_genre === g ? " on" : ""}"
                    data-pub-genre="${esc(g)}">${esc(g)}</button>`).join("")}</div>` : ""}
          <div class="pub-sortbar">
-           <span class="pub-tally"><b>${단위들.length}곳</b>${
-             pids.length > 단위들.length ? ` · 레이블 ${pids.length}` : ""} · 품평 <b>${전체품평}</b>개</span>
+           <span class="pub-tally"><b>${단위들.length}곳</b>${(() => {
+             const 총레이블 = pids.reduce((a, pid) => a + 레이블수(_pubs[pid].name), 0);
+             return 총레이블 > 단위들.length ? ` · 레이블 ${총레이블}` : "";
+           })()} · 품평 <b>${전체품평}</b>개</span>
            <span class="pub-sort" role="group" aria-label="정렬">
              <button type="button" class="pub-sort-btn${_sort === "abc" ? " on" : ""}"
                      data-pub-sort="abc">가나다순</button>
