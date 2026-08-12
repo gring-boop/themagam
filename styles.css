@@ -7732,18 +7732,24 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   pointer-events: auto;
   position: absolute;
   bottom: 0;              /* ★ 바닥을 맞춰 섭니다 (자리는 JS 가 left 로) */
+  z-index: 1;             /* 만지면 JS 가 올립니다 — 방금 손댄 것이 위로 */
   width: min(460px, calc(100vw - 24px));
   height: var(--dock-h, 430px);
   max-height: calc(100vh - 190px);
   display: flex;
   flex-direction: column;
-  /* ★★ [고침 2026-08-12] --panel 은 **반투명**(96%)입니다. 그대로 쓰니
-     뒤의 카드가 비쳐서, 판 안에 남의 프사와 닉네임이 어른거렸어요.
-     "왜 소소 카드만 위로 올라오지?" 의 정체가 이것입니다 — 올라온 게
-     아니라 **비쳐 보인** 거예요. 떠 있는 판은 불투명해야 합니다.
-     ★ --header 는 테마마다 정해 둔 **불투명한** 색입니다. 판이 방의
-       결과 따로 놀지 않으면서 뒤가 안 비쳐요. */
-  background: var(--header, #FFFDF6);
+  /* [되돌림 2026-08-12] 원래 칸들이 쓰던 반투명(--panel)으로 돌아갑니다.
+     원고지 격자가 은은하게 비치는 결이 이 방의 인상이라서요.
+
+     ★ 앞서 이걸 불투명으로 바꿨던 건 "카드가 비쳐서 이상하다" 때문이었는데,
+       진짜 원인은 **z-index 가 없어 카드 요소가 판 위로 삐져나온 것**이었고
+       그건 따로 고쳤습니다. 비치는 것 자체는 문제가 아니었어요.
+     ★ 대신 뒤를 살짝 흐립니다. 격자처럼 규칙적인 무늬는 흐려도 결이
+       남지만, 남의 닉네임·얼굴은 뭉개져서 "누가 있나?" 로 안 읽혀요.
+       비치되 읽히지는 않는 — 그 사이를 노린 값입니다. */
+  background: var(--panel);
+  backdrop-filter: blur(7px) saturate(1.06);
+  -webkit-backdrop-filter: blur(7px) saturate(1.06);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   box-shadow: 0 -6px 28px rgba(0,0,0,.16);
@@ -7853,8 +7859,11 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 
 /* 🏅 업적 — 원래 알약 판(.achv-pop)의 결을 그대로.
    흰 바탕에 안쪽 여백이 있어야 목록이 답답하지 않습니다. */
-/* 🏅 업적만 원래대로 **흰 바탕** — 나머지는 테마 색을 씁니다 */
-#dock-panel-achv{ width: min(340px, calc(100vw - 24px)); background: var(--modal-bg, #fff); }
+/* 🏅 업적만 원래대로 **흰 바탕** — 나머지는 반투명한 테마 색입니다 */
+#dock-panel-achv{
+  width: min(340px, calc(100vw - 24px));
+  background: var(--modal-bg, #fff);
+}
 #dock-body-achv{ padding: 10px; }
 
 /* 🍅 뽀모 판 — 고리가 자리를 많이 먹어서 줄입니다.

@@ -144,6 +144,31 @@
   const _open = new Set();
 
   /* =====================================================================
+     방금 만진 판이 맨 위로 (2026-08-12)
+     ---------------------------------------------------------------------
+     [무엇이 불편했나]
+     판들이 만들어진 차례대로 쌓여서, **왼쪽 알약의 판이 늘 아래**로
+     깔렸습니다. 챗을 왼쪽에 두고 수다방을 그 위에 겹쳐 놓으면, 새 글이
+     와서 답하려 해도 챗이 가려져 있었어요. 옮기거나 닫는 수밖에요.
+
+     [어떻게]
+     판을 만지는 순간(누르거나 글칸에 커서를 두는 순간) 그 판을 맨 위로
+     올립니다. 종이 여러 장을 책상에 늘어놓고 쓰는 것과 같아요 —
+     방금 손댄 것이 위로 옵니다.
+
+     ★ 자리(left·bottom)는 안 건드립니다. 위아래 차례만 바뀌어요.
+     ===================================================================== */
+  let _zTop = 10;
+
+  function raise(id) {
+    const p = el("dock-panel-" + id);
+    if (!p) return;
+    if (Number(p.style.zIndex) === _zTop) return;   // 이미 맨 위
+    p.style.zIndex = String(++_zTop);
+  }
+  window.dockRaise = raise;
+
+  /* =====================================================================
      판 만들기 — 알약마다 하나씩
      ===================================================================== */
   function build() {
@@ -273,6 +298,7 @@
     _open.add(id);
     /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위 */
     place(id, (d.drag && loadPos(id)) || defaultPos(id));
+    raise(id);                       // 방금 연 것이 맨 위로
     el("dock-pill-" + id)?.setAttribute("aria-expanded", "true");
     document.getElementById("dock")?.setAttribute("data-open", [..._open].join(" "));
 
@@ -451,6 +477,17 @@
   }
 
   function bind() {
+    /* ★ 판을 만지면 맨 위로. capture 로 받는 이유 —
+       글칸·단추가 이벤트를 멈추더라도(stopPropagation) 여기까지는
+       먼저 오기 때문입니다. 채팅 입력칸을 눌렀는데 안 올라오면
+       고친 뜻이 없어요. */
+    const 올리기 = (e) => {
+      const p = e.target.closest?.(".dock-panel");
+      if (p) raise(p.id.replace("dock-panel-", ""));
+    };
+    document.addEventListener("pointerdown", 올리기, true);
+    document.addEventListener("focusin", 올리기, true);
+
     document.addEventListener("click", (e) => {
       const pill = e.target.closest("[data-dock]");
       if (pill) { open(pill.dataset.dock); return; }
