@@ -7672,7 +7672,13 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   border-color: var(--accent);
   color: var(--text);
 }
+/* ★★ 배지는 알약 **바깥**(오른쪽 위)에 띄웁니다.
+   안쪽에 넣으면 배지가 뜰 때마다 알약이 넓어져서 줄 전체가 밀립니다 —
+   새 글이 올 때마다 아래 줄이 들썩이면 눈에 몹시 거슬려요.
+   자리를 안 차지하니 알약 크기는 늘 그대로입니다. */
 .dock-badge{
+  position: absolute;
+  top: -6px; right: -4px;
   min-width: 17px; height: 17px;
   padding: 0 5px;
   border-radius: var(--r-full);
@@ -7680,10 +7686,24 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   color: #fff;
   font-size: var(--fs-2xs);
   font-weight: var(--fw-bold);
+  line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
   font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--bg);
+  pointer-events: none;
 }
 .dock-badge.hidden{ display: none; }
+/* 📢 공지는 개수 없이 점 하나 — "새 것 있음" 만 알리면 충분합니다 */
+.dock-dot{
+  position: absolute;
+  top: -3px; right: -1px;
+  width: 8px; height: 8px;
+  border-radius: var(--r-full);
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--bg);
+  pointer-events: none;
+}
+.dock-dot.hidden{ display: none; }
 
 /* ── 위로 펼쳐지는 판 ──
    ★ bottom 을 기준 삼아야 위로 자랍니다. 알약 줄이 화면 맨 아래라
@@ -7782,6 +7802,23 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 .dock-body > .chat-sidebar > .header{ display: none; }   /* 판 머리말이 대신합니다 */
 .dock-body #chat-box2{ flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+/* ── 카드가 **줄마다 가운데**로 차게 (2026-08-12) ──
+   격자(grid)는 덩어리째 가운데에 놓이지만, 마지막 줄은 그 덩어리 안에서
+   왼쪽에 붙습니다. 열아홉 명이면 마지막 줄 세 장이 왼쪽으로 몰렸어요.
+   ★ flex 로 바꾸면 **줄마다** 가운데로 모입니다.
+   ★ 카드는 늘어나지 않습니다(flex: 0 0 auto) — 늘어나면 줄마다 폭이
+     달라져서 오히려 들쭉날쭉해 보여요. */
+.dock-mode .user-cards-grid{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+}
+.dock-mode .user-cards-grid > *{
+  flex: 0 0 var(--card-w);
+  max-width: var(--card-w);
+}
 
 /* ── 접속자 창이 화면을 꽉 채웁니다 ──
    ★ 세 칸 배치(script_layout.js)를 안 싣기 때문에, 칸 크기를 정해 주던

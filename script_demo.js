@@ -193,6 +193,7 @@
       고리멈춤();
       가짜채팅();
       가짜할일();
+      가짜안읽음();
 
       배너();
       console.log("%c[시험 모드] 서버에 아무것도 쓰지 않습니다.",
@@ -260,6 +261,22 @@
       if (!pill) return;
       pill.innerHTML = "📌 오늘 할 일 <b>78개</b> 중 <b>31개</b> 완료";
       if (wrap) wrap.hidden = false;
+    } catch (e) {}
+  }
+
+  /* 안 읽음 표시 — 배지가 떴을 때 알약 줄이 흐트러지지 않는지 봐야 해서
+     시험 모드에서도 그럴듯하게 켜 둡니다. */
+  function 가짜안읽음() {
+    try {
+      const 켜기 = (id, txt) => {
+        const n = document.getElementById(id);
+        if (!n) return;
+        if (txt !== undefined) n.textContent = txt;
+        n.classList.remove("hidden");
+      };
+      켜기("chat-tab-badge-main", "3");
+      켜기("chat-tab-badge-chatty", "12");
+      켜기("notice-dot");
     } catch (e) {}
   }
 

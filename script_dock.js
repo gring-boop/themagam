@@ -158,8 +158,12 @@
       b.id = "dock-pill-" + d.id;
       b.dataset.dock = d.id;
       b.setAttribute("aria-expanded", "false");
+      /* ★ 배지는 알약 **바깥**(오른쪽 위 모서리)에 띄웁니다.
+         안쪽에 넣으면 배지가 뜰 때마다 알약이 넓어져서 줄 전체가
+         밀립니다 — 새 글이 올 때마다 아래 줄이 들썩이면 눈에 거슬려요. */
       b.innerHTML = `<span class="dock-pill-label">${d.label}</span>` +
-                    `<span class="dock-badge hidden" id="dock-badge-${d.id}">0</span>`;
+                    `<span class="dock-badge hidden" id="dock-badge-${d.id}">0</span>` +
+                    `<span class="dock-dot hidden" id="dock-dot-${d.id}" aria-hidden="true"></span>`;
       bar.appendChild(b);
 
       if (d.inline) {
@@ -280,14 +284,16 @@
     if (id === "chat")   window.scrollChatToBottom?.(true);
     if (id === "chatty") window.scrollChattyToBottom?.();
 
-    /* 안 읽음 표시는 열면 지웁니다 */
+    /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
+    dot(id, false);
   }
 
   /** 하나만 닫기 */
   function close(id) {
     const p = el("dock-panel-" + id);
     if (p) p.hidden = true;
+    setTimeout(syncBadges, 0);      // 닫으면 다시 쌓이기 시작합니다
     el("dock-pill-" + id)?.setAttribute("aria-expanded", "false");
     _open.delete(id);
     const dock = document.getElementById("dock");
@@ -316,7 +322,7 @@
     });
   }
 
-  /** 안 읽음 숫자 — 0 이면 감춥니다 */
+  /** 안 읽음 숫자 — 0 이면 감춥니다 (챗·수다방) */
   function badge(id, n) {
     const b = el("dock-badge-" + id);
     if (!b) return;
@@ -325,6 +331,54 @@
     b.classList.toggle("hidden", v === 0);
   }
   window.dockBadge = badge;
+
+  /** 붉은 점 — 개수 없이 "새 것 있음" 만 (공지) */
+  function dot(id, on) {
+    el("dock-dot-" + id)?.classList.toggle("hidden", !on);
+  }
+  window.dockDot = dot;
+
+  /* =====================================================================
+     안 읽음 표시를 원래 있던 것에서 그대로 가져옵니다
+     ---------------------------------------------------------------------
+     채팅·수다방은 script_chatty.js 가, 공지는 script_notice.js 가 이미
+     세고 있습니다. 여기서 다시 세면 **두 벌이 되어 언젠가 어긋나요.**
+     그쪽이 만들어 둔 표시를 지켜보다가 그대로 옮겨 적습니다.
+
+       #chat-tab-badge-main    → 💬 Chat
+       #chat-tab-badge-chatty  → ☕ 수다방
+       #notice-dot             → 📢 공지
+
+     ★ 판이 **열려 있는 동안**에는 표시를 지웁니다. 보고 있는데 숫자가
+       쌓이면 이상하니까요.
+     ===================================================================== */
+  function syncBadges() {
+    const 읽기 = (id) => {
+      const n = el(id);
+      if (!n) return 0;
+      if (n.classList.contains("hidden")) return 0;
+      return parseInt(String(n.textContent).replace(/\D/g, ""), 10) || 0;
+    };
+    badge("chat",   _open.has("chat")   ? 0 : 읽기("chat-tab-badge-main"));
+    badge("chatty", _open.has("chatty") ? 0 : 읽기("chat-tab-badge-chatty"));
+    const nd = el("notice-dot");
+    dot("notice", !_open.has("notice") && !!nd && !nd.classList.contains("hidden"));
+  }
+
+  function watchBadges() {
+    ["chat-tab-badge-main", "chat-tab-badge-chatty", "notice-dot"].forEach(id => {
+      const n = el(id);
+      if (!n) return;
+      try {
+        new MutationObserver(syncBadges).observe(n, {
+          attributes: true, attributeFilter: ["class"], childList: true, characterData: true, subtree: true
+        });
+      } catch (e) {}
+    });
+    /* 지켜보기가 안 되는 경우를 대비해 이따금 한 번씩 맞춥니다 */
+    setInterval(syncBadges, 3000);
+    syncBadges();
+  }
 
   /* =====================================================================
      손가락
@@ -428,6 +482,7 @@
     relocate();
     bind();
     bindDrag();
+    watchBadges();
     /* 처음에는 다 닫아 둡니다 — 카드가 제일 넓게 보이는 상태 */
     closeAll();
     console.log("[dock] 알약 " + DOCK.length + "개 준비 완료");
