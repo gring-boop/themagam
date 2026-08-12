@@ -377,13 +377,57 @@
      ===================================================================== */
   const 펜 = ["reply-preview-bar"];      // 글칸과 함께 다니는 것들
 
+  /* ★★ [고침 2026-08-13] 글칸 이사가 한글을 깨뜨리고 있었습니다.
+
+     [무엇이 잘못됐었나]
+     요소를 appendChild 로 옮기면 DOM 에서 **뽑았다가 다시 꽂는** 것이라,
+     그 순간 두 가지가 부서집니다.
+       ① 초점 — 초점이 있던 채로 옮기면 브라우저가 조용히 떨어뜨립니다.
+          겉보기엔 커서가 있는 것 같은데 실제로는 아무 데도 아니어서
+          "그냥 안 쳐져요" 가 됩니다.
+       ② 한글 조합 — 조합(ㅂ+ㅔ→베) 중에 옮기면 조합이 끊기고,
+          크롬에서는 그 뒤로 IME 상태가 끼어 자모가 낱개로 풀려
+          나오기도 합니다 ("베ㄹㅔ니ㅁㅣ" 의 정체로 의심).
+
+     [고침]
+     · 조합 중이면 **조합이 끝날 때까지 이사를 미룹니다.**
+     · 초점이 글칸에 있었다면 이사 직후 **초점과 커서를 되살립니다.** */
+  let _composing = false;
+  document.addEventListener("compositionstart", (e) => {
+    if (e.target?.id === "message") _composing = true;
+  }, true);
+  document.addEventListener("compositionend", (e) => {
+    if (e.target?.id === "message") _composing = false;
+  }, true);
+
   function moveInput(tab) {
     const 이쪽 = tab === "chatty" ? "chatty" : "chat";
     const host = el("dock-write-" + 이쪽);
     if (!host) return;
+
+    /* 한글 조합 중이면 끝나고 나서 옮깁니다 — 지금 옮기면 글자가 깨져요 */
+    if (_composing) {
+      document.addEventListener("compositionend",
+        () => moveInput(tab), { once: true });
+      return;
+    }
+
+    const ta = el("message");
+    const 초점있던 = ta && document.activeElement === ta;
+    const s = 초점있던 ? ta.selectionStart : 0;
+    const e2 = 초점있던 ? ta.selectionEnd : 0;
+
     펜.forEach(id => { const n = el(id); if (n) host.appendChild(n); });
     const ia = document.querySelector(".input-area");
     if (ia) host.appendChild(ia);
+
+    /* 이사하느라 떨어진 초점을 제자리에 — 커서 위치까지 */
+    if (초점있던) {
+      try {
+        ta.focus({ preventScroll: true });
+        ta.setSelectionRange(s, e2);
+      } catch (err) {}
+    }
     /* 빈 자리 표시 — :empty 를 못 쓰는 이유는 답장 미리보기가 늘 붙어
        다녀서입니다 (감춰져 있어도 자식은 자식이라 :empty 가 아니에요) */
     ["chat", "chatty"].forEach(k => {
