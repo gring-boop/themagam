@@ -73,6 +73,9 @@
        "여기에 쓰기" 줄이 남아서, 누르면 펜이 그리로 옵니다.
        ===================================================================== */
     { id: "chatty", label: "☕ 수다방", stay: true, size: 1.35, move: null, drag: true, tab: "chatty", resize: true },
+    /* 🏢 출판사 품평 — 익명 게시판 (2026-08-12, script_pubreview.js).
+       공지처럼 목록형이지만 댓글이 길게 달리는 곳이라 키울 수 있게 했어요. */
+    { id: "pub", label: "🏢 출판사 품평", stay: true, size: 1.35, move: null, drag: true, resize: true },
     { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다. */
@@ -535,6 +538,7 @@
          들고 있어서, 판을 닫는 순간 옛 숫자가 도로 올라와요. */
     if (pid === "chat")   { window.markChatRead?.("main");   window.scrollChatToBottom?.(true); }
     if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
+    if (pid === "pub")    window.openPubReview?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);

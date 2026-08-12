@@ -70,8 +70,12 @@ const MANUAL_SECTIONS = [
       <b>알약 여덟 개</b>로 내려갔어요. 알약을 누르면 그 자리에서 <b>위로</b> 펼쳐집니다.</p>
 
       <table class="man-t"><tbody>
-        <tr><td><b>알약 차례</b></td><td>📢 공지 · 💬 Chat · ☕ 수다방 · 📓 Letters 전체 기록 ·
-            📌 오늘 할 일 · 🏅 업적 · 🍅 Pomodoro · ✍️ Letters</td></tr>
+        <tr><td><b>알약 차례</b></td><td>📢 공지 · 💬 Chat · ☕ 수다방 · 🏢 출판사 품평 ·
+            📓 Letters 전체 기록 · 📌 오늘 할 일 · 🏅 업적 · 🍅 Pomodoro · ✍️ Letters</td></tr>
+        <tr><td><b>🏢 출판사 품평</b></td><td>출판사 이름을 펼치면 <b>익명 품평</b>이 달려요 —
+            🎋 대숲처럼 닉네임·계정이 서버에 남지 않아요. 출판사 추가는 누구나,
+            내가 쓴 품평의 ✕ 는 <b>쓴 기기에서만</b> 보입니다. 품평은 사라지지 않고 쌓여요
+            <span class="man-new">2026-08-12 새로</span></td></tr>
         <tr><td><b>여러 개 동시에</b></td><td>뽀모와 글자수를 같이 켜 두고 작업하셔도 돼요.
             공지를 띄워 놓고 챗을 쓰셔도 되고요</td></tr>
         <tr><td><b>💬 Chat 과 ☕ 수다방</b></td><td><b>창은 둘, 펜은 하나</b>예요.

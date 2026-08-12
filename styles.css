@@ -7912,6 +7912,85 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-mode #my-info.tab-off{ opacity: 1; }
 
 /* =====================================================================
+   🏢 출판사 품평 — 익명 게시판 (2026-08-12)
+   ---------------------------------------------------------------------
+   공지판처럼 목록형이지만, 명패를 펼치면 익명 댓글이 달립니다.
+   판 바탕의 반투명을 살리고, 명패는 종이처럼 살짝 불투명하게.
+   ===================================================================== */
+#dock-panel-pub{ width: min(400px, calc(100vw - 24px)); }
+.pub-board{
+  flex: 1 1 auto; min-height: 0; overflow: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 2px var(--sp-3) var(--sp-3);
+}
+.pub-item{
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--glass2);
+  flex: 0 0 auto;
+}
+.pub-item.is-open{ border-color: var(--accent); }
+.pub-head{
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; background: none; border: none; cursor: pointer;
+  color: var(--text); text-align: left; font-size: var(--fs-sm);
+}
+.pub-name{ font-weight: var(--fw-bold); }
+.pub-genre{ font-size: var(--fs-xs); color: var(--muted); }
+.pub-count{ margin-left: auto; font-size: var(--fs-xs); color: var(--muted-strong); }
+.pub-arrow{ font-size: var(--fs-xs); color: var(--muted); }
+.pub-body{
+  padding: 2px 12px 12px;
+  border-top: 1px dashed var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pub-rev{ padding-top: 8px; }
+.pub-rev-text{
+  background: var(--fill-1);
+  border-radius: 0 var(--r-md) var(--r-md) var(--r-md);
+  padding: 8px 11px;
+  font-size: var(--fs-sm); line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+}
+.pub-rev-meta{
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 3px; padding-left: 4px;
+  font-size: var(--fs-xs); color: var(--muted);
+}
+.pub-heart{
+  border: none; background: none; cursor: pointer;
+  font-size: var(--fs-xs); color: var(--muted);
+  padding: 2px 4px;
+}
+.pub-heart.on{ color: var(--danger); }
+.pub-del{
+  border: none; background: none; cursor: pointer;
+  font-size: var(--fs-xs); color: var(--muted); padding: 2px 4px;
+}
+.pub-del:hover{ color: var(--danger); }
+.pub-write{ display: flex; gap: 6px; align-items: flex-end; margin-top: 4px; }
+.pub-input{
+  flex: 1; resize: none;
+  border: 1px solid var(--border); border-radius: var(--r-full);
+  padding: 7px 13px; font-size: var(--fs-sm);
+  background: var(--modal-bg, #fff); color: var(--text);
+  font-family: inherit; line-height: 1.5;
+}
+.pub-send{
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: var(--r-full);
+  border: none; background: var(--accent); color: var(--on-accent-btn, #fff);
+  cursor: pointer; font-size: var(--fs-sm);
+}
+.pub-add{
+  border: 1px dashed var(--border); border-radius: var(--r-md);
+  background: none; color: var(--muted-strong); cursor: pointer;
+  padding: 9px 12px; font-size: var(--fs-xs);
+}
+.pub-add:hover{ border-color: var(--accent); color: var(--accent); }
+.pub-empty{ text-align: center; color: var(--muted); font-size: var(--fs-xs); padding: 10px 0; margin: 0; }
+.pub-hint{ font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; margin: 2px 2px 0; }
+
+/* =====================================================================
    판 키우기 손잡이 — 위 가장자리 (챗 · 수다방)
    ---------------------------------------------------------------------
    판은 바닥에 붙어 자라므로 **위로** 끄는 것이 곧 키우기입니다.
