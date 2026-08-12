@@ -50,6 +50,24 @@
     try { return firebase.auth().currentUser?.uid === ADMIN_UID; } catch (e) { return false; }
   };
 
+  /* ── 🔍 찾기 (2026-08-12) ──
+     출판사가 수십 곳이라 목록을 훑어서는 못 찾습니다. 맨 윗줄에서
+     이름·장르 아무거나 몇 글자만 쳐도 좁혀지고, 장르 칩을 눌러
+     그 장르만 모아 볼 수도 있어요. 걸러내기는 전부 이 화면 안에서만 —
+     서버는 건드리지 않습니다. */
+  let _query = "";       // 찾는 말
+  let _genre = null;     // 골라 둔 장르 칩
+
+  /** 띄어쓰기·대소문자를 무시하고 견줍니다 — "페일 블루" 로도 "페일블루" 가 잡히게 */
+  function _folded(s) {
+    return String(s || "").toLowerCase().replace(/\s+/g, "");
+  }
+
+  /** "로판 · BL" 같은 장르 글자를 칩 단위로 쪼갭니다 */
+  function _genreTokens(g) {
+    return String(g || "").split(/[·,/|]+/).map(t => t.trim()).filter(Boolean);
+  }
+
   let _pubs = {};        // pid → { name, genre, at }
   let _revs = {};        // pid → { rid → { text, at, hearts } }
   let _openPub = null;   // 펼쳐진 명패 — 한 번에 하나 (목록이 길어지니까)
@@ -155,16 +173,45 @@
     const ta = box.querySelector("[data-pub-input]");
     const draft = ta ? ta.value : "";
 
+    /* 찾는 칸에 커서를 둔 채 새 품평이 도착하면 판이 다시 그려집니다.
+       그때 커서가 튕기면 치던 말이 끊겨요 — 자리까지 기억해 되살립니다. */
+    const 찾는중 = document.activeElement?.id === "pub-search";
+    const 커서 = 찾는중 ? document.activeElement.selectionStart : 0;
+
     /* 명패는 늘 **가나다순** — 등록한 차례가 아닙니다.
        찾는 사람 입장에서는 "ㅅ이니까 중간쯤" 이 통해야 하니까요.
        numeric: "2사" 가 "10사" 앞에 오게 (글자 아닌 숫자로 견줌) */
     const 견줌 = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
-    const pids = Object.keys(_pubs).sort((a, b) =>
+    const 전체 = Object.keys(_pubs).sort((a, b) =>
       견줌.compare(String(_pubs[a].name).trim(), String(_pubs[b].name).trim()));
+
+    /* 걸러내기 — 찾는 말은 이름과 장르 어느 쪽에 걸려도 잡습니다 */
+    const q = _folded(_query);
+    const pids = 전체.filter(pid => {
+      const p = _pubs[pid];
+      if (_genre && !_genreTokens(p.genre).includes(_genre)) return false;
+      if (q && !_folded(p.name).includes(q) && !_folded(p.genre).includes(q)) return false;
+      return true;
+    });
+
+    /* 장르 칩 — 등록된 장르에서 그때그때 모읍니다 (따로 관리 안 함) */
+    const 칩들 = [...new Set(전체.flatMap(pid => _genreTokens(_pubs[pid].genre)))]
+      .sort((a, b) => 견줌.compare(a, b));
+
     box.innerHTML =
+      `<div class="pub-find">
+         <input type="search" class="pub-search" id="pub-search"
+                placeholder="🔍 출판사 · 장르 찾기" value="${esc(_query)}"
+                aria-label="출판사나 장르로 찾기">
+         ${칩들.length ? `<div class="pub-chips">${칩들.map(g => `
+           <button type="button" class="pub-chip${_genre === g ? " on" : ""}"
+                   data-pub-genre="${esc(g)}">${esc(g)}</button>`).join("")}</div>` : ""}
+       </div>` +
       (pids.length
         ? pids.map(pid => pubHtml(pid, _pubs[pid])).join("")
-        : `<p class="pub-empty">아직 등록된 출판사가 없어요.</p>`) +
+        : 전체.length
+          ? `<p class="pub-empty">"${esc(_query || _genre || "")}" 에 맞는 곳이 없어요.</p>`
+          : `<p class="pub-empty">아직 등록된 출판사가 없어요.</p>`) +
       `<button type="button" class="pub-add" data-pub-add>＋ 출판사 추가</button>
        <p class="pub-hint">🎋 대숲처럼 <b>완전 익명</b>이에요 — 닉네임·계정은 서버에 남지 않아요.
        내가 쓴 품평의 ✕ 는 이 기기에서만 보입니다.</p>`;
@@ -172,6 +219,10 @@
     if (draft) {
       const ta2 = box.querySelector("[data-pub-input]");
       if (ta2) { ta2.value = draft; }
+    }
+    if (찾는중) {
+      const inp = el("pub-search");
+      if (inp) { inp.focus(); try { inp.setSelectionRange(커서, 커서); } catch (e) {} }
     }
   }
 
@@ -293,7 +344,28 @@
       const ed = e.target.closest("[data-pub-edit]");
       if (ed) { editPub(ed.dataset.pubEdit); return; }
       const rm = e.target.closest("[data-pub-remove]");
-      if (rm) { removePub(rm.dataset.pubRemove); }
+      if (rm) { removePub(rm.dataset.pubRemove); return; }
+      const chip = e.target.closest("[data-pub-genre]");
+      if (chip) {
+        /* 같은 칩을 다시 누르면 풀립니다 */
+        _genre = _genre === chip.dataset.pubGenre ? null : chip.dataset.pubGenre;
+        render();
+      }
+    });
+
+    /* 🔍 치는 대로 좁혀집니다 — 단추도, Enter 도 필요 없어요.
+       ★ 한글은 조합 중(ㅊ→추→출)이 있습니다. 그 중간에 판을 다시 그리면
+         조합이 뚝 끊겨서 글자가 깨져요. 조합 중에는 걸러 두기만 하고,
+         조합이 끝나는 순간(compositionend) 한 번에 그립니다. */
+    box.addEventListener("input", (e) => {
+      if (e.target.id !== "pub-search") return;
+      _query = e.target.value;
+      if (!e.isComposing) render();
+    });
+    box.addEventListener("compositionend", (e) => {
+      if (e.target.id !== "pub-search") return;
+      _query = e.target.value;
+      render();
     });
 
     /* Enter 로 올리기 (Shift+Enter 는 줄바꿈 — 채팅과 같은 손맛) */
