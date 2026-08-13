@@ -6652,8 +6652,12 @@ body.split-dragging #chat-box3{ user-select: none; }
    순수한 표시이지, 권한을 주는 물건이 아닙니다. */
 .card-admin-stamp{
   position: absolute;
-  right: -9px;
-  bottom: -3px;
+  /* [조정 2026-08-13] −9px/−3px 에서 더 밖으로 뺐습니다. 프사를 너무
+     가렸어요. 스티커는 42×23 쯤이라 겹치는 넓이가 33×20 이었는데,
+     22×15 로 줄여 **절반**이 됐습니다. 오른쪽으로 20px 나가도 카드
+     안입니다 — 프사 옆 여백이 한쪽에 36px 이거든요. */
+  right: -20px;
+  bottom: -8px;
   z-index: 2;
   display: inline-flex;
   align-items: center;
