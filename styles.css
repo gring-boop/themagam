@@ -6769,7 +6769,11 @@ body.split-dragging #chat-box3{ user-select: none; }
 .card-deco.deco-a{ top: 14px;  right: -8px;  transform: rotate(6deg); }
 .card-deco.deco-b{ left: -12px; bottom: 12px; transform: rotate(-8deg); }
 .card-deco.deco-c{ bottom: -8px; right: 12px; transform: rotate(-5deg); }
-.card-deco.deco-d{ left: -8px;  bottom: 34px; transform: rotate(7deg); }
+/* [조정 2026-08-13] D 를 34px → 46px 로 — ⏱ 작업 시간 줄과 좀 더 떨어지게 */
+.card-deco.deco-d{ left: -8px;  bottom: 46px; transform: rotate(7deg); }
+/* [추가 2026-08-13] E — B 의 아랫동네. 프사 칸 기준이라 프사를 따라다닙니다.
+   B(-8도)와 반대로 +4도 — 나란히 두 장이 같은 각도면 붙여 찍은 티가 나요 */
+.card-deco.deco-e{ left: -14px; bottom: -14px; transform: rotate(4deg); }
 
 .card-admin-stamp{
   position: absolute;

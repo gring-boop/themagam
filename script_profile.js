@@ -496,7 +496,9 @@ const DECO_WORDS = [
   { t: "아자자!",  bg: "#FFD9C2", fg: "#A34715" }    /* 귤 */
 ];
 const DECO_EMOJIS = ["😇","😭","🤩","🔥","😳","😍","😣","🤬","😰","🫠","🥹","😴","🔞","💋","✈️","🚨","☕️"];
-const DECO_SLOTS = ["a", "b", "c", "d"];
+/* [늘림 2026-08-13] E 자리 추가 — B(프사 옆) 근처, 조금 아래.
+   프사 왼쪽에 위아래로 두 장을 겹쳐 붙일 수 있게 됐습니다 */
+const DECO_SLOTS = ["a", "b", "c", "d", "e"];
 
 function sanitizeDeco(v) {
   const t = String(v || "");
@@ -942,6 +944,7 @@ function renderProfilePanel() {
       ${[
         ["a", "오른쪽 위"],
         ["b", "프사 옆"],
+        ["e", "프사 옆 아래"],
         ["c", "오른쪽 아래"],
         ["d", "왼쪽 허리"]
       ].map(([k, label]) => {
@@ -968,8 +971,8 @@ function renderProfilePanel() {
       </div>`;
       }).join("")}
       <p class="hint">
-        캐리어에 스티커 붙이듯 카드의 <b>정해진 자리 넷</b>에 골라 붙여요.
-        비워도 되고 넷 다 붙여도 됩니다. 다른 분들 화면에도 보여요.<br>
+        캐리어에 스티커 붙이듯 카드의 <b>정해진 자리 다섯</b>에 골라 붙여요.
+        비워도 되고 다 붙여도 됩니다. 다른 분들 화면에도 보여요.<br>
         색은 <b>낱말 스티커에만</b> 먹어요 — 글자색은 고른 색에서 읽히게
         저절로 맞춰집니다. [기본]을 누르면 낱말의 원래 색으로 돌아가요.
       </p>
@@ -1108,7 +1111,7 @@ function bindProfilePanel() {
      배경색 연결까지 같이 죽었습니다. */
   function _saveDeco() {
     const stickers = {}, stickerColors = {};
-    ["a", "b", "c", "d"].forEach(k => {
+    ["a", "b", "c", "d", "e"].forEach(k => {
       stickers[k] = sanitizeDeco(
         document.getElementById("prof-deco-" + k)?.value || "");
       /* dirty 표시가 있는 자리만 색을 저장 — 색 우물의 기본값(#FFCDD2)이
