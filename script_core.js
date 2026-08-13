@@ -427,6 +427,10 @@ window.AppSession = AppSession;
       // ✅ 3-1) 자리비움 자동 감지 — 저장값이 켜짐이고 권한이 있으면 조용히 시작
       try { await window.afterJoinInitIdleDetect?.(); } catch(e){ console.warn("[afterJoinInitIdleDetect failed]", e); }
 
+      // ✅ 3-2) 무음 접속 유지 — 이 기기에서 켜 뒀으면 입장 클릭에 얹어 조용히 시작
+      //         (브라우저는 클릭 전에 소리를 못 내게 막습니다. 지금이 그 클릭 직후예요)
+      try { await window.afterJoinInitAlive?.(); } catch(e){ console.warn("[afterJoinInitAlive failed]", e); }
+
       armPresenceOnDisconnect();
       bindConnectionWatcher();
 

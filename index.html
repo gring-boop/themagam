@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608130322">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608130322">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608131328">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608131328">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608130322">
+  <link rel="manifest" href="manifest.json?v=202608131328">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608130322" />
+  <link rel="stylesheet" href="styles.css?v=202608131328" />
 </head>
 
 <body class="dock-mode">
@@ -350,6 +350,9 @@
            바꾸는 것이 좁은 칸을 계속 차지하고 있었어요. -->
       <button class="tab"        data-tab="pomo"    role="tab" aria-selected="false" aria-controls="panel-pomo"    onclick="openTab('pomo')">🍅 뽀모</button>
       <button class="tab"        data-tab="theme"   role="tab" aria-selected="false" aria-controls="panel-theme"   onclick="openTab('theme')">🎨 테마</button>
+      <!-- [2026-08-13] 🔌 접속 유지 — 머리말 [무음] 버튼과 같은 스위치입니다.
+           버튼만으로는 "이게 뭔지"를 설명할 자리가 없어서 여기에 둡니다. -->
+      <button class="tab"        data-tab="alive"   role="tab" aria-selected="false" aria-controls="panel-alive"   onclick="openTab('alive')">🔌 접속 유지</button>
       <button class="tab"        data-tab="privacy" role="tab" aria-selected="false" aria-controls="panel-privacy" onclick="openTab('privacy')">🔒 개인정보</button>
     </div>
 
@@ -455,6 +458,34 @@
         </div>
       </div>
 
+      <!-- ── 🔌 접속 유지 ── -->
+      <div class="panel" id="panel-alive" role="tabpanel">
+        <div class="set-block">
+          <div class="set-title">무음 접속 유지</div>
+          <label class="mini-row" style="gap:8px;align-items:center;cursor:pointer;">
+            <input type="checkbox" id="set-alive" onchange="onAliveSwitch()">
+            <span>들리지 않는 소리로 탭이 잠드는 걸 막기</span>
+          </label>
+          <p class="hint">
+            다른 창을 오래 보면 브라우저가 더마감 탭을 재워서 접속이 끊깁니다.
+            그런데 <b>소리가 나는 탭은 재우지 않아요.</b> 그래서 사람 귀에는 닿지 않을 만큼
+            작은 소리(30Hz)를 계속 흘려 탭을 붙잡아 둡니다. <b>멤버들에게는 아무것도 안 들립니다.</b>
+          </p>
+          <p class="hint">
+            켜면 <b>이 기기에서만</b> 기억해요. 집 컴퓨터에서 켠 것이 폰이나 회사 컴퓨터까지
+            따라가지 않습니다. 머리말의 <b>🔇 무음</b> 버튼과 같은 스위치예요.
+          </p>
+          <p class="hint">
+            <b>알아두실 점.</b><br>
+            · 탭에 <b>🔊 스피커 표시</b>가 뜹니다 — 정상입니다. 그게 떠야 효과가 있어요.
+              탭을 우클릭해 <b>사이트 음소거</b>를 누르면 효과가 사라집니다.<br>
+            · <b>폰에서는 음악 앱이 끊기거나 볼륨이 눌릴 수 있어요.</b> 폰은 꺼 두시길 권합니다.<br>
+            · 노트북 자체가 절전으로 들어가는 건 막지 못합니다.<br>
+            · 옆의 자동감지와 달리 <b>사파리·파이어폭스에서도 됩니다.</b>
+          </p>
+        </div>
+      </div>
+
       <!-- ── 타이머 ── -->
       <!-- ── 개인정보 ── -->
       <div class="panel" id="panel-privacy" role="tabpanel">
@@ -503,6 +534,11 @@
       <!-- 창을 비우는 기능이 없어졌으므로 "치워둔 창" 자리도 없앴습니다. -->
 
       <div class="head-tools">
+        <!-- [2026-08-13] 🔇 무음 접속 유지 — 들리지 않는 소리로 탭이 잠드는 걸 막습니다.
+             옆의 자동감지와 달리 브라우저를 가리지 않아요(사파리도 됩니다).
+             켬/끔은 이 기기에만 기억합니다 — script_alive.js 참고. -->
+        <button class="icon-btn labeled" type="button" id="alive-btn" onclick="toggleKeepAlive()" aria-pressed="false" aria-label="무음 접속 유지" title="들리지 않는 소리로 탭이 잠드는 걸 막아요">🔇<span class="icon-btn-label">무음 OFF</span></button>
+
         <!-- 자리비움 자동 감지 — 크롬·엣지 전용. script_idledetect.js 가 라벨과 흐림을 관리합니다 -->
         <button class="icon-btn labeled" type="button" id="idle-detect-btn" onclick="toggleIdleDetect()" aria-label="자리비움 자동 감지" title="무입력 20분이면 자동으로 AWAY">🖱️<span class="icon-btn-label">자동감지 OFF</span></button>
 
@@ -989,36 +1025,37 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608130322"></script>
-<script src="fortune_data.js?v=202608130322"></script>
-<script src="script_core.js?v=202608130322"></script>
-<script src="script_auth.js?v=202608130322"></script>
-<script src="script_ui.js?v=202608130322"></script>
-<script src="script_chat.js?v=202608130322"></script>
-<script src="script_chatty.js?v=202608130322"></script>
-<script src="script_data.js?v=202608130322"></script>
-<script src="script_realtime.js?v=202608130322"></script>
-<script src="script_dock.js?v=202608130322"></script>
-<script src="script_wordcount.js?v=202608130322"></script>
-<script src="script_timelog.js?v=202608130322"></script>
-<script src="script_idledetect.js?v=202608130322"></script>
-<script src="script_profile.js?v=202608130322"></script>
-<script src="script_mywork.js?v=202608130322"></script>
-<script src="script_forest.js?v=202608130322"></script>
-<script src="script_pubreview.js?v=202608130322"></script>
-<script src="script_notice.js?v=202608130322"></script>
-<script src="script_achv.js?v=202608130322"></script>
-<script src="script_reactions.js?v=202608130322"></script>
-<script src="script_note.js?v=202608130322"></script>
+<script src="script_demo.js?v=202608131328"></script>
+<script src="fortune_data.js?v=202608131328"></script>
+<script src="script_core.js?v=202608131328"></script>
+<script src="script_auth.js?v=202608131328"></script>
+<script src="script_ui.js?v=202608131328"></script>
+<script src="script_chat.js?v=202608131328"></script>
+<script src="script_chatty.js?v=202608131328"></script>
+<script src="script_data.js?v=202608131328"></script>
+<script src="script_realtime.js?v=202608131328"></script>
+<script src="script_dock.js?v=202608131328"></script>
+<script src="script_wordcount.js?v=202608131328"></script>
+<script src="script_timelog.js?v=202608131328"></script>
+<script src="script_idledetect.js?v=202608131328"></script>
+<script src="script_alive.js?v=202608131328"></script>
+<script src="script_profile.js?v=202608131328"></script>
+<script src="script_mywork.js?v=202608131328"></script>
+<script src="script_forest.js?v=202608131328"></script>
+<script src="script_pubreview.js?v=202608131328"></script>
+<script src="script_notice.js?v=202608131328"></script>
+<script src="script_achv.js?v=202608131328"></script>
+<script src="script_reactions.js?v=202608131328"></script>
+<script src="script_note.js?v=202608131328"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608130322"></script>
+<script src="script_worktag.js?v=202608131328"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608130322"></script>
-<script src="script_share.js?v=202608130322"></script>
-<script src="script_manual.js?v=202608130322"></script>
-<script src="script_guard.js?v=202608130322"></script>
+<script src="script_sticker.js?v=202608131328"></script>
+<script src="script_share.js?v=202608131328"></script>
+<script src="script_manual.js?v=202608131328"></script>
+<script src="script_guard.js?v=202608131328"></script>
 
 <script>
   window.addEventListener("load", () => {
@@ -1054,7 +1091,8 @@
       "script_manual.js":   "openManual",
       "script_dock.js":     "dockOpen",
       "script_timelog.js":  "renderMyRecordPanel",
-      "script_idledetect.js": "toggleIdleDetect"
+      "script_idledetect.js": "toggleIdleDetect",
+      "script_alive.js":      "toggleKeepAlive"
     };
     const missing = Object.entries(required)
       .filter(([, fn]) => typeof window[fn] !== "function")
