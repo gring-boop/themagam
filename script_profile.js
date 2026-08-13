@@ -1051,8 +1051,13 @@ function bindProfilePanel() {
   paintPreview();
 
   /* ---- 🧲 꾸미기 스티커 — 넷 중 하나만 바꿔도 넷을 모아 저장합니다.
-     낱개로 저장하면 "빈 값으로 되돌리기"가 지워지지 않고 남는 수가 있어요. */
-  host.querySelectorAll("[data-deco-slot]").forEach(sel => {
+     낱개로 저장하면 "빈 값으로 되돌리기"가 지워지지 않고 남는 수가 있어요.
+
+     [고침 2026-08-13 당일] host → document. 여기는 bindProfilePanel 안이라
+     host 변수가 없습니다(그건 renderProfilePanel 것). ReferenceError 로
+     이 연결이 즉사해서 "골라도 카드에 안 붙는" 상태였고, 아래 눈사람
+     배경색 연결까지 같이 죽었습니다. */
+  document.querySelectorAll("[data-deco-slot]").forEach(sel => {
     sel.onchange = () => {
       const stickers = {};
       ["a", "b", "c", "d"].forEach(k => {
