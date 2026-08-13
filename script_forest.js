@@ -275,7 +275,7 @@
                   aria-expanded="${open ? "true" : "false"}">${open ? "▴" : "💬"} ${rs.length}</button>
         </div>
         ${open ? `
-        <div class="fr-replies">
+        <div class="fr-replies${n.y > 55 ? " flip" : ""}">
           ${rs.map(replyHtml).join("")}
           ${_reply && _reply.parent === n.id
             ? replyComposeHtml()
@@ -416,8 +416,10 @@
 
     /* 쪽지는 왼쪽 위 모서리를 기준으로 놓입니다. 누른 자리가 카드
        한복판이 되도록 조금 당겨 두면 손끝과 덜 어긋나요. */
-    const x = clamp(((e.clientX - r.left) / r.width) * 100 - 8, 0, 100);
-    const y = clamp(((e.clientY - r.top) / r.height) * 100 - 6, 0, 100);
+    const x = clamp(((e.clientX - r.left) / r.width) * 100 - 8, 0, 88);
+    /* 세로는 72%까지만 — 맨 아래를 눌러도 작성 카드가 잘리지 않게
+       살짝 위로 당겨 앉힙니다 (쪽지 자체는 어디든 끌어다 둘 수 있어요) */
+    const y = clamp(((e.clientY - r.top) / r.height) * 100 - 6, 0, 72);
 
     _compose = {
       x: Math.round(x * 10) / 10,
