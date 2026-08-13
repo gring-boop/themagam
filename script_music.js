@@ -114,12 +114,41 @@
       slot.appendChild(f);
     }
     /* 방금 클릭했으므로(사용자 제스처) autoplay 가 허용됩니다.
-       nocookie 도메인 — 방문 기록에 쿠키를 덜 남깁니다 */
-    f.src = "https://www.youtube-nocookie.com/embed/" + vid + "?autoplay=1&rel=0";
+       nocookie 도메인 — 방문 기록에 쿠키를 덜 남깁니다.
+       enablejsapi=1 — 알약 더블클릭 일시정지가 postMessage 로 명령을
+       보내려면 이 문이 열려 있어야 합니다. */
+    f.src = "https://www.youtube-nocookie.com/embed/" + vid
+          + "?autoplay=1&rel=0&enablejsapi=1";
     _cur = vid;
+    _paused = false;
     void title;
     renderList();
   }
+
+  /* ---------------------------------------------------------------
+     알약 더블클릭 — 재생/일시정지 (script_dock.js 가 부릅니다)
+
+     iframe 을 안 건드리고 유튜브에 쪽지(postMessage)만 보냅니다.
+     끊길 염려가 없는 유일한 방법이에요.
+     --------------------------------------------------------------- */
+  let _paused = false;
+  function musicHasPlayer() {
+    return !!document.getElementById("music-player-frame");
+  }
+  function musicTogglePlay() {
+    const f = document.getElementById("music-player-frame");
+    if (!f || !f.contentWindow) return false;
+    const cmd = _paused ? "playVideo" : "pauseVideo";
+    try {
+      f.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func: cmd, args: [] }), "*");
+      _paused = !_paused;
+      renderList();
+      return true;
+    } catch (e) { return false; }
+  }
+  window.musicHasPlayer = musicHasPlayer;
+  window.musicTogglePlay = musicTogglePlay;
 
   /* ---------------------------------------------------------------
      리스트 그리기 — 플레이어 칸은 절대 건드리지 않습니다
@@ -140,7 +169,7 @@
     box.innerHTML = rows.map(s => `
       <div class="music-row${s.vid === _cur ? " is-playing" : ""}" data-vid="${s.vid}"
            data-title="${escapeHtml(s.title || "")}" role="button" tabindex="0">
-        <span class="music-row-ico">${s.vid === _cur ? "🔊" : "♪"}</span>
+        <span class="music-row-ico">${s.vid === _cur ? (_paused ? "⏸" : "🔊") : "♪"}</span>
         <span class="music-row-title">${escapeHtml(s.title || s.vid)}</span>
         <span class="music-row-nick">${escapeHtml(s.nick || "")}</span>
         ${s.nick === myNick

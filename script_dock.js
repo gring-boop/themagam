@@ -823,9 +823,31 @@
     document.addEventListener("pointerdown", 올리기, true);
     document.addEventListener("focusin", 올리기, true);
 
+    /* ♪ BGM 알약만 더블클릭이 있습니다 — 두 번 누르면 재생/일시정지.
+       더블클릭은 클릭 두 번이라 그냥 걸면 판이 열렸다 닫히며 깜빡여요.
+       그래서 이 알약만 250ms 기다렸다가 "한 번이면 열기"를 실행합니다.
+       (음악이 없을 때는 기다릴 이유가 없으니 바로 엽니다) */
+    let _musicClickTimer = null;
     document.addEventListener("click", (e) => {
       const pill = e.target.closest("[data-dock]");
-      if (pill) { open(pill.dataset.dock); return; }
+      if (pill) {
+        const id = pill.dataset.dock;
+        if (id === "music" && window.musicHasPlayer?.()) {
+          if (_musicClickTimer) {                      // 두 번째 클릭 — 일시정지 토글
+            clearTimeout(_musicClickTimer);
+            _musicClickTimer = null;
+            window.musicTogglePlay?.();
+            return;
+          }
+          _musicClickTimer = setTimeout(() => {        // 한 번뿐이면 — 열기
+            _musicClickTimer = null;
+            open(id);
+          }, 250);
+          return;
+        }
+        open(id);
+        return;
+      }
 
       const x = e.target.closest("[data-dock-close]");
       if (x) { close(x.dataset.dockClose); return; }   // ★ 그 판만 닫습니다
