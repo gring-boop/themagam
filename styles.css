@@ -7933,10 +7933,93 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 #dock-panel-pomo{ width: min(288px, calc(100vw - 24px)); }
 /* 📢 공지 — 글이 짧아서 오른쪽이 휑했습니다. 460 → 356 */
 #dock-panel-notice{ width: min(356px, calc(100vw - 24px)); }
-/* 💬 챗 460 → 391 (85%) */
-#dock-panel-chat{ width: min(391px, calc(100vw - 24px)); }
-/* ☕ 수다방 520 → 416 (80%) */
-#dock-panel-chatty{ width: min(416px, calc(100vw - 24px)); }
+/* 💬 챗 460 → 391 → 352 (2026-08-13 다시 10% 줄임) */
+#dock-panel-chat{ width: min(352px, calc(100vw - 24px)); }
+/* ☕ 수다방 520 → 416 → 374 (2026-08-13 다시 10% 줄임) */
+#dock-panel-chatty{ width: min(374px, calc(100vw - 24px)); }
+
+/* ♪ BGM (2026-08-13) — 뽀모와 같은 폭. 위 플레이어, 아래 리스트.
+   ★ 플레이어 칸(#music-player-slot)은 다시 그리면 안 됩니다 —
+     iframe 이 새로 실리면서 음악이 끊깁니다 (script_music.js 참고) */
+#dock-panel-music{ width: min(288px, calc(100vw - 24px)); }
+#dock-panel-music .dock-body{ display: flex; flex-direction: column; min-height: 0; }
+.music-player-slot{
+  flex: 0 0 auto;
+  aspect-ratio: 16 / 9;
+  background: #201B17;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.music-player-slot iframe{ width: 100%; height: 100%; border: 0; display: block; }
+.music-player-empty{
+  height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  color: #A08D7F;
+  font-size: var(--fs-xs);
+  text-align: center;
+  line-height: 1.6;
+}
+.music-list-head{
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: var(--fs-2xs); color: var(--muted);
+  padding: 2px 2px 4px;
+}
+.music-list-hint{ font-size: calc(var(--fs-2xs) * .92); }
+.music-list{ flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.music-empty{
+  padding: 14px 8px; text-align: center;
+  color: var(--muted); font-size: var(--fs-xs); line-height: 1.7;
+}
+.music-row{
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 7px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-size: var(--fs-xs);
+}
+.music-row:hover{ background: var(--fill-1); }
+.music-row.is-playing{ background: var(--fill-2); }
+.music-row-ico{ flex: 0 0 14px; text-align: center; }
+.music-row-title{
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.music-row-nick{ flex: 0 0 auto; font-size: var(--fs-2xs); color: var(--muted); }
+.music-row-x{
+  flex: 0 0 auto;
+  border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: var(--fs-2xs);
+  padding: 2px 4px; border-radius: 6px;
+}
+.music-row-x:hover{ background: var(--fill-2); color: var(--text); }
+.music-add{
+  flex: 0 0 auto;
+  display: flex; gap: 6px;
+  padding-top: 8px; margin-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+.music-add input{
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--fs-xs);
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--panel2);
+  color: var(--text);
+}
+.music-add button{
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 7px 12px;
+  border: none; border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff; cursor: pointer;
+}
+.music-add button:disabled{ opacity: .5; cursor: default; }
 
 /* 머리말 — 바탕은 판과 같게, 가르는 선은 없앴습니다.
    ★ 선이 있으면 판이 두 덩어리로 잘려 보였어요. */

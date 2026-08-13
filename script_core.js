@@ -431,6 +431,9 @@ window.AppSession = AppSession;
       //         (브라우저는 클릭 전에 소리를 못 내게 막습니다. 지금이 그 클릭 직후예요)
       try { await window.afterJoinInitAlive?.(); } catch(e){ console.warn("[afterJoinInitAlive failed]", e); }
 
+      // ✅ 3-3) ♪ BGM — 추천 리스트 구독 시작 (판은 dock 이 이미 만들어 둠)
+      try { window.musicInit?.(); } catch(e){ console.warn("[musicInit failed]", e); }
+
       armPresenceOnDisconnect();
       bindConnectionWatcher();
 

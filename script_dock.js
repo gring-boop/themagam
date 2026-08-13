@@ -76,10 +76,16 @@
     /* 🏢 출판사 품평 — 익명 게시판 (2026-08-12, script_pubreview.js).
        공지처럼 목록형이지만 댓글이 길게 달리는 곳이라 키울 수 있게 했어요. */
     { id: "pub", label: "🏢 출판사 품평", stay: true, size: 1.35, move: null, drag: true, resize: true },
-    { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
+    /* ♪ BGM (2026-08-13, script_music.js) — 유튜브 추천 리스트 + 작은
+       플레이어. 접어도 소리가 이어집니다(판은 hidden 으로 가려질 뿐,
+       iframe 은 DOM 에 남으니까). 키는 위 가장자리로 조절. */
+    { id: "music", label: "♪ BGM", stay: true, size: 0.72, move: null, drag: true, resize: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
-       뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다. */
+       뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다.
+       [2026-08-13] 자리를 전체기록 앞으로 — 왼쪽(소통)과 오른쪽(기록)을
+       가르는 기준선 역할입니다. */
     { id: "todo",   label: "",                   stay: false, size: 0, move: null, inline: true },
+    { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
