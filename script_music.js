@@ -193,6 +193,18 @@
   window.musicHasPlayer = musicHasPlayer;
   window.musicTogglePlay = musicTogglePlay;
 
+  /** 기본 키 — 판 꼭대기부터 영상 아랫변까지 (script_dock.js 가 씁니다).
+      영상만 보이는 높이로 열려서, 아래 리스트가 작업 중에 안 거슬려요. */
+  function musicDefaultH() {
+    const p = document.getElementById("dock-panel-music");
+    const slot = document.getElementById("music-player-slot");
+    if (!p || !slot) return 0;
+    const pr = p.getBoundingClientRect(), sr = slot.getBoundingClientRect();
+    if (!pr.height || !sr.height) return 0;
+    return Math.round(sr.bottom - pr.top);
+  }
+  window.musicDefaultH = musicDefaultH;
+
   /* ---------------------------------------------------------------
      알약 불 켜기 — 재생 중이면 [♪ BGM] 알약이 색을 입습니다
      (화면 공유의 "공유 중" 같은 표시. 일시정지하면 꺼져요)

@@ -79,7 +79,7 @@
     /* ♪ BGM (2026-08-13, script_music.js) — 유튜브 추천 리스트 + 작은
        플레이어. 접어도 소리가 이어집니다(판은 hidden 으로 가려질 뿐,
        iframe 은 DOM 에 남으니까). 키는 위 가장자리로 조절. */
-    { id: "music", label: "♪ BGM", stay: true, size: 0.72, move: null, drag: true, resize: true },
+    { id: "music", label: "♪ BGM", stay: true, size: 0.5, move: null, drag: true, resize: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다.
        [2026-08-13] 자리를 전체기록 앞으로 — 왼쪽(소통)과 오른쪽(기록)을
@@ -564,6 +564,17 @@
     p.hidden = false;
     _open.add(pid);
     if (d.resize) setH(pid, loadH(pid));       // 늘려 뒀던 키를 되살립니다
+
+    /* ♪ BGM — 늘려 둔 키가 없으면 **영상 아랫변까지만** 엽니다.
+       영상만 띄워 두고 작업하는 사람에게 아래 리스트가 거슬리지 않게요.
+       리스트가 보고 싶으면 위 가장자리를 끌어 키우면 되고, 한 번 키우면
+       그 키가 기억됩니다. (rAF — 방금 hidden 을 풀어서 한 틀 뒤에야 잴 수 있어요) */
+    if (pid === "music" && !window.AppStore?.getItem(H_KEY + ":music")) {
+      requestAnimationFrame(() => {
+        const h = window.musicDefaultH?.();
+        if (h) setH("music", h);
+      });
+    }
     /* 자리 — 놓아둔 곳이 있으면 거기, 없으면 제 알약 위 */
     place(pid, (d.drag && loadPos(pid)) || defaultPos(pid, id));
     raise(pid);                      // 방금 연 것이 맨 위로
