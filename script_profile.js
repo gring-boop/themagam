@@ -434,13 +434,23 @@ function snowColor(nick) {
 /* 카드 무늬 — CSS 그라데이션으로 그리므로 이미지 파일이 필요 없습니다 */
 const CARD_PATTERNS = [
   { id: "none",           label: "무늬 없음" },
+  /* 도트 네 크기 — 원단 용어를 빌렸습니다: 핀도트(아주 잘게) ·
+     도트(중간) · 코인도트(동전만큼 큼) · 폴카도트(엇갈려 배치) */
+  { id: "dots-pin",       label: "핀도트 (자잘)" },
   { id: "dots",           label: "도트" },
+  { id: "dots-coin",      label: "코인도트 (큼)" },
+  { id: "dots-polka",     label: "폴카도트 (엇갈림)" },
   { id: "grid",           label: "그리드" },
+  { id: "grid-wide",      label: "성근 그리드" },
+  { id: "grid-diamond",   label: "마름모 격자 ◇" },
   { id: "cross",          label: "십자" },
   { id: "check",          label: "체크" },
+  { id: "check-gingham",  label: "깅엄 체크" },
   { id: "line",           label: "가로 줄무늬" },
   { id: "stripe",         label: "사선 줄무늬 ／" },
   { id: "stripe-rev",     label: "사선 줄무늬 ＼" },
+  { id: "zigzag",         label: "지그재그" },
+  { id: "scallop",        label: "비늘 (스캘럽)" },
   { id: "shape-star",     label: "⭐ 별" },
   { id: "shape-sun",      label: "☀️ 해" },
   { id: "shape-moon",     label: "🌙 달" },

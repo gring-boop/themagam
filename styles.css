@@ -1442,6 +1442,83 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   background-position: 10px 10px;
 }
 
+/* ── 무늬 추가 (2026-08-13) — 카드와 미리보기를 한 선택자로 묶습니다.
+   위 옛 무늬들처럼 둘로 갈라 쓰면 한쪽만 고치는 사고가 나요.
+
+   도트는 원단 분류를 따랐습니다: 핀도트(아주 잘게) < 도트 < 코인도트(동전).
+   폴카도트는 크기가 아니라 **배치** — 엇갈린 격자라 옷감처럼 보입니다. */
+.user-card.pat-dots-pin,
+.card-preview.pat-dots-pin{
+  background-image: radial-gradient(var(--cpat) 1px, transparent 1.1px);
+  background-size: 8px 8px;
+}
+.user-card.pat-dots-coin,
+.card-preview.pat-dots-coin{
+  background-image: radial-gradient(var(--cpat) 5.5px, transparent 5.9px);
+  background-size: 26px 26px;
+}
+.user-card.pat-dots-polka,
+.card-preview.pat-dots-polka{
+  background-image:
+    radial-gradient(var(--cpat) 2.6px, transparent 2.8px),
+    radial-gradient(var(--cpat) 2.6px, transparent 2.8px);
+  background-size: 22px 22px;
+  background-position: 0 0, 11px 11px;
+}
+
+/* 성근 그리드 — 기존 그리드(16px)의 큰 칸(34px) 판. 셔츠의 윈도판 체크 */
+.user-card.pat-grid-wide,
+.card-preview.pat-grid-wide{
+  background-image:
+    linear-gradient(var(--cpat) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cpat) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* 마름모 격자 — 그리드를 45도로 뉘였습니다. 사선 두 방향을 겹치면
+   가위표가 이어져 마름모 그물이 됩니다 */
+.user-card.pat-grid-diamond,
+.card-preview.pat-grid-diamond{
+  background-image:
+    repeating-linear-gradient(45deg,  var(--cpat) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(-45deg, var(--cpat) 0 1px, transparent 1px 14px);
+}
+
+/* 깅엄 체크 — 반투명 띠를 가로세로로 겹칩니다. 겹친 자리만 진해져서
+   식탁보 같은 세 단계 색이 나요. 띠를 불투명하게 하면 그냥 체크가 됩니다 */
+.user-card.pat-check-gingham,
+.card-preview.pat-check-gingham{
+  background-image:
+    repeating-linear-gradient(0deg,
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(90deg,
+      color-mix(in srgb, var(--cpat) 45%, transparent) 0 8px, transparent 8px 16px);
+}
+
+/* 지그재그 — 삼각형 네 겹으로 산줄기를 잇는 고전 셰브론 기법 */
+.user-card.pat-zigzag,
+.card-preview.pat-zigzag{
+  background-image:
+    linear-gradient(135deg, var(--cpat) 25%, transparent 25%),
+    linear-gradient(225deg, var(--cpat) 25%, transparent 25%),
+    linear-gradient(315deg, var(--cpat) 25%, transparent 25%),
+    linear-gradient(45deg,  var(--cpat) 25%, transparent 25%);
+  background-size: 14px 14px;
+  background-position: 7px 0, 7px 0, 0 0, 0 0;
+}
+
+/* 비늘 — 반원 테를 반 칸씩 엇갈려 포개면 물고기 비늘이 됩니다 */
+.user-card.pat-scallop,
+.card-preview.pat-scallop{
+  background-image:
+    radial-gradient(circle at 50% 0%,
+      transparent 9px, var(--cpat) 9px 10px, transparent 10.5px),
+    radial-gradient(circle at 50% 0%,
+      transparent 9px, var(--cpat) 9px 10px, transparent 10.5px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
 /* [삭제] 카드 강조색 띠와 "내 카드" 테두리는 요청에 따라 없앴습니다.
    내 카드는 프사 위 ✏️ 버튼으로 구분됩니다. */
 
