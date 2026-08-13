@@ -38,9 +38,16 @@
 (function () {
   "use strict";
 
-  const MUSIC_MAX = 35;      // 리스트 상한 — 넘치면 오래된 것부터
+  /* [나눔 2026-08-13 밤] 리스트가 둘이 됐습니다.
+       ♪ 나의 리스트 — 10곡, 나만 봅니다 (users/{닉}/musicMine — 닉 기준이라
+                        크롬·사파리 어디서든 따라와요). 꽉 차면 거절 —
+                        아끼는 곡을 자동으로 지우면 서운하니까요.
+       🎵 추천 리스트 — 30곡, 모두 공용 (music). 넘치면 오래된 것부터. */
+  const MUSIC_MAX = 30;      // 추천(공용) 상한
+  const MINE_MAX  = 10;      // 나의 리스트 상한
   let _cur = "";             // 지금 재생 중인 vid (이 기기에서만)
-  let _list = {};            // 서버 리스트 스냅샷
+  let _list = {};            // 추천(공용) 스냅샷
+  let _mine = {};            // 나의 리스트 스냅샷
   let _built = false;
 
   /* ---------------------------------------------------------------
@@ -88,18 +95,17 @@
                value="80" aria-label="볼륨">
         <span class="music-vol-val" id="music-vol-val">80</span>
       </div>
-      <div class="music-list-head">
-        <span>🎵 추천 리스트</span><span class="music-list-hint">클릭하면 재생 · 나에게만 들려요</span>
-      </div>
       <div id="music-list" class="music-list"></div>
       <div class="music-add">
         <input type="url" id="music-add-url" placeholder="유튜브 링크 붙여넣기"
                autocomplete="off" spellcheck="false">
-        <button type="button" id="music-add-btn">추천</button>
+        <button type="button" id="music-add-mine" title="♪ 나의 리스트에 (나만 봐요)">담기</button>
+        <button type="button" id="music-add-btn" title="🎵 추천 리스트에 (모두에게)">추천</button>
       </div>`;
-    document.getElementById("music-add-btn").addEventListener("click", addLink);
+    document.getElementById("music-add-btn").addEventListener("click", () => addLink(false));
+    document.getElementById("music-add-mine").addEventListener("click", () => addLink(true));
     document.getElementById("music-add-url").addEventListener("keydown", e => {
-      if (e.key === "Enter") { e.preventDefault(); addLink(); }
+      if (e.key === "Enter") { e.preventDefault(); addLink(false); }
     });
 
     /* 볼륨 — 저장값 복원 + 움직일 때마다 적용·저장 */
@@ -244,11 +250,13 @@
   window.musicHasPlayer = musicHasPlayer;
   window.musicTogglePlay = musicTogglePlay;
 
-  /** 기본 키 — 판 꼭대기부터 영상 아랫변까지 (script_dock.js 가 씁니다).
-      영상만 보이는 높이로 열려서, 아래 리스트가 작업 중에 안 거슬려요. */
+  /** 기본 키 — 판 꼭대기부터 **볼륨 줄 아랫변**까지 (script_dock.js 가 씁니다).
+      영상 + 볼륨만 보이는 높이로 열려서, 아래 리스트가 작업 중에 안 거슬려요.
+      [2026-08-13 밤] 영상 아랫변 → 볼륨까지로 늘림 (콩 요청 — 캡쳐처럼) */
   function musicDefaultH() {
     const p = document.getElementById("dock-panel-music");
-    const slot = document.getElementById("music-player-slot");
+    const slot = document.querySelector("#dock-panel-music .music-vol-row")
+              || document.getElementById("music-player-slot");
     if (!p || !slot) return 0;
     const pr = p.getBoundingClientRect(), sr = slot.getBoundingClientRect();
     if (!pr.height || !sr.height) return 0;
@@ -268,34 +276,59 @@
   /* ---------------------------------------------------------------
      리스트 그리기 — 플레이어 칸은 절대 건드리지 않습니다
      --------------------------------------------------------------- */
-  function renderList() {
-    const box = document.getElementById("music-list");
-    if (!box) return;
-    const rows = Object.entries(_list)
-      .map(([id, s]) => ({ id, ...s }))
-      .filter(s => okVid(s.vid))
-      .sort((a, b) => (a.at || 0) - (b.at || 0));   // 오래된 것 위
-
-    if (!rows.length) {
-      box.innerHTML = `<div class="music-empty">아직 추천이 없어요.
-        아래에 유튜브 링크를 붙여넣어 첫 곡을 걸어 주세요!</div>`;
-      return;
-    }
-    box.innerHTML = rows.map(s => `
+  function _rowHtml(s, extra) {
+    return `
       <div class="music-row${s.vid === _cur ? " is-playing" : ""}" data-vid="${s.vid}"
            data-title="${escapeHtml(s.title || "")}" role="button" tabindex="0">
         <span class="music-row-ico">${s.vid === _cur ? (_paused ? "⏸" : "🔊") : "♪"}</span>
         <span class="music-row-title">${escapeHtml(s.title || s.vid)}</span>
-        <span class="music-row-nick">${escapeHtml(s.nick || "")}</span>
-        ${s.nick === myNick
-          ? `<button type="button" class="music-row-x" data-music-del="${s.id}"
-                     aria-label="내 추천 지우기" title="내 추천 지우기">✕</button>`
-          : ""}
-      </div>`).join("");
+        ${extra}
+      </div>`;
+  }
+
+  function renderList() {
+    const box = document.getElementById("music-list");
+    if (!box) return;
+    const mine = Object.entries(_mine)
+      .map(([id, s]) => ({ id, ...s }))
+      .filter(s => okVid(s.vid))
+      .sort((a, b) => (a.at || 0) - (b.at || 0));
+    const rows = Object.entries(_list)
+      .map(([id, s]) => ({ id, ...s }))
+      .filter(s => okVid(s.vid))
+      .sort((a, b) => (a.at || 0) - (b.at || 0));   // 오래된 것 위
+    const mineVids = new Set(mine.map(s => s.vid));
+
+    /* ♪ 나의 리스트 — 위 */
+    let h = `<div class="music-sec-head"><span>♪ 나의 리스트</span>
+               <span>${mine.length} / ${MINE_MAX} · 나만 봐요</span></div>`;
+    h += mine.length
+      ? mine.map(s => _rowHtml(s, `
+          <button type="button" class="music-row-x" data-mine-del="${s.id}"
+                  aria-label="내 리스트에서 빼기" title="내 리스트에서 빼기">✕</button>`)).join("")
+      : `<div class="music-empty mini">링크를 [담기] 하거나, 아래 추천의 ＋ 를 눌러 채워요.</div>`;
+
+    /* 🎵 추천 리스트 — 아래 */
+    h += `<div class="music-sec-head"><span>🎵 추천 리스트</span>
+            <span>클릭하면 재생 · 나에게만 들려요</span></div>`;
+    h += rows.length
+      ? rows.map(s => _rowHtml(s, `
+          <span class="music-row-nick">${escapeHtml(s.nick || "")}</span>
+          ${!mineVids.has(s.vid) && mine.length < MINE_MAX
+            ? `<button type="button" class="music-row-x" data-mine-add="${s.vid}"
+                       data-add-title="${escapeHtml(s.title || "")}"
+                       aria-label="내 리스트에 담기" title="내 리스트에 담기">＋</button>` : ""}
+          ${s.nick === myNick
+            ? `<button type="button" class="music-row-x" data-music-del="${s.id}"
+                       aria-label="내 추천 지우기" title="내 추천 지우기">✕</button>` : ""}`)).join("")
+      : `<div class="music-empty">아직 추천이 없어요.
+          아래에 유튜브 링크를 붙여넣어 첫 곡을 걸어 주세요!</div>`;
+
+    box.innerHTML = h;
 
     box.querySelectorAll(".music-row").forEach(r => {
       r.addEventListener("click", e => {
-        if (e.target.closest("[data-music-del]")) return;
+        if (e.target.closest(".music-row-x")) return;
         play(r.dataset.vid, r.dataset.title);
       });
     });
@@ -304,20 +337,43 @@
         db.ref("music/" + b.dataset.musicDel).remove().catch(() => {});
       });
     });
+    box.querySelectorAll("[data-mine-del]").forEach(b => {
+      b.addEventListener("click", () => {
+        db.ref(`users/${myNick}/musicMine/` + b.dataset.mineDel).remove().catch(() => {});
+      });
+    });
+    /* 추천 → 내 리스트로 담기 */
+    box.querySelectorAll("[data-mine-add]").forEach(b => {
+      b.addEventListener("click", () => {
+        if (Object.keys(_mine).length >= MINE_MAX) return;
+        db.ref(`users/${myNick}/musicMine`).push({
+          vid: b.dataset.mineAdd,
+          title: b.dataset.addTitle || "",
+          at: Date.now()
+        }).catch(() => {});
+      });
+    });
   }
 
   /* ---------------------------------------------------------------
      추천 올리기 — 상한을 넘으면 오래된 것부터 지웁니다
      --------------------------------------------------------------- */
-  async function addLink() {
+  async function addLink(toMine) {
     const inp = document.getElementById("music-add-url");
-    const btn = document.getElementById("music-add-btn");
+    const btn = document.getElementById(toMine ? "music-add-mine" : "music-add-btn");
     if (!inp || !myNick) return;
     const url = inp.value.trim();
     const vid = parseVid(url);
     if (!vid) { alert("유튜브 링크가 아닌 것 같아요. 주소를 다시 봐 주세요."); return; }
-    if (Object.values(_list).some(s => s.vid === vid)) {
-      alert("이미 리스트에 있는 곡이에요!"); inp.value = ""; return;
+    if (toMine) {
+      if (Object.keys(_mine).length >= MINE_MAX) {
+        alert(`나의 리스트는 ${MINE_MAX}곡까지예요. 하나를 빼고 담아 주세요.`); return;
+      }
+      if (Object.values(_mine).some(s => s.vid === vid)) {
+        alert("이미 나의 리스트에 있는 곡이에요!"); inp.value = ""; return;
+      }
+    } else if (Object.values(_list).some(s => s.vid === vid)) {
+      alert("이미 추천 리스트에 있는 곡이에요!"); inp.value = ""; return;
     }
 
     /* ★ 글칸은 보내기 **전에** 비웁니다 — 품평에서 배운 것.
@@ -327,16 +383,21 @@
 
     try {
       const title = (await fetchTitle(url)) || url;
-      await db.ref("music").push({ vid, title, nick: myNick, at: Date.now() });
+      if (toMine) {
+        await db.ref(`users/${myNick}/musicMine`).push({ vid, title, at: Date.now() });
+      } else {
+        await db.ref("music").push({ vid, title, nick: myNick, at: Date.now() });
 
-      /* 상한 정리 — 넘친 만큼 오래된 것부터 */
-      const snap = await db.ref("music").once("value");
-      const all = [];
-      snap.forEach(c => { all.push({ id: c.key, at: (c.val() || {}).at || 0 }); });
-      if (all.length > MUSIC_MAX) {
-        all.sort((a, b) => a.at - b.at);
-        const over = all.slice(0, all.length - MUSIC_MAX);
-        for (const o of over) await db.ref("music/" + o.id).remove();
+        /* 상한 정리 — 넘친 만큼 오래된 것부터 (추천만. 나의 리스트는
+           꽉 차면 거절합니다 — 아끼는 곡을 자동으로 지우면 서운해요) */
+        const snap = await db.ref("music").once("value");
+        const all = [];
+        snap.forEach(c => { all.push({ id: c.key, at: (c.val() || {}).at || 0 }); });
+        if (all.length > MUSIC_MAX) {
+          all.sort((a, b) => a.at - b.at);
+          const over = all.slice(0, all.length - MUSIC_MAX);
+          for (const o of over) await db.ref("music/" + o.id).remove();
+        }
       }
     } catch (e) {
       console.warn("[music add failed]", e);
@@ -359,6 +420,11 @@
     _ref = db.ref("music");
     _ref.on("value", snap => {
       _list = snap.val() || {};
+      renderList();
+    });
+    /* ♪ 나의 리스트 — 닉 기준이라 어느 기기에서든 따라옵니다 */
+    db.ref(`users/${myNick}/musicMine`).on("value", snap => {
+      _mine = snap.val() || {};
       renderList();
     });
     cueLast();     // 직전 곡을 멈췄던 지점에 걸어 둡니다 (▶ 만 누르면 이어짐)

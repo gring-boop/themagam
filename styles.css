@@ -8183,12 +8183,16 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
-.music-list-head{
+/* 리스트 구역 머리 — ♪ 나의 리스트 / 🎵 추천 리스트 */
+.music-sec-head{
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: var(--fs-2xs); color: var(--muted);
-  padding: 2px 2px 4px;
+  padding: 6px 2px 4px;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 3px;
 }
-.music-list-hint{ font-size: calc(var(--fs-2xs) * .92); }
+.music-sec-head:first-child{ padding-top: 2px; }
+.music-empty.mini{ padding: 8px; font-size: calc(var(--fs-xs) * .92); }
 .music-list{ flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .music-empty{
   padding: 14px 8px; text-align: center;
@@ -8241,6 +8245,8 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   color: #fff; cursor: pointer;
 }
 .music-add button:disabled{ opacity: .5; cursor: default; }
+/* [담기]는 나만 보는 리스트라 먹색 — 모두에게 가는 [추천]과 결을 가릅니다 */
+#music-add-mine{ background: #38342F; }
 
 /* 머리말 — 바탕은 판과 같게, 가르는 선은 없앴습니다.
    ★ 선이 있으면 판이 두 덩어리로 잘려 보였어요. */
