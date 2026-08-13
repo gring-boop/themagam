@@ -467,6 +467,66 @@ function sanitizePattern(v) {
 window.CARD_PATTERNS = CARD_PATTERNS;
 window.sanitizePattern = sanitizePattern;
 
+/* =====================================================================
+   🧲 꾸미기 스티커 (2026-08-13) — 냉장고 자석처럼
+
+   카드의 지정 자리 넷(A·B·C·D)에 낱말이나 표정을 골라 붙입니다.
+   자리는 고정이고 스티커만 고릅니다 — 자유 배치로 하면 드래그 저장·
+   겹침·화면 크기별 어긋남이 줄줄이 딸려 오고, 카드가 난장판 되는 것도
+   막을 수 없어요. 자석 느낌은 자리마다 다른 기울기가 냅니다(CSS).
+
+   저장은 프로필(users/{닉})의 stickers: {a,b,c,d} — 규칙 변경 없음.
+   목록제인 이유: 자유 입력은 좁은 카드에서 터지고, 목록이라야
+   sanitize 로 이상한 값을 걸러낼 수 있습니다.
+   ===================================================================== */
+const DECO_WORDS = [
+  /* 낱말 → 고정 색 (배경/글자). 작업 스티커처럼 단어마다 색이 정해져
+     있어야 멀리서도 "아 쟤 마감이구나"가 읽힙니다 */
+  { t: "마감",     bg: "#A32D2D", fg: "#FCEBEB" },
+  { t: "스불재",   bg: "#854F0B", fg: "#FAEEDA" },
+  { t: "라이브",   bg: "#0F6E56", fg: "#E1F5EE" },
+  { t: "갈엎",     bg: "#444441", fg: "#F1EFE8" },
+  { t: "투고",     bg: "#185FA5", fg: "#E6F1FB" },
+  { t: "심사",     bg: "#534AB7", fg: "#EEEDFE" },
+  { t: "수정궁",   bg: "#993556", fg: "#FBEAF0" },
+  { t: "영감님!!", bg: "#993C1D", fg: "#FAECE7" },
+  { t: "투도!",    bg: "#085041", fg: "#E1F5EE" },
+  { t: "아자자!",  bg: "#C64A2E", fg: "#FDF0EA" }
+];
+const DECO_EMOJIS = ["😇","😭","🤩","🔥","😳","😍","😣","🤬","😰","🫠","🥹","😴","🔞","💋","✈️","🚨","☕️"];
+const DECO_SLOTS = ["a", "b", "c", "d"];
+
+function sanitizeDeco(v) {
+  const t = String(v || "");
+  if (!t) return "";
+  if (DECO_WORDS.some(w => w.t === t)) return t;
+  if (DECO_EMOJIS.includes(t)) return t;
+  return "";
+}
+function sanitizeStickers(obj) {
+  const s = (obj && typeof obj === "object") ? obj : {};
+  const out = {};
+  DECO_SLOTS.forEach(k => { out[k] = sanitizeDeco(s[k]); });
+  return out;
+}
+
+/** 한 자리의 스티커 HTML — 카드를 그리는 쪽(script_realtime.js)이 씁니다.
+    빈 자리는 빈 문자열: DOM 자체가 안 생겨서 카드에 흔적이 없어요. */
+function decoStickerHtml(slot, val) {
+  const v = sanitizeDeco(val);
+  if (!v) return "";
+  const w = DECO_WORDS.find(x => x.t === v);
+  if (w) {
+    return `<span class="card-deco card-deco-word deco-${slot}"
+      style="background:${w.bg};color:${w.fg}">${escapeHtml(w.t)}</span>`;
+  }
+  return `<span class="card-deco card-deco-emoji deco-${slot}">${v}</span>`;
+}
+window.DECO_WORDS = DECO_WORDS;
+window.DECO_EMOJIS = DECO_EMOJIS;
+window.sanitizeStickers = sanitizeStickers;
+window.decoStickerHtml = decoStickerHtml;
+
 /* 채팅 말풍선 위에 뜨는 닉네임 색.
    프로필에서 고른 값이 없으면 테마 기본색을 그대로 씁니다. */
 function nickColorOf(nick) {
@@ -834,6 +894,38 @@ function renderProfilePanel() {
       </p>
     </div>
 
+    <!-- 🧲 꾸미기 스티커 — 자리 넷, 각자 낱말/표정/비움 -->
+    <div class="set-block">
+      <div class="set-title">꾸미기 스티커</div>
+      ${[
+        ["a", "오른쪽 위"],
+        ["b", "프사 옆"],
+        ["c", "오른쪽 아래"],
+        ["d", "왼쪽 허리"]
+      ].map(([k, label]) => {
+        const cur = (window.sanitizeStickers(p.stickers))[k];
+        return `
+      <div class="set-row" style="margin-bottom:7px; gap:8px; align-items:center;">
+        <span class="slot-name" style="flex:0 0 84px;">${label}</span>
+        <select id="prof-deco-${k}" class="slot-sel" data-deco-slot="${k}">
+          <option value="">(비움)</option>
+          <optgroup label="낱말">
+            ${DECO_WORDS.map(w => `
+              <option value="${w.t}"${w.t === cur ? " selected" : ""}>${w.t}</option>`).join("")}
+          </optgroup>
+          <optgroup label="표정">
+            ${DECO_EMOJIS.map(e => `
+              <option value="${e}"${e === cur ? " selected" : ""}>${e}</option>`).join("")}
+          </optgroup>
+        </select>
+      </div>`;
+      }).join("")}
+      <p class="hint">
+        캐리어에 스티커 붙이듯 카드의 <b>정해진 자리 넷</b>에 골라 붙여요.
+        비워도 되고 넷 다 붙여도 됩니다. 다른 분들 화면에도 보여요.
+      </p>
+    </div>
+
     <!-- 눈사람 배경색 — 사진을 안 올린 사람만 의미가 있으므로 그때만 보입니다 -->
     <div class="set-block${photo ? " hidden" : ""}" id="prof-snowbg-block">
       <div class="set-title">눈사람 배경색</div>
@@ -957,6 +1049,20 @@ function bindProfilePanel() {
     saveCard();
   };
   paintPreview();
+
+  /* ---- 🧲 꾸미기 스티커 — 넷 중 하나만 바꿔도 넷을 모아 저장합니다.
+     낱개로 저장하면 "빈 값으로 되돌리기"가 지워지지 않고 남는 수가 있어요. */
+  host.querySelectorAll("[data-deco-slot]").forEach(sel => {
+    sel.onchange = () => {
+      const stickers = {};
+      ["a", "b", "c", "d"].forEach(k => {
+        stickers[k] = sanitizeDeco(
+          document.getElementById("prof-deco-" + k)?.value || "");
+      });
+      saveMyProfile({ stickers });
+      window.rerenderUserCards?.();
+    };
+  });
 
   /* ---- 눈사람 배경색 ---- */
   const bgWell  = document.getElementById("prof-snowbg");

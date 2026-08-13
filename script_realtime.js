@@ -468,6 +468,14 @@
           const patCls = patId !== "none" ? ` pat-${patId}` : "";
           const bgCls  = cardBg ? " has-cardbg" : "";
 
+          /* 🧲 꾸미기 스티커 — 자리 넷. B(프사 옆)만 프사 칸 안에 넣어
+             프사를 따라다니게 하고, 나머지는 카드에 직접 붙입니다. */
+          const stk = window.sanitizeStickers?.(prof.stickers) || {};
+          const decoA = window.decoStickerHtml?.("a", stk.a) || "";
+          const decoB = window.decoStickerHtml?.("b", stk.b) || "";
+          const decoC = window.decoStickerHtml?.("c", stk.c) || "";
+          const decoD = window.decoStickerHtml?.("d", stk.d) || "";
+
           /* 연결 상태 안테나 — 이 사람이 지금 붙어 있는가.
              disconnectedAt 이 남아 있으면 "끊겨서 유예 중"이라는 뜻입니다. */
           const connOk = !Number(row.disconnectedAt || 0);
@@ -532,12 +540,14 @@
                    왼쪽 위 구석입니다. 그래서 .card-body 바깥, 카드 바로
                    아래에 둡니다 (프사 칸 안에 있으면 프사를 따라다녀요). -->
               ${window.workTagChipHtml?.(row, isMine) || ""}
+              ${decoA}${decoC}${decoD}
               <div class="card-body">
                 <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0"'
                          + ' title="프로필 설정 (사진·색·무늬)"' : ""}>
                   ${avatar}
                   ${editBtn}
+                  ${decoB}
                   ${u === ADMIN_NICK
                     ? `<span class="card-admin-stamp" aria-label="방장">방장</span>`
                     : ""}

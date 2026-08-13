@@ -6727,6 +6727,50 @@ body.split-dragging #chat-box3{ user-select: none; }
    서버에는 아무것도 안 적습니다. 카드를 그릴 때 닉네임을 견주기만 해요
    (script_realtime.js 의 ADMIN_NICK) — 그래서 보안규칙도 손댈 게 없습니다.
    순수한 표시이지, 권한을 주는 물건이 아닙니다. */
+/* ── 🧲 꾸미기 스티커 (2026-08-13) ──
+
+   자리 넷, 기울기는 제각각 — 캐리어에 아무렇게나 붙인 느낌은 이 어긋난
+   각도가 만듭니다. 전부 나란하면 인쇄물처럼 보여요.
+
+     A 오른쪽 위   +6°  카드 위 모서리보다 **아래**로 내려 앉힘 —
+                        왼쪽 위 작업 스티커(-9px 위로 솟음)와 높이가
+                        어긋나야 둘 다 숨 쉴 자리가 생깁니다
+     B 프사 옆     -8°  프사 칸 안에 있어 프사를 따라다님
+     C 오른쪽 아래 -5°  방장 스티커(왼쪽 아래 모서리 아님, 프사 오른쪽
+                        아래)와는 층이 달라 안 부딪힘
+     D 왼쪽 허리   +7°  아래칸(닉네임 상자) 왼쪽 가장자리 — 안테나 점과
+                        ⏱ 작업 시간 줄 사이 높이
+
+   크기는 작업 스티커(fs-sm×.88)보다 한 단계 작게(×.78) — 주역은 작업
+   스티커고 이건 장식이라, 크기로 서열을 매깁니다. */
+.card-deco{
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;      /* 카드의 클릭 세 곳(프사·상태·아래칸)을 안 가림 */
+}
+.card-deco-word{
+  padding: 2.5px 7px;
+  border-radius: 7px;
+  font-size: calc(var(--fs-sm) * .78);
+  font-weight: var(--fw-bold);
+  line-height: 1.25;
+  border: 1px solid rgba(255,255,255,.45);
+  box-shadow: 0 1px 2px rgba(40,30,20,.2);
+}
+.card-deco-emoji{
+  font-size: 19px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(40,30,20,.3));
+}
+.card-deco.deco-a{ top: 14px;  right: -8px;  transform: rotate(6deg); }
+.card-deco.deco-b{ left: -12px; bottom: 12px; transform: rotate(-8deg); }
+.card-deco.deco-c{ bottom: -8px; right: 12px; transform: rotate(-5deg); }
+.card-deco.deco-d{ left: -8px;  bottom: 34px; transform: rotate(7deg); }
+
 .card-admin-stamp{
   position: absolute;
   /* [조정 2026-08-13] −9px/−3px 에서 더 밖으로 뺐습니다. 프사를 너무
