@@ -167,7 +167,9 @@
     const btn = document.getElementById("alive-btn");
     if (btn) {
       const label = btn.querySelector(".icon-btn-label");
-      if (label) label.textContent = _on ? "무음 ON" : "무음 OFF";
+      /* [2026-08-13] "무음 ON" 이라고 적었더니 **음소거 버튼으로 읽혔습니다.**
+         하는 일은 접속 유지이고 무음은 그 수단일 뿐이라, 이름을 결과로 바꿉니다. */
+      if (label) label.textContent = _on ? "접속유지 ON" : "접속유지 OFF";
       btn.setAttribute("aria-pressed", _on ? "true" : "false");
       if (!_supported()) { btn.style.opacity = ".45"; }
     }
