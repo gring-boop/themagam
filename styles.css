@@ -8129,10 +8129,48 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   padding: 0 2px 8px;
 }
 .music-vol-ico{ flex: 0 0 auto; font-size: 13px; }
-.music-vol-row input[type="range"]{
+/* 볼륨 — 가는 먹선 위에 납작한 사각 도장 (2026-08-13 콩이 고른 조합).
+   완전 검정이 아니라 **먹색**(#38342F, 차콜)입니다 — 방장 스티커와 같은 결.
+   채워진 만큼 먹선이 진해지는 건 --vol 을 script_music.js 가 넣어줍니다. */
+#music-vol{
+  -webkit-appearance: none;
+  appearance: none;
   flex: 1 1 auto; min-width: 0;
-  accent-color: var(--accent);
+  height: 18px;
+  background: transparent;
   cursor: pointer;
+}
+#music-vol::-webkit-slider-runnable-track{
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg,
+    #38342F var(--vol, 80%), rgba(120,100,80,.28) var(--vol, 80%));
+}
+#music-vol::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -7px;                 /* (16 - 2) / 2 — 먹선 한가운데에 앉게 */
+  width: 9px;
+  height: 16px;
+  border-radius: 3px;
+  background: #38342F;
+  border: 1.5px solid rgba(255,251,244,.8);
+  box-shadow: 0 1px 2px rgba(40,30,20,.35);
+}
+#music-vol::-moz-range-track{
+  height: 2px; border-radius: 1px;
+  background: rgba(120,100,80,.28);
+}
+#music-vol::-moz-range-progress{
+  height: 2px; border-radius: 1px;
+  background: #38342F;
+}
+#music-vol::-moz-range-thumb{
+  width: 9px; height: 16px;
+  border-radius: 3px;
+  background: #38342F;
+  border: 1.5px solid rgba(255,251,244,.8);
+  box-shadow: 0 1px 2px rgba(40,30,20,.35);
 }
 .music-vol-val{
   flex: 0 0 26px;

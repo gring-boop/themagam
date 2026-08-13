@@ -108,9 +108,14 @@
       const saved = parseInt(AppStore.getItem("musicVol"), 10);
       if (saved >= 0 && saved <= 100) vol.value = saved;
     } catch (e) {}
-    document.getElementById("music-vol-val").textContent = vol.value;
-    vol.addEventListener("input", () => {
+    /* --vol — 먹선의 채워진 길이 (CSS 가 읽습니다) */
+    const paintVol = () => {
       document.getElementById("music-vol-val").textContent = vol.value;
+      vol.style.setProperty("--vol", vol.value + "%");
+    };
+    paintVol();
+    vol.addEventListener("input", () => {
+      paintVol();
       _sendCmd("setVolume", [Number(vol.value)]);
       try { AppStore.setItem("musicVol", vol.value); } catch (e) {}
     });
