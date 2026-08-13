@@ -8102,7 +8102,7 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   flex: 0 0 auto;
   aspect-ratio: 16 / 9;
   background: #201B17;
-  border-radius: var(--r-md);
+  border-radius: 0;    /* [2026-08-13] 영상은 네모 반듯하게 (콩 요청) */
   overflow: hidden;
   margin-bottom: 8px;
 }
@@ -8237,6 +8237,15 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-mode .user-cards-grid > *{
   flex: 0 0 var(--card-w);
   max-width: var(--card-w);
+}
+/* 줄바꿈 띠 — 혼자 내려간 카드 구제용 (script_realtime.js fixLonelyCard).
+   폭 100%를 차지하는 높이 0짜리라, 뒤의 카드들을 다음 줄로 내립니다 */
+.dock-mode .user-cards-grid > .card-row-break{
+  flex: 1 0 100%;
+  max-width: none;
+  height: 0;
+  margin: 0;
+  padding: 0;
 }
 
 /* ── 접속자 창이 화면을 꽉 채웁니다 ──

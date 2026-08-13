@@ -598,9 +598,57 @@
            목표 글이 길어져 카드가 커지는 일이 있으니까요. */
         window.renderShareCards?.();
       }
+      fixLonelyCard();
 
       startHeaderTicker();
   }
+
+  /* =====================================================================
+     혼자 내려간 카드 구제 (2026-08-13, 콩 요청)
+     ---------------------------------------------------------------------
+     줄이 꽉 차고 카드 하나가 다음 줄로 넘어가면 그 카드가 외롭습니다.
+     그럴 때는 **둘이 같이 내려가게** 합니다 — 윗줄에서 한 장을 더
+     데리고 내려와요. 다음 줄이 2장을 넘으면(3장째부터) 다시 위가
+     채워질 차례이므로 그대로 둡니다. 몇째 줄이든 같은 규칙입니다.
+
+     방법: 한 줄에 몇 장 들어가는지(C) 재서, 전체가 C로 나눠 나머지가
+     1일 때만 끝에서 두 번째 카드 앞에 "줄바꿈 띠"(flex-basis:100%)를
+     끼웁니다. 그러면 마지막 두 장이 함께 다음 줄로 내려갑니다.
+     한 줄에 2장 이하로 들어가는 좁은 화면에서는 안 합니다 —
+     한 장을 데려오면 이번엔 윗줄이 외로워져요.
+     ===================================================================== */
+  function fixLonelyCard() {
+    const list = document.getElementById("user-cards");
+    if (!list) return;
+    list.querySelector(".card-row-break")?.remove();
+
+    const cards = list.querySelectorAll(":scope > .user-card");
+    const n = cards.length;
+    if (n < 4) return;
+    const first = cards[0];
+    if (!first) return;
+
+    const cs = getComputedStyle(list);
+    const gap = parseFloat(cs.columnGap) || 12;
+    const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const cw = first.getBoundingClientRect().width;
+    if (!cw) return;
+    const C = Math.floor((list.clientWidth - padX + gap) / (cw + gap));
+    if (C < 3 || n <= C || n % C !== 1) return;
+
+    const br = document.createElement("div");
+    br.className = "card-row-break";
+    br.setAttribute("aria-hidden", "true");
+    list.insertBefore(br, cards[n - 2]);
+  }
+  window.fixLonelyCard = fixLonelyCard;
+
+  /* 창 폭이 바뀌면 줄당 장수도 바뀝니다 — 잠깐 기다렸다 다시 잽니다 */
+  let _lonelyTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(_lonelyTimer);
+    _lonelyTimer = setTimeout(fixLonelyCard, 150);
+  });
 
   /* 상태 이름. 저장되는 값(writing/focus/rest/away)은 그대로 두고
      화면에 보이는 이름만 바꿨습니다. 기존 데이터가 그대로 살아납니다.
