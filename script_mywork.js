@@ -192,6 +192,95 @@
   /* ---------------------------------------------------------------
      화면 그리기 — 왼쪽 달력
      --------------------------------------------------------------- */
+  /* =====================================================================
+     📏 이번 달 의무 출석 (2026-08-13)
+     ---------------------------------------------------------------------
+     관리자 출석부의 규칙 칸과 **같은 셈법**입니다 (script_admin.js 의
+     ruleOf — 고치면 둘 다 고쳐야 해요, checks 가 어긋남을 잡습니다).
+
+       · 기준은 한 달 18일 — 달이 28일이든 31일이든 **똑같이 18일**입니다.
+         비율식(eff/daysInMonth × 18)이라 달을 꽉 채운 사람은 언제나
+         eff = daysInMonth 이 되어 정확히 18이 나와요.
+       · 이 달 중간에 들어온 사람은 있은 날만큼 비율로 줄고,
+       · 🏖️ 휴가를 찍으면 그 날수만큼 기준이 자동으로 내려갑니다.
+     ===================================================================== */
+  const RULE_DAYS = 18;   // ★ script_admin.js 와 같은 값이어야 합니다
+
+  function ruleInfo(y, m, attended, vacCount) {
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const today = todayStr();
+    const 이달첫날 = dateStr(y, m, 1);
+    const 이달끝날 = dateStr(y, m, daysInMonth);
+    if (이달첫날 > today) return null;                  // 다음 달 — 셀 것이 없어요
+
+    /* 입장 전 날 세기 — 내 기록(출석·휴가)의 첫 날 이전은 셈에서 뺍니다 */
+    const born = [...Object.keys(_days), ...Object.keys(_vacs)].sort()[0] || null;
+    let beforeN = 0;
+    if (born && born > 이달첫날) {
+      for (let d = 1; d <= daysInMonth; d++) {
+        if (dateStr(y, m, d) >= born) break;
+        beforeN++;
+      }
+    }
+    const member = daysInMonth - beforeN;
+    const eff = Math.max(0, member - vacCount);
+    const need = Math.round((eff / daysInMonth) * RULE_DAYS);
+
+    /* 남은 날 — 오늘 이후, 앞으로 낼 휴가는 뺍니다 (두 번 봐주지 않게) */
+    const 이번달인가 = today >= 이달첫날 && today <= 이달끝날;
+    let daysLeft = 0;
+    if (이번달인가) {
+      for (let d = 1; d <= daysInMonth; d++) {
+        const k = dateStr(y, m, d);
+        if (k > today && _vacs[k] !== true) daysLeft++;
+      }
+    }
+    const state = attended >= need ? "ok"
+                : (이번달인가 && attended + daysLeft >= need) ? "maybe" : "bad";
+    return { need, daysInMonth, vacCount, beforeN, daysLeft, state, 이번달인가 };
+  }
+
+  function ruleHtml(y, m, attended, vacCount) {
+    const r = ruleInfo(y, m, attended, vacCount);
+    if (!r) return "";
+    const pct = r.need ? Math.min(100, Math.round((attended / r.need) * 100)) : 100;
+
+    let pill, cls;
+    if (r.state === "ok") { cls = "ok"; pill = `${attended}일 — 다 채웠어요 🎉`; }
+    else if (r.state === "maybe") {
+      const 더 = r.need - attended;
+      cls = 더 <= r.daysLeft / 2 ? "ok" : "maybe";
+      pill = 더 <= r.daysLeft / 2
+        ? `지금 ${attended}일 · 순항 중`
+        : `지금 ${attended}일 · 남은 ${r.daysLeft}일 중 ${더}일!`;
+    } else {
+      cls = "bad";
+      pill = r.이번달인가 ? `지금 ${attended}일 · 남은 날로는 어려워요` : `${attended}일 — 미달`;
+    }
+
+    /* 셈이 어디서 왔는지 보여줍니다 — 숫자가 하늘에서 떨어지면 억울해요 */
+    const 조각 = [];
+    if (r.beforeN) 조각.push(`입장 전 ${r.beforeN}일`);
+    if (r.vacCount) 조각.push(`휴가 ${r.vacCount}일`);
+    const 셈 = 조각.length
+      ? ` (이번 달: ${r.daysInMonth}일 중 ${조각.join(" · ")} → <b>${r.need}일</b>)`
+      : "";
+
+    return `
+      <div class="mw-rule">
+        <div class="mw-rule-head">
+          <span class="mw-rule-t">📏 ${r.이번달인가 ? "이번 달" : "이 달"} 의무 출석 <b>${r.need}일</b></span>
+          <span class="mw-rule-pill ${cls}">${pill}</span>
+        </div>
+        <div class="mw-rule-bar"><span class="mw-rule-fill ${cls}" style="width:${pct}%"></span></div>
+        <p class="mw-rule-why">
+          한 달 <b>${RULE_DAYS}일</b>이 기준이에요 — 달이 며칠이든 같아요.<br>
+          이 달 중간에 들어왔으면 있은 날만큼 비율로 줄고,
+          🏖️ <b>휴가를 찍으면 그만큼 자동으로 내려가요</b>${셈}
+        </p>
+      </div>`;
+  }
+
   function calHtml() {
     const y = _y, m = _m;
     const lastDay = new Date(y, m + 1, 0).getDate();
@@ -246,6 +335,7 @@
         <span>${esc(me())} · 이 달 <b>${attended}일</b> 출석했어요</span>
         <span>🏖️ 이번 달 휴가 <b>${vacCount}일</b></span>
       </div>
+      ${ruleHtml(y, m, attended, vacCount)}
       <p class="mw-calhint">
         <b>클릭</b> — 그날 할 일 보기 · <b>더블 클릭</b> — 휴가로 표시
       </p>`;

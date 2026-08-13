@@ -8017,6 +8017,50 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   color: var(--on-accent-btn, #fff);
 }
 
+/* =====================================================================
+   📏 이번 달 의무 출석 — 나의 작업 달력 아래 (2026-08-13)
+   ---------------------------------------------------------------------
+   좁은 칸이라 처음부터 두 줄로 짭니다 — 윗줄에 기준·상태, 아랫줄에 바.
+   ===================================================================== */
+.mw-rule{
+  margin-top: 8px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--glass2);
+}
+.mw-rule-head{
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: var(--fs-xs); color: var(--muted-strong);
+}
+.mw-rule-t b{ font-size: var(--fs-sm); color: var(--text); }
+.mw-rule-pill{
+  margin-left: auto;
+  border-radius: var(--r-full);
+  padding: 2px 10px;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.mw-rule-pill.ok{    background: #DFF0DE; color: #2E6B2B; }
+.mw-rule-pill.maybe{ background: #FBF0CE; color: #8A6A12; }
+.mw-rule-pill.bad{   background: #F8D9D6; color: #A33127; }
+.mw-rule-bar{
+  margin-top: 7px; height: 7px;
+  border-radius: var(--r-full);
+  background: var(--fill-2);
+  overflow: hidden;
+}
+.mw-rule-fill{ display: block; height: 100%; transition: width .25s ease; }
+.mw-rule-fill.ok{    background: #2E8B6B; }
+.mw-rule-fill.maybe{ background: #C99A2C; }
+.mw-rule-fill.bad{   background: #B3372B; }
+.mw-rule-why{
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 /* 숫자 줄 + 정렬 토글 — 장르 칩 아래 */
 .pub-sortbar{
   display: flex; align-items: center; gap: 6px;
