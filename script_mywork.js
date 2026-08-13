@@ -168,11 +168,28 @@
      script_realtime.js 의 toggleMyVacation 을 쓰지 않는 이유:
      그 함수는 끝에 showMyAttendance() 를 불러 **옛 출석 팝업**을
      띄웁니다. 여기서 부르면 팝업이 두 개 겹쳐요. */
+  /* 🏖️ 한 달 휴가 상한 (2026-08-13, 콩의 결정)
+     상한이 없으면 "이번 달 못 채울 것 같다 → 휴가 30일!" 로 18일 규칙이
+     통째로 무력화됩니다. 7일이면 다 써도 의무가 14일 밑으로 안 내려가요.
+     ★ 상한을 넘는 사정(장기 부재)은 휴가가 아니라 방장과 상의할 일 —
+       안내 문구가 그 길을 알려줍니다. */
+  const VAC_CAP = 7;
+
+  function vacCountOfMonth(ym) {
+    return Object.keys(_vacs).filter(k => k.startsWith(ym)).length;
+  }
+
   async function toggleVac(ds) {
     const nick = me();
     if (!nick || !window.db || !DUE_RE.test(ds)) return;
     const ref = window.db.ref(`users/${nick}/vacations/${ds}`);
     const next = !_vacs[ds];
+
+    /* 켜는 것만 막습니다 — 끄는 것은 언제나 됩니다 (풀 길은 늘 열려 있게) */
+    if (next && vacCountOfMonth(ds.slice(0, 7)) >= VAC_CAP) {
+      alert(`🏖️ 휴가는 한 달에 ${VAC_CAP}일까지예요.\n더 길게 쉬어야 하는 사정이 있으면 방장에게 말씀해 주세요!`);
+      return;
+    }
 
     /* 화면이 먼저 반응하도록 손에 든 값을 먼저 고칩니다 */
     if (next) _vacs[ds] = true; else delete _vacs[ds];
@@ -276,7 +293,7 @@
         <p class="mw-rule-why">
           한 달 <b>${RULE_DAYS}일</b>이 기준이에요 — 달이 며칠이든 같아요.<br>
           이 달 중간에 들어왔으면 있은 날만큼 비율로 줄고,
-          🏖️ <b>휴가를 찍으면 그만큼 자동으로 내려가요</b>${셈}
+          🏖️ <b>휴가를 찍으면 그만큼 자동으로 내려가요</b> (한 달 ${VAC_CAP}일까지)${셈}
         </p>
       </div>`;
   }
