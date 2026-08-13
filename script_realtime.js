@@ -470,11 +470,12 @@
 
           /* 🧲 꾸미기 스티커 — 자리 넷. B(프사 옆)만 프사 칸 안에 넣어
              프사를 따라다니게 하고, 나머지는 카드에 직접 붙입니다. */
-          const stk = window.sanitizeStickers?.(prof.stickers) || {};
-          const decoA = window.decoStickerHtml?.("a", stk.a) || "";
-          const decoB = window.decoStickerHtml?.("b", stk.b) || "";
-          const decoC = window.decoStickerHtml?.("c", stk.c) || "";
-          const decoD = window.decoStickerHtml?.("d", stk.d) || "";
+          const stk  = window.sanitizeStickers?.(prof.stickers) || {};
+          const stkC = window.sanitizeStickerColors?.(prof.stickerColors) || {};
+          const decoA = window.decoStickerHtml?.("a", stk.a, stkC.a) || "";
+          const decoB = window.decoStickerHtml?.("b", stk.b, stkC.b) || "";
+          const decoC = window.decoStickerHtml?.("c", stk.c, stkC.c) || "";
+          const decoD = window.decoStickerHtml?.("d", stk.d, stkC.d) || "";
 
           /* 연결 상태 안테나 — 이 사람이 지금 붙어 있는가.
              disconnectedAt 이 남아 있으면 "끊겨서 유예 중"이라는 뜻입니다. */

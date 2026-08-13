@@ -511,22 +511,62 @@ function sanitizeStickers(obj) {
   DECO_SLOTS.forEach(k => { out[k] = sanitizeDeco(s[k]); });
   return out;
 }
+/* 자리별 색 (2026-08-13) — 낱말 스티커의 배경을 각자 고를 수 있습니다.
+   비어 있으면 낱말의 기본 파스텔. 표정 스티커에는 색이 안 먹습니다. */
+function sanitizeStickerColors(obj) {
+  const s = (obj && typeof obj === "object") ? obj : {};
+  const out = {};
+  DECO_SLOTS.forEach(k => { out[k] = sanitizeHexColor(s[k]) || ""; });
+  return out;
+}
+
+/* 고른 배경색에서 읽히는 글자색을 만들어냅니다 — 같은 색상(hue)을
+   진하게 낮춘 톤. 아무 색을 골라도 글자가 배경에 묻지 않아요.
+   (검정/흰색 이지선다보다 파스텔 스티커의 결이 살아 있습니다) */
+function decoInkFor(bgHex) {
+  const c = sanitizeHexColor(bgHex);
+  if (!c) return "#3B2A24";
+  const r = parseInt(c.slice(1, 3), 16) / 255,
+        g = parseInt(c.slice(3, 5), 16) / 255,
+        b = parseInt(c.slice(5, 7), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  let h = 0;
+  const d = mx - mn;
+  if (d > 0) {
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (mx === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  const s = mx === 0 ? 0 : d / mx;
+  /* 같은 hue, 채도는 살리고, 밝기만 확 낮춘다 */
+  const S = Math.min(Math.max(s * 1.15, s > .08 ? .5 : 0), .88);
+  const V = .42;
+  const i = Math.floor(h * 6), f = h * 6 - i;
+  const p = V * (1 - S), q = V * (1 - f * S), t = V * (1 - (1 - f) * S);
+  const [R, G, B] = [[V,t,p],[q,V,p],[p,V,t],[p,q,V],[t,p,V],[V,p,q]][i % 6];
+  const hx = x => Math.round(x * 255).toString(16).padStart(2, "0");
+  return "#" + hx(R) + hx(G) + hx(B);
+}
 
 /** 한 자리의 스티커 HTML — 카드를 그리는 쪽(script_realtime.js)이 씁니다.
-    빈 자리는 빈 문자열: DOM 자체가 안 생겨서 카드에 흔적이 없어요. */
-function decoStickerHtml(slot, val) {
+    빈 자리는 빈 문자열: DOM 자체가 안 생겨서 카드에 흔적이 없어요.
+    color 를 주면(낱말일 때만) 그 배경 + 어울리는 진한 글자색. */
+function decoStickerHtml(slot, val, color) {
   const v = sanitizeDeco(val);
   if (!v) return "";
   const w = DECO_WORDS.find(x => x.t === v);
   if (w) {
+    const bg = sanitizeHexColor(color) || w.bg;
+    const fg = sanitizeHexColor(color) ? decoInkFor(bg) : w.fg;
     return `<span class="card-deco card-deco-word deco-${slot}"
-      style="background:${w.bg};color:${w.fg}">${escapeHtml(w.t)}</span>`;
+      style="background:${bg};color:${fg}">${escapeHtml(w.t)}</span>`;
   }
   return `<span class="card-deco card-deco-emoji deco-${slot}">${v}</span>`;
 }
 window.DECO_WORDS = DECO_WORDS;
 window.DECO_EMOJIS = DECO_EMOJIS;
 window.sanitizeStickers = sanitizeStickers;
+window.sanitizeStickerColors = sanitizeStickerColors;
 window.decoStickerHtml = decoStickerHtml;
 
 /* 채팅 말풍선 위에 뜨는 닉네임 색.
@@ -906,6 +946,7 @@ function renderProfilePanel() {
         ["d", "왼쪽 허리"]
       ].map(([k, label]) => {
         const cur = (window.sanitizeStickers(p.stickers))[k];
+        const curC = (window.sanitizeStickerColors(p.stickerColors))[k];
         return `
       <div class="set-row" style="margin-bottom:7px; gap:8px; align-items:center;">
         <span class="slot-name" style="flex:0 0 84px;">${label}</span>
@@ -920,11 +961,17 @@ function renderProfilePanel() {
               <option value="${e}"${e === cur ? " selected" : ""}>${e}</option>`).join("")}
           </optgroup>
         </select>
+        <input type="color" id="prof-deco-${k}-color" class="color-well" data-deco-color="${k}"
+               value="${curC || "#FFCDD2"}" aria-label="${label} 스티커 색" title="낱말 스티커 색">
+        <button type="button" class="ghost-btn compact" data-deco-color-reset="${k}"
+                title="낱말의 기본색으로">기본</button>
       </div>`;
       }).join("")}
       <p class="hint">
         캐리어에 스티커 붙이듯 카드의 <b>정해진 자리 넷</b>에 골라 붙여요.
-        비워도 되고 넷 다 붙여도 됩니다. 다른 분들 화면에도 보여요.
+        비워도 되고 넷 다 붙여도 됩니다. 다른 분들 화면에도 보여요.<br>
+        색은 <b>낱말 스티커에만</b> 먹어요 — 글자색은 고른 색에서 읽히게
+        저절로 맞춰집니다. [기본]을 누르면 낱말의 원래 색으로 돌아가요.
       </p>
     </div>
 
@@ -1059,15 +1106,36 @@ function bindProfilePanel() {
      host 변수가 없습니다(그건 renderProfilePanel 것). ReferenceError 로
      이 연결이 즉사해서 "골라도 카드에 안 붙는" 상태였고, 아래 눈사람
      배경색 연결까지 같이 죽었습니다. */
+  function _saveDeco() {
+    const stickers = {}, stickerColors = {};
+    ["a", "b", "c", "d"].forEach(k => {
+      stickers[k] = sanitizeDeco(
+        document.getElementById("prof-deco-" + k)?.value || "");
+      /* dirty 표시가 있는 자리만 색을 저장 — 색 우물의 기본값(#FFCDD2)이
+         "고른 색"으로 잘못 저장되는 걸 막습니다 */
+      const well = document.getElementById(`prof-deco-${k}-color`);
+      stickerColors[k] = (well && well.dataset.dirty === "1")
+        ? (sanitizeHexColor(well.value) || "") : "";
+    });
+    saveMyProfile({ stickers, stickerColors });
+    window.rerenderUserCards?.();
+  }
   document.querySelectorAll("[data-deco-slot]").forEach(sel => {
-    sel.onchange = () => {
-      const stickers = {};
-      ["a", "b", "c", "d"].forEach(k => {
-        stickers[k] = sanitizeDeco(
-          document.getElementById("prof-deco-" + k)?.value || "");
-      });
-      saveMyProfile({ stickers });
-      window.rerenderUserCards?.();
+    sel.onchange = _saveDeco;
+  });
+  document.querySelectorAll("[data-deco-color]").forEach(well => {
+    /* 저장된 색이 있던 자리는 dirty 로 시작해야 색이 유지됩니다 */
+    const k = well.dataset.decoColor;
+    const saved = (sanitizeStickerColors(window._myProfile?.stickerColors))[k];
+    if (saved) well.dataset.dirty = "1";
+    well.oninput = () => { well.dataset.dirty = "1"; _saveDeco(); };
+  });
+  document.querySelectorAll("[data-deco-color-reset]").forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.decoColorReset;
+      const well = document.getElementById(`prof-deco-${k}-color`);
+      if (well) { delete well.dataset.dirty; well.value = "#FFCDD2"; }
+      _saveDeco();
     };
   });
 
