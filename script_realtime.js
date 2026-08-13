@@ -538,6 +538,9 @@
                          + ' title="프로필 설정 (사진·색·무늬)"' : ""}>
                   ${avatar}
                   ${editBtn}
+                  ${u === ADMIN_NICK
+                    ? `<span class="card-admin-stamp" aria-label="방장">방장</span>`
+                    : ""}
                 </div>
 
                 <div class="card-side">
