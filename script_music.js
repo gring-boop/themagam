@@ -79,6 +79,15 @@
           ♪<br>리스트에서 골라 주세요
         </div>
       </div>
+      <!-- 자체 볼륨 — 유튜브의 노브는 플레이어가 작으면 커서를 대기도
+           전에 접힙니다. 일시정지처럼 쪽지(postMessage)로 명령을 보내는
+           우리 슬라이더는 크기와 무관하게 됩니다. 값은 이 기기에 기억 -->
+      <div class="music-vol-row">
+        <span class="music-vol-ico" aria-hidden="true">🔊</span>
+        <input type="range" id="music-vol" min="0" max="100" step="1"
+               value="80" aria-label="볼륨">
+        <span class="music-vol-val" id="music-vol-val">80</span>
+      </div>
       <div class="music-list-head">
         <span>🎵 추천 리스트</span><span class="music-list-hint">클릭하면 재생 · 나에게만 들려요</span>
       </div>
@@ -92,8 +101,43 @@
     document.getElementById("music-add-url").addEventListener("keydown", e => {
       if (e.key === "Enter") { e.preventDefault(); addLink(); }
     });
+
+    /* 볼륨 — 저장값 복원 + 움직일 때마다 적용·저장 */
+    const vol = document.getElementById("music-vol");
+    try {
+      const saved = parseInt(AppStore.getItem("musicVol"), 10);
+      if (saved >= 0 && saved <= 100) vol.value = saved;
+    } catch (e) {}
+    document.getElementById("music-vol-val").textContent = vol.value;
+    vol.addEventListener("input", () => {
+      document.getElementById("music-vol-val").textContent = vol.value;
+      _sendCmd("setVolume", [Number(vol.value)]);
+      try { AppStore.setItem("musicVol", vol.value); } catch (e) {}
+    });
+
     _built = true;
     return true;
+  }
+
+  /** 유튜브에 쪽지 보내기 — 일시정지·볼륨이 같이 씁니다 */
+  function _sendCmd(func, args) {
+    const f = document.getElementById("music-player-frame");
+    if (!f || !f.contentWindow) return false;
+    try {
+      f.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func, args: args || [] }), "*");
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /** 곡을 새로 실을 때 저장된 볼륨을 입힙니다 — 플레이어가 준비될
+      때까지 잠깐 걸려서 두어 번 나눠 보냅니다 */
+  function _applyVolumeSoon() {
+    const vol = document.getElementById("music-vol");
+    if (!vol) return;
+    const v = Number(vol.value);
+    [400, 1200, 2500].forEach(ms =>
+      setTimeout(() => _sendCmd("setVolume", [v]), ms));
   }
 
   /* ---------------------------------------------------------------
@@ -124,6 +168,7 @@
     void title;
     renderList();
     _syncPill();
+    _applyVolumeSoon();
   }
 
   /* ---------------------------------------------------------------
@@ -137,17 +182,13 @@
     return !!document.getElementById("music-player-frame");
   }
   function musicTogglePlay() {
-    const f = document.getElementById("music-player-frame");
-    if (!f || !f.contentWindow) return false;
+    if (!musicHasPlayer()) return false;
     const cmd = _paused ? "playVideo" : "pauseVideo";
-    try {
-      f.contentWindow.postMessage(
-        JSON.stringify({ event: "command", func: cmd, args: [] }), "*");
-      _paused = !_paused;
-      renderList();
-      _syncPill();
-      return true;
-    } catch (e) { return false; }
+    if (!_sendCmd(cmd)) return false;
+    _paused = !_paused;
+    renderList();
+    _syncPill();
+    return true;
   }
   window.musicHasPlayer = musicHasPlayer;
   window.musicTogglePlay = musicTogglePlay;

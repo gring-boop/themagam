@@ -8096,7 +8096,10 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 /* ♪ BGM (2026-08-13) — 뽀모와 같은 폭. 위 플레이어, 아래 리스트.
    ★ 플레이어 칸(#music-player-slot)은 다시 그리면 안 됩니다 —
      iframe 이 새로 실리면서 음악이 끊깁니다 (script_music.js 참고) */
-#dock-panel-music{ width: min(288px, calc(100vw - 24px)); }
+/* [키움 2026-08-13] 288 → 317 (10%) — 영상이 조금 넉넉해집니다.
+   볼륨은 유튜브 노브 대신 아래 자체 슬라이더로 (작은 플레이어에서는
+   노브가 커서를 대기도 전에 접혀요) */
+#dock-panel-music{ width: min(317px, calc(100vw - 24px)); }
 #dock-panel-music .dock-body{ display: flex; flex-direction: column; min-height: 0; }
 .music-player-slot{
   flex: 0 0 auto;
@@ -8116,6 +8119,24 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   font-size: var(--fs-xs);
   text-align: center;
   line-height: 1.6;
+}
+.music-vol-row{
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 2px 8px;
+}
+.music-vol-ico{ flex: 0 0 auto; font-size: 13px; }
+.music-vol-row input[type="range"]{
+  flex: 1 1 auto; min-width: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.music-vol-val{
+  flex: 0 0 26px;
+  text-align: right;
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 .music-list-head{
   display: flex; justify-content: space-between; align-items: baseline;
