@@ -147,9 +147,12 @@
 
   /* ---------------------------------------------------------------
      재생 — iframe 은 여기서 처음 만들고, 다음부터는 src 만 바꿉니다
+     opts.cue    : 걸어만 두기 (자동재생 안 함 — 입장 이어듣기용)
+     opts.start  : 이 지점(초)부터
      --------------------------------------------------------------- */
-  function play(vid, title) {
+  function play(vid, title, opts) {
     if (!okVid(vid)) return;
+    const o = opts || {};
     const slot = document.getElementById("music-player-slot");
     if (!slot) return;
     let f = document.getElementById("music-player-frame");
@@ -162,18 +165,61 @@
       f.setAttribute("title", "BGM 플레이어");
       slot.appendChild(f);
     }
-    /* 방금 클릭했으므로(사용자 제스처) autoplay 가 허용됩니다.
+    /* 리스트를 클릭한 직후라면(사용자 제스처) autoplay 가 허용됩니다.
        nocookie 도메인 — 방문 기록에 쿠키를 덜 남깁니다.
-       enablejsapi=1 — 알약 더블클릭 일시정지가 postMessage 로 명령을
-       보내려면 이 문이 열려 있어야 합니다. */
+       enablejsapi=1 — 일시정지·볼륨·이어듣기가 전부 이 문으로 드나듭니다. */
     f.src = "https://www.youtube-nocookie.com/embed/" + vid
-          + "?autoplay=1&rel=0&enablejsapi=1";
+          + "?autoplay=" + (o.cue ? 0 : 1) + "&rel=0&enablejsapi=1"
+          + (o.start > 3 ? "&start=" + Math.floor(o.start) : "");
     _cur = vid;
-    _paused = false;
+    _paused = !!o.cue;
     void title;
     renderList();
     _syncPill();
     _applyVolumeSoon();
+    _startListening();
+  }
+
+  /* ---------------------------------------------------------------
+     이어듣기 (2026-08-13 밤)
+
+     유튜브에 "소식 좀 계속 보내줘"(listening) 하고 부탁하면 재생
+     위치(currentTime)가 계속 날아옵니다. 그걸 이 기기에 적어 뒀다가,
+     다음 입장 때 그 곡을 **그 지점에 걸어만** 둡니다 — 자동재생은
+     안 해요. 입장하자마자 소리가 터지면 놀라니까, ▶ 는 본인이.
+     --------------------------------------------------------------- */
+  const LAST_KEY = "musicLast";
+  let _lastSaveAt = 0;
+
+  function _startListening() {
+    [600, 1500, 3000].forEach(ms => setTimeout(() => {
+      const f = document.getElementById("music-player-frame");
+      try {
+        f?.contentWindow?.postMessage(
+          JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*");
+      } catch (e) {}
+    }, ms));
+  }
+
+  window.addEventListener("message", (e) => {
+    if (typeof e.data !== "string" || !/youtube/.test(e.origin || "")) return;
+    let d = null;
+    try { d = JSON.parse(e.data); } catch (err) { return; }
+    const t = d && d.info && d.info.currentTime;
+    if (typeof t !== "number" || !_cur) return;
+    const now = Date.now();
+    if (now - _lastSaveAt < 3000) return;      // 3초에 한 번이면 충분합니다
+    _lastSaveAt = now;
+    try { AppStore.setItem(LAST_KEY, JSON.stringify({ vid: _cur, t: Math.floor(t) })); }
+    catch (err) {}
+  });
+
+  /** 입장 때 — 직전 곡을 멈췄던 지점에 걸어 둡니다 */
+  function cueLast() {
+    let saved = null;
+    try { saved = JSON.parse(AppStore.getItem(LAST_KEY) || "null"); } catch (e) {}
+    if (!saved || !okVid(saved.vid)) return;
+    play(saved.vid, "", { cue: true, start: Number(saved.t) || 0 });
   }
 
   /* ---------------------------------------------------------------
@@ -315,6 +361,7 @@
       _list = snap.val() || {};
       renderList();
     });
+    cueLast();     // 직전 곡을 멈췄던 지점에 걸어 둡니다 (▶ 만 누르면 이어짐)
   }
   window.musicInit = musicInit;
 })();
