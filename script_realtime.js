@@ -399,6 +399,7 @@
      그런데 lastSeen은 화면에 안 나오므로 결과 HTML은 대부분 이전과 똑같습니다.
      → 만들어진 HTML이 직전과 동일하면 DOM을 건드리지 않고 끝냅니다. */
   let _lastCardsHtml = null;
+  let _lastCardParts = null;   // { nicks:[…], parts:[…] } — 바뀐 카드만 갈아 끼우기용
 
   function renderUserCards(data) {
       const list = document.getElementById("user-cards");
@@ -447,7 +448,12 @@
           // 프사 — 사진이 있으면 사진, 없으면 닉네임으로 만든 눈사람
           const photo = window.sanitizePhoto?.(prof.photo) || "";
           const avatar = photo
-            ? `<div class="card-avatar has-photo"><img src="${escapeHtml(photo)}" alt="" loading="lazy"></div>`
+            /* [고침 2026-08-13] loading="lazy" → decoding="sync".
+               사진은 프로필에 저장된 데이터 주소(data:)라 lazy 가 무의미하고,
+               사파리는 새 img 를 "빈 칸 먼저, 사진 나중"으로 그려서 카드를
+               다시 그릴 때마다 프사가 깜빡였습니다. sync 는 사진을 다 풀고
+               나서 화면에 내보내므로 빈 칸이 없어요. */
+            ? `<div class="card-avatar has-photo"><img src="${escapeHtml(photo)}" alt="" decoding="sync"></div>`
             : `<div class="card-avatar has-snow">${window.snowmanSvg?.(u) || ""}</div>`;
 
           // 내 카드에만 편집(연필) 버튼. 프사 위에 떠 있다가 마우스를 올리면 나타납니다.
@@ -591,12 +597,31 @@
       // 결과가 직전과 같으면 DOM을 그대로 둡니다 (이미지 재디코딩 방지)
       const html = parts.join("");
       if (html !== _lastCardsHtml) {
-        list.innerHTML = html;
+        /* [수술 2026-08-13] 통째로 갈지 않고 **바뀐 카드만** 갈아 끼웁니다.
+
+           15초마다 오는 하트비트로 이 함수가 계속 도는데, 매번 목록
+           전체를 innerHTML 로 갈면 모든 프사 <img> 가 새로 태어납니다.
+           사파리는 새 img 를 "빈 칸 먼저" 그려서 **전원 프사가 동시에
+           점멸**했어요 (실사용 제보). 대개 실제로 바뀐 건 한두 카드라,
+           멤버 구성·순서가 같으면 그 카드만 바꿉니다. 안 바뀐 카드의
+           img 는 그대로 살아 있으니 깜빡일 일이 없어요. */
+        const prev = _lastCardParts;
+        const same = prev && prev.nicks.length === orderedNicks.length &&
+                     prev.nicks.every((n, i) => n === orderedNicks[i]);
+        const domCards = same
+          ? list.querySelectorAll(":scope > .user-card:not(.share-card)") : null;
+        if (same && domCards.length === parts.length) {
+          parts.forEach((p, i) => {
+            if (p !== prev.parts[i]) domCards[i].outerHTML = p;
+          });
+        } else {
+          /* 들어오거나 나가서 구성이 달라졌을 때만 통째로.
+             [2026-08-10] 이때는 공유 카드도 함께 지워지므로 다시 끼웁니다 */
+          list.innerHTML = html;
+          window.renderShareCards?.();
+        }
         _lastCardsHtml = html;
-        /* [2026-08-10] 여기서 innerHTML 을 통째로 갈면 공유 카드도 함께
-           지워집니다. 다시 끼우고, 프로필 카드 높이에 맞춰 줍니다 —
-           목표 글이 길어져 카드가 커지는 일이 있으니까요. */
-        window.renderShareCards?.();
+        _lastCardParts = { nicks: orderedNicks.slice(), parts };
       }
       fixLonelyCard();
 
