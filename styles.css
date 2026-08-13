@@ -8006,7 +8006,11 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
    방금 누른 판으로 **옮겨** 놓고, 비어 있는 쪽에는 "여기에 쓰기" 줄을
    남깁니다. 그 줄을 누르면 펜이 그리로 옵니다.
    ===================================================================== */
-.dock-write{ flex: 0 0 auto; }
+/* [2026-08-13] position:relative — 멘션 드롭다운의 닻입니다.
+   드롭다운이 이제 글칸과 함께 이 상자로 이사 다니는데(script_dock.js 펜 목록),
+   드롭다운은 absolute 라 "가장 가까운 positioned 조상"에 붙습니다. 닻이
+   없으면 판 전체에 붙어서 챗과 수다방의 뜨는 위치가 서로 달라져요. */
+.dock-write{ flex: 0 0 auto; position: relative; }
 .dock-write[data-empty]{
   cursor: text;
   padding: 10px var(--sp-3);
