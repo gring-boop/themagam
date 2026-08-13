@@ -8158,6 +8158,15 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-panel.writing{ border-color: var(--accent); }
 .dock-pill.writing{ border-color: var(--accent); color: var(--accent); }
 
+/* ♪ BGM 재생 중 — 알약에 불이 들어옵니다 (화면 공유의 "공유 중" 같은 표시).
+   일시정지(더블클릭)하면 꺼져요. script_music.js 의 _syncPill 이 관리. */
+.dock-pill.music-on{
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.dock-pill.music-on:hover{ background: var(--accent); color: #fff; opacity: .92; }
+
 /* ★★ 두 판이 **동시에** 보여야 합니다.
    switchChatTab() 은 원래 한 칸에서 자리를 바꾸던 것이라, 안 보는 쪽에
    .hidden 을 붙입니다. 판이 갈라진 지금은 그 감춤이 필요 없어요.

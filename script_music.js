@@ -123,6 +123,7 @@
     _paused = false;
     void title;
     renderList();
+    _syncPill();
   }
 
   /* ---------------------------------------------------------------
@@ -144,11 +145,21 @@
         JSON.stringify({ event: "command", func: cmd, args: [] }), "*");
       _paused = !_paused;
       renderList();
+      _syncPill();
       return true;
     } catch (e) { return false; }
   }
   window.musicHasPlayer = musicHasPlayer;
   window.musicTogglePlay = musicTogglePlay;
+
+  /* ---------------------------------------------------------------
+     알약 불 켜기 — 재생 중이면 [♪ BGM] 알약이 색을 입습니다
+     (화면 공유의 "공유 중" 같은 표시. 일시정지하면 꺼져요)
+     --------------------------------------------------------------- */
+  function _syncPill() {
+    document.getElementById("dock-pill-music")
+      ?.classList.toggle("music-on", !!_cur && !_paused);
+  }
 
   /* ---------------------------------------------------------------
      리스트 그리기 — 플레이어 칸은 절대 건드리지 않습니다
