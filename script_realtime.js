@@ -419,8 +419,17 @@
 
       /* [2026-08-04] 내 카드는 항상 맨 앞으로.
          sort 는 안정 정렬이라 내 닉만 앞으로 빼고, 나머지의 기존 순서
-         (데이터 순서·접속중 필터)는 그대로 유지됩니다. */
+         (데이터 순서·접속중 필터)는 그대로 유지됩니다.
+         [2026-08-13] 나머지의 순서를 고를 수 있습니다 (설정 → 💬 채팅):
+           가나다순(기본) — 서버가 주는 순서 그대로 (키가 이름순이라 가나다)
+           접속 순서     — 먼저 들어온 사람이 앞 (joinedAt 오름차순) */
       const orderedNicks = Object.keys(data);
+      const sortPref = (window.AppStore?.getItem("cardSort")) || "abc";
+      if (sortPref === "join") {
+        orderedNicks.sort((a, b) =>
+          (Number(data[a]?.joinedAt) || Infinity) -
+          (Number(data[b]?.joinedAt) || Infinity));
+      }
       orderedNicks.sort((a, b) =>
         (a === myNick ? -1 : 0) - (b === myNick ? -1 : 0));
 
@@ -742,6 +751,8 @@
 
     db.ref("status/" + myNick).set({
       emoji: myEmoji,
+      /* [2026-08-13] 언제 들어왔는지 — 카드 정렬(접속 순서)이 씁니다 */
+      joinedAt: Number(window._myJoinTimestamp?.() || 0),
       status: statusChoice,
       statusLabel: statusLabel(statusChoice),
       todayGoalText: goalText,

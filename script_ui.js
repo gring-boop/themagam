@@ -498,6 +498,16 @@
       nsel.onchange = () => window.setNarrowDefault?.(nsel.value);
     }
 
+    /* 접속자 카드 정렬 (2026-08-13) — 이 기기에만. 바꾸면 그 자리에서 재배열 */
+    const csort = document.getElementById("set-card-sort");
+    if (csort) {
+      csort.value = AppStore.getItem("cardSort") || "abc";
+      csort.onchange = () => {
+        AppStore.setItem("cardSort", csort.value);
+        window.rerenderUserCards?.();
+      };
+    }
+
     const joinChk = document.getElementById("set-join-noti");
     if (joinChk) {
       joinChk.checked = _joinNoti;
