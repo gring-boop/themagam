@@ -6239,8 +6239,11 @@ body.split-dragging #chat-box3{ user-select: none; }
    사용자 지정 속성으로 받습니다. */
 .fr-board{
   position: relative;
-  height: var(--fr-h, 387px);
-  min-height: 387px;
+  /* [바꿈 2026-08-13] 쪽지 수만큼 길어지던 높이(--fr-h)를 버리고 화면에
+     맞춰 고정 — 창 높이에서 제목·안내·여백(약 290px)을 뺀 만큼.
+     스크롤이 안 생기고, 쪽지 좌표는 %라 상대 위치가 유지됩니다. */
+  height: clamp(340px, calc(100dvh - 290px), 640px);
+  min-height: 340px;
   border-radius: 10px;
   background-color: #DED6C6;
   background-image: radial-gradient(rgba(120,100,72,.20) 1px, transparent 1px);
@@ -6299,6 +6302,73 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .fr-note-time{ letter-spacing: .2px; }
 .fr-note-dot{ opacity: .7; }
+
+/* ── 내 쪽지 끌기 (2026-08-13) ── */
+.fr-note.is-mine{ cursor: grab; touch-action: none; }
+.fr-note.is-mine.dragging{
+  cursor: grabbing;
+  z-index: 999 !important;
+  box-shadow: 0 8px 22px rgba(60,45,25,.35);
+}
+
+/* ── 답쪽지 (2026-08-13) — 부모 밑에 작게 겹쳐 붙는 무더기 ── */
+.fr-rbtn{
+  border: none; background: none; cursor: pointer;
+  font: inherit; font-size: inherit;
+  color: var(--fr-sub, #8A7B68);
+  padding: 0 2px;
+}
+.fr-rbtn:hover{ color: var(--fr-fg, #4A3E2E); }
+.fr-replies{
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(90,70,40,.25);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.fr-reply{
+  position: relative;
+  background: var(--fr-bg, #FBF3DC);
+  color: var(--fr-fg, #4A3E2E);
+  transform: rotate(var(--fr-rot, 0deg));
+  padding: 5px 20px 5px 8px;
+  font-size: calc(var(--fs-xs) * .95);
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(60,45,25,.18);
+  border-radius: 2px;
+  word-break: break-word;
+}
+.fr-reply-del{
+  position: absolute; right: 3px; top: 3px;
+  width: auto; height: auto;
+  font-size: 11px; line-height: 1;
+  padding: 2px 3px;
+}
+.fr-radd{
+  align-self: flex-start;
+  border: 1px dashed rgba(90,70,40,.35);
+  border-radius: 7px;
+  padding: 3px 9px;
+  background: rgba(255,255,255,.45);
+  font-size: calc(var(--fs-xs) * .95);
+}
+.fr-rcompose{ display: flex; flex-direction: column; gap: 5px; }
+.fr-rtext{
+  width: 100%;
+  min-height: 44px;
+  resize: none;
+  border: 1px solid rgba(90,70,40,.3);
+  border-radius: 6px;
+  background: rgba(255,255,255,.75);
+  font: inherit; font-size: calc(var(--fs-xs) * .95);
+  color: #2B2620;
+  padding: 5px 7px;
+  box-sizing: border-box;
+}
+.fr-rcompose-row{
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.fr-swatch.mini{ width: 15px; height: 15px; }
+.fr-btn.mini{ padding: 3px 10px; font-size: calc(var(--fs-xs) * .95); }
 .fr-heart{
   background: none; border: none; padding: 0 1px;
   font: inherit; color: inherit;
@@ -6765,6 +6835,36 @@ body.split-dragging #chat-box3{ user-select: none; }
   font-size: 19px;
   line-height: 1;
   filter: drop-shadow(0 1px 2px rgba(40,30,20,.3));
+}
+
+/* ── 종이테이프 모양 (2026-08-13) — 프로필 설정에서 사람당 하나 고름 ──
+
+   양끝을 clip-path 로 얕게 찢습니다. 진짜 종이테이프처럼 보이려면
+   ① 뜯김이 **얕아야** 하고(깊으면 톱니바퀴), ② 양끝이 살짝 비스듬해야
+   하고, ③ 자리마다 뜯긴 무늬가 달라야 합니다 — 같은 테이프를 다섯 번
+   뜯어 붙였는데 뜯긴 자국이 똑같으면 도장 찍은 티가 나요.
+   반투명(.9)은 테이프 특유의 종이 비침입니다. */
+.card-deco-word.is-tape{
+  border: none;
+  border-radius: 0;
+  padding: 3.5px 13px;
+  opacity: .9;
+  box-shadow: 0 1px 2px rgba(40,30,20,.14);
+}
+.card-deco-word.is-tape.deco-a{
+  clip-path: polygon(2.5% 0%, 97% 4%, 100% 22%, 97.5% 48%, 99.5% 74%, 96.5% 100%, 3% 96%, 0.5% 70%, 2.5% 44%, 0% 18%);
+}
+.card-deco-word.is-tape.deco-b{
+  clip-path: polygon(0% 10%, 3.5% 0%, 98% 2%, 96.5% 30%, 100% 56%, 97% 82%, 98.5% 100%, 2% 98%, 3% 66%, 0.5% 38%);
+}
+.card-deco-word.is-tape.deco-c{
+  clip-path: polygon(1.5% 4%, 98.5% 0%, 96.5% 26%, 99.5% 52%, 97% 78%, 99% 100%, 1% 97%, 3% 72%, 0% 46%, 2% 22%);
+}
+.card-deco-word.is-tape.deco-d{
+  clip-path: polygon(3% 0%, 97.5% 3%, 99.5% 20%, 96.5% 46%, 99% 72%, 97.5% 96%, 2% 100%, 0.5% 74%, 3% 50%, 1% 24%);
+}
+.card-deco-word.is-tape.deco-e{
+  clip-path: polygon(0.5% 6%, 96.5% 0%, 99% 28%, 96.5% 54%, 100% 80%, 97% 100%, 3% 95%, 1% 68%, 3.5% 42%, 0% 16%);
 }
 .card-deco.deco-a{ top: 14px;  right: -8px;  transform: rotate(6deg); }
 .card-deco.deco-b{ left: -12px; bottom: 12px; transform: rotate(-8deg); }

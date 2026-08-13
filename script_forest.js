@@ -144,7 +144,9 @@
      서버 읽고 쓰기 — forest/{자동키}
      --------------------------------------------------------------- */
 
-  /** 한 장을 안전한 모양으로 다듬습니다 (옛 데이터·손댄 데이터 대비) */
+  /** 한 장을 안전한 모양으로 다듬습니다 (옛 데이터·손댄 데이터 대비)
+      [2026-08-13] parent — 답쪽지입니다. 값이 있으면 보드가 아니라
+      그 부모 쪽지 밑에 작게 겹쳐 붙어요. 익명 규칙은 똑같습니다. */
   function normalize(id, v) {
     if (!v || typeof v !== "object") return null;
     const text = String(v.text == null ? "" : v.text).slice(0, MAX_TEXT);
@@ -157,7 +159,8 @@
       y:      clamp(Number(v.y) || 0, 0, 100),
       rot:    clamp(Number(v.rot) || 0, -3, 3),
       at:     Number(v.at) || 0,
-      hearts: Math.max(0, Math.round(Number(v.hearts) || 0))
+      hearts: Math.max(0, Math.round(Number(v.hearts) || 0)),
+      parent: typeof v.parent === "string" ? v.parent : ""
     };
   }
 
@@ -178,7 +181,16 @@
     });
     /* 오래된 것이 아래, 최신이 위로 오도록 (z-index 를 이 순서로 줍니다) */
     list.sort((a, b) => a.at - b.at);
-    _notes = list;
+
+    /* 부모가 사라진 답쪽지는 같이 걷어냅니다 — 부모가 시들거나 지워지면
+       답쪽지 혼자 보드에 나뒹굴 곳이 없어요. 서버에서도 조용히 지웁니다. */
+    const ids = new Set(list.map(n => n.id));
+    const orphans = list.filter(n => n.parent && !ids.has(n.parent));
+    for (const o of orphans) {
+      try { window.db.ref("forest/" + o.id).remove(); } catch (e) {}
+      forget(MINE_KEY, o.id); forget(HEART_KEY, o.id);
+    }
+    _notes = list.filter(n => !(n.parent && !ids.has(n.parent)));
   }
 
   /** 서른 날이 지난 쪽지를 조용히 걷어냅니다.
@@ -201,13 +213,50 @@
      화면 그리기
      --------------------------------------------------------------- */
 
-  /** 쪽지 한 장 */
-  function noteHtml(n, z) {
+  /* 답쪽지 펼침 상태와 답쪽지 작성 상태 — 이 기기 화면에만 있는 것 */
+  let _openReplies = new Set();
+  let _reply = null;   // { parent, text, color }
+
+  /** 답쪽지 한 장 — 부모 밑에 작게 겹쳐 붙습니다 */
+  function replyHtml(r) {
+    const c = colorOf(r.color);
+    const mine = isMine(r.id);
+    return `
+      <div class="fr-reply" style="--fr-bg:${c.bg}; --fr-fg:${c.fg};
+             --fr-rot:${r.rot}deg;">
+        <span class="fr-reply-text">${esc(r.text)}</span>
+        ${mine ? `<button type="button" class="fr-del fr-reply-del" data-fr-del="${esc(r.id)}"
+                          title="내 답쪽지 지우기" aria-label="내 답쪽지 지우기">✕</button>` : ""}
+      </div>`;
+  }
+
+  /** 답쪽지 쓰는 칸 — 펼친 답쪽지 무더기 맨 아래 */
+  function replyComposeHtml() {
+    const swatches = FOREST_COLORS.map((k, i) => `
+      <button type="button" class="fr-swatch mini${i === _reply.color ? " is-on" : ""}"
+              data-fr-rcolor="${i}" style="--fr-bg:${k.bg}; --fr-fg:${k.fg};"
+              aria-pressed="${i === _reply.color ? "true" : "false"}"></button>`).join("");
+    return `
+      <div class="fr-rcompose">
+        <textarea id="fr-rtext" class="fr-rtext" maxlength="${MAX_TEXT}"
+                  placeholder="답쪽지…">${esc(_reply.text)}</textarea>
+        <div class="fr-rcompose-row">
+          <span class="fr-swatches mini">${swatches}</span>
+          <button type="button" class="fr-btn mini" data-fr-ract="post">붙이기</button>
+        </div>
+      </div>`;
+  }
+
+  /** 쪽지 한 장 (보드에 붙는 뿌리 쪽지) */
+  function noteHtml(n, z, replies) {
     const c = colorOf(n.color);
     const mine = isMine(n.id);
     const on   = didHeart(n.id);
+    const open = _openReplies.has(n.id);
+    const rs   = replies || [];
     return `
-      <div class="fr-note" data-fr-note="${esc(n.id)}"
+      <div class="fr-note${mine ? " is-mine" : ""}" data-fr-note="${esc(n.id)}"
+           ${mine ? `data-fr-mine="1"` : ""}
            style="--fr-x:${n.x}%; --fr-y:${n.y}%; --fr-rot:${n.rot}deg;
                   --fr-bg:${c.bg}; --fr-fg:${c.fg}; --fr-sub:${c.sub}; z-index:${z};">
         ${mine ? `<button type="button" class="fr-del" data-fr-del="${esc(n.id)}"
@@ -220,7 +269,18 @@
                   data-fr-heart="${esc(n.id)}"
                   aria-label="공감 ${n.hearts}개${on ? " (이미 눌렀어요)" : ""}"
                   title="${on ? "이미 공감했어요" : "공감하기 (한 번만)"}">♥ ${n.hearts}</button>
+          <span class="fr-note-dot" aria-hidden="true">·</span>
+          <button type="button" class="fr-rbtn" data-fr-replies="${esc(n.id)}"
+                  title="${open ? "답쪽지 접기" : "답쪽지 보기·쓰기"}"
+                  aria-expanded="${open ? "true" : "false"}">${open ? "▴" : "💬"} ${rs.length}</button>
         </div>
+        ${open ? `
+        <div class="fr-replies">
+          ${rs.map(replyHtml).join("")}
+          ${_reply && _reply.parent === n.id
+            ? replyComposeHtml()
+            : `<button type="button" class="fr-rbtn fr-radd" data-fr-reply="${esc(n.id)}">+ 답쪽지 쓰기</button>`}
+        </div>` : ""}
       </div>`;
   }
 
@@ -253,19 +313,26 @@
     if (!_notes.length && !_compose) {
       return `<p class="fr-empty">아직 아무 쪽지도 없어요.<br>빈 곳을 눌러 첫 쪽지를 붙여 보세요.</p>`;
     }
-    /* 오래된 것부터 z-index 1 씩 — 최신 쪽지가 늘 위에 옵니다 */
-    return _notes.map((n, i) => noteHtml(n, i + 1)).join("")
+    /* 뿌리 쪽지만 보드에 — 답쪽지는 제 부모 밑으로 들어갑니다 */
+    const roots = _notes.filter(n => !n.parent);
+    const byParent = {};
+    _notes.forEach(n => {
+      if (!n.parent) return;
+      (byParent[n.parent] = byParent[n.parent] || []).push(n);
+    });
+    /* 오래된 것부터 z-index 1 씩 — 최신 쪽지가 늘 위에 옵니다.
+       답쪽지를 펼친 쪽지는 무더기가 이웃 위로 오도록 한층 더 올립니다 */
+    return roots.map((n, i) =>
+        noteHtml(n, _openReplies.has(n.id) ? roots.length + 1 + i : i + 1,
+                 byParent[n.id])).join("")
          + (_compose ? composeHtml() : "");
   }
 
-  /** 쪽지가 많아지면 보드를 세로로 늘립니다 (넘치면 창이 스크롤돼요).
-      좌표는 %라서 보드가 길어지면 쪽지도 자연스레 넓게 퍼집니다. */
-  /* [고침 2026-08-07] 기본 높이 430 → 387 (9할). 대신 보드 폭이 3할
-     넓어져서 한 줄에 6장까지 들어가므로, 쪽지가 늘어날 때 세로로
-     길어지는 속도도 그만큼 늦춥니다 (5장 기준 → 6장 기준). */
-  function boardHeight() {
-    return Math.max(387, 257 + Math.ceil((_notes.length + 1) / 6) * 130);
-  }
+  /* [바꿈 2026-08-13] 쪽지 수에 따라 보드를 늘리던 boardHeight() 를
+     없앴습니다 — 쪽지가 붙을수록 창이 길어져 스크롤이 생기는 원인이
+     그거였어요. 이제 높이는 CSS 가 화면에 맞춰 고정합니다
+     (styles.css .fr-board — 화면 높이에서 제목·여백만큼 뺀 값).
+     좌표가 %라서 보드 크기가 바뀌어도 쪽지의 상대 위치는 그대로예요. */
 
   function render() {
     const board = el("forest-board");
@@ -273,17 +340,17 @@
 
     /* 글을 치던 중이면 어디까지 쳤는지·초점을 되돌려 줍니다 */
     const act = document.activeElement;
-    const keep = !!(act && act.id === "fr-text");
+    const keep = !!(act && (act.id === "fr-text" || act.id === "fr-rtext"));
     const caret = keep ? act.selectionStart : 0;
+    const keepId = keep ? act.id : "";
 
-    board.style.setProperty("--fr-h", boardHeight() + "px");
     board.innerHTML = boardHtml();
 
     const cnt = el("forest-count");
     if (cnt) cnt.textContent = _notes.length ? `쪽지 ${_notes.length}장` : "";
 
-    if (_compose) {
-      const ta = el("fr-text");
+    if (_compose || _reply) {
+      const ta = el(keepId || (_reply ? "fr-rtext" : "fr-text"));
       if (ta) {
         try {
           ta.focus();
@@ -418,9 +485,36 @@
     const box = root.querySelector(".modal-content") || root;
     box.addEventListener("click", onClick);
     box.addEventListener("input", onInput);
+    bindDrag();
   }
 
   function onClick(e) {
+    /* 0) 방금 쪽지를 끌었다면 이 클릭은 끌기의 꼬리 — 아무것도 안 합니다 */
+    if (_dragged) { _dragged = false; return; }
+
+    /* 0-1) 답쪽지 펼치기/접기 · 쓰기 · 붙이기 */
+    const rb = e.target.closest("[data-fr-replies]");
+    if (rb) {
+      const id = rb.getAttribute("data-fr-replies");
+      if (_openReplies.has(id)) { _openReplies.delete(id); if (_reply?.parent === id) _reply = null; }
+      else _openReplies.add(id);
+      render(); return;
+    }
+    const ra = e.target.closest("[data-fr-reply]");
+    if (ra) {
+      _reply = { parent: ra.getAttribute("data-fr-reply"), text: "",
+                 color: Math.floor(Math.random() * FOREST_COLORS.length) };
+      render(); return;
+    }
+    const rc = e.target.closest("[data-fr-rcolor]");
+    if (rc && _reply) {
+      _reply.color = clamp(Number(rc.getAttribute("data-fr-rcolor")) || 0,
+                           0, FOREST_COLORS.length - 1);
+      render(); return;
+    }
+    const ract = e.target.closest("[data-fr-ract]");
+    if (ract) { postReply(); return; }
+
     /* 1) 쪽지의 ✕ */
     const del = e.target.closest("[data-fr-del]");
     if (del) { removeNote(del.getAttribute("data-fr-del")); return; }
@@ -457,10 +551,106 @@
 
   function onInput(e) {
     const t = e.target;
+    if (t && t.id === "fr-rtext" && _reply) {
+      _reply.text = String(t.value || "").slice(0, MAX_TEXT);
+      return;
+    }
     if (!t || t.id !== "fr-text" || !_compose) return;
     _compose.text = String(t.value || "").slice(0, MAX_TEXT);
     const c = el("fr-count");
     if (c) c.textContent = String(_compose.text.length);
+  }
+
+  /** 답쪽지 붙이기 — 뿌리 쪽지와 같은 익명 규칙, parent 만 하나 더 */
+  async function postReply() {
+    if (!_reply || _busy) return;
+    const text = String(_reply.text || "").trim().slice(0, MAX_TEXT);
+    if (!text) { alert("답쪽지에 적을 말을 먼저 써 주세요."); return; }
+    if (!me() || !window.db) return;
+    _busy = true;
+    const note = {
+      text,
+      color: clamp(Math.round(Number(_reply.color) || 0), 0, FOREST_COLORS.length - 1),
+      x: 0, y: 0,
+      rot: Math.round((Math.random() * 4 - 2) * 10) / 10,   // 답쪽지는 살짝만
+      at: Date.now(),
+      hearts: 0,
+      parent: _reply.parent
+    };
+    try {
+      const ref = window.db.ref("forest").push();
+      await ref.set(note);
+      remember(MINE_KEY, ref.key);
+      _notes.push(normalize(ref.key, note));
+      _reply = null;
+      render();
+    } catch (e) {
+      console.warn("[대숲] 답쪽지를 붙이지 못했어요", e);
+      alert("답쪽지를 붙이지 못했어요. 연결을 확인해 주세요.");
+    } finally {
+      _busy = false;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     내 쪽지 끌어 옮기기 (2026-08-13)
+
+     이 기기가 기억하는 **내 쪽지만** 끌립니다 — 아무나 남의 쪽지를
+     옮기면 아침마다 보드가 뒤죽박죽일 테니까요.
+     서버에는 x·y 만 고쳐 씁니다. 보안규칙이 "글이 그대로인 수정"을
+     이미 허용하고 있어서 규칙 변경이 없습니다 (♥ 와 같은 문).
+     5px 넘게 움직였을 때만 끌기로 칩니다 — 안 그러면 ♥ 누르려던
+     클릭이 끌기로 오해받아요. 끌었으면 뒤따르는 click 을 삼킵니다.
+     --------------------------------------------------------------- */
+  let _dragNote = null;
+  let _dragged = false;
+
+  function bindDrag() {
+    const board = el("forest-board");
+    if (!board || board.__frDragBound) return;
+    board.__frDragBound = true;
+
+    board.addEventListener("pointerdown", (e) => {
+      const noteEl = e.target.closest("[data-fr-mine]");
+      if (!noteEl) return;
+      /* 단추(♥·✕·💬)와 답쪽지 무더기 위에서는 끌지 않습니다 */
+      if (e.target.closest("button") || e.target.closest(".fr-replies")) return;
+      const id = noteEl.getAttribute("data-fr-note");
+      const n = _notes.find(v => v.id === id);
+      if (!n) return;
+      const r = board.getBoundingClientRect();
+      _dragNote = { n, el: noteEl, sx: e.clientX, sy: e.clientY,
+                    ox: n.x, oy: n.y, bw: r.width, bh: r.height, moved: false };
+      noteEl.setPointerCapture?.(e.pointerId);
+    });
+
+    board.addEventListener("pointermove", (e) => {
+      if (!_dragNote) return;
+      const dx = e.clientX - _dragNote.sx, dy = e.clientY - _dragNote.sy;
+      if (!_dragNote.moved && Math.hypot(dx, dy) < 5) return;
+      _dragNote.moved = true;
+      _dragNote.el.classList.add("dragging");
+      const x = clamp(_dragNote.ox + (dx / _dragNote.bw) * 100, 0, 96);
+      const y = clamp(_dragNote.oy + (dy / _dragNote.bh) * 100, 0, 92);
+      _dragNote.n.x = Math.round(x * 10) / 10;
+      _dragNote.n.y = Math.round(y * 10) / 10;
+      _dragNote.el.style.setProperty("--fr-x", _dragNote.n.x + "%");
+      _dragNote.el.style.setProperty("--fr-y", _dragNote.n.y + "%");
+      e.preventDefault();
+    });
+
+    const drop = () => {
+      if (!_dragNote) return;
+      const d = _dragNote;
+      _dragNote = null;
+      d.el.classList.remove("dragging");
+      if (!d.moved) return;
+      _dragged = true;                        // 뒤따르는 click 삼키기
+      window.db?.ref("forest/" + d.n.id).update({ x: d.n.x, y: d.n.y })
+        .catch(e => console.warn("[대숲] 자리를 저장하지 못했어요", e));
+    };
+    board.addEventListener("pointerup", drop);
+    board.addEventListener("pointercancel", drop);
   }
 
   /* ---------------------------------------------------------------
@@ -477,6 +667,8 @@
     if (!modal) return;
 
     _compose = null;
+    _reply = null;
+    _openReplies = new Set();
     bind();
     modal.style.display = "flex";
     render();                       // 빈 보드를 먼저 (서버를 기다리는 동안 멈춘 듯 보이지 않게)

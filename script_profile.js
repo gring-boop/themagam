@@ -521,6 +521,12 @@ function sanitizeStickerColors(obj) {
   DECO_SLOTS.forEach(k => { out[k] = sanitizeHexColor(s[k]) || ""; });
   return out;
 }
+/* 스티커 모양 (2026-08-13) — 알약(pill) / 찢긴 종이테이프(tape).
+   사람당 하나입니다: 한 카드에 두 양식이 섞이면 지저분하고,
+   자리마다 고르게 하면 고르는 칸만 다섯 배가 돼요. */
+function sanitizeStickerShape(v) {
+  return v === "tape" ? "tape" : "pill";
+}
 
 /* 고른 배경색에서 읽히는 글자색을 만들어냅니다 — 같은 색상(hue)을
    진하게 낮춘 톤. 아무 색을 골라도 글자가 배경에 묻지 않아요.
@@ -553,14 +559,15 @@ function decoInkFor(bgHex) {
 /** 한 자리의 스티커 HTML — 카드를 그리는 쪽(script_realtime.js)이 씁니다.
     빈 자리는 빈 문자열: DOM 자체가 안 생겨서 카드에 흔적이 없어요.
     color 를 주면(낱말일 때만) 그 배경 + 어울리는 진한 글자색. */
-function decoStickerHtml(slot, val, color) {
+function decoStickerHtml(slot, val, color, shape) {
   const v = sanitizeDeco(val);
   if (!v) return "";
   const w = DECO_WORDS.find(x => x.t === v);
   if (w) {
     const bg = sanitizeHexColor(color) || w.bg;
     const fg = sanitizeHexColor(color) ? decoInkFor(bg) : w.fg;
-    return `<span class="card-deco card-deco-word deco-${slot}"
+    const tape = sanitizeStickerShape(shape) === "tape" ? " is-tape" : "";
+    return `<span class="card-deco card-deco-word deco-${slot}${tape}"
       style="background:${bg};color:${fg}">${escapeHtml(w.t)}</span>`;
   }
   return `<span class="card-deco card-deco-emoji deco-${slot}">${v}</span>`;
@@ -569,6 +576,7 @@ window.DECO_WORDS = DECO_WORDS;
 window.DECO_EMOJIS = DECO_EMOJIS;
 window.sanitizeStickers = sanitizeStickers;
 window.sanitizeStickerColors = sanitizeStickerColors;
+window.sanitizeStickerShape = sanitizeStickerShape;
 window.decoStickerHtml = decoStickerHtml;
 
 /* 채팅 말풍선 위에 뜨는 닉네임 색.
@@ -938,9 +946,16 @@ function renderProfilePanel() {
       </p>
     </div>
 
-    <!-- 🧲 꾸미기 스티커 — 자리 넷, 각자 낱말/표정/비움 -->
+    <!-- 🧲 꾸미기 스티커 — 자리 다섯, 각자 낱말/표정/비움 -->
     <div class="set-block">
       <div class="set-title">꾸미기 스티커</div>
+      <div class="set-row" style="margin-bottom:10px; gap:8px; align-items:center;">
+        <span class="slot-name" style="flex:0 0 84px;">모양</span>
+        <select id="prof-deco-shape" class="slot-sel" data-deco-shape="1">
+          <option value="pill"${sanitizeStickerShape(p.stickerShape) !== "tape" ? " selected" : ""}>알약 (매끈)</option>
+          <option value="tape"${sanitizeStickerShape(p.stickerShape) === "tape" ? " selected" : ""}>종이테이프 (찢긴)</option>
+        </select>
+      </div>
       ${[
         ["a", "오른쪽 위"],
         ["b", "프사 옆"],
@@ -1120,12 +1135,16 @@ function bindProfilePanel() {
       stickerColors[k] = (well && well.dataset.dirty === "1")
         ? (sanitizeHexColor(well.value) || "") : "";
     });
-    saveMyProfile({ stickers, stickerColors });
+    const stickerShape = sanitizeStickerShape(
+      document.getElementById("prof-deco-shape")?.value);
+    saveMyProfile({ stickers, stickerColors, stickerShape });
     window.rerenderUserCards?.();
   }
   document.querySelectorAll("[data-deco-slot]").forEach(sel => {
     sel.onchange = _saveDeco;
   });
+  const shapeSel = document.getElementById("prof-deco-shape");
+  if (shapeSel) shapeSel.onchange = _saveDeco;
   document.querySelectorAll("[data-deco-color]").forEach(well => {
     /* 저장된 색이 있던 자리는 dirty 로 시작해야 색이 유지됩니다 */
     const k = well.dataset.decoColor;
