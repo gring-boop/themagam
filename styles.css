@@ -6240,9 +6240,10 @@ body.split-dragging #chat-box3{ user-select: none; }
 .fr-board{
   position: relative;
   /* [바꿈 2026-08-13] 쪽지 수만큼 길어지던 높이(--fr-h)를 버리고 화면에
-     맞춰 고정 — 창 높이에서 제목·안내·여백(약 290px)을 뺀 만큼.
-     스크롤이 안 생기고, 쪽지 좌표는 %라 상대 위치가 유지됩니다. */
-  height: clamp(340px, calc(100dvh - 290px), 640px);
+     맞춰 고정 — 창 높이에서 제목·안내·여백만큼 뺀 값.
+     [키움 같은 날] 위아래로 작업방이 가려져도 좋다고 해서 넉넉히
+     (290 → 250). 좌우 빈 곳을 누르면 닫히니 답답하지 않아요. */
+  height: clamp(340px, calc(100dvh - 250px), 860px);
   min-height: 340px;
   border-radius: 10px;
   background-color: #DED6C6;
@@ -6302,6 +6303,37 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .fr-note-time{ letter-spacing: .2px; }
 .fr-note-dot{ opacity: .7; }
+
+/* ── 판 넘기기 줄 — 보드 위 (2026-08-13) ── */
+.fr-topbar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 7px;
+  font-size: var(--fs-xs);
+  color: #6B5F52;
+}
+.fr-topbar .fr-count-label{ font-weight: var(--fw-bold); }
+.fr-pager{ display: inline-flex; gap: 4px; align-items: center; }
+.fr-pg{
+  min-width: 27px;
+  padding: 3px 8px;
+  border: 1px solid rgba(163,88,70,.3);
+  border-radius: 8px;
+  background: #FFFDF6;
+  color: #6B5F52;
+  font: inherit;
+  cursor: pointer;
+}
+.fr-pg:hover{ background: rgba(163,88,70,.08); }
+.fr-pg.is-on{
+  background: #B3372B;
+  border-color: #B3372B;
+  color: #fff;
+  cursor: default;
+}
+.fr-pg:disabled{ opacity: .35; cursor: default; }
 
 /* ── 내 쪽지 끌기 (2026-08-13) ── */
 .fr-note.is-mine{ cursor: grab; touch-action: none; }

@@ -309,12 +309,46 @@
       </div>`;
   }
 
+  /* =====================================================================
+     판 넘기기 (2026-08-13) — 한 판에 24장
+
+     판은 쪽지에 기록하지 않습니다. **시간순으로 잘라 자동 배정**해요 —
+     오래된 24장이 1판, 다음 24장이 2판…. 그래서
+       · 시든 쪽지가 빠지면 뒤 판 쪽지가 앞 판으로 저절로 당겨 붙고
+       · 꽉 차면 새 판이 저절로 생기고
+       · 서버·보안규칙은 아무것도 안 바뀝니다.
+     새 쪽지는 시간순 맨 끝 = 맨 끝 판에 붙습니다. 다른 판을 보다가
+     붙여도 붙인 직후 그 판으로 데려다줘요.
+     ===================================================================== */
+  const PAGE_SIZE = 24;
+  let _page = 0;         // 지금 보는 판 (0부터)
+
+  function rootNotes() { return _notes.filter(n => !n.parent); }
+  function pageCount() { return Math.max(1, Math.ceil(rootNotes().length / PAGE_SIZE)); }
+
+  function pagerHtml() {
+    const pc = pageCount();
+    if (pc <= 1) return "";
+    let h = `<button type="button" class="fr-pg" data-fr-page="prev"
+                     aria-label="이전 판"${_page === 0 ? " disabled" : ""}>‹</button>`;
+    for (let i = 0; i < pc; i++) {
+      h += `<button type="button" class="fr-pg${i === _page ? " is-on" : ""}"
+                    data-fr-page="${i}" aria-label="${i + 1}판"
+                    ${i === _page ? `aria-current="page"` : ""}>${i + 1}</button>`;
+    }
+    h += `<button type="button" class="fr-pg" data-fr-page="next"
+                  aria-label="다음 판"${_page >= pc - 1 ? " disabled" : ""}>›</button>`;
+    return h;
+  }
+
   function boardHtml() {
     if (!_notes.length && !_compose) {
       return `<p class="fr-empty">아직 아무 쪽지도 없어요.<br>빈 곳을 눌러 첫 쪽지를 붙여 보세요.</p>`;
     }
     /* 뿌리 쪽지만 보드에 — 답쪽지는 제 부모 밑으로 들어갑니다 */
-    const roots = _notes.filter(n => !n.parent);
+    const all = rootNotes();
+    _page = clamp(_page, 0, pageCount() - 1);
+    const roots = all.slice(_page * PAGE_SIZE, (_page + 1) * PAGE_SIZE);
     const byParent = {};
     _notes.forEach(n => {
       if (!n.parent) return;
@@ -347,7 +381,15 @@
     board.innerHTML = boardHtml();
 
     const cnt = el("forest-count");
-    if (cnt) cnt.textContent = _notes.length ? `쪽지 ${_notes.length}장` : "";
+    if (cnt) {
+      const roots = rootNotes().length;
+      const replies = _notes.length - roots;
+      cnt.textContent = roots
+        ? `🎋 쪽지 ${roots}장${replies ? ` · 답쪽지 ${replies}장` : ""}`
+        : "";
+    }
+    const pg = el("forest-pager");
+    if (pg) pg.innerHTML = pagerHtml();
 
     if (_compose || _reply) {
       const ta = el(keepId || (_reply ? "fr-rtext" : "fr-text"));
@@ -420,6 +462,7 @@
       window.achvBump?.("cForest");     // 🏅 대숲지기 (누가 썼는지는 여전히 안 남습니다)
       _notes.push(normalize(ref.key, note));
       _compose = null;
+      _page = pageCount() - 1;          // 새 쪽지는 맨 끝 판에 붙습니다 — 거기로 데려다줘요
       render();
     } catch (e) {
       console.warn("[대숲] 쪽지를 붙이지 못했어요", e);
@@ -491,6 +534,18 @@
   function onClick(e) {
     /* 0) 방금 쪽지를 끌었다면 이 클릭은 끌기의 꼬리 — 아무것도 안 합니다 */
     if (_dragged) { _dragged = false; return; }
+
+    /* 0-0) 판 넘기기 */
+    const pg = e.target.closest("[data-fr-page]");
+    if (pg) {
+      const v = pg.getAttribute("data-fr-page");
+      if (v === "prev") _page = Math.max(0, _page - 1);
+      else if (v === "next") _page = Math.min(pageCount() - 1, _page + 1);
+      else _page = clamp(Number(v) || 0, 0, pageCount() - 1);
+      _compose = null;              // 판을 넘기면 쓰던 카드는 접습니다
+      render();
+      return;
+    }
 
     /* 0-1) 답쪽지 펼치기/접기 · 쓰기 · 붙이기 */
     const rb = e.target.closest("[data-fr-replies]");
@@ -675,6 +730,7 @@
 
     await loadNotes();
     await sweepOld();               // 서른 날 지난 쪽지는 조용히 걷어냅니다
+    _page = pageCount() - 1;        // 열면 맨 끝 판(최신)부터
     if (isOpen()) render();
   }
 
