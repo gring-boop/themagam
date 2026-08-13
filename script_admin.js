@@ -22,7 +22,7 @@
      ※ 메인 앱(script_realtime.js) 맨 위에 같은 값이 있습니다.
        두 파일은 반드시 함께 고쳐야 해요 — 동기 필요!
      ===================================================================== */
-  const ADMIN_NICK = "그링링🍄";     // ← 관리자 닉네임
+  const ADMIN_NICK = "링가링🍄";     // ← 관리자 닉네임 (2026-08-13 그링링🍄 → 링가링🍄 · script_realtime.js 와 동기)
   const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
 
   /* ★ script_core.js 의 firebaseConfig 와 동기 유지 — 코어가 바뀌면 여기도 */
