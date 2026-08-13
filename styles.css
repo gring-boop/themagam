@@ -8126,7 +8126,11 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .music-vol-row{
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 8px;
-  padding: 0 2px 8px;
+  /* [2026-08-13] 먹선이 판 폭을 꽉 채워 답답했습니다 — 양쪽에 숨을
+     쉬게 1할씩 여백 (창의 8할만 차지) */
+  width: 80%;
+  margin: 0 auto;
+  padding: 0 0 8px;
 }
 .music-vol-ico{ flex: 0 0 auto; font-size: 13px; }
 /* 볼륨 — 가는 먹선 위에 납작한 사각 도장 (2026-08-13 콩이 고른 조합).
