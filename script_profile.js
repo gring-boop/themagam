@@ -1056,17 +1056,11 @@ function renderProfilePanel() {
     <div class="set-block" id="prof-stk-place-block">
       <div class="set-title">스티커 배치</div>
       <p class="hint" style="margin-top:0">
-        카드의 스티커를 <b>끌어서</b> 자리를 옮기고, 아래 슬라이더로
-        <b>기울기</b>를 돌려요. <b>실물 크기 카드</b>라 여기서 놓은 그대로
-        진짜 카드에 붙습니다. 오른쪽 벽에 바짝 붙이면 글자가 세로로 서요.
+        <b>내 진짜 카드</b> 그대로예요 — 스티커를 <b>끌어서</b> 자리를 옮기고,
+        아래 슬라이더로 <b>기울기</b>를 돌려요. 여기서 놓은 그대로
+        모두의 화면에 붙습니다. 오른쪽 벽에 바짝 붙이면 글자가 세로로 서요.
       </p>
-      <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 카드 (실물 크기)">
-        <div class="stk-avatar-wrap" id="prof-stk-avwrap"><div class="stk-avatar"></div></div>
-        <div class="stk-mockstate"><span>🔥WRITE🔥</span></div>
-        <div class="stk-mockname">${escapeHtml(myNick)}</div>
-        <div class="stk-mockgoal">🎯 오늘의 목표</div>
-        <div class="stk-mockwh">⏱ 2h 30m</div>
-      </div>
+      <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 카드 (내 카드 그대로)"></div>
       <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
         <span class="slot-name" style="flex:0 0 44px;">기울기</span>
         <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
@@ -1297,42 +1291,41 @@ function bindProfilePanel() {
     if (rotv) rotv.textContent = s ? `${s.dataset.r}°` : "–";
   }
 
+  /* [재수술 2026-08-14 2차 — 콩 제안: "아예 찐을 보여주자"]
+     흉내 카드를 그리는 대신 **접속자 목록의 내 카드를 통째로 복제**해서
+     그 위에서 붙입니다. 배경·무늬·사진·목표 글까지 전부 진짜라,
+     어긋날 것이 원리적으로 없어요. 복제본이라 카드의 클릭 세 곳도
+     안 움직입니다 (위임 리스너가 보드에만 붙어 있으니까). */
   function renderStkEditor() {
     if (!_stkCard) return;
-    _stkCard.querySelectorAll("[data-stk]").forEach(x => x.remove());
-    const avwrap = document.getElementById("prof-stk-avwrap");
+    _stkCard.innerHTML = "";
+    const src = Array.from(
+      document.querySelectorAll("#user-cards > .user-card:not(.share-card)"))
+      .find(el => el.getAttribute("data-card-nick") === myNick);
+    if (!src) {
+      _stkCard.innerHTML = `<p class="hint" style="padding:22px 8px;text-align:center;">
+        카드를 준비하는 중이에요… 잠시 뒤 다시 열어 주세요.</p>`;
+      return;
+    }
+    const clone = src.cloneNode(true);
+    clone.classList.add("stk-clone");
+    clone.classList.remove("is-me");
+    clone.removeAttribute("data-card-nick");   // 진짜 카드 셈(fixLonelyCard 등)에 안 잡히게
+    clone.style.width = "100%";
+    clone.style.maxWidth = "none";
+    _stkCard.appendChild(clone);
+
+    /* 복제된 스티커들에 손잡이 달기 — 자리는 클래스(deco-a…e)에서 읽습니다 */
     const st = _stkState();
-    DECO_SLOTS.forEach(k => {
-      const v = st.stickers[k];
-      if (!v) return;
+    clone.querySelectorAll(".card-deco").forEach(el => {
+      const m = el.className.match(/deco-([abcde])(?:\s|$)/);
+      if (!m) return;
+      const k = m[1];
+      el.dataset.stk = k;
       const p = st.pos[k];
-      const w = DECO_WORDS.find(x => x.t === v);
-      const s = document.createElement("span");
-      s.dataset.stk = k;
-      s.dataset.custom = p ? "1" : "0";
-      s.dataset.r = p ? p.r : 0;
-      /* 실제 카드와 똑같은 클래스 — 크기·기본 자리·테이프 모양까지 1:1 */
-      if (w) {
-        const bg = st.colors[k] || w.bg;
-        s.className = `card-deco card-deco-word deco-${k} stk-item`
-          + (st.shape === "tape" ? " is-tape" : "");
-        s.style.background = bg;
-        s.style.color = st.colors[k] ? decoInkFor(bg) : w.fg;
-        s.textContent = w.t;
-      } else {
-        s.className = `card-deco card-deco-emoji deco-${k} stk-item`;
-        s.textContent = v;
-      }
-      if (p) {
-        s.classList.add("deco-free");
-        s.dataset.x = p.x; s.dataset.y = p.y;
-        _stkPaint(s);
-        _stkCard.appendChild(s);
-      } else if (k === "b" || k === "e") {
-        avwrap?.appendChild(s);     // 기본 자리의 B·E 는 실제처럼 프사 칸에
-      } else {
-        _stkCard.appendChild(s);
-      }
+      el.dataset.custom = p ? "1" : "0";
+      el.dataset.r = p ? p.r : 0;
+      if (p) { el.dataset.x = p.x; el.dataset.y = p.y; }
     });
     _stkSelect(_stkSel && _stkCard.querySelector(`[data-stk="${_stkSel}"]`) ? _stkSel : "");
   }
