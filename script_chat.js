@@ -521,7 +521,9 @@
      서버에는 여전히 글자(주소)만 저장돼요 — 그림은 각자의 브라우저가
      그 주소에서 직접 받아옵니다. 용량 부담 0, 규칙 변경 0.
      못 불러오는 주소(지워진 짤 등)는 조용히 글자 링크로 돌아갑니다. */
-  const IMG_URL_RE = /\.(jpe?g|png|gif|webp|avif)(\?[^\s<>"']*)?$/i;
+  /* [넓힘 2026-08-14] .jpg 뒤에 ?만 아니라 & 나 # 가 이어지는 주소도
+     (네이버 프록시 ...jpg&type=sc960 같은) 그림으로 알아봅니다 */
+  const IMG_URL_RE = /\.(jpe?g|png|gif|webp|avif)([?&#][^\s<>"']*)?$/i;
 
   function linkifyEscaped(html) {
     return html.replace(
@@ -536,6 +538,7 @@
              주소 글자로 되돌립니다 (textContent 라 주입 걱정 없음) */
           return `<a class="msg-img-link" href="${clean}" target="_blank" rel="noopener noreferrer"
             ><img class="msg-img" src="${clean}" alt="공유한 그림" loading="lazy"
+                  referrerpolicy="no-referrer"
                   onerror="this.parentNode.textContent=this.src"></a>${tail}`;
         }
         return `<a class="msg-link" href="${clean}" target="_blank" rel="noopener noreferrer">${clean}</a>${tail}`;
