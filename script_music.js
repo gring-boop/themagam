@@ -184,6 +184,9 @@
     _syncPill();
     _applyVolumeSoon();
     _startListening();
+    /* 곡부터 즉시 저장 — 소식(listening)이 안 와도 최소한 "그 곡 처음부터"는
+       다음 입장에 걸립니다 (걸어만 두는 cue 때는 저장된 지점을 안 밟습니다) */
+    if (!o.cue) _saveLast(vid, o.start || 0);
   }
 
   /* ---------------------------------------------------------------
@@ -197,14 +200,29 @@
   const LAST_KEY = "musicLast";
   let _lastSaveAt = 0;
 
+  /* [고침 2026-08-14] 저장이 유튜브 소식(listening)에만 기대고 있어서,
+     악수가 어긋나면 곡 자체도 안 남았습니다("적용이 안 돼요" 제보).
+     이제 ① 재생을 시작하는 순간 곡부터 즉시 적고(지점 0초),
+          ② 소식이 오면 지점을 덧쓰고,
+          ③ 악수는 한 번이 아니라 5초마다 계속 청합니다 — 놓쳐도 다음에. */
+  function _saveLast(vid, t) {
+    try { AppStore.setItem(LAST_KEY, JSON.stringify({ vid, t: Math.floor(t) })); }
+    catch (e) {}
+  }
+
+  let _listenTimer = null;
   function _startListening() {
-    [600, 1500, 3000].forEach(ms => setTimeout(() => {
+    if (_listenTimer) return;
+    const ask = () => {
       const f = document.getElementById("music-player-frame");
+      if (!f) return;
       try {
-        f?.contentWindow?.postMessage(
+        f.contentWindow?.postMessage(
           JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*");
       } catch (e) {}
-    }, ms));
+    };
+    ask();
+    _listenTimer = setInterval(ask, 5000);
   }
 
   window.addEventListener("message", (e) => {
@@ -216,8 +234,7 @@
     const now = Date.now();
     if (now - _lastSaveAt < 3000) return;      // 3초에 한 번이면 충분합니다
     _lastSaveAt = now;
-    try { AppStore.setItem(LAST_KEY, JSON.stringify({ vid: _cur, t: Math.floor(t) })); }
-    catch (err) {}
+    _saveLast(_cur, t);
   });
 
   /** 입장 때 — 직전 곡을 멈췄던 지점에 걸어 둡니다 */

@@ -6856,75 +6856,84 @@ body.split-dragging #chat-box3{ user-select: none; }
    탭이 세로로 너무 길어서 두 칸으로 흘립니다. 프로필 탭일 때만 설정
    창이 넓어져요 (openTab 이 data-tab 표식을 답니다). 좁은 화면에서는
    도로 한 칸 — 폰에서 두 칸은 글자가 깨알이 됩니다. */
-#settings-modal .modal-content[data-tab="profile"]{ width: min(820px, 100%); }
+/* [넓힘 2026-08-14 같은 날] 820 두 칸 → 1080 세 칸. 두 칸일 때 색상 줄이
+   좁아 [기본] 단추가 세로로 늘어졌고, 배치 카드를 실물 크기로 키우려면
+   제 칸이 필요했습니다. 3칸: 색들 | 스티커 고르기 | 배치(실물 카드) */
+#settings-modal .modal-content[data-tab="profile"]{ width: min(1080px, 100%); }
 .prof-cols{
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 254px;   /* 3칸째는 실물 카드(214px)+여백 */
   gap: 14px;
   align-items: start;
 }
 .prof-col{ min-width: 0; }
-@media (max-width: 720px){
+/* 색상 줄이 좁은 칸에서도 한 줄에 남게 — 코드 칸은 줄이고 이름표는 살짝 좁게 */
+.prof-cols .color-row{ flex-wrap: nowrap; }
+.prof-cols .color-hex{ flex: 1 1 56px; min-width: 0; width: auto; }
+.prof-cols .color-row > span[style]{ flex: 0 0 64px !important; font-size: 12px; }
+@media (max-width: 1100px){
   #settings-modal .modal-content[data-tab="profile"]{ width: min(460px, 100%); }
   .prof-cols{ display: block; }
 }
 
-/* ── 🧷 스티커 배치 편집기 (2026-08-14) ── */
+/* ── 🧷 스티커 배치 편집기 (2026-08-14 · 같은 날 실물 크기로 재수술) ──
+   카드가 실제 카드와 같은 214px + 같은 속(프사 118px·상태·이름·목표)이라,
+   실제 .card-deco CSS 가 그대로 먹어서 기본 자리도 1:1 로 같습니다. */
 .stk-card{
   position: relative;
-  width: 168px;
-  height: 200px;
+  width: 214px;
   margin: 4px auto 0;
+  padding: 14px 12px 12px;
+  box-sizing: border-box;
   background: var(--panel2);
   border: 1px solid var(--border);
-  border-left: 6px solid var(--accent-line);
-  border-radius: 10px;
+  border-left: 8px solid var(--accent-line);   /* 실제 카드의 책등 */
+  border-radius: 6px 16px 16px 6px;
   overflow: visible;
   touch-action: none;          /* 폰에서 끌 때 화면이 같이 안 밀리게 */
 }
+.stk-avatar-wrap{
+  position: relative;          /* 기본 자리의 B·E 가 여기 닻을 내립니다 */
+  width: 118px;
+  margin: 6px auto 0;
+}
 .stk-avatar{
-  width: 76px; height: 76px;
-  margin: 14px auto 0;
-  border-radius: 10px;
+  width: 118px; height: 118px;
+  border-radius: var(--r-md);
   background: var(--fill-2);
   border: 1px solid var(--border);
 }
-.stk-mockstate{
-  text-align: center; margin-top: 10px;
-  font-size: 10.5px; color: var(--muted);
+.stk-mockstate{ text-align: center; margin-top: 12px; }
+.stk-mockstate > span{
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: var(--r-full);
+  font-size: 11.5px;
+  font-weight: var(--fw-bold);
+  background: var(--accent);
+  color: #fff;
 }
 .stk-mockname{
-  text-align: center; margin-top: 6px;
-  font-size: 13px; font-weight: var(--fw-bold);
+  text-align: center; margin-top: 8px;
+  font-size: var(--fs-md); font-weight: var(--fw-bold);
 }
 .stk-mockgoal{
   text-align: center; margin-top: 2px;
-  font-size: 10px; color: var(--muted);
+  font-size: 11.5px; color: var(--muted);
 }
-.stk-item{
-  position: absolute;
+.stk-mockwh{
+  text-align: center; margin-top: 2px;
+  font-size: 11px; color: var(--muted);
+}
+/* 실제 카드의 스티커 CSS 를 그대로 쓰되, 편집기 안에서만 잡을 수 있게 */
+.stk-card .card-deco{
+  pointer-events: auto;
   cursor: grab;
   user-select: none;
   touch-action: none;
-  z-index: 2;
 }
-.stk-item:active{ cursor: grabbing; }
-.stk-item.is-sel{ outline: 2px dashed var(--accent); outline-offset: 2px; }
-.stk-word{
-  padding: 2.5px 7px;
-  border-radius: 7px;
-  font-size: 10.5px;
-  font-weight: var(--fw-bold);
-  line-height: 1.25;
-  border: 1px solid rgba(255,255,255,.45);
-  box-shadow: 0 1px 2px rgba(40,30,20,.2);
-  max-width: 100%;
-}
-.stk-word.is-tape{ border: none; border-radius: 0; opacity: .9; padding: 3px 11px; }
-.stk-emoji{
-  font-size: 17px; line-height: 1;
-  filter: drop-shadow(0 1px 2px rgba(40,30,20,.3));
-}
+.stk-card .card-deco:active{ cursor: grabbing; }
+.stk-card .card-deco.is-sel{ outline: 2px dashed var(--accent); outline-offset: 2px; }
 
 /* 자유 배치된 스티커 — 기본 자리의 right/bottom 닻을 풀어야 left/top 이
    먹습니다. white-space 도 풀어서, 오른쪽 벽에 밀리면 글자가 세로로 서요

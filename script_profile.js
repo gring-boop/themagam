@@ -964,7 +964,9 @@ function renderProfilePanel() {
         내 카드에만 적용되고, 다른 분들 화면에도 이 색으로 보입니다.
       </p>
     </div>
+    </div><!-- /1칸 -->
 
+    <div class="prof-col">
     <div class="set-block">
       <div class="set-title">채팅 닉네임 색</div>
       <div class="color-row">
@@ -977,9 +979,7 @@ function renderProfilePanel() {
       <div class="nick-preview" id="prof-nick-preview">${escapeHtml(myNick)}</div>
       <p class="hint">채팅 말풍선 위에 뜨는 <b>내 이름 색</b>이에요. 다른 분들 화면에도 이 색으로 보입니다.</p>
     </div>
-    </div><!-- /왼칸 -->
 
-    <div class="prof-col">
     <!-- 🧲 꾸미기 스티커 — 자리 다섯, 각자 낱말/표정/비움 -->
     <div class="set-block">
       <div class="set-title">꾸미기 스티커</div>
@@ -1027,30 +1027,6 @@ function renderProfilePanel() {
       </p>
     </div>
 
-    <!-- 🧷 스티커 배치 (2026-08-14) — 끌어서 자리, 슬라이더로 기울기 -->
-    <div class="set-block" id="prof-stk-place-block">
-      <div class="set-title">스티커 배치</div>
-      <p class="hint" style="margin-top:0">
-        미니 카드의 스티커를 <b>끌어서</b> 자리를 옮기고, 아래 슬라이더로
-        <b>기울기</b>를 돌려요. 좌우로 살짝 삐져나가게 둘 수도 있고,
-        <b>오른쪽 벽에 바짝 붙이면 글자가 세로로 서요.</b>
-      </p>
-      <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 미니 카드">
-        <div class="stk-avatar"></div>
-        <div class="stk-mockstate">🔥WRITE🔥</div>
-        <div class="stk-mockname">${escapeHtml(myNick)}</div>
-        <div class="stk-mockgoal">🎯 오늘의 목표</div>
-      </div>
-      <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
-        <span class="slot-name" style="flex:0 0 52px;">기울기</span>
-        <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
-               aria-label="고른 스티커 기울기">
-        <span id="prof-stk-rotv" style="flex:0 0 34px; text-align:right; font-size:12px;">–</span>
-        <button type="button" class="ghost-btn compact" id="prof-stk-reset">제자리로</button>
-      </div>
-      <p class="hint">고른 스티커: <b id="prof-stk-sel">없음</b> —
-        스티커를 누르면 골라져요. 안 만진 스티커는 기본 자리 그대로입니다.</p>
-    </div>
 
     <!-- 눈사람 배경색 — 사진을 안 올린 사람만 의미가 있으므로 그때만 보입니다 -->
     <div class="set-block${photo ? " hidden" : ""}" id="prof-snowbg-block">
@@ -1071,7 +1047,37 @@ function renderProfilePanel() {
       </div>
       <p class="hint">색 상자를 누르면 자세한 색상 선택 창이 열려요. 코드(#RRGGBB)를 직접 적어도 됩니다.</p>
     </div>
-    </div><!-- /오른칸 -->
+    </div><!-- /2칸 -->
+
+    <!-- 🧷 3칸 — 스티커 배치. 카드가 **실물 크기**(214px)에 실제 CSS 그대로라,
+         여기서 놓은 자리가 진짜 카드와 1:1 로 같습니다 (2026-08-14 콩 지적:
+         미니 카드는 실제와 어긋나서 까다로웠음) -->
+    <div class="prof-col">
+    <div class="set-block" id="prof-stk-place-block">
+      <div class="set-title">스티커 배치</div>
+      <p class="hint" style="margin-top:0">
+        카드의 스티커를 <b>끌어서</b> 자리를 옮기고, 아래 슬라이더로
+        <b>기울기</b>를 돌려요. <b>실물 크기 카드</b>라 여기서 놓은 그대로
+        진짜 카드에 붙습니다. 오른쪽 벽에 바짝 붙이면 글자가 세로로 서요.
+      </p>
+      <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 카드 (실물 크기)">
+        <div class="stk-avatar-wrap" id="prof-stk-avwrap"><div class="stk-avatar"></div></div>
+        <div class="stk-mockstate"><span>🔥WRITE🔥</span></div>
+        <div class="stk-mockname">${escapeHtml(myNick)}</div>
+        <div class="stk-mockgoal">🎯 오늘의 목표</div>
+        <div class="stk-mockwh">⏱ 2h 30m</div>
+      </div>
+      <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
+        <span class="slot-name" style="flex:0 0 44px;">기울기</span>
+        <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
+               aria-label="고른 스티커 기울기">
+        <span id="prof-stk-rotv" style="flex:0 0 34px; text-align:right; font-size:12px;">–</span>
+        <button type="button" class="ghost-btn compact" id="prof-stk-reset">제자리로</button>
+      </div>
+      <p class="hint">고른 스티커: <b id="prof-stk-sel">없음</b> —
+        스티커를 누르면 골라져요. 안 만진 스티커는 기본 자리 그대로입니다.</p>
+    </div>
+    </div><!-- /3칸 -->
     </div><!-- /prof-cols -->
 
   `;
@@ -1223,15 +1229,12 @@ function bindProfilePanel() {
     };
   });
 
-  /* ---- 🧷 스티커 배치 편집기 (2026-08-14) ----
-     미니 카드에서 끌어 자리를, 슬라이더로 기울기를 정합니다.
-     대숲 쪽지 끌기와 같은 문법 — % 좌표, 문턱 없이 바로 끌림(편집기니까).
-     저장은 stickerPos — 만진 자리만 적히고, 나머지는 기본 자리입니다. */
-  const _stkDefaults = {
-    a: { x: 64, y: -3, r: 6 },  b: { x: -8, y: 24, r: -8 },
-    e: { x: -12, y: 42, r: -4 }, c: { x: 58, y: 88, r: -5 },
-    d: { x: -5, y: 64, r: 7 }
-  };
+  /* ---- 🧷 스티커 배치 편집기 (2026-08-14, 같은 날 재수술) ----
+     처음엔 축소판 카드였는데 실제 카드와 위치가 어긋나 까다로웠습니다.
+     이제 **실물 크기(214px) + 실제 CSS 클래스 그대로**를 씁니다 —
+     기본 자리는 진짜 카드의 deco-a…e 규칙이 그대로 적용되고,
+     끌기 시작하는 순간 좌표(deco-free)로 갈아탑니다. 그래서 여기서
+     보이는 그대로가 진짜 카드입니다. 만진 스티커만 좌표가 저장돼요. */
   let _stkSel = "";
   const _stkCard = document.getElementById("prof-stk-card");
 
@@ -1266,6 +1269,20 @@ function bindProfilePanel() {
     s.style.transform = `rotate(${s.dataset.r}deg)`;
   }
 
+  /* 기본 자리(CSS 닻) 스티커를 좌표(deco-free)로 갈아태웁니다 —
+     지금 보이는 자리 그대로, 카드 기준 %로 환산해서 */
+  function _stkToFree(s) {
+    if (s.dataset.custom === "1") return;
+    const r = _stkCard.getBoundingClientRect();
+    const sr = s.getBoundingClientRect();
+    s.dataset.x = Math.round(((sr.left - r.left) / r.width) * 1000) / 10;
+    s.dataset.y = Math.round(((sr.top - r.top) / r.height) * 1000) / 10;
+    s.dataset.custom = "1";
+    s.classList.add("deco-free");
+    _stkCard.appendChild(s);        // 프사 칸에 있던 B·E 도 카드 기준으로
+    _stkPaint(s);
+  }
+
   function _stkSelect(slot) {
     _stkSel = slot;
     const rot = document.getElementById("prof-stk-rot");
@@ -1283,28 +1300,39 @@ function bindProfilePanel() {
   function renderStkEditor() {
     if (!_stkCard) return;
     _stkCard.querySelectorAll("[data-stk]").forEach(x => x.remove());
+    const avwrap = document.getElementById("prof-stk-avwrap");
     const st = _stkState();
-    ["a", "b", "e", "c", "d"].forEach(k => {
+    DECO_SLOTS.forEach(k => {
       const v = st.stickers[k];
       if (!v) return;
-      const p = st.pos[k] || _stkDefaults[k];
+      const p = st.pos[k];
       const w = DECO_WORDS.find(x => x.t === v);
       const s = document.createElement("span");
       s.dataset.stk = k;
-      s.dataset.custom = st.pos[k] ? "1" : "0";
-      s.dataset.x = p.x; s.dataset.y = p.y; s.dataset.r = p.r;
+      s.dataset.custom = p ? "1" : "0";
+      s.dataset.r = p ? p.r : 0;
+      /* 실제 카드와 똑같은 클래스 — 크기·기본 자리·테이프 모양까지 1:1 */
       if (w) {
         const bg = st.colors[k] || w.bg;
-        s.className = "stk-item stk-word" + (st.shape === "tape" ? " is-tape" : "");
+        s.className = `card-deco card-deco-word deco-${k} stk-item`
+          + (st.shape === "tape" ? " is-tape" : "");
         s.style.background = bg;
         s.style.color = st.colors[k] ? decoInkFor(bg) : w.fg;
         s.textContent = w.t;
       } else {
-        s.className = "stk-item stk-emoji";
+        s.className = `card-deco card-deco-emoji deco-${k} stk-item`;
         s.textContent = v;
       }
-      _stkPaint(s);
-      _stkCard.appendChild(s);
+      if (p) {
+        s.classList.add("deco-free");
+        s.dataset.x = p.x; s.dataset.y = p.y;
+        _stkPaint(s);
+        _stkCard.appendChild(s);
+      } else if (k === "b" || k === "e") {
+        avwrap?.appendChild(s);     // 기본 자리의 B·E 는 실제처럼 프사 칸에
+      } else {
+        _stkCard.appendChild(s);
+      }
     });
     _stkSelect(_stkSel && _stkCard.querySelector(`[data-stk="${_stkSel}"]`) ? _stkSel : "");
   }
@@ -1320,28 +1348,33 @@ function bindProfilePanel() {
       _stkSelect(s.dataset.stk);
       const r = _stkCard.getBoundingClientRect();
       const sr = s.getBoundingClientRect();
-      drag = { s, dx: e.clientX - sr.left, dy: e.clientY - sr.top, r };
+      drag = { s, dx: e.clientX - sr.left, dy: e.clientY - sr.top, r,
+               sx: e.clientX, sy: e.clientY };
       s.setPointerCapture?.(e.pointerId);
       e.preventDefault();
     });
     _stkCard.addEventListener("pointermove", (e) => {
       if (!drag) return;
       const { s, r } = drag;
-      /* 좌우 -14% 까지 삐져나갈 수 있게 — 콩이 정한 허용치.
+      /* 4px 문턱 — 고르기만 한 클릭이 "만졌다"가 되지 않게 */
+      if (s.dataset.custom !== "1" &&
+          Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
+      _stkToFree(s);
+      /* 좌우 -14% 까지 삐져나갈 수 있게 (양쪽 같은 허용치).
          오른쪽 벽에 바짝 붙이면 글자가 세로로 서는 것도 여기서 나옵니다 */
       let x = ((e.clientX - r.left - drag.dx) / r.width) * 100;
       let y = ((e.clientY - r.top - drag.dy) / r.height) * 100;
-      x = Math.max(-14, Math.min(104 - 10, x));
+      x = Math.max(-14, Math.min(94, x));
       y = Math.max(-10, Math.min(96, y));
       s.dataset.x = Math.round(x * 10) / 10;
       s.dataset.y = Math.round(y * 10) / 10;
-      s.dataset.custom = "1";
       _stkPaint(s);
     });
     const drop = () => {
       if (!drag) return;
+      const moved = drag.s.dataset.custom === "1";
       drag = null;
-      _stkSaveDebounced();
+      if (moved) _stkSaveDebounced();
     };
     _stkCard.addEventListener("pointerup", drop);
     _stkCard.addEventListener("pointercancel", drop);
@@ -1349,8 +1382,8 @@ function bindProfilePanel() {
     document.getElementById("prof-stk-rot")?.addEventListener("input", (e) => {
       const s = _stkCard.querySelector(`[data-stk="${_stkSel}"]`);
       if (!s) return;
+      _stkToFree(s);                      // 기본 자리였으면 그 자리 그대로 좌표화
       s.dataset.r = e.target.value;
-      s.dataset.custom = "1";
       document.getElementById("prof-stk-rotv").textContent = `${e.target.value}°`;
       _stkPaint(s);
       _stkSaveDebounced();
@@ -1358,12 +1391,9 @@ function bindProfilePanel() {
     document.getElementById("prof-stk-reset")?.addEventListener("click", () => {
       const s = _stkCard.querySelector(`[data-stk="${_stkSel}"]`);
       if (!s) return;
-      const d = _stkDefaults[_stkSel];
-      s.dataset.x = d.x; s.dataset.y = d.y; s.dataset.r = d.r;
-      s.dataset.custom = "0";                 // 기본 자리로 — 저장에서 빠집니다
-      _stkPaint(s);
-      _stkSelect(_stkSel);
+      s.dataset.custom = "0";             // 좌표를 지우면 CSS 기본 자리로 돌아갑니다
       _stkSaveDebounced();
+      setTimeout(renderStkEditor, 300);   // 저장 뒤 기본 자리로 다시 그림
     });
   }
   renderStkEditor();
