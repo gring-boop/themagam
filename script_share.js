@@ -556,9 +556,13 @@
     rows.forEach(row => {
       const own = Array.from(list.querySelectorAll(".user-card:not(.share-card)"))
         .find(el => el.getAttribute("data-card-nick") === row.nick);
-      const one = shareCardHtml(row);
-      if (own) own.insertAdjacentHTML("afterend", one);
-      else list.insertAdjacentHTML("beforeend", one);
+      /* [고침 2026-08-14] 주인 카드가 없으면 **그리지 않습니다.**
+         예전에는 맨 뒤에 붙였는데, 그 사람 접속이 잠깐 끊겨 카드가 사라진
+         순간에 공유 그림만 덩그러니 남아 "프로필 카드가 남의 그림으로
+         바뀐 것처럼" 보였습니다 (실제 제보 — 놀라게 해서 미안합니다).
+         주인이 돌아오면 다음 그림에 다시 붙으니 잃는 것도 없어요. */
+      if (!own) return;
+      own.insertAdjacentHTML("afterend", shareCardHtml(row));
     });
     _lastShareHtml = html;
 

@@ -624,9 +624,20 @@
      한 줄에 2장 이하로 들어가는 좁은 화면에서는 안 합니다 —
      한 장을 데려오면 이번엔 윗줄이 외로워져요.
      ===================================================================== */
-  function fixLonelyCard() {
+  let _lonelySig = "";
+  function fixLonelyCard(force) {
     const list = document.getElementById("user-cards");
     if (!list) return;
+
+    /* [2026-08-14] 사람 수·창 폭이 그대로면 다시 재지 않습니다.
+       재는 일(getBoundingClientRect)은 브라우저에게 "지금 당장 배치를
+       계산하라"고 시키는 것이라, 15초마다 하트비트가 올 때마다 하면
+       괜히 화면이 들썩입니다. */
+    const cards0 = list.querySelectorAll(":scope > .user-card");
+    const sig = cards0.length + "@" + Math.round(list.clientWidth / 20);
+    if (!force && sig === _lonelySig) return;
+    _lonelySig = sig;
+
     list.querySelector(".card-row-break")?.remove();
 
     const cards = list.querySelectorAll(":scope > .user-card");
@@ -654,7 +665,7 @@
   let _lonelyTimer = null;
   window.addEventListener("resize", () => {
     clearTimeout(_lonelyTimer);
-    _lonelyTimer = setTimeout(fixLonelyCard, 150);
+    _lonelyTimer = setTimeout(() => fixLonelyCard(true), 150);
   });
 
   /* 상태 이름. 저장되는 값(writing/focus/rest/away)은 그대로 두고
