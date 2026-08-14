@@ -1362,16 +1362,20 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
 }
 
 /* 🖼️ 방 배경 (2026-08-14) — 그림 위에 테마 종이색 덮개.
-   두 겹을 background 하나에 쌓습니다: [덮개(그라데이션 흉내)] + [그림].
-   그림은 cover 로 꽉 채우고, 덮개 색·농도는 JS(--room-veil)가 넣어줘요. */
-.user-cards-grid.room-bg{
+   [고침 같은 날] 카드 마당에만 깔았더니 헤드·바텀 띠가 섬처럼 따로
+   놀았습니다("따로 놀아" — 콩). 몸통(body)에 깔면 헤드부터 알약 줄까지
+   화면 전체가 한 장으로 이어져요. 네 겹을 쌓습니다(위부터):
+   [원고지 격자 2겹 — 테마 것 그대로] + [덮개] + [그림]. */
+body.room-bg-on{
   background-image:
+    repeating-linear-gradient(90deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px),
+    repeating-linear-gradient( 0deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px),
     linear-gradient(var(--room-veil, rgba(250,246,236,.82)),
                     var(--room-veil, rgba(250,246,236,.82))),
     var(--room-bg-img, none);
-  background-size: auto, cover;
-  background-position: 0 0, center;
-  background-repeat: no-repeat;
+  background-size: auto, auto, auto, cover;
+  background-position: 0 0, 0 0, 0 0, center;
+  background-repeat: repeat, repeat, no-repeat, no-repeat;
 }
 
 .user-cards-grid{

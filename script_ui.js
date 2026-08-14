@@ -1879,26 +1879,31 @@
     return s ? "data:image/svg+xml;utf8," + encodeURIComponent(s.replace(/\n\s*/g, " ")) : "";
   }
 
-  /* ---- 적용 — 카드 마당(#user-cards)에 그림+덮개를 깝니다 ---- */
+  /* ---- 적용 — 몸통(body)에 그림+덮개를 깝니다.
+     [고침 2026-08-14] 카드 마당에만 깔았더니 헤드·바텀이 섬처럼 따로
+     놀았어요. body 에 깔면 화면 전체가 한 장으로 이어집니다. ---- */
   function applyRoomBg() {
-    const grid = document.getElementById("user-cards");
-    if (!grid) return;
+    const b = document.body;
+    if (!b) return;
     const id = AppStore.getItem(BG_KEY) || "none";
     const src = id === "none" ? "" : 그림주소(id);
     if (!src) {
-      grid.classList.remove("room-bg");
-      grid.style.removeProperty("--room-bg-img");
-      grid.style.removeProperty("--room-veil");
+      b.classList.remove("room-bg-on");
+      b.style.removeProperty("--room-bg-img");
+      b.style.removeProperty("--room-veil");
       return;
     }
-    /* 덮개 색 = 지금 테마의 종이색. 계산된 값을 읽어야 8테마 다 맞아요 */
+    /* 덮개 색 = 지금 테마의 종이색. 계산된 값을 읽어야 8테마 다 맞아요.
+       ★ 반드시 클래스를 붙이기 **전에** 읽습니다 — 붙인 뒤에 읽으면
+         저번 그림이 섞인 값이 나올 수 있어요 */
+    b.classList.remove("room-bg-on");
     const veil = Math.max(40, Math.min(96, Number(AppStore.getItem(VEIL_KEY)) || VEIL_DEF));
-    let base = getComputedStyle(document.body).backgroundColor || "rgb(250,246,236)";
+    let base = getComputedStyle(b).backgroundColor || "rgb(250,246,236)";
     const m = base.match(/(\d+),\s*(\d+),\s*(\d+)/);
     const rgba = m ? `rgba(${m[1]},${m[2]},${m[3]},${veil / 100})` : `rgba(250,246,236,${veil / 100})`;
-    grid.style.setProperty("--room-bg-img", `url("${src}")`);
-    grid.style.setProperty("--room-veil", rgba);
-    grid.classList.add("room-bg");
+    b.style.setProperty("--room-bg-img", `url("${src}")`);
+    b.style.setProperty("--room-veil", rgba);
+    b.classList.add("room-bg-on");
   }
   window.applyRoomBg = applyRoomBg;
 
