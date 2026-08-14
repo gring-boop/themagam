@@ -908,6 +908,49 @@ window.mountStatusBlock = mountStatusBlock;
 /* [뺌 2026-08-08] openGoals · closeGoals — 카드 아래칸을 누르면 이제
    🗂️ 나의 작업 창이 열립니다 (script_timelog.js 의 카드 클릭 처리). */
 
+/* =====================================================================
+   🧘 혼자 방 — 카드 수와, 지금 고른 카드의 이름·목표·작업 스티커
+   ---------------------------------------------------------------------
+   진짜 방에서는 이런 게 있을 수 없습니다(남의 이름을 내가 정할 수는
+   없으니까요). 혼자 방은 카드가 전부 자기 것이라, 프꾸 창 맨 위에서
+   바로 고치는 게 가장 짧은 길입니다.
+   ===================================================================== */
+function soloProfileBlockHtml(tgt) {
+  const isGhost = tgt !== myNick;
+  const row = (window._statusCache || {})[tgt] || {};
+  const tags = window.WORKTAGS || [];
+  const n = Number(window.soloGetCount?.() || 9);
+  return `
+    <div class="set-block solo-block">
+      <div class="set-title">🧘 혼자 방</div>
+      <div class="set-row">
+        <label for="solo-count">카드 수</label>
+        <input type="range" id="solo-count" min="1" max="20" step="1" value="${n}">
+        <span id="solo-count-val" class="solo-count-val">${n}</span>
+      </div>
+      ${isGhost ? `
+      <div class="set-row">
+        <label for="solo-card-nick">이 카드 이름</label>
+        <input type="text" id="solo-card-nick" maxlength="12"
+               value="${escapeHtml(tgt)}" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="set-row">
+        <label for="solo-card-goal">오늘 목표</label>
+        <input type="text" id="solo-card-goal" maxlength="30"
+               value="${escapeHtml(row.todayGoalText || "")}" autocomplete="off">
+      </div>
+      <div class="set-row">
+        <label for="solo-card-tag">작업 스티커</label>
+        <select id="solo-card-tag">
+          <option value="">(없음)</option>
+          ${tags.map(t => `<option value="${t.v}"${row.tag === t.v ? " selected" : ""}>${t.emoji} ${t.label}</option>`).join("")}
+        </select>
+      </div>
+      <p class="hint">이름을 바꾸면 이 카드에 붙여둔 꾸밈도 함께 따라갑니다.</p>
+      ` : `<p class="hint">카드를 눌러 고르면 그 카드의 이름·목표·작업 스티커도 여기서 정할 수 있어요.</p>`}
+    </div>`;
+}
+
 function renderProfilePanel() {
   const host = document.getElementById("panel-profile");
   if (!host) return;
@@ -940,6 +983,7 @@ function renderProfilePanel() {
       지금 <b>${escapeHtml(_tgt)}</b> 카드를 꾸미는 중이에요
       <button type="button" class="ghost-btn compact" id="prof-target-mine">내 카드로</button>
     </div>` : ""}
+    ${window.SOLO ? soloProfileBlockHtml(_tgt) : ""}
     <div class="prof-cols">
     <div class="prof-col">
     <div class="set-block">
@@ -1140,7 +1184,54 @@ function renderProfilePanel() {
   bindProfilePanel();
 }
 
+function bindSoloProfileBlock() {
+  const cnt = document.getElementById("solo-count");
+  const cntVal = document.getElementById("solo-count-val");
+  if (cnt) {
+    cnt.oninput = () => { if (cntVal) cntVal.textContent = cnt.value; };
+    /* 놓았을 때만 다시 짓습니다 — 끄는 동안 매번 지으면 눈이 어지러워요 */
+    cnt.onchange = () => {
+      window.soloSetCount?.(Number(cnt.value));
+      /* 카드가 줄어 지금 고른 카드가 사라졌을 수 있으니 내 카드로 */
+      if (!(window._statusCache || {})[profileTargetNick()]) {
+        window._profTargetNick = myNick;
+      }
+      renderProfilePanel();
+    };
+  }
+
+  const tgt = profileTargetNick();
+  const nickIn = document.getElementById("solo-card-nick");
+  const goalIn = document.getElementById("solo-card-goal");
+  const tagSel = document.getElementById("solo-card-tag");
+
+  const 적용 = (patch) => {
+    const next = window.soloEditCard?.(tgt, patch);
+    if (!next) return;
+    if (next !== tgt) {
+      window._profTargetNick = next;
+      renderProfilePanel();
+    }
+  };
+
+  if (nickIn) nickIn.onchange = () => {
+    const v = nickIn.value.trim();
+    if (!v || v === tgt) { nickIn.value = tgt; return; }
+    if ((window._statusCache || {})[v]) {
+      alert("같은 이름의 카드가 이미 있어요.");
+      nickIn.value = tgt;
+      return;
+    }
+    적용({ nick: v });
+  };
+  if (goalIn) goalIn.onchange = () => 적용({ goal: goalIn.value });
+  if (tagSel) tagSel.onchange = () => 적용({ tag: tagSel.value });
+}
+
 function bindProfilePanel() {
+  /* 🧘 혼자 방 — 카드 수 · 이 카드의 이름·목표·스티커 */
+  if (window.SOLO) bindSoloProfileBlock();
+
   /* 🧘 혼자 방 — [내 카드로] 되돌리기 */
   const backBtn = document.getElementById("prof-target-mine");
   if (backBtn) backBtn.onclick = () => {

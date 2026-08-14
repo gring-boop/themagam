@@ -71,7 +71,14 @@
     /* 몰아서 저장합니다 — 글자 하나 칠 때마다 통째로 쓰면 버벅여요 */
     clearTimeout(_saveTimer);
     _saveTimer = setTimeout(() => {
-      try { _store()?.setItem(DB_KEY, JSON.stringify(_tree)); }
+      try {
+        /* 🖥️ 화면 공유 그림(screens)은 저장하지 않습니다 — 5초마다 오는
+           40KB 짜리 사진이라, 넣어 두면 저장 공간(5MB)이 금방 찹니다.
+           지금 화면에 보이기만 하면 되는 것이고, 다시 열면 어차피
+           공유를 새로 켜야 해요. */
+        const { screens, ...남길것 } = _tree;
+        _store()?.setItem(DB_KEY, JSON.stringify(남길것));
+      }
       catch (e) { console.warn("[solo] 저장 공간이 가득 찼어요", e); }
     }, 400);
   }
@@ -260,7 +267,12 @@
 
   try {
     firebase.database = function () { return 방DB; };
-    firebase.database.ServerValue = { TIMESTAMP: Date.now() };
+    /* ★ TIMESTAMP 는 **부를 때마다** 지금이어야 합니다. 한 번 박아 두면
+         updateStatus 가 늘 같은 lastSeen 을 쓰고, 몇 분 뒤 "오래된 기록"
+         으로 걸러져 내 카드가 통째로 사라집니다. */
+    Object.defineProperty(firebase.database, "ServerValue", {
+      get() { return { TIMESTAMP: Date.now() }; }
+    });
     firebase.database.enableLogging = () => {};
   } catch (e) { console.warn("[solo] database 갈아끼우기 실패", e); }
 
@@ -287,6 +299,7 @@
      ===================================================================== */
   const 기본이름 = ["나", "밤샘", "커피", "원고", "마감", "퇴고", "초고", "여백",
                     "각주", "탈고", "문장", "행간", "표지", "서문", "결말", "교정", "인쇄"];
+  const 태그들 = ["draft", "polish", "idea", "proof", "input", "revise", "etc", "rework"];
   const 기본목표 = ["오늘도 한 줄", "1빡 완주", "매일 1빡", "3천자", "퇴고 마무리",
                     "프롤로그 끝내기", "교정 2장", "자유롭게", "마감 전까지", "한 화 완성"];
 
@@ -311,24 +324,42 @@
     return v;
   }
 
+  /* 카드마다 따로 정한 것 (이름·목표·스티커) — 이 기기에 남습니다 */
+  const CARDS_KEY = "soloCards";
+  function 카드설정() {
+    try { return JSON.parse(_store()?.getItem(CARDS_KEY) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+  function 카드설정저장(o) {
+    try { _store()?.setItem(CARDS_KEY, JSON.stringify(o || {})); } catch (e) {}
+  }
+  window.soloCardConf = 카드설정;
+
   function 만들기() {
     const n = 카드수();
+    const conf = 카드설정();
     const now = Date.now();
     _친구 = [];
     for (let i = 0; i < n; i++) {
-      const nick = i === 0 ? 내닉() : (기본이름[i % 기본이름.length] + (i > 16 ? i : ""));
+      const c = conf[String(i)] || {};
+      const nick = i === 0 ? 내닉()
+                 : (c.nick || (기본이름[i % 기본이름.length] + (i > 16 ? i : "")));
       _친구.push({
         nick,
         status: i === 0 ? "rest" : 상태들[i % 상태들.length],
-        goal: 기본목표[i % 기본목표.length],
+        goal: c.goal || 기본목표[i % 기본목표.length],
         workMs: i === 0 ? 0 : ((1 + (i % 6)) * 3600e3 + (i * 13 % 60) * 60e3),
-        pomo: i % 9
+        pomo: i % 9,
+        /* 내 카드의 스티커는 내가 붙입니다 — 유령만 미리 하나씩 */
+        tag: i === 0 ? "" : (c.tag !== undefined ? c.tag : 태그들[i % 태그들.length]),
+        idx: i
       });
     }
     const out = {};
     _친구.forEach((f, i) => {
       out[f.nick] = {
         emoji: "✍️",
+        tag: f.tag,
         status: f.status,
         statusLabel: "",
         todayGoalText: f.goal,
@@ -342,8 +373,12 @@
       };
     });
     window._statusCache = out;
-    /* 내 카드는 진짜 저장자리와 이어 둡니다 — 뽀모·글자수가 여기 붙어요 */
-    _put("status/" + 내닉(), out[내닉()]);
+    /* ★ [고침 2026-08-15] 예전에는 내 카드 하나만 status 에 넣고, 나머지는
+         _statusCache 에만 얹어 두었습니다. 그런데 status 를 듣는 쪽
+         (listenStatus)이 한 번이라도 돌면 캐시를 통째로 갈아치웁니다 —
+         작업 스티커를 붙이는 순간 유령들이 전부 사라진 이유예요.
+         전부 진짜 자리에 넣어 두면 진짜 방과 똑같은 길로 흐릅니다. */
+    _put("status", out);
     return out;
   }
 
@@ -351,7 +386,9 @@
      빠르게 바뀌면 눈에 밟혀서 오히려 방해가 됩니다. 옆자리 사람이
      1분에 한 번 자세를 고치는 정도가 딱 좋아요. */
   function 숨쉬기() {
-    const cache = window._statusCache || {};
+    /* ★ 화면 캐시가 아니라 **저장자리**를 고칩니다 — 그래야 듣는 쪽이
+         알아채고 카드가 다시 그려집니다 */
+    const cache = _get("status") || {};
     const names = Object.keys(cache).filter(n => n !== 내닉());
     if (names.length) {
       const who = names[Math.floor(Math.random() * names.length)];
@@ -363,12 +400,17 @@
       }
     }
     /* 작업 중인 카드들의 시간이 조금씩 흐릅니다 */
+    const 지금 = Date.now();
     Object.keys(cache).forEach(n => {
       if (n === 내닉()) return;
       const r = cache[n];
-      if (r && (r.status === "writing" || r.status === "focus")) r.workMs += 30000;
+      if (!r) return;
+      if (r.status === "writing" || r.status === "focus") r.workMs += 30000;
+      /* 유령도 숨은 쉬어야 합니다 — lastSeen 이 멈추면 "오래된 기록"으로
+         걸러져 한참 뒤에 하나씩 사라집니다 */
+      r.lastSeen = 지금;
     });
-    window.renderUserCards?.(cache);
+    _put("status", cache);
     setTimeout(숨쉬기, 30000 + Math.random() * 60000);
   }
 
@@ -385,12 +427,23 @@
     document.body.classList.add("solo-mode");
 
     만들기();
-    window.renderUserCards?.(window._statusCache);
 
-    /* 진짜 방의 시동 절차 중 **혼자서도 뜻이 있는 것만** 부릅니다 */
-    ["listenMessages", "loadPersonalData", "renderProfilePanel",
-     "startAchv", "listenRoomTodo", "musicInit", "afterJoinLoadProfile"]
+    /* 진짜 방의 시동 절차 중 **혼자서도 뜻이 있는 것만** 부릅니다.
+       ★ 순서가 있습니다 — 만들기() 로 status 를 채운 **뒤에**
+         listenStatus 를 붙여야 첫 그림에 유령들이 다 들어옵니다. */
+    ["listenStatus", "listenMessages", "loadPersonalData",
+     "listenPomodoro",           // 🍅 내 카드의 토마토
+     "listenNotes", "listenRoomTodo", "loadGoalHours",
+     "afterJoinLoadProfile",     // 프꾸 값 읽기
+     "startTimelog",             // 작업 시간 쌓기
+     "startWordcount",           // ✍️ 글자수 말풍선
+     "renderProfilePanel", "musicInit", "renderShareButton", "startAchv"]
       .forEach(fn => { try { window[fn]?.(); } catch (e) {} });
+
+    /* 내 카드를 진짜 값으로 한 번 채우고, 그 뒤로도 계속 갱신합니다.
+       (진짜 방에서는 join() 이 하던 일입니다) */
+    try { window.updateStatus?.(true); } catch (e) {}
+    setInterval(() => { try { window.updateStatus?.(false); } catch (e) {} }, 20000);
 
     setTimeout(숨쉬기, 20000);
   }
@@ -419,6 +472,45 @@
   window.addEventListener("load", () => setTimeout(걷어내기, 500));
 
   /* 메모(채팅)가 무한정 쌓이지 않게 — 최근 500줄만 */
+  /* =====================================================================
+     설정 창에서 쓰는 창구 — 카드 하나를 고쳐 씁니다
+     ---------------------------------------------------------------------
+     닉으로 찾아 그 자리(idx)의 설정을 고칩니다. 이름을 바꾸면 status 의
+     열쇠도 바뀌므로 통째로 다시 짓고, 그 카드에 붙여 둔 꾸밈(프로필)도
+     새 이름으로 옮겨 줍니다 — 안 그러면 이름만 바꿔도 옷이 벗겨져요.
+     ===================================================================== */
+  window.soloEditCard = function (nick, patch) {
+    const cache = _get("status") || {};
+    const names = Object.keys(cache);
+    const me = 내닉();
+    /* 자리 번호 — _친구 가 지금 순서를 알고 있습니다 */
+    const found = _친구.findIndex(f => f.nick === nick);
+    if (found < 0) return false;
+    if (found === 0) return false;          // 내 카드는 여기서 못 바꿉니다
+
+    const conf = 카드설정();
+    const cur = conf[String(found)] || {};
+    const next = { ...cur };
+    if (patch.nick !== undefined) next.nick = String(patch.nick).slice(0, 12).trim();
+    if (patch.goal !== undefined) next.goal = String(patch.goal).slice(0, 30);
+    if (patch.tag  !== undefined) next.tag  = String(patch.tag || "");
+    conf[String(found)] = next;
+    카드설정저장(conf);
+
+    /* 꾸밈 옮기기 */
+    const newNick = next.nick || nick;
+    if (newNick !== nick) {
+      const prof = _get("users/" + nick + "/profile");
+      if (prof) _put("users/" + newNick + "/profile", prof);
+      _put("users/" + nick, null);
+    }
+    만들기();
+    return newNick;
+  };
+  window.soloCardIndex = function (nick) {
+    return _친구.findIndex(f => f.nick === nick);
+  };
+
   window.soloTrimChat = function () {
     const all = _get("messages");
     if (!all) return;

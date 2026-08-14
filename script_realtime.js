@@ -357,6 +357,14 @@
 
       const now = serverNow();
 
+      /* ★ [고침 2026-08-15] 인자 없이 부르면 지금 명단으로 그립니다.
+         setMyTag 처럼 "그냥 다시 그려 줘" 하는 자리가 여럿인데, 예전에는
+         그 호출이 카드를 **전부 지웠습니다**. 진짜 방에서는 곧이어
+         listenStatus 가 다시 그려서 티가 안 났지만, 🧘 혼자 방에서는
+         작업 스티커를 붙이는 순간 카드가 통째로 사라졌어요.
+         ─ 인자 없음(undefined) = 지금 것 그대로, null = 아무도 없음. */
+      if (data === undefined) data = _statusCache;
+
       if (!data) {
         if (_lastCardsHtml !== "") {
           list.innerHTML = "";

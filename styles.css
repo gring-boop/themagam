@@ -4476,6 +4476,17 @@ body.solo-mode .card-avatar-wrap{ cursor: pointer; }
 .prof-target-bar b{ color: var(--text, #2E3440); }
 .prof-target-bar button{ margin-left:auto; }
 
+/* 🧘 혼자 방 칸 — 프꾸 창 맨 위 */
+.solo-block .set-row{ align-items:center; gap:10px; }
+.solo-block label{ min-width: 76px; font-size: 13px; color: var(--text-2, #5A6473); }
+.solo-block input[type="text"]{ flex:1; min-width:0; }
+.solo-block input[type="range"]{ flex:1; min-width:0; }
+.solo-count-val{
+  min-width: 26px; text-align:right;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px; color: var(--text, #2E3440);
+}
+
 /* ── 🕐 머리말 시계 (2026-08-14, 한줄 공지 자리) ──
    날짜·요일은 옅게, 시각은 진하게, AM/PM 은 작게 — 콩이 정한 모양.
    숫자는 tabular — 2:59 → 3:00 될 때 폭이 안 흔들리게. */
