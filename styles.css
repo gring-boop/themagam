@@ -4456,6 +4456,25 @@ body.solo-mode #reply-preview-bar,
 body.solo-mode #mention-dropdown{ display: none !important; }
 /* 대숲 창의 "30일이 지나면 시들어요" 안내도 혼자 방에선 뜻이 없어요 */
 body.solo-mode .fr-wither{ visibility: hidden; }
+/* 📮 쪽지 — 보낼 상대가 없으니 뺍니다 (2026-08-15) */
+body.solo-mode [data-mw-tab="note"],
+body.solo-mode #mywork-panel-note{ display: none !important; }
+/* BGM — 혼자 방에는 [추천](모두에게)이 뜻이 없어요. [담기]만 남깁니다 */
+body.solo-mode #music-add-btn{ display: none !important; }
+/* 유령 카드도 눌러서 꾸밀 수 있다는 표시 */
+body.solo-mode .card-avatar-wrap{ cursor: pointer; }
+
+/* 🧘 혼자 방 — 지금 꾸미는 카드가 내 것이 아닐 때 위에 알려줍니다 */
+.prof-target-bar{
+  display:flex; align-items:center; gap:10px;
+  margin: 0 0 10px; padding: 8px 12px;
+  border: 1px solid var(--line, #E3E7EE);
+  border-radius: 10px;
+  background: var(--panel-2, #F7F8FA);
+  font-size: 13px; color: var(--text-2, #5A6473);
+}
+.prof-target-bar b{ color: var(--text, #2E3440); }
+.prof-target-bar button{ margin-left:auto; }
 
 /* ── 🕐 머리말 시계 (2026-08-14, 한줄 공지 자리) ──
    날짜·요일은 옅게, 시각은 진하게, AM/PM 은 작게 — 콩이 정한 모양.
@@ -6926,7 +6945,8 @@ body.split-dragging #chat-box3{ user-select: none; }
 /* [넓힘 2026-08-14 같은 날] 820 두 칸 → 1080 세 칸. 두 칸일 때 색상 줄이
    좁아 [기본] 단추가 세로로 늘어졌고, 배치 카드를 실물 크기로 키우려면
    제 칸이 필요했습니다. 3칸: 색들 | 스티커 고르기 | 배치(실물 카드) */
-#settings-modal .modal-content[data-tab="profile"]{ width: min(1080px, 100%); }
+/* [넓힘 2026-08-15] 1080 → 1188 (10%) — 좁아서 칸 안의 글자가 세로로 섰어요 */
+#settings-modal .modal-content[data-tab="profile"]{ width: min(1188px, 100%); }
 .prof-cols{
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;   /* 세 칸 같은 너비 (2026-08-14 콩) */
@@ -8109,6 +8129,12 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 .dock-pill{
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  /* [고침 2026-08-15] ♪ BGM 만 작아 보이던 문제.
+     다른 알약은 이모지(📢 💬 🍅)가 줄 높이를 밀어 올리는데, ♪ 는 보통
+     글자라 그만큼 안 커집니다. 높이를 못 박아 모두 같게 맞춥니다. */
+  min-height: 33px;
+  box-sizing: border-box;
   gap: 5px;
   padding: 7px 13px;
   border-radius: var(--r-full);

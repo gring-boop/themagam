@@ -833,13 +833,34 @@ async function loadMyProfile() {
   }
 }
 
+/* [2026-08-15] 꾸밀 카드 고르기 — 🧘 혼자 방에서 유령 카드를 누르면
+   그 카드를 편집합니다. 평소(진짜 방)에는 늘 내 카드예요. */
+function profileTargetNick() {
+  return window.profileTargetNick || myNick;
+}
+window.getProfileTarget = profileTargetNick;
+
+/** 그 카드의 지금 꾸밈 — 내 것이면 _myProfile, 남(유령)이면 캐시에서 */
+function profileTargetData() {
+  const t = profileTargetNick();
+  if (t === myNick) return window._myProfile || {};
+  return (window._profileCache || {})[t] || {};
+}
+
 async function saveMyProfile(patch) {
-  if (!myNick) return;
-  const next = { ...(window._myProfile || {}), ...patch };
-  window._myProfile = next;
+  const nick = profileTargetNick();
+  if (!nick) return;
+  const next = { ...profileTargetData(), ...patch };
+  if (nick === myNick) {
+    window._myProfile = next;
+  } else {
+    /* 유령 카드 — 캐시에 바로 반영해야 화면이 즉시 바뀝니다 */
+    window._profileCache = window._profileCache || {};
+    window._profileCache[nick] = next;
+  }
 
   try {
-    await db.ref(`users/${myNick}/profile`).update(next);
+    await db.ref(`users/${nick}/profile`).update(next);
   } catch (e) {
     console.warn("[saveMyProfile failed]", e);
   }
@@ -896,9 +917,11 @@ function renderProfilePanel() {
     return;
   }
 
-  const p = window._myProfile || {};
+  /* 꾸밀 카드 — 평소엔 내 카드, 혼자 방에서 유령 카드를 누르면 그 카드 */
+  const _tgt = profileTargetNick();
+  const p = profileTargetData();
   const photo = sanitizePhoto(p.photo);
-  const curSnowBg = sanitizeHexColor(p.snowBg) || snowColor(myNick);
+  const curSnowBg = sanitizeHexColor(p.snowBg) || snowColor(_tgt);
   const curCardBg = sanitizeHexColor(p.cardBg) || "#FFFFFF";
   const curPat = sanitizePattern(p.cardPattern);
   const curPatColor = sanitizeHexColor(p.patColor) || "#D8DEE8";
@@ -913,16 +936,20 @@ function renderProfilePanel() {
      오른쪽은 스티커(고르기 → 배치가 세로로 이어지는 동선). 좁은 화면에서는
      CSS 가 한 칸으로 되돌립니다. */
   host.innerHTML = `
+    ${(_tgt !== myNick) ? `<div class="prof-target-bar">
+      지금 <b>${escapeHtml(_tgt)}</b> 카드를 꾸미는 중이에요
+      <button type="button" class="ghost-btn compact" id="prof-target-mine">내 카드로</button>
+    </div>` : ""}
     <div class="prof-cols">
     <div class="prof-col">
     <div class="set-block">
       <div class="set-title">프사 사진</div>
       <div class="profile-emoji-row">
         <div class="profile-photo-preview${photo ? " has-photo" : ""}" id="prof-photo-preview">
-          ${photo ? `<img src="${escapeHtml(photo)}" alt="">` : snowmanSvg(myNick)}
+          ${photo ? `<img src="${escapeHtml(photo)}" alt="">` : snowmanSvg(_tgt)}
         </div>
         <div class="profile-emoji-meta">
-          <div class="profile-emoji-name">${escapeHtml(myNick)}</div>
+          <div class="profile-emoji-name">${escapeHtml(_tgt)}</div>
           <div class="set-row" style="margin-top:8px;">
             <button type="button" class="ghost-btn compact" id="prof-photo-btn">사진 올리기</button>
             <button type="button" class="ghost-btn compact danger${photo ? "" : " hidden"}" id="prof-photo-clear">지우기</button>
@@ -998,7 +1025,7 @@ function renderProfilePanel() {
                value="${curNickColor}" maxlength="7" spellcheck="false" aria-label="닉네임 색 코드">
         <button type="button" class="ghost-btn compact" id="prof-nickcolor-reset">기본값</button>
       </div>
-      <div class="nick-preview" id="prof-nick-preview">${escapeHtml(myNick)}</div>
+      <div class="nick-preview" id="prof-nick-preview">${escapeHtml(_tgt)}</div>
       <p class="hint">채팅 말풍선 위에 뜨는 <b>내 이름 색</b>이에요. 다른 분들 화면에도 이 색으로 보입니다.</p>
     </div>
 
@@ -1114,6 +1141,13 @@ function renderProfilePanel() {
 }
 
 function bindProfilePanel() {
+  /* 🧘 혼자 방 — [내 카드로] 되돌리기 */
+  const backBtn = document.getElementById("prof-target-mine");
+  if (backBtn) backBtn.onclick = () => {
+    window.profileTargetNick = myNick;
+    renderProfilePanel();
+  };
+
   /* ---- 카드 글자색 3종 (2026-08-03) ---- */
   [["nick", "cardNickColor"], ["goal", "cardGoalColor"], ["wh", "cardWhColor"]]
     .forEach(([k, field]) => {
@@ -1285,7 +1319,7 @@ function bindProfilePanel() {
   const _stkCard = document.getElementById("prof-stk-card");
 
   function _stkState() {
-    const p = window._myProfile || {};
+    const p = profileTargetData();
     return {
       stickers: sanitizeStickers(p.stickers),
       colors: sanitizeStickerColors(p.stickerColors),
@@ -1363,7 +1397,7 @@ function bindProfilePanel() {
     _stkCard.innerHTML = "";
     const src = Array.from(
       document.querySelectorAll("#user-cards > .user-card:not(.share-card)"))
-      .find(el => el.getAttribute("data-card-nick") === myNick);
+      .find(el => el.getAttribute("data-card-nick") === profileTargetNick());
     if (!src) {
       _stkCard.innerHTML = `<p class="hint" style="padding:22px 8px;text-align:center;">
         카드를 준비하는 중이에요… 잠시 뒤 다시 열어 주세요.</p>`;
@@ -1484,7 +1518,7 @@ function bindProfilePanel() {
     // 설정 창 안 미리보기도 즉시 갱신
     const prev = document.getElementById("prof-photo-preview");
     if (prev && !prev.classList.contains("has-photo")) {
-      prev.innerHTML = snowmanSvg(myNick, c);
+      prev.innerHTML = snowmanSvg(profileTargetNick(), c);
     }
 
     saveMyProfile({ snowBg: c });
@@ -1502,7 +1536,7 @@ function bindProfilePanel() {
       if (!sanitizeHexColor(bgHex.value)) bgHex.value = bgWell ? bgWell.value : "";
     };
   }
-  if (bgReset) bgReset.onclick = () => applySnowBg(snowColor(myNick));
+  if (bgReset) bgReset.onclick = () => applySnowBg(snowColor(profileTargetNick()));
   bgPre?.querySelectorAll(".color-chip").forEach(btn => {
     btn.onclick = () => applySnowBg(btn.dataset.color);
   });
@@ -1560,7 +1594,7 @@ function bindProfilePanel() {
       await saveMyProfile({ photo: "" });
       if (photoPrev) {
         photoPrev.classList.remove("has-photo");
-        photoPrev.innerHTML = snowmanSvg(myNick);
+        photoPrev.innerHTML = snowmanSvg(profileTargetNick());
       }
       photoClear.classList.add("hidden");
       if (photoHint) {
@@ -1580,11 +1614,14 @@ window.renderProfilePanel = renderProfilePanel;
  * 설정 모달을 열고 곧바로 프로필 탭으로 이동.
  * 내 카드의 ✏️ 버튼과, 필요하면 다른 곳에서도 호출할 수 있게 노출합니다.
  */
-function openProfileEditor() {
+function openProfileEditor(nick) {
   if (!myNick) {
     alert("입장 후에 프로필을 설정할 수 있어요.");
     return;
   }
+  /* [2026-08-15] 🧘 혼자 방 — 유령 카드를 누르면 그 카드를 꾸밉니다.
+     진짜 방에서는 남의 카드를 건드릴 수 없으니 늘 내 카드로 되돌립니다. */
+  window.profileTargetNick = (window.SOLO && nick) ? String(nick) : myNick;
   window.openSettings?.();
   window.openTab?.("profile");
 }
@@ -1611,8 +1648,20 @@ function bindCardEditDelegate() {
     /* 프사 → 프로필 설정 */
     if (e.target?.closest?.("[data-edit-profile]")) {
       e.preventDefault(); e.stopPropagation();
-      openProfileEditor();
+      openProfileEditor(myNick);
       return;
+    }
+    /* 🧘 혼자 방 — 유령 카드의 프사를 눌러도 그 카드를 꾸밉니다.
+       (진짜 방에는 [data-edit-profile] 가 내 카드에만 붙어 있어서
+        여기까지 오지 않습니다) */
+    if (window.SOLO) {
+      const wrap = e.target?.closest?.(".card-avatar-wrap");
+      const card = wrap && wrap.closest("[data-card-nick]");
+      if (card) {
+        e.preventDefault(); e.stopPropagation();
+        openProfileEditor(card.getAttribute("data-card-nick"));
+        return;
+      }
     }
     /* 상태표 → 고르기 판 (2026-08-03: 4가지로 확장하며 팝업 방식 복귀) */
     if (e.target?.closest?.("[data-pick-status]")) {
@@ -1635,7 +1684,7 @@ function bindCardEditDelegate() {
     if (e.key !== "Enter" && e.key !== " ") return;
     const t = e.target;
     if (t?.closest?.("[data-pick-worktag]")) { e.preventDefault(); window.openWorkTagPicker?.(t); }
-    else if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(); }
+    else if (t?.closest?.("[data-edit-profile]")) { e.preventDefault(); openProfileEditor(myNick); }
     else if (t?.closest?.("[data-pick-status]")) { e.preventDefault(); window.openStatusPicker?.(t); }
   });
 }

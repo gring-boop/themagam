@@ -116,7 +116,8 @@
     document.getElementById("music-add-btn").addEventListener("click", () => addLink(false));
     document.getElementById("music-add-mine").addEventListener("click", () => addLink(true));
     document.getElementById("music-add-url").addEventListener("keydown", e => {
-      if (e.key === "Enter") { e.preventDefault(); addLink(false); }
+      /* 🧘 혼자 방에는 [추천](모두에게)이 없으니 엔터는 [담기]로 */
+      if (e.key === "Enter") { e.preventDefault(); addLink(!!window.SOLO); }
     });
 
     /* 볼륨 — 저장값 복원 + 움직일 때마다 적용·저장 */
@@ -356,6 +357,51 @@
       </div>`;
   }
 
+  /* 리스트의 손잡이 달기 — 혼자 방은 추천 구역 없이 먼저 끝내므로
+     두 곳에서 같이 씁니다 (2026-08-15) */
+  function _bindRows(box) {
+    box.querySelectorAll(".music-row").forEach(r => {
+      r.addEventListener("click", e => {
+        if (e.target.closest(".music-row-x")) return;
+        play(r.dataset.vid, r.dataset.title);
+      });
+    });
+    box.querySelectorAll("[data-music-del]").forEach(b => {
+      b.addEventListener("click", () => {
+        db.ref("music/" + b.dataset.musicDel).remove().catch(() => {});
+      });
+    });
+    box.querySelectorAll("[data-mine-del]").forEach(b => {
+      b.addEventListener("click", () => {
+        db.ref(`users/${myNick}/musicMine/` + b.dataset.mineDel).remove().catch(() => {});
+      });
+    });
+    /* ⏭ 이어듣기 — 리스트 머리의 단추. 같은 것을 다시 누르면 끕니다 */
+    box.querySelectorAll("[data-chain]").forEach(b => {
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const v = b.dataset.chain;
+        _chain = (_chain === v) ? "" : v;
+        if (_chain) { _loop1 = false; try { AppStore.setItem(LOOP_KEY, "0"); } catch (er) {} }
+        try { AppStore.setItem(CHAIN_KEY, _chain); } catch (er) {}
+        document.getElementById("music-loop1")
+          ?.setAttribute("aria-pressed", _loop1 ? "true" : "false");
+        renderList();
+      });
+    });
+    /* 추천 → 내 리스트로 담기 */
+    box.querySelectorAll("[data-mine-add]").forEach(b => {
+      b.addEventListener("click", () => {
+        if (Object.keys(_mine).length >= MINE_MAX) return;
+        db.ref(`users/${myNick}/musicMine`).push({
+          vid: b.dataset.mineAdd,
+          title: b.dataset.addTitle || "",
+          at: Date.now()
+        }).catch(() => {});
+      });
+    });
+  }
+
   function renderList() {
     const box = document.getElementById("music-list");
     if (!box) return;
@@ -381,7 +427,9 @@
                   aria-label="내 리스트에서 빼기" title="내 리스트에서 빼기">✕</button>`)).join("")
       : `<div class="music-empty mini">링크를 [담기] 하거나, 아래 추천의 ＋ 를 눌러 채워요.</div>`;
 
-    /* 🎵 추천 리스트 — 아래 */
+    /* 🎵 추천 리스트 — 아래.
+       🧘 혼자 방에는 없습니다 (나눌 상대가 없으니 나의 리스트만 씁니다) */
+    if (window.SOLO) { box.innerHTML = h; _bindRows(box); return; }
     h += `<div class="music-sec-head"><span>🎵 추천 리스트
             <button type="button" class="music-mode-btn mini" data-chain="all"
               aria-pressed="${_chain === "all"}"
@@ -401,47 +449,7 @@
           아래에 유튜브 링크를 붙여넣어 첫 곡을 걸어 주세요!</div>`;
 
     box.innerHTML = h;
-
-    box.querySelectorAll(".music-row").forEach(r => {
-      r.addEventListener("click", e => {
-        if (e.target.closest(".music-row-x")) return;
-        play(r.dataset.vid, r.dataset.title);
-      });
-    });
-    box.querySelectorAll("[data-music-del]").forEach(b => {
-      b.addEventListener("click", () => {
-        db.ref("music/" + b.dataset.musicDel).remove().catch(() => {});
-      });
-    });
-    box.querySelectorAll("[data-mine-del]").forEach(b => {
-      b.addEventListener("click", () => {
-        db.ref(`users/${myNick}/musicMine/` + b.dataset.mineDel).remove().catch(() => {});
-      });
-    });
-    /* 추천 → 내 리스트로 담기 */
-    /* ⏭ 이어듣기 — 리스트 머리의 단추. 같은 것을 다시 누르면 끕니다 */
-    box.querySelectorAll("[data-chain]").forEach(b => {
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const v = b.dataset.chain;
-        _chain = (_chain === v) ? "" : v;
-        if (_chain) { _loop1 = false; try { AppStore.setItem(LOOP_KEY, "0"); } catch (er) {} }
-        try { AppStore.setItem(CHAIN_KEY, _chain); } catch (er) {}
-        document.getElementById("music-loop1")
-          ?.setAttribute("aria-pressed", _loop1 ? "true" : "false");
-        renderList();
-      });
-    });
-    box.querySelectorAll("[data-mine-add]").forEach(b => {
-      b.addEventListener("click", () => {
-        if (Object.keys(_mine).length >= MINE_MAX) return;
-        db.ref(`users/${myNick}/musicMine`).push({
-          vid: b.dataset.mineAdd,
-          title: b.dataset.addTitle || "",
-          at: Date.now()
-        }).catch(() => {});
-      });
-    });
+    _bindRows(box);
   }
 
   /* ---------------------------------------------------------------
