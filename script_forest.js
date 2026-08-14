@@ -198,6 +198,9 @@
       실패했다고 화면에 경고를 띄우면 오히려 성가십니다. */
   async function sweepOld() {
     if (!window.db) return;
+    /* 🧘 혼자 방에서는 시들지 않습니다 — 나 혼자 붙인 쪽지가 한 달 뒤
+       사라지면 그건 메모장이 아니라 모래시계니까요 (2026-08-15) */
+    if (window.FOREST_NO_WITHER) return;
     const cut = Date.now() - KEEP_MS;
     const dead = _notes.filter(n => n.at && n.at < cut);
     if (!dead.length) return;

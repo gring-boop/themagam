@@ -4443,6 +4443,20 @@ html[data-theme-style="ink"] .card-state{
    [2026-08-03] 상단바 공지 핀 · 채팅 머리말 · 뽀모 창 리디자인
    ===================================================================== */
 
+/* ── 🧘 혼자 방 (?solo=1) — 혼자서는 뜻이 없는 것들을 감춥니다.
+   script_solo.js 가 실제로 지우기도 하지만, 그리는 쪽이 나중에
+   되살리는 경우가 있어 화면에서도 한 번 더 막습니다. ── */
+body.solo-mode #alive-btn,
+body.solo-mode [data-dock="chatty"],
+body.solo-mode [data-dock="pub"],
+body.solo-mode #dock-panel-chatty,
+body.solo-mode #dock-panel-pub,
+body.solo-mode .chat-tabs,
+body.solo-mode #reply-preview-bar,
+body.solo-mode #mention-dropdown{ display: none !important; }
+/* 대숲 창의 "30일이 지나면 시들어요" 안내도 혼자 방에선 뜻이 없어요 */
+body.solo-mode .fr-wither{ visibility: hidden; }
+
 /* ── 🕐 머리말 시계 (2026-08-14, 한줄 공지 자리) ──
    날짜·요일은 옅게, 시각은 진하게, AM/PM 은 작게 — 콩이 정한 모양.
    숫자는 tabular — 2:59 → 3:00 될 때 폭이 안 흔들리게. */
