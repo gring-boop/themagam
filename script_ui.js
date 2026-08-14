@@ -1946,6 +1946,11 @@
       AppStore.setItem(BG_KEY, sel.value);
       applyRoomBg();
     };
+    /* [고침 2026-08-14] 사진 바꾸기 — "내 사진"이 이미 골라져 있으면
+       같은 항목을 다시 눌러도 변화가 아니라서(onchange 안 옴) 폴더가
+       안 떴어요. 바꾸는 길은 이 단추입니다. */
+    const chg = document.getElementById("set-roombg-change");
+    if (chg) chg.onclick = () => file?.click();
     if (file) file.onchange = () => {
       const f = file.files && file.files[0];
       file.value = "";
