@@ -429,6 +429,24 @@
         orderedNicks.sort((a, b) =>
           (Number(data[a]?.joinedAt) || Infinity) -
           (Number(data[b]?.joinedAt) || Infinity));
+      } else if (sortPref === "random") {
+        /* 🎲 랜덤 (2026-08-14) — 입장할 때 한 번 섞고 세션 동안 고정.
+           매 렌더마다 굴리면 하트비트(15초)마다 카드가 자리를 바꿔서
+           멀미가 납니다. 내 입장 시각을 주사위 씨앗으로 써서 닉마다
+           고정 순서값을 만들어요 — 세션 내내 같고, 다음 입장 때 새 배치.
+           중간에 들어온 멤버도 같은 씨앗으로 셈해져 남들은 안 움직입니다. */
+        const seed = Number(window._myJoinTimestamp?.() || 0);
+        /* FNV 방식 — 씨앗과 글자를 XOR 한 뒤 곱해서 섞습니다.
+           (처음엔 h*31+글자 로 했다가, 씨앗이 전원에게 같은 값만 더해서
+            순서가 안 바뀌는 산수 버그가 있었어요 — 곱셈으로 얽어야 섞입니다) */
+        const dice = (nick) => {
+          let h = (seed ^ 2166136261) | 0;
+          for (const ch of nick) {
+            h = Math.imul(h ^ ch.codePointAt(0), 16777619);
+          }
+          return h >>> 0;
+        };
+        orderedNicks.sort((a, b) => dice(a) - dice(b));
       }
       orderedNicks.sort((a, b) =>
         (a === myNick ? -1 : 0) - (b === myNick ? -1 : 0));
