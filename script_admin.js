@@ -392,7 +392,8 @@
           if (isVac) { cls += " vac"; txt = "🏖️"; }
           else if (inAt) {
             txt = hhmm(inAt);
-            if ((mins[dk] || 0) < 60) cls += " short"; // 출석했는데 1일 접속 1시간 미만
+            /* [뺌 2026-08-14] 1시간 미만 붉은 표시(short) — 잔소리 같다는
+               콩 결정으로 걷었습니다. 궁금하면 칸을 눌러 돋보기로 봅니다 */
           }
           if (dk === todayKey) cls += " today";
           /* 출석한 칸은 눌러서 그날 구간 내역을 볼 수 있습니다 (돋보기) */
@@ -890,7 +891,8 @@
       if (events.length) {
         if (body) body.innerHTML = logRowsHtml(events, false);
         if (note) note.textContent =
-          "정밀 기록이에요 — 하루에 여러 번 드나든 것도 모두 남고, 창을 그냥 닫아도 퇴장이 찍힙니다.";
+          "입장 기록이에요 — 3시간 안에 다시 들어온 것은 안 적힙니다 (2026-08-14부터). "
+          + "언제까지 있었는지는 출석부의 칸을 눌러(돋보기) 봅니다.";
         return;
       }
 
@@ -992,102 +994,95 @@
     return m % 60 ? `${h}h ${m % 60}m` : `${h}h`;
   }
 
-  function previewCardHtml(nick, row, prof) {
-    const st  = String(row.status || "rest");
-    const cls = ST_CLASS[st] || "rest";
-    const label = row.statusLabel || ST_LABEL[st] || "휴식";
+  /* [철거 2026-08-14] 접속자 명단 미리보기(previewCardHtml·openMemberPreview·
+     closeMemberPreview) — 그 카드 자리를 ✨ 성실 멤버가 물려받으며 걷었습니다. */
 
-    const photo = String(prof.photo || "");
-    const avatar = photo
-      ? `<div class="card-avatar has-photo"><img src="${escapeHtml(photo)}" alt="" loading="lazy"></div>`
-      : `<div class="card-avatar has-snow"><svg class="snowman" viewBox="0 0 100 100">
-           <rect width="100" height="100" fill="${snowBg(nick)}"/>
-           <circle cx="50" cy="31" r="13.5" fill="#fff" opacity=".85"/>
-           <circle cx="50" cy="56" r="24" fill="#fff" opacity=".85"/></svg></div>`;
+  // ------------------------------------------------- ③-3.9 ✨ 성실 멤버
+  /* 최근 7일 출석부(attendance)와 작업시간(timeSegs)으로 자동 선정.
+     기준(콩): 출석 5일 이상 + 하루 5시간 넘게 작업한 날 3일 이상.
+       · "작업"은 카드의 작업시간과 같은 셈 — Write(writing) + Job(focus)
+       · 휴가일은 출석에 안 들어갑니다 (출석부에 입장 기록이 없으니 저절로)
+       · 중복 구간 흉터는 돋보기와 같은 규칙으로 걸러 셉니다
+     읽기량: 출석부 7번 + 후보×출석일 만큼의 timeSegs — 방장 페이지에서
+     단추를 눌렀을 때만 도니 부담 없습니다. */
+  const DIL_DAYS = 7;
+  const DIL_NEED_ATT = 5;        // 출석 5일 이상
+  const DIL_NEED_5H = 3;         // 5시간 넘게 일한 날 3일 이상
+  const DIL_5H_MS = 5 * 60 * 60 * 1000;
 
-    const bg  = /^#[0-9a-f]{6}$/i.test(prof.cardBg || "") ? prof.cardBg : "";
-    const pat = String(prof.cardPattern || "none");
-    const patCol = /^#[0-9a-f]{6}$/i.test(prof.patColor || "") ? prof.patColor : "#D8DEE8";
-    const style = (bg || pat !== "none")
-      ? ` style="${bg ? `--cbg:${bg};` : ""}--cpat:${patCol};"` : "";
-    const ink = ["cardNickColor","cardGoalColor","cardWhColor"]
-      .map((k, i) => (/^#[0-9a-f]{6}$/i.test(prof[k] || "")
-        ? `${["--ink-nick","--ink-goal","--ink-wh"][i]}:${prof[k]};` : "")).join("");
-
-    const pCount = Math.max(0, Number(row.pomoCount || 0));
-    const goal = row.todayGoalText ? escapeHtml(row.todayGoalText) : "오늘의 한줄 목표 없음";
-
-    return `
-      <div class="user-card side-lay ${cls}${pat !== "none" ? ` pat-${pat}` : ""}${bg ? " has-cardbg" : ""}"${style}>
-        <div class="card-body">
-          <div class="card-avatar-wrap">
-            ${avatar}
-            <div class="card-state-row">
-              <span class="card-state ${cls}">${escapeHtml(label)}</span>
-            </div>
-          </div>
-          <div class="card-foot"${ink ? ` style="${ink}"` : ""}>
-            <span class="card-conn" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-            <div class="card-name">${escapeHtml(nick)}</div>
-            <div class="card-goal"><div class="goal-line">🎯 ${goal}</div></div>
-            <div class="card-meta card-wh">
-              <span class="card-wh-t"><small>⏱</small><b>${fmtWork(row.workMs)}</b></span>
-              ${pCount > 0 ? `<span class="card-pomo-count">🍅 ${pCount}</span>` : ""}
-            </div>
-          </div>
-        </div>
-      </div>`;
+  function dilDayKeys() {
+    const out = [];
+    for (let i = 0; i < DIL_DAYS; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      out.push(dayKey(d));
+    }
+    return out;
   }
 
-  let _cardsShadow = null;
-
-  async function openMemberPreview() {
-    el("adm-cards-modal")?.removeAttribute("hidden");
-    const host = el("adm-cards-host");
-    if (!host) return;
-
-    if (!_cardsShadow) {
-      _cardsShadow = host.attachShadow({ mode: "open" });
-      _cardsShadow.innerHTML =
-        `<link rel="stylesheet" href="styles.css">
-         <style>${CARD_PREVIEW_CSS}</style>
-         <div class="wrap"></div>`;
-    }
-    const wrap = _cardsShadow.querySelector(".wrap");
-    wrap.innerHTML = `<div class="empty">불러오는 중…</div>`;
-    msg("adm-cards-msg", "");
-
+  async function workMsOf(nick, dk) {
     try {
-      const stSnap = await db.ref("status").once("value");
-      const all = stSnap.val() || {};
-      const now = Date.now();
-
-      /* 접속 중인 사람만 — 15분 넘게 소식이 없으면 뺍니다 */
-      const nicks = Object.keys(all).filter(n => {
-        const r = all[n] || {};
-        const seen = Number(r.lastSeen || 0);
-        return !seen || (now - seen) < 15 * 60 * 1000;
+      const v = (await db.ref(`users/${nick}/timeSegs/${dk}`).once("value")).val() || {};
+      const best = {};
+      Object.values(v).filter(s => s && s.b > s.a).forEach(s => {
+        const k = `${s.s}|${s.a}`;
+        if (!best[k] || s.b > best[k].b) best[k] = s;
       });
+      let ms = 0;
+      Object.values(best).forEach(s => {
+        if (s.s === "writing" || s.s === "focus") ms += s.b - s.a;
+      });
+      return ms;
+    } catch (e) { return 0; }
+  }
 
-      if (!nicks.length) { wrap.innerHTML = `<div class="empty">지금 접속한 사람이 없어요.</div>`; return; }
-
-      /* 프로필은 사람별로 — users 를 통째로 읽지 않습니다 */
-      const profs = {};
-      await Promise.all(nicks.map(async n => {
-        try { profs[n] = (await db.ref(`users/${n}/profile`).once("value")).val() || {}; }
-        catch (e) { profs[n] = {}; }
+  async function runDiligent() {
+    const box = el("adm-diligent");
+    if (!box) return;
+    box.innerHTML = `<div class="adm-msg">최근 ${DIL_DAYS}일을 세는 중…</div>`;
+    msg("adm-diligent-msg", "");
+    try {
+      const days = dilDayKeys();
+      /* 날짜별 출석부 — 누가 어느 날 나왔나 */
+      const attByNick = {};
+      await Promise.all(days.map(async dk => {
+        const v = (await db.ref(`attendance/${dk}`).once("value")).val() || {};
+        Object.keys(v).forEach(n => { (attByNick[n] = attByNick[n] || []).push(dk); });
       }));
 
-      wrap.innerHTML = nicks.map(n => previewCardHtml(n, all[n] || {}, profs[n])).join("");
-      msg("adm-cards-msg", `${nicks.length}명을 새 배치로 그렸어요.`);
-    } catch (e) {
-      console.warn("[adm cards]", e);
-      wrap.innerHTML = `<div class="empty">불러오지 못했어요.</div>`;
-    }
-  }
+      const rows = [];
+      await Promise.all(Object.entries(attByNick).map(async ([n, dks]) => {
+        const msArr = await Promise.all(dks.map(dk => workMsOf(n, dk)));
+        const total = msArr.reduce((a, b) => a + b, 0);
+        const d5 = msArr.filter(x => x >= DIL_5H_MS).length;
+        rows.push({ n, att: dks.length, d5, total });
+      }));
 
-  function closeMemberPreview() {
-    el("adm-cards-modal")?.setAttribute("hidden", "");
+      const pass = rows.filter(r => r.att >= DIL_NEED_ATT && r.d5 >= DIL_NEED_5H)
+        .sort((a, b) => b.d5 - a.d5 || b.att - a.att || b.total - a.total);
+      const near = rows.filter(r => !pass.includes(r) && (r.att >= DIL_NEED_ATT - 1 || r.d5 >= DIL_NEED_5H - 1))
+        .sort((a, b) => b.d5 - a.d5 || b.att - a.att).slice(0, 3);
+
+      const medal = (i) => ["🥇", "🥈", "🥉"][i] || "✨";
+      const hh = (ms) => {
+        const m = Math.round(ms / 60000), h = Math.floor(m / 60);
+        return m % 60 ? `${h}h ${m % 60}m` : `${h}h`;
+      };
+      box.innerHTML = (pass.length
+        ? pass.map((r, i) => `
+          <div class="adm-row">
+            <span>${medal(i)}</span><span class="n">${escapeHtml(r.n)}</span>
+            <span class="s">출석 ${r.att}일 · 5h+ <b>${r.d5}일</b> · 총 ${hh(r.total)}</span>
+          </div>`).join("")
+        : `<div class="adm-msg">이번 주는 기준을 넘긴 멤버가 없어요.</div>`)
+        + (near.length
+          ? `<div class="adm-vac-dates" style="margin-top:8px;">아깝게 놓침 — ${
+              near.map(r => `${escapeHtml(r.n)} (출석 ${r.att}·5h+ ${r.d5})`).join(" · ")}</div>`
+          : "");
+      msg("adm-diligent-msg", `${rows.length}명을 살펴 ${pass.length}명을 뽑았어요.`);
+    } catch (e) {
+      console.warn("[adm diligent]", e);
+      box.innerHTML = `<div class="adm-msg">세지 못했어요. 연결을 확인해 주세요.</div>`;
+    }
   }
 
   // ------------------------------------------------- ③-4 글자수
@@ -1213,11 +1208,7 @@
     el("adm-chatty-clear")?.addEventListener("click", clearChatty);
     el("adm-wc-clear")?.addEventListener("click", clearWordcount);
     el("adm-log-open")?.addEventListener("click", openAttendLog);
-    el("adm-cards-open")?.addEventListener("click", openMemberPreview);
-    el("adm-cards-close")?.addEventListener("click", closeMemberPreview);
-    el("adm-cards-modal")?.addEventListener("click", e => {
-      if (e.target === el("adm-cards-modal")) closeMemberPreview();
-    });
+    el("adm-diligent-run")?.addEventListener("click", runDiligent);
     el("adm-log-close")?.addEventListener("click", closeAttendLog);
     el("adm-log-prev")?.addEventListener("click", () => loadAttendLog(_logOffset + 1));
     el("adm-log-next")?.addEventListener("click", () => loadAttendLog(_logOffset - 1));
@@ -1228,7 +1219,6 @@
     document.addEventListener("keydown", e => {
       if (e.key !== "Escape") return;
       if (!el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
-      if (!el("adm-cards-modal")?.hasAttribute("hidden")) closeMemberPreview();
     });
     /* 🔐 입장 승인 · 🚫 내보내기 */
     el("adm-allow-add")?.addEventListener("click", () => addAllow(el("adm-allow-nick")?.value));

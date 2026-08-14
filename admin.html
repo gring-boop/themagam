@@ -372,7 +372,7 @@
           <button type="button" id="adm-att-next" title="다음 달">›</button>
           <!-- [2026-08-07] 하루치 출입을 시간순으로 훑어보는 창 -->
           <button type="button" id="adm-log-open" class="adm-btn ghost adm-nav-side"
-                  title="하루치 입·퇴장을 시간순으로 봅니다">🕘 출입 기록</button>
+                  title="하루치 입장을 시간순으로 봅니다 (3시간에 한 번만 기록)">🕘 입장 기록</button>
         </div>
         <div id="adm-att-body" class="adm-msg">불러오는 중…</div>
         <div class="adm-att-legend">
@@ -480,12 +480,17 @@
       </div>
 
       <!-- [2026-08-06] 🆔 내 계정 uid — 보안규칙에 관리자를 박아 넣을 때 씁니다. -->
-      <!-- 👥 접속자 명단 미리보기 — 카드 배치를 바꿔보는 자리 -->
+      <!-- ✨ 성실 멤버 (2026-08-14) — 접속자 명단 미리보기 자리를 물려받음.
+           최근 7일 출석부 + 작업시간(timeSegs)으로 자동 선정합니다.
+           이 명단은 관리자 페이지에만 보여요 — 작업시간은 비공개 자료라서. -->
       <div class="adm-card">
-        <h2>👥 접속자 명단 (미리보기)</h2>
-        <p class="adm-sub">지금 접속자 카드를 <b>새 배치</b>로 그려 봅니다.
-          여기서만 보이고 <b>작업방에는 영향이 없어요.</b></p>
-        <button class="adm-btn" id="adm-cards-open">명단 열기</button>
+        <h2>✨ 성실 멤버 <span style="font-size:12px; color:#8A7B68; font-weight:400;">최근 7일</span></h2>
+        <p class="adm-sub">출석 <b>5일 이상</b> + 하루 <b>5시간 넘게</b> 작업한 날 <b>3일 이상</b>.
+          휴가일은 출석에서 빼고 셉니다.</p>
+        <div id="adm-diligent"><div class="adm-msg">아래 [뽑기]를 눌러 주세요.</div></div>
+        <div class="adm-gap"></div>
+        <button class="adm-btn" id="adm-diligent-run">✨ 뽑기</button>
+        <div class="adm-msg" id="adm-diligent-msg"></div>
       </div>
 
       <div class="adm-card">
@@ -500,10 +505,10 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608141509"></script>
+  <script src="script_admin.js?v=202608141759"></script>
 
 <!-- =====================================================================
-     🕘 출입 기록 — 하루치 입·퇴장을 일어난 순서대로
+     🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
 
      출석부는 "그날 왔는가"를 한 칸으로 보여주는 표라, 하루 안의 흐름은
      안 보입니다. 이 창은 그 하루를 시간순으로 펼쳐 봅니다.
@@ -512,7 +517,7 @@
 <div id="adm-log-modal" class="adm-modal" hidden>
   <div class="adm-modal-in">
     <div class="adm-modal-head">
-      <h2>🕘 출입 기록</h2>
+      <h2>🕘 입장 기록</h2>
       <button type="button" id="adm-log-close" class="adm-btn ghost" aria-label="닫기">✕</button>
     </div>
     <div class="adm-nav">
@@ -525,28 +530,8 @@
   </div>
 </div>
 
-<!-- =====================================================================
-     👥 접속자 명단 미리보기
-
-     [왜 그림자 뿌리(Shadow DOM)를 쓰나]
-     진짜 카드처럼 보이려면 작업방의 styles.css 가 필요합니다. 그런데
-     그걸 이 페이지에 그냥 붙이면 관리자 화면 전체가 그 스타일로 덮여요.
-     그림자 뿌리 안에 넣으면 스타일이 그 안에만 머뭅니다 — 바깥은 그대로.
-
-     새 배치용 CSS 도 그 안에만 넣습니다. **작업방 파일은 한 줄도 건드리지
-     않으므로**, 마음에 안 들면 이 카드를 지우면 그만입니다.
-     ===================================================================== -->
-<div id="adm-cards-modal" class="adm-modal" hidden>
-  <div class="adm-modal-in wide">
-    <div class="adm-modal-head">
-      <h2>👥 접속자 명단</h2>
-      <button type="button" id="adm-cards-close" class="adm-btn ghost" aria-label="닫기">✕</button>
-    </div>
-    <p class="adm-sub">왼쪽에 프사와 상태표, 오른쪽에 닉네임 박스. 실제 접속자 자료로 그렸어요.</p>
-    <div id="adm-cards-host"></div>
-    <div class="adm-msg" id="adm-cards-msg"></div>
-  </div>
-</div>
+<!-- [철거 2026-08-14] 👥 접속자 명단 미리보기 — 그 카드 자리를
+     ✨ 성실 멤버가 물려받으면서 이 창도 함께 걷었습니다. -->
 
 </body>
 </html>
