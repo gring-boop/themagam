@@ -99,12 +99,12 @@
            우리 슬라이더는 크기와 무관하게 됩니다. 값은 이 기기에 기억.
            [2026-08-14] 왼쪽에 🔂 한 곡 반복 — 볼륨은 7할 폭으로 양보 -->
       <div class="music-vol-row">
-        <button type="button" id="music-loop1" class="music-mode-btn"
-                aria-pressed="false" title="이 곡을 계속 반복">🔂</button>
         <span class="music-vol-ico" aria-hidden="true">🔊</span>
         <input type="range" id="music-vol" min="0" max="100" step="1"
                value="80" aria-label="볼륨">
         <span class="music-vol-val" id="music-vol-val">80</span>
+        <button type="button" id="music-loop1" class="music-mode-btn"
+                aria-pressed="false" title="이 곡을 계속 반복">🔂</button>
       </div>
       <div id="music-list" class="music-list"></div>
       <div class="music-add">
