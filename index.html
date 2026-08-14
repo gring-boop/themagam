@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608141525">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608141525">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608141624">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608141624">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608141525">
+  <link rel="manifest" href="manifest.json?v=202608141624">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608141525" />
+  <link rel="stylesheet" href="styles.css?v=202608141624" />
 </head>
 
 <body class="dock-mode">
@@ -473,6 +473,35 @@
 
       <!-- ── 테마 ── -->
       <div class="panel" id="panel-theme" role="tabpanel">
+        <!-- [2026-08-14] 🖼️ 방 배경 — 카드 마당 뒤에 그림이 은은하게 비칩니다.
+             덮개(테마 종이색 반투명)가 위에 깔려 카드·글자는 안 묻혀요.
+             이 기기에만 저장 — script_ui.js 방 배경 참고 -->
+        <div class="set-block">
+          <div class="set-title">방 배경</div>
+          <select id="set-roombg" class="w-full">
+            <option value="none">현재 스타일 그대로 (기본)</option>
+            <option value="office">🏢 사무실</option>
+            <option value="studycafe">📚 스터디 카페</option>
+            <option value="library">🕮 서재</option>
+            <option value="terrace">🌳 야외 카페</option>
+            <option value="window">🪟 창가</option>
+            <option value="custom">📷 내 사진…</option>
+          </select>
+          <input type="file" id="set-roombg-file" accept="image/*" class="sr-only">
+          <div class="set-row" style="gap:10px; align-items:center; margin-top:10px;">
+            <span class="slot-name" style="flex:0 0 64px;">덮개 농도</span>
+            <input type="range" id="set-roombg-veil" min="40" max="96" step="1" value="82"
+                   style="flex:1; accent-color:var(--accent);" aria-label="덮개 농도">
+            <span id="set-roombg-veilv" style="flex:0 0 38px; text-align:right; font-size:12px;
+                   font-variant-numeric:tabular-nums;">82%</span>
+          </div>
+          <p class="hint">
+            배경 위에 <b>테마 종이색 덮개</b>가 깔려 은은하게 비쳐요 — 농도를 내릴수록
+            그림이 드러납니다. 내 사진은 알아서 줄여서 <b>이 기기에만</b> 저장돼요
+            (다른 분들에게는 안 보입니다).
+          </p>
+        </div>
+
         <div class="set-block">
           <div class="set-title">테마 선택</div>
           <p class="hint">동그라미는 “배경(왼쪽) + 내 말풍선(오른쪽)” 반반 미리보기예요.</p>
@@ -1057,38 +1086,38 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608141525"></script>
-<script src="fortune_data.js?v=202608141525"></script>
-<script src="script_core.js?v=202608141525"></script>
-<script src="script_auth.js?v=202608141525"></script>
-<script src="script_ui.js?v=202608141525"></script>
-<script src="script_chat.js?v=202608141525"></script>
-<script src="script_chatty.js?v=202608141525"></script>
-<script src="script_data.js?v=202608141525"></script>
-<script src="script_realtime.js?v=202608141525"></script>
-<script src="script_dock.js?v=202608141525"></script>
-<script src="script_music.js?v=202608141525"></script>
-<script src="script_wordcount.js?v=202608141525"></script>
-<script src="script_timelog.js?v=202608141525"></script>
-<script src="script_idledetect.js?v=202608141525"></script>
-<script src="script_alive.js?v=202608141525"></script>
-<script src="script_profile.js?v=202608141525"></script>
-<script src="script_mywork.js?v=202608141525"></script>
-<script src="script_forest.js?v=202608141525"></script>
-<script src="script_pubreview.js?v=202608141525"></script>
-<script src="script_notice.js?v=202608141525"></script>
-<script src="script_achv.js?v=202608141525"></script>
-<script src="script_reactions.js?v=202608141525"></script>
-<script src="script_note.js?v=202608141525"></script>
+<script src="script_demo.js?v=202608141624"></script>
+<script src="fortune_data.js?v=202608141624"></script>
+<script src="script_core.js?v=202608141624"></script>
+<script src="script_auth.js?v=202608141624"></script>
+<script src="script_ui.js?v=202608141624"></script>
+<script src="script_chat.js?v=202608141624"></script>
+<script src="script_chatty.js?v=202608141624"></script>
+<script src="script_data.js?v=202608141624"></script>
+<script src="script_realtime.js?v=202608141624"></script>
+<script src="script_dock.js?v=202608141624"></script>
+<script src="script_music.js?v=202608141624"></script>
+<script src="script_wordcount.js?v=202608141624"></script>
+<script src="script_timelog.js?v=202608141624"></script>
+<script src="script_idledetect.js?v=202608141624"></script>
+<script src="script_alive.js?v=202608141624"></script>
+<script src="script_profile.js?v=202608141624"></script>
+<script src="script_mywork.js?v=202608141624"></script>
+<script src="script_forest.js?v=202608141624"></script>
+<script src="script_pubreview.js?v=202608141624"></script>
+<script src="script_notice.js?v=202608141624"></script>
+<script src="script_achv.js?v=202608141624"></script>
+<script src="script_reactions.js?v=202608141624"></script>
+<script src="script_note.js?v=202608141624"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608141525"></script>
+<script src="script_worktag.js?v=202608141624"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608141525"></script>
-<script src="script_share.js?v=202608141525"></script>
-<script src="script_manual.js?v=202608141525"></script>
-<script src="script_guard.js?v=202608141525"></script>
+<script src="script_sticker.js?v=202608141624"></script>
+<script src="script_share.js?v=202608141624"></script>
+<script src="script_manual.js?v=202608141624"></script>
+<script src="script_guard.js?v=202608141624"></script>
 
 <script>
   window.addEventListener("load", () => {

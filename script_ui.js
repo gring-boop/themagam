@@ -392,6 +392,8 @@
 
     currentTheme = name;
     renderThemePalette();
+    /* 방 배경의 덮개는 테마 종이색으로 만듭니다 — 테마가 바뀌면 다시 */
+    window.applyRoomBg?.();
   }
 
   function renderThemePalette() {
@@ -541,7 +543,7 @@
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
     /* [2026-08-14] 프로필 탭만 두 칸이라 창을 넓힙니다 — CSS 가 이 표식을 봅니다 */
     document.querySelector("#settings-modal .modal-content")?.setAttribute("data-tab", name);
-    if (name === "theme") renderThemePalette();
+    if (name === "theme") { renderThemePalette(); window.bindRoomBgUI?.(); }
     if (name === "pomo") { renderPomodoroSoundMini(); applyPomoShape(loadPomoShape()); }
     if (name === "chat") { renderLayoutPick(); window.bindLayoutUI?.(); window.renderSlotMap?.(); }
     if (name === "alive") window.renderAliveButton?.();   // 스위치를 지금 상태에 맞춥니다
@@ -1787,4 +1789,183 @@
   tickHeadClock();
   setInterval(tickHeadClock, 1000);
   window.tickHeadClock = tickHeadClock;
+})();
+
+/* =====================================================================
+   🖼️ 방 배경 (2026-08-14) — 젭처럼, 카드 마당 뒤에 은은하게
+
+   [구조 — 세 겹]
+     ① 배경 그림 (기본 5종 SVG 또는 내 사진)
+     ② 덮개 — 테마 종이색을 반투명으로 (농도는 각자 40~96%)
+     ③ 카드들
+   덮개가 테마색이라 잉크 테마면 미색, 마감 전야면 어두운 덮개가 깔려
+   여덟 테마 어디서든 저절로 어울립니다.
+
+   [저장은 이 기기에만 — 일부러]
+   내 사진을 프로필(서버)에 올리면 **모든 멤버가 내 배경을 내려받게**
+   됩니다(카드 프로필은 전원이 읽으니까). 배경은 내 화면에만 보이는
+   것이라 localStorage 가 맞아요. 사진은 긴 변 1600px 로 줄여 저장합니다
+   — 브라우저 저장 한도(약 5MB)를 지키기 위해서요.
+
+   [기본 배경 5종]
+   그림 파일 없이 SVG 를 코드로 품고 있습니다 — 납작한 색면으로 그린
+   사무실·스터디 카페·서재·야외 카페·창가. 한 장에 1~2KB 라 가볍습니다.
+   ===================================================================== */
+(function () {
+  "use strict";
+
+  const BG_KEY = "roomBg";          // none | office | studycafe | library | terrace | window | custom
+  const VEIL_KEY = "roomBgVeil";    // 40~96 (%)
+  const PHOTO_KEY = "roomBgPhoto";  // 내 사진 (dataURL, 줄여서)
+  const VEIL_DEF = 82;
+
+  /* ---- 기본 배경 5종 — 납작한 색면 SVG ---- */
+  const 장면 = {
+    office: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
+      <rect width='640' height='400' fill='#8A9BAE'/><rect width='640' height='144' fill='#AFC4D6'/>
+      <rect x='38' y='24' width='128' height='96' fill='#D9E7F0' stroke='#7E93A6' stroke-width='8'/>
+      <rect x='205' y='24' width='128' height='96' fill='#D9E7F0' stroke='#7E93A6' stroke-width='8'/>
+      <rect x='500' y='32' width='83' height='80' rx='6' fill='#6E8296'/>
+      <rect y='144' width='640' height='32' fill='#7E93A6'/>
+      <rect x='51' y='192' width='166' height='52' rx='6' fill='#B08D63'/><rect x='77' y='244' width='32' height='64' fill='#8A6B48'/>
+      <rect x='358' y='192' width='166' height='52' rx='6' fill='#B08D63'/><rect x='384' y='244' width='32' height='64' fill='#8A6B48'/>
+      <rect x='64' y='164' width='51' height='28' rx='4' fill='#5F7488'/><rect x='410' y='164' width='51' height='28' rx='4' fill='#5F7488'/>
+      <path d='M600 376c0-52-12-96-29-96s-29 44-29 96z' fill='#5E7A5E'/><path d='M48 384c0-40-9-72-22-72s-22 32-22 72z' fill='#5E7A5E'/></svg>`,
+    studycafe: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
+      <rect width='640' height='400' fill='#B9A28A'/><rect width='640' height='150' fill='#8A7460'/>
+      <rect x='30' y='30' width='580' height='14' fill='#6E5B4A'/><rect x='30' y='78' width='580' height='14' fill='#6E5B4A'/>
+      <g fill='#D9C9B4'><rect x='60' y='44' width='22' height='34'/><rect x='96' y='44' width='22' height='34'/><rect x='150' y='44' width='22' height='34'/>
+      <rect x='300' y='44' width='22' height='34'/><rect x='352' y='44' width='22' height='34'/><rect x='500' y='44' width='22' height='34'/></g>
+      <g fill='#C4B29B'><rect x='210' y='92' width='22' height='34'/><rect x='420' y='92' width='22' height='34'/><rect x='545' y='92' width='22' height='34'/></g>
+      <rect y='150' width='640' height='20' fill='#6E5B4A'/>
+      <rect x='60' y='210' width='220' height='16' rx='4' fill='#7E695A'/><rect x='150' y='226' width='24' height='100' fill='#5E4E42'/>
+      <rect x='360' y='210' width='220' height='16' rx='4' fill='#7E695A'/><rect x='450' y='226' width='24' height='100' fill='#5E4E42'/>
+      <rect x='96' y='176' width='40' height='34' rx='4' fill='#4E4238'/><rect x='396' y='176' width='40' height='34' rx='4' fill='#4E4238'/>
+      <circle cx='560' cy='196' r='12' fill='#D9C9B4'/></svg>`,
+    library: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
+      <rect width='640' height='400' fill='#6E5B4A'/>
+      <g><rect x='24' y='24' width='180' height='352' fill='#5A4A3C'/><rect x='230' y='24' width='180' height='352' fill='#5A4A3C'/><rect x='436' y='24' width='180' height='352' fill='#5A4A3C'/></g>
+      <g fill='#8A7460'><rect x='36' y='48' width='156' height='10'/><rect x='36' y='128' width='156' height='10'/><rect x='36' y='208' width='156' height='10'/><rect x='36' y='288' width='156' height='10'/>
+      <rect x='242' y='48' width='156' height='10'/><rect x='242' y='128' width='156' height='10'/><rect x='242' y='208' width='156' height='10'/><rect x='242' y='288' width='156' height='10'/>
+      <rect x='448' y='48' width='156' height='10'/><rect x='448' y='128' width='156' height='10'/><rect x='448' y='208' width='156' height='10'/><rect x='448' y='288' width='156' height='10'/></g>
+      <g fill='#B3372B'><rect x='44' y='70' width='14' height='56'/><rect x='260' y='150' width='14' height='56'/><rect x='530' y='230' width='14' height='56'/></g>
+      <g fill='#C9974A'><rect x='66' y='76' width='12' height='50'/><rect x='290' y='156' width='12' height='50'/><rect x='466' y='70' width='12' height='56'/></g>
+      <g fill='#5E7A5E'><rect x='86' y='72' width='13' height='54'/><rect x='318' y='152' width='13' height='54'/><rect x='494' y='236' width='13' height='50'/></g>
+      <g fill='#D9C9B4'><rect x='108' y='78' width='11' height='48'/><rect x='340' y='158' width='11' height='48'/><rect x='560' y='74' width='11' height='52'/>
+      <rect x='128' y='150' width='12' height='56'/><rect x='362' y='230' width='12' height='56'/><rect x='448' y='150' width='12' height='56'/></g></svg>`,
+    terrace: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
+      <rect width='640' height='400' fill='#BFD9E8'/><circle cx='540' cy='64' r='36' fill='#F5E6B8'/>
+      <path d='M0 240 L120 150 L240 240 Z' fill='#8FA98F'/><path d='M160 240 L300 130 L440 240 Z' fill='#7A967A'/><path d='M380 240 L520 160 L640 240 Z' fill='#8FA98F'/>
+      <rect y='240' width='640' height='160' fill='#C9B491'/>
+      <ellipse cx='120' cy='250' rx='70' ry='14' fill='#E0524E'/><rect x='112' y='250' width='16' height='60' fill='#8A6B48'/>
+      <ellipse cx='420' cy='250' rx='70' ry='14' fill='#E0524E'/><rect x='412' y='250' width='16' height='60' fill='#8A6B48'/>
+      <circle cx='120' cy='330' r='26' fill='#B08D63'/><circle cx='420' cy='330' r='26' fill='#B08D63'/>
+      <path d='M610 384c0-56-13-104-31-104s-31 48-31 104z' fill='#5E7A5E'/><path d='M62 390c0-44-10-80-24-80s-24 36-24 80z' fill='#5E7A5E'/></svg>`,
+    window: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
+      <rect width='640' height='400' fill='#EDE3D2'/>
+      <rect x='140' y='30' width='360' height='280' rx='10' fill='#B9CFE0' stroke='#8A7460' stroke-width='14'/>
+      <rect x='313' y='30' width='14' height='280' fill='#8A7460'/><rect x='140' y='163' width='360' height='14' fill='#8A7460'/>
+      <circle cx='240' cy='90' r='26' fill='#F5E6B8'/>
+      <path d='M140 310 h360' stroke='#8A7460' stroke-width='10'/>
+      <rect x='100' y='30' width='26' height='290' fill='#C97F5E'/><rect x='514' y='30' width='26' height='290' fill='#C97F5E'/>
+      <rect x='60' y='330' width='520' height='16' rx='6' fill='#B08D63'/>
+      <ellipse cx='560' cy='322' rx='24' ry='10' fill='#5E7A5E'/><rect x='552' y='296' width='16' height='26' fill='#5E7A5E'/>
+      <rect x='90' y='306' width='40' height='24' rx='4' fill='#D9C9B4'/></svg>`
+  };
+
+  function 그림주소(id) {
+    if (id === "custom") return AppStore.getItem(PHOTO_KEY) || "";
+    const s = 장면[id];
+    return s ? "data:image/svg+xml;utf8," + encodeURIComponent(s.replace(/\n\s*/g, " ")) : "";
+  }
+
+  /* ---- 적용 — 카드 마당(#user-cards)에 그림+덮개를 깝니다 ---- */
+  function applyRoomBg() {
+    const grid = document.getElementById("user-cards");
+    if (!grid) return;
+    const id = AppStore.getItem(BG_KEY) || "none";
+    const src = id === "none" ? "" : 그림주소(id);
+    if (!src) {
+      grid.classList.remove("room-bg");
+      grid.style.removeProperty("--room-bg-img");
+      grid.style.removeProperty("--room-veil");
+      return;
+    }
+    /* 덮개 색 = 지금 테마의 종이색. 계산된 값을 읽어야 8테마 다 맞아요 */
+    const veil = Math.max(40, Math.min(96, Number(AppStore.getItem(VEIL_KEY)) || VEIL_DEF));
+    let base = getComputedStyle(document.body).backgroundColor || "rgb(250,246,236)";
+    const m = base.match(/(\d+),\s*(\d+),\s*(\d+)/);
+    const rgba = m ? `rgba(${m[1]},${m[2]},${m[3]},${veil / 100})` : `rgba(250,246,236,${veil / 100})`;
+    grid.style.setProperty("--room-bg-img", `url("${src}")`);
+    grid.style.setProperty("--room-veil", rgba);
+    grid.classList.add("room-bg");
+  }
+  window.applyRoomBg = applyRoomBg;
+
+  /* ---- 내 사진 — 긴 변 1600px 로 줄여 이 기기에 저장 ---- */
+  function shrinkPhoto(file, cb) {
+    const img = new Image();
+    img.onload = () => {
+      const max = 1600;
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * k);
+      cv.height = Math.round(img.height * k);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      cb(cv.toDataURL("image/jpeg", 0.78));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => cb("");
+    img.src = URL.createObjectURL(file);
+  }
+
+  /* ---- 설정 (🎨 테마 탭) ---- */
+  function bindRoomBgUI() {
+    const sel = document.getElementById("set-roombg");
+    const rng = document.getElementById("set-roombg-veil");
+    const val = document.getElementById("set-roombg-veilv");
+    const file = document.getElementById("set-roombg-file");
+    if (!sel || sel.__bound) return;
+    sel.__bound = true;
+
+    sel.value = AppStore.getItem(BG_KEY) || "none";
+    const v0 = Math.max(40, Math.min(96, Number(AppStore.getItem(VEIL_KEY)) || VEIL_DEF));
+    if (rng) rng.value = v0;
+    if (val) val.textContent = v0 + "%";
+
+    sel.onchange = () => {
+      if (sel.value === "custom" && !AppStore.getItem(PHOTO_KEY)) {
+        file?.click();               // 사진이 아직 없으면 먼저 고르게
+        return;
+      }
+      AppStore.setItem(BG_KEY, sel.value);
+      applyRoomBg();
+    };
+    if (file) file.onchange = () => {
+      const f = file.files && file.files[0];
+      file.value = "";
+      if (!f) { sel.value = AppStore.getItem(BG_KEY) || "none"; return; }
+      shrinkPhoto(f, (url) => {
+        if (!url) { alert("사진을 읽지 못했어요."); return; }
+        try {
+          AppStore.setItem(PHOTO_KEY, url);
+          AppStore.setItem(BG_KEY, "custom");
+        } catch (e) {
+          alert("사진이 너무 커서 저장하지 못했어요. 조금 작은 사진으로 다시 해 주세요.");
+          return;
+        }
+        sel.value = "custom";
+        applyRoomBg();
+      });
+    };
+    if (rng) rng.oninput = () => {
+      AppStore.setItem(VEIL_KEY, rng.value);
+      if (val) val.textContent = rng.value + "%";
+      applyRoomBg();
+    };
+  }
+  window.bindRoomBgUI = bindRoomBgUI;
+
+  /* 입장 화면이 그려진 뒤 한 번 — 저장해 둔 배경을 되살립니다 */
+  window.addEventListener("load", () => setTimeout(applyRoomBg, 300));
 })();

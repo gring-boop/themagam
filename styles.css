@@ -1361,6 +1361,19 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
   overflow: hidden;
 }
 
+/* 🖼️ 방 배경 (2026-08-14) — 그림 위에 테마 종이색 덮개.
+   두 겹을 background 하나에 쌓습니다: [덮개(그라데이션 흉내)] + [그림].
+   그림은 cover 로 꽉 채우고, 덮개 색·농도는 JS(--room-veil)가 넣어줘요. */
+.user-cards-grid.room-bg{
+  background-image:
+    linear-gradient(var(--room-veil, rgba(250,246,236,.82)),
+                    var(--room-veil, rgba(250,246,236,.82))),
+    var(--room-bg-img, none);
+  background-size: auto, cover;
+  background-position: 0 0, center;
+  background-repeat: no-repeat;
+}
+
 .user-cards-grid{
   flex: 1;
   display: grid;
