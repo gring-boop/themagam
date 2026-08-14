@@ -928,12 +928,12 @@ function soloProfileBlockHtml(tgt) {
         <input type="range" id="solo-count" min="1" max="20" step="1" value="${n}">
         <span id="solo-count-val" class="solo-count-val">${n}</span>
       </div>
-      ${isGhost ? `
       <div class="set-row">
-        <label for="solo-card-nick">이 카드 이름</label>
+        <label for="solo-card-nick">${isGhost ? "이 카드 이름" : "내 이름"}</label>
         <input type="text" id="solo-card-nick" maxlength="12"
                value="${escapeHtml(tgt)}" autocomplete="off" spellcheck="false">
       </div>
+      ${isGhost ? `
       <div class="set-row">
         <label for="solo-card-goal">오늘 목표</label>
         <input type="text" id="solo-card-goal" maxlength="30"
@@ -947,7 +947,7 @@ function soloProfileBlockHtml(tgt) {
         </select>
       </div>
       <p class="hint">이름을 바꾸면 이 카드에 붙여둔 꾸밈도 함께 따라갑니다.</p>
-      ` : `<p class="hint">카드를 눌러 고르면 그 카드의 이름·목표·작업 스티커도 여기서 정할 수 있어요.</p>`}
+      ` : `<p class="hint">내 이름을 바꾸면 꾸밈·메모를 데리고 방을 다시 엽니다. 다른 카드는 눌러서 고르면 목표와 작업 스티커도 여기서 정할 수 있어요.</p>`}
     </div>`;
 }
 
@@ -1220,6 +1220,19 @@ function bindSoloProfileBlock() {
     if ((window._statusCache || {})[v]) {
       alert("같은 이름의 카드가 이미 있어요.");
       nickIn.value = tgt;
+      return;
+    }
+    /* 내 카드는 방을 다시 여는 쪽 — myNick 을 여러 곳이 붙들고 있어서
+       그 자리에서 갈아끼우면 반쪽만 바뀝니다 */
+    if (tgt === myNick) {
+      if (!confirm(`내 이름을 "${v}" 로 바꾸고 방을 다시 열까요?`)) {
+        nickIn.value = tgt;
+        return;
+      }
+      if (window.soloRename?.(v) === false) {
+        alert("그 이름은 쓸 수 없어요.");
+        nickIn.value = tgt;
+      }
       return;
     }
     적용({ nick: v });

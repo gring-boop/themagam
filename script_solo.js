@@ -372,6 +372,14 @@
         joinedAt: now - (n - i) * 60000
       };
     });
+    /* ★ [고침 2026-08-15] 내 카드는 **덮어쓰지 않고 물려받습니다.**
+         카드 수를 바꾸거나 유령 이름을 고칠 때마다 여기서 새로 지으면,
+         updateStatus 가 실어 둔 살아 있는 값(작업 스티커·🍅·작업 시간)이
+         전부 초기값으로 돌아갑니다 — 유령에게 스티커를 붙이면 내 카드에서
+         스티커가 떨어지던 이유였어요. */
+    const 옛나 = _get("status/" + 내닉());
+    if (옛나 && typeof 옛나 === "object") out[내닉()] = { ...out[내닉()], ...옛나 };
+
     window._statusCache = out;
     /* ★ [고침 2026-08-15] 예전에는 내 카드 하나만 status 에 넣고, 나머지는
          _statusCache 에만 얹어 두었습니다. 그런데 status 를 듣는 쪽
@@ -458,7 +466,57 @@
      채팅의 멘션·답장·반응·명령어 — 혼자 쓰는 메모장에는 없어도 돼요
        (스티커는 남깁니다. 그게 재미라고 하셨어요)
      ===================================================================== */
+  /* =====================================================================
+     🔍 화면 확대·축소 — 머리말의 [− 18px +] 자리를 물려받습니다
+     ---------------------------------------------------------------------
+     [왜 바꾸는가] 글자 크기 조절은 **채팅 글자만** 굵어집니다. 카드도
+     알약도 그대로라, 화면이 작다고 느낄 때 정작 도움이 안 됐어요.
+     확대·축소는 방 전체가 같이 커집니다.
+
+     [왜 CSS zoom 인가] transform: scale 은 자리만 늘려서 스크롤과 클릭
+     좌표가 어긋납니다. zoom 은 배치를 다시 계산해서 그런 일이 없어요.
+     크롬·사파리·파이어폭스 모두 씁니다.
+
+     ★ 진짜 더마감은 손대지 않습니다 — 여기는 혼자 방 파일이에요.
+     ===================================================================== */
+  const ZOOM_KEY = "soloZoom";
+  const ZOOM_MIN = 70, ZOOM_MAX = 130, ZOOM_STEP = 5;
+
+  function 배율() {
+    const v = Number(_store()?.getItem(ZOOM_KEY));
+    return (v >= ZOOM_MIN && v <= ZOOM_MAX) ? v : 100;
+  }
+  function 배율적용(v) {
+    const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(v / ZOOM_STEP) * ZOOM_STEP));
+    _store()?.setItem(ZOOM_KEY, String(z));
+    /* 100% 일 때는 아예 손대지 않습니다 — zoom:1 만 걸려 있어도
+       어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
+    document.body.style.zoom = (z === 100) ? "" : (z / 100);
+    const pill = document.getElementById("solo-zoom-pill");
+    if (pill) pill.textContent = z + "%";
+    return z;
+  }
+  window.soloZoom = 배율적용;
+
+  function 확대축소달기() {
+    const ctl = document.querySelector(".font-ctl");
+    if (!ctl) return;
+    ctl.innerHTML = `
+      <button class="font-btn" type="button" id="solo-zoom-out" aria-label="화면 축소">−</button>
+      <span id="solo-zoom-pill" class="font-pill" aria-live="polite"
+            role="button" tabindex="0" title="눌러서 100% 로">100%</span>
+      <button class="font-btn" type="button" id="solo-zoom-in" aria-label="화면 확대">+</button>`;
+    document.getElementById("solo-zoom-out").onclick = () => 배율적용(배율() - ZOOM_STEP);
+    document.getElementById("solo-zoom-in").onclick  = () => 배율적용(배율() + ZOOM_STEP);
+    const pill = document.getElementById("solo-zoom-pill");
+    /* 눌러서 제자리로 — 한참 만졌다가 되돌리기가 은근히 번거로워요 */
+    pill.onclick = () => 배율적용(100);
+    pill.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); 배율적용(100); } };
+    배율적용(배율());
+  }
+
   function 걷어내기() {
+    확대축소달기();
     ["dock-pill-chatty", "dock-pill-pub", "alive-btn",
      "chatty-tab", "chat-tab-chatty"].forEach(id => {
       const el = document.getElementById(id);
@@ -523,9 +581,33 @@
   setInterval(() => { try { window.soloTrimChat(); } catch (e) {} }, 60000);
 
   /* 콘솔에서 쓰는 손잡이 (설정 화면이 붙기 전까지) */
+  /* 내 카드 이름 바꾸기 — 꾸밈도 메모도 데리고 갑니다.
+     ★ myNick 은 여러 곳이 이미 붙들고 있어서 그 자리에서 갈아끼우면
+       반쪽만 바뀝니다. 짐을 먼저 옮기고 방을 다시 여는 쪽이 정직해요. */
   window.soloRename = function (nick) {
-    if (!nick) return;
-    _store()?.setItem(NICK_KEY, String(nick).slice(0, 12));
+    const 새 = String(nick || "").slice(0, 12).trim();
+    if (!새) return false;
+    const 옛 = 내닉();
+    if (새 === 옛) return false;
+    if ((_get("status") || {})[새]) return false;   // 같은 이름이 이미 있어요
+
+    const prof = _get("users/" + 옛 + "/profile");
+    if (prof) _put("users/" + 새 + "/profile", prof);
+    _put("users/" + 옛, null);
+
+    const row = _get("status/" + 옛);
+    if (row) _put("status/" + 새, row);
+    _put("status/" + 옛, null);
+
+    /* 메모(채팅)에 남은 옛 이름도 바꿔 둡니다 — 혼자 쓰는 자리라 안전해요 */
+    const msgs = _get("messages") || {};
+    Object.keys(msgs).forEach(k => {
+      if (msgs[k] && msgs[k].user === 옛) msgs[k].user = 새;
+    });
+    _put("messages", msgs);
+
+    _store()?.setItem(NICK_KEY, 새);
     location.reload();
+    return true;
   };
 })();
