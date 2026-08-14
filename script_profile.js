@@ -836,7 +836,7 @@ async function loadMyProfile() {
 /* [2026-08-15] 꾸밀 카드 고르기 — 🧘 혼자 방에서 유령 카드를 누르면
    그 카드를 편집합니다. 평소(진짜 방)에는 늘 내 카드예요. */
 function profileTargetNick() {
-  return window.profileTargetNick || myNick;
+  return window._profTargetNick || myNick;
 }
 window.getProfileTarget = profileTargetNick;
 
@@ -1144,7 +1144,7 @@ function bindProfilePanel() {
   /* 🧘 혼자 방 — [내 카드로] 되돌리기 */
   const backBtn = document.getElementById("prof-target-mine");
   if (backBtn) backBtn.onclick = () => {
-    window.profileTargetNick = myNick;
+    window._profTargetNick = myNick;
     renderProfilePanel();
   };
 
@@ -1621,7 +1621,7 @@ function openProfileEditor(nick) {
   }
   /* [2026-08-15] 🧘 혼자 방 — 유령 카드를 누르면 그 카드를 꾸밉니다.
      진짜 방에서는 남의 카드를 건드릴 수 없으니 늘 내 카드로 되돌립니다. */
-  window.profileTargetNick = (window.SOLO && nick) ? String(nick) : myNick;
+  window._profTargetNick = (window.SOLO && nick) ? String(nick) : myNick;
   window.openSettings?.();
   window.openTab?.("profile");
 }

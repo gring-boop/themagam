@@ -265,6 +265,9 @@
     if (list && !list.__noteBound) {
       list.__noteBound = true;
       list.addEventListener("click", (e) => {
+        /* 🧘 혼자 방 — 카드는 전부 내 것입니다. 쪽지도 업적도 뜻이 없고,
+           프꾸 창을 여는 길만 남습니다 (script_profile.js 가 맡아요). */
+        if (window.SOLO) return;
         /* 내 카드는 🗂️ 나의 작업이 열립니다 — 건드리지 않습니다 */
         if (e.target.closest("[data-record-of]")) return;
         if (e.target.closest("[data-edit-profile]")) return;
