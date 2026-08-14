@@ -1247,7 +1247,10 @@ function bindProfilePanel() {
         if (!opt) {
           opt = document.createElement("option");
           opt.value = okv; opt.textContent = "✏️ " + okv;
-          sel.insertBefore(opt, sel.options[2] || null);
+          /* ★ 낱말 묶음(optgroup) **앞에** 끼웁니다. sel.options[n] 으로
+             집으면 묶음 안의 자식이 잡혀서 insertBefore 가 거부됩니다 —
+             "직접 쓰기가 적용이 안 돼요"의 범인이 이 한 줄이었어요 */
+          sel.insertBefore(opt, sel.querySelector("optgroup"));
         }
         sel.value = okv;
       }
