@@ -83,6 +83,20 @@
     }, 400);
   }
 
+  /** 미루지 않고 지금 저장합니다 — 방을 다시 열기 직전처럼 급할 때.
+      ★ 저장은 400ms 뒤에 몰아서 하는데, 그 사이에 location.reload() 가
+        먼저 돌면 방금 바꾼 것이 통째로 사라집니다. 이름을 바꿨더니
+        꾸밈·브금·테마가 초기화되던 이유였어요. */
+  function _flush() {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    try {
+      const { screens, ...남길것 } = _ensure();
+      _store()?.setItem(DB_KEY, JSON.stringify(남길것));
+      return true;
+    } catch (e) { console.warn("[solo] 저장 실패", e); return false; }
+  }
+
   const 조각 = (p) => String(p || "").split("/").filter(Boolean);
 
   function _get(path) {
@@ -498,11 +512,19 @@
          어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
     document.documentElement.style.zoom = (z === 100) ? "" : (z / 100);
     document.body.style.zoom = "";
+    /* ★★ [고침 2026-08-15] 바텀 알약 줄이 바닥에서 붕 뜨던 것.
+         몸통 높이가 100dvh 인데, 화면 단위(dvh)는 확대를 모릅니다.
+         95% 로 줄이면 "화면 높이만큼" 잡은 몸통이 95% 로 그려져서
+         아래 5% 가 빈 채로 남아요. 확대한 만큼 미리 키워 둡니다. */
+    const f = z / 100;
+    document.body.style.height = (z === 100) ? "" : (window.innerHeight / f) + "px";
     const pill = document.getElementById("solo-zoom-pill");
     if (pill) pill.textContent = z + "%";
     return z;
   }
   window.soloZoom = 배율적용;
+  /* 창 크기가 바뀌면 몸통 높이를 다시 잽니다 (위 계산이 화면 높이를 씁니다) */
+  window.addEventListener("resize", () => { try { 배율적용(배율()); } catch (e) {} });
   /* 다른 파일이 좌표를 잴 때 쓰는 창구.
      마우스 좌표·getBoundingClientRect 는 **화면 기준(확대된 뒤)** 이고,
      style.left·offsetWidth 는 **요소 기준(확대 전)** 입니다. 둘을 섞으면
@@ -603,8 +625,13 @@
     if (새 === 옛) return false;
     if ((_get("status") || {})[새]) return false;   // 같은 이름이 이미 있어요
 
-    const prof = _get("users/" + 옛 + "/profile");
-    if (prof) _put("users/" + 새 + "/profile", prof);
+    /* ★ [고침 2026-08-15] 예전에는 users/{닉}/profile 만 옮기고 나머지를
+         지웠습니다. 그 아래에는 프꾸(profile) 말고도
+           musicMine — ♪ 나의 리스트
+           prefs     — 테마
+         가 함께 삽니다. 통째로 옮겨야 짐을 안 흘려요. */
+    const 짐 = _get("users/" + 옛);
+    if (짐) _put("users/" + 새, 짐);
     _put("users/" + 옛, null);
 
     const row = _get("status/" + 옛);
@@ -619,6 +646,7 @@
     _put("messages", msgs);
 
     _store()?.setItem(NICK_KEY, 새);
+    _flush();                 // ★ 저장이 끝난 것을 보고 나서 다시 엽니다
     location.reload();
     return true;
   };
