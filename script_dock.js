@@ -157,15 +157,26 @@
     return { x: (pr.left + pr.width / 2) - hr.left - w / 2, y: 0 };
   }
 
+  /* 화면 배율 — 🧘 혼자 방의 확대·축소. 진짜 방에서는 늘 1 입니다.
+
+     [왜 나눠야 하나] getBoundingClientRect 와 마우스 좌표는 **확대된 뒤**
+     의 화면 값이고, style.left 와 offsetWidth 는 **확대 전** 요소 값입니다.
+     섞어 쓰면 95% 에서 판이 오른쪽 끝에 닿기도 전에 막혔어요 — 화면
+     너비(작아진 값)로 재고 판 너비(원래 값)를 빼니까요. */
+  const Z = () => (window.uiZoom?.() || 1);
+
   /** 화면 밖으로 나가지 않게 */
   function clampPos(p, x, y) {
     const host = el("dock-panels");
     const hr = host.getBoundingClientRect();
+    const z = Z();
+    /* 재는 자를 하나로 맞춥니다 — 전부 요소 기준(확대 전)으로 */
+    const hostLeft = hr.left / z, hostTop = hr.top / z, hostW = hr.width / z;
     const w = p.offsetWidth || 360, h = p.offsetHeight || 300;
-    const maxX = hr.width - w - EDGE;
-    const maxY = hr.top - EDGE;              // 위로 화면 끝까지
+    const maxX = hostW - w - EDGE;
+    const maxY = hostTop - EDGE;             // 위로 화면 끝까지
     return {
-      x: Math.max(EDGE - hr.left, Math.min(maxX, x)),
+      x: Math.max(EDGE - hostLeft, Math.min(maxX, x)),
       y: Math.max(0, Math.min(maxY, y))
     };
   }
@@ -778,11 +789,12 @@
 
       const r = panel.getBoundingClientRect();
       const host = el("dock-panels").getBoundingClientRect();
+      const z = Z();
       _drag = {
         id, panel,
-        dx: e.clientX - r.left,
-        dy: r.bottom - e.clientY,
-        hostLeft: host.left, hostBottom: host.bottom
+        dx: (e.clientX - r.left) / z,
+        dy: (r.bottom - e.clientY) / z,
+        hostLeft: host.left / z, hostBottom: host.bottom / z
       };
       panel.classList.add("dragging");
       head.setPointerCapture?.(e.pointerId);
@@ -791,9 +803,10 @@
 
     document.addEventListener("pointermove", (e) => {
       if (!_drag) return;
+      const z = Z();
       place(_drag.id, {
-        x: e.clientX - _drag.dx - _drag.hostLeft,
-        y: _drag.hostBottom - (e.clientY + _drag.dy)
+        x: e.clientX / z - _drag.dx - _drag.hostLeft,
+        y: _drag.hostBottom - (e.clientY / z + _drag.dy)
       });
     });
 

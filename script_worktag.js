@@ -159,11 +159,14 @@
 
     /* 스티커 바로 아래. 화면 밖으로 나가면 안쪽으로 밀어 넣습니다. */
     const r = anchor.getBoundingClientRect();
+    /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1) */
+    const _z = (window.uiZoom?.() || 1);
+    const VW = innerWidth / _z, VH = innerHeight / _z;
     const w = pop.offsetWidth, h = pop.offsetHeight;
-    let left = r.left;
-    let top  = r.bottom + 6;
-    if (left + w > innerWidth - 8)  left = innerWidth - w - 8;
-    if (top  + h > innerHeight - 8) top  = r.top - h - 6;
+    let left = r.left / _z;
+    let top  = r.bottom / _z + 6;
+    if (left + w > VW - 8) left = VW - w - 8;
+    if (top  + h > VH - 8) top  = r.top / _z - h - 6;
     pop.style.left = Math.max(8, left) + "px";
     pop.style.top  = Math.max(8, top)  + "px";
 

@@ -482,10 +482,13 @@
     document.body.appendChild(pop);
 
     const r = btn.getBoundingClientRect();
+    /* 🧘 혼자 방의 확대·축소 — 재는 자를 하나로 맞춥니다 (진짜 방은 늘 1) */
+    const _z = (window.uiZoom?.() || 1);
+    const VW = innerWidth / _z, VH = innerHeight / _z;
     const w = pop.offsetWidth, h = pop.offsetHeight;
-    let left = Math.min(r.left, innerWidth - w - 8);
-    let top = r.top - h - 8;
-    if (top < 8) top = r.bottom + 8;          // 위가 좁으면 아래로
+    let left = Math.min(r.left / _z, VW - w - 8);
+    let top = r.top / _z - h - 8;
+    if (top < 8) top = r.bottom / _z + 8;     // 위가 좁으면 아래로
     pop.style.left = Math.max(8, left) + "px";
     pop.style.top = top + "px";
 

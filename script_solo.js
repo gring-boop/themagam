@@ -489,14 +489,26 @@
   function 배율적용(v) {
     const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(v / ZOOM_STEP) * ZOOM_STEP));
     _store()?.setItem(ZOOM_KEY, String(z));
-    /* 100% 일 때는 아예 손대지 않습니다 — zoom:1 만 걸려 있어도
-       어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
-    document.body.style.zoom = (z === 100) ? "" : (z / 100);
+    /* ★ [고침 2026-08-15] body 가 아니라 **뿌리(html)** 에 겁니다.
+         body 에 걸면 화면에 고정된 것들(바텀 알약 줄)이 배율만큼 위로
+         떠오릅니다 — 고정 좌표는 화면을 기준으로 재는데, 그 화면이
+         이미 줄어든 몸통 안이라 어긋나요. 뿌리에 걸면 브라우저 자체
+         확대와 같은 취급이라 고정 요소도 제자리를 지킵니다.
+       100% 일 때는 아예 손대지 않습니다 — zoom:1 만 걸려 있어도
+         어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
+    document.documentElement.style.zoom = (z === 100) ? "" : (z / 100);
+    document.body.style.zoom = "";
     const pill = document.getElementById("solo-zoom-pill");
     if (pill) pill.textContent = z + "%";
     return z;
   }
   window.soloZoom = 배율적용;
+  /* 다른 파일이 좌표를 잴 때 쓰는 창구.
+     마우스 좌표·getBoundingClientRect 는 **화면 기준(확대된 뒤)** 이고,
+     style.left·offsetWidth 는 **요소 기준(확대 전)** 입니다. 둘을 섞으면
+     판이 커서를 못 따라가고, 오른쪽 끝에서 먼저 막혀요 — 실제로 그랬습니다.
+     진짜 방에는 이 함수가 없으니 (window.uiZoom?.() || 1) 로 늘 1 입니다. */
+  window.uiZoom = () => 배율() / 100;
 
   function 확대축소달기() {
     const ctl = document.querySelector(".font-ctl");
