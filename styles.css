@@ -473,6 +473,20 @@ body.split-dragging .chat-sidebar,
 body.split-dragging #chat-box{ user-select: none; }
 
 /* 채팅 속 주소 링크 */
+/* 🖼️ 채팅 속 그림 (2026-08-14) — 이미지 주소를 붙여넣으면 말풍선에
+   그림으로 펼쳐집니다. 누르면 원본을 새 탭에. 말풍선이 터지지 않게
+   높이에 상한을 두고, 그림이 죽어 있으면 JS 가 글자 링크로 되돌립니다 */
+.msg-img-link{ display: inline-block; max-width: 100%; }
+.msg-img{
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 10px;
+  margin: 3px 0 2px;
+  cursor: zoom-in;
+  background: var(--fill-1);
+}
+
 .msg-link{
   color: inherit;
   text-decoration: underline;

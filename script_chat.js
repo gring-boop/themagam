@@ -517,6 +517,12 @@
        · 먼저 escapeHtml 로 다 막은 뒤에 링크만 다시 만듭니다 → 태그 주입 불가
        · http / https 로 시작하는 것만 링크로 봅니다 → javascript: 같은 건 제외
        · rel="noopener" 로 새 창이 원래 창을 건드리지 못하게 막습니다 */
+  /* [2026-08-14] 이미지 주소는 글자 대신 **그림으로** 펼칩니다.
+     서버에는 여전히 글자(주소)만 저장돼요 — 그림은 각자의 브라우저가
+     그 주소에서 직접 받아옵니다. 용량 부담 0, 규칙 변경 0.
+     못 불러오는 주소(지워진 짤 등)는 조용히 글자 링크로 돌아갑니다. */
+  const IMG_URL_RE = /\.(jpe?g|png|gif|webp|avif)(\?[^\s<>"']*)?$/i;
+
   function linkifyEscaped(html) {
     return html.replace(
       /(https?:\/\/[^\s<>"']+)/g,
@@ -525,6 +531,13 @@
         const m = url.match(/[.,!?)\]]+$/);
         const tail = m ? m[0] : "";
         const clean = tail ? url.slice(0, -tail.length) : url;
+        if (IMG_URL_RE.test(clean)) {
+          /* 누르면 원본을 새 탭에. onerror — 이미지가 죽어 있으면
+             주소 글자로 되돌립니다 (textContent 라 주입 걱정 없음) */
+          return `<a class="msg-img-link" href="${clean}" target="_blank" rel="noopener noreferrer"
+            ><img class="msg-img" src="${clean}" alt="공유한 그림" loading="lazy"
+                  onerror="this.parentNode.textContent=this.src"></a>${tail}`;
+        }
         return `<a class="msg-link" href="${clean}" target="_blank" rel="noopener noreferrer">${clean}</a>${tail}`;
       }
     );
