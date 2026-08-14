@@ -8242,19 +8242,39 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   flex: 0 0 auto;
   display: flex; align-items: center; gap: 8px;
   /* [2026-08-13] 먹선이 판 폭을 꽉 채워 답답했습니다 — 양쪽에 숨을
-     쉬게 1할씩 여백 (창의 8할만 차지) */
-  width: 80%;
+     쉬게 1할씩 여백. [2026-08-14] 왼쪽에 🔂 단추가 들어와 88%로 */
+  width: 88%;
   margin: 0 auto;
   padding: 0 0 8px;
 }
 .music-vol-ico{ flex: 0 0 auto; font-size: 13px; }
+/* 🔂 한 곡 반복 · ⏭ 이어듣기 — 켜지면 먹색 알약으로 불이 들어옵니다 */
+.music-mode-btn{
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: var(--r-full);
+  padding: 2px 7px;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  color: var(--muted);
+}
+.music-mode-btn:hover{ border-color: var(--accent); }
+.music-mode-btn[aria-pressed="true"]{
+  background: #38342F;
+  border-color: #38342F;
+  color: #F4EFE9;
+}
+.music-mode-btn.mini{ padding: 1px 6px; font-size: 11px; margin-left: 5px; }
 /* 볼륨 — 가는 먹선 위에 납작한 사각 도장 (2026-08-13 콩이 고른 조합).
    완전 검정이 아니라 **먹색**(#38342F, 차콜)입니다 — 방장 스티커와 같은 결.
    채워진 만큼 먹선이 진해지는 건 --vol 을 script_music.js 가 넣어줍니다. */
 #music-vol{
   -webkit-appearance: none;
   appearance: none;
-  flex: 1 1 auto; min-width: 0;
+  /* [2026-08-14] 🔂 단추가 왼쪽에 붙으면서 먹선은 7할만 (콩 요청) */
+  flex: 0 1 70%; min-width: 0;
   height: 18px;
   background: transparent;
   cursor: pointer;

@@ -50,6 +50,14 @@
   let _mine = {};            // 나의 리스트 스냅샷
   let _built = false;
 
+  /* 재생 방식 (2026-08-14, 멤버 요청) — 이 기기에 기억합니다.
+       _loop1 : 🔂 이 곡을 계속 반복 (볼륨 줄 왼쪽 단추)
+       _chain : "" | "mine" | "all" — ⏭ 그 리스트를 차례로, 끝나면 처음으로
+     둘이 겹치면 한 곡 반복이 이깁니다 (더 좁은 뜻이니까). */
+  const LOOP_KEY = "musicLoop1", CHAIN_KEY = "musicChain";
+  let _loop1 = false;
+  let _chain = "";
+
   /* ---------------------------------------------------------------
      유튜브 주소 → 영상 id
      watch?v=x · youtu.be/x · shorts/x · live/x · embed/x 다 받습니다
@@ -88,8 +96,11 @@
       </div>
       <!-- 자체 볼륨 — 유튜브의 노브는 플레이어가 작으면 커서를 대기도
            전에 접힙니다. 일시정지처럼 쪽지(postMessage)로 명령을 보내는
-           우리 슬라이더는 크기와 무관하게 됩니다. 값은 이 기기에 기억 -->
+           우리 슬라이더는 크기와 무관하게 됩니다. 값은 이 기기에 기억.
+           [2026-08-14] 왼쪽에 🔂 한 곡 반복 — 볼륨은 7할 폭으로 양보 -->
       <div class="music-vol-row">
+        <button type="button" id="music-loop1" class="music-mode-btn"
+                aria-pressed="false" title="이 곡을 계속 반복">🔂</button>
         <span class="music-vol-ico" aria-hidden="true">🔊</span>
         <input type="range" id="music-vol" min="0" max="100" step="1"
                value="80" aria-label="볼륨">
@@ -125,6 +136,21 @@
       _sendCmd("setVolume", [Number(vol.value)]);
       try { AppStore.setItem("musicVol", vol.value); } catch (e) {}
     });
+
+    /* 🔂 한 곡 반복 — 이 기기에 기억 */
+    try { _loop1 = AppStore.getItem(LOOP_KEY) === "1"; } catch (e) {}
+    try { _chain = AppStore.getItem(CHAIN_KEY) || ""; } catch (e) {}
+    const lb = document.getElementById("music-loop1");
+    if (lb) {
+      lb.setAttribute("aria-pressed", _loop1 ? "true" : "false");
+      lb.onclick = () => {
+        _loop1 = !_loop1;
+        if (_loop1) { _chain = ""; try { AppStore.setItem(CHAIN_KEY, ""); } catch (e) {} }
+        try { AppStore.setItem(LOOP_KEY, _loop1 ? "1" : "0"); } catch (e) {}
+        lb.setAttribute("aria-pressed", _loop1 ? "true" : "false");
+        renderList();
+      };
+    }
 
     _built = true;
     return true;
@@ -229,6 +255,11 @@
     if (typeof e.data !== "string" || !/youtube/.test(e.origin || "")) return;
     let d = null;
     try { d = JSON.parse(e.data); } catch (err) { return; }
+
+    /* 곡이 끝났다 (playerState 0) — 반복이나 이어듣기 차례 */
+    const st = d && d.info && d.info.playerState;
+    if (st === 0) { onSongEnd(); return; }
+
     const t = d && d.info && d.info.currentTime;
     if (typeof t !== "number" || !_cur) return;
     const now = Date.now();
@@ -236,6 +267,37 @@
     _lastSaveAt = now;
     _saveLast(_cur, t);
   });
+
+  /* ---------------------------------------------------------------
+     곡이 끝났을 때 (2026-08-14)
+
+     🔂 한 곡 반복이면 그 자리에서 처음으로. ⏭ 이어듣기면 그 리스트의
+     다음 곡으로, 마지막이면 처음으로 돌아갑니다(무한 순환 — 콩 결정).
+     ★ 자동으로 시작하는 재생은 브라우저가 막을 수 있습니다. 다만 이미
+       소리를 내던 중이라 대개 통과해요. 막히면 알약 불이 안 켜지므로
+       거기서 눈치챌 수 있고, 리스트에서 직접 누르면 이어집니다.
+     --------------------------------------------------------------- */
+  function chainRows() {
+    const pick = (o) => Object.entries(o).map(([id, s]) => ({ id, ...s }))
+      .filter(s => okVid(s.vid)).sort((a, b) => (a.at || 0) - (b.at || 0));
+    if (_chain === "mine") return pick(_mine);
+    if (_chain === "all") return pick(_list);
+    return [];
+  }
+
+  function onSongEnd() {
+    if (_loop1 && _cur) {                 // 🔂 이 곡을 다시 처음부터
+      _sendCmd("seekTo", [0, true]);
+      _sendCmd("playVideo");
+      return;
+    }
+    if (!_chain) return;
+    const rows = chainRows();
+    if (!rows.length) return;
+    const i = rows.findIndex(s => s.vid === _cur);
+    const next = rows[(i + 1) % rows.length];   // 마지막 다음은 처음 (무한 순환)
+    if (next) play(next.vid, next.title);
+  }
 
   /** 입장 때 — 직전 곡을 멈췄던 지점에 걸어 둡니다 */
   function cueLast() {
@@ -307,8 +369,11 @@
       .sort((a, b) => (a.at || 0) - (b.at || 0));   // 오래된 것 위
     const mineVids = new Set(mine.map(s => s.vid));
 
-    /* ♪ 나의 리스트 — 위 */
-    let h = `<div class="music-sec-head"><span>♪ 나의 리스트</span>
+    /* ♪ 나의 리스트 — 위. 머리 오른쪽에 ⏭ 이어듣기 (그 리스트를 무한 순환) */
+    let h = `<div class="music-sec-head"><span>♪ 나의 리스트
+               <button type="button" class="music-mode-btn mini" data-chain="mine"
+                 aria-pressed="${_chain === "mine"}"
+                 title="나의 리스트를 차례로 이어 듣기 (끝나면 처음으로)">⏭</button></span>
                <span>${mine.length} / ${MINE_MAX} · 나만 봐요</span></div>`;
     h += mine.length
       ? mine.map(s => _rowHtml(s, `
@@ -317,7 +382,10 @@
       : `<div class="music-empty mini">링크를 [담기] 하거나, 아래 추천의 ＋ 를 눌러 채워요.</div>`;
 
     /* 🎵 추천 리스트 — 아래 */
-    h += `<div class="music-sec-head"><span>🎵 추천 리스트</span>
+    h += `<div class="music-sec-head"><span>🎵 추천 리스트
+            <button type="button" class="music-mode-btn mini" data-chain="all"
+              aria-pressed="${_chain === "all"}"
+              title="추천 리스트를 차례로 이어 듣기 (끝나면 처음으로)">⏭</button></span>
             <span>클릭하면 재생 · 나에게만 들려요</span></div>`;
     h += rows.length
       ? rows.map(s => _rowHtml(s, `
@@ -351,6 +419,19 @@
       });
     });
     /* 추천 → 내 리스트로 담기 */
+    /* ⏭ 이어듣기 — 리스트 머리의 단추. 같은 것을 다시 누르면 끕니다 */
+    box.querySelectorAll("[data-chain]").forEach(b => {
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const v = b.dataset.chain;
+        _chain = (_chain === v) ? "" : v;
+        if (_chain) { _loop1 = false; try { AppStore.setItem(LOOP_KEY, "0"); } catch (er) {} }
+        try { AppStore.setItem(CHAIN_KEY, _chain); } catch (er) {}
+        document.getElementById("music-loop1")
+          ?.setAttribute("aria-pressed", _loop1 ? "true" : "false");
+        renderList();
+      });
+    });
     box.querySelectorAll("[data-mine-add]").forEach(b => {
       b.addEventListener("click", () => {
         if (Object.keys(_mine).length >= MINE_MAX) return;
