@@ -135,7 +135,6 @@
     el("adm-dash").style.display = "block";
     showMyUid();
     loadAttendance(0);
-    loadNotice();
     loadPinnedMessage();
     loadHistoryConfig();
     loadForest();
@@ -655,27 +654,8 @@
   }
 
   // ------------------------------------------------- ③-2 공지
-  async function loadNotice() {
-    try {
-      const v = (await db.ref("config/notice").once("value")).val();
-      el("adm-notice").value = v?.text || "";
-    } catch (e) {}
-  }
-  async function saveNotice() {
-    const text = (el("adm-notice")?.value || "").trim();
-    try {
-      if (text) await db.ref("config/notice").set({ text, by: myNick, at: Date.now() });
-      else await db.ref("config/notice").remove();
-      msg("adm-notice-msg", text ? "✅ 공지를 저장했어요." : "✅ 공지를 내렸어요.");
-    } catch (e) {
-      msg("adm-notice-msg", "저장하지 못했어요. 연결을 확인해 주세요.", true);
-    }
-  }
-  async function clearNotice() {
-    if (!confirm("공지를 내릴까요?")) return;
-    el("adm-notice").value = "";
-    await saveNotice();
-  }
+  // [철거 2026-08-14] 머리말 한줄 공지(config/notice) — 자리에 시계가
+  // 앉으면서 함께 뺐습니다. 공지는 📢 공지판으로.
 
   // ------------------------------------------------- ③-2.5 채팅 핀 메시지
   /* script_chat.js 의 setPinnedMessage / removePinnedMessage 와 같은 노드 */
@@ -1225,8 +1205,6 @@
       const btn = e.target.closest("[data-del-nick]");
       if (btn) removeMember(btn.getAttribute("data-del-nick"));
     });
-    el("adm-notice-save")?.addEventListener("click", saveNotice);
-    el("adm-notice-clear")?.addEventListener("click", clearNotice);
     el("adm-pin-msg-save")?.addEventListener("click", savePinnedMessage);
     el("adm-pin-msg-clear")?.addEventListener("click", clearPinnedMessage);
     el("adm-uid-copy")?.addEventListener("click", copyMyUid);

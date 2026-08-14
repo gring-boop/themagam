@@ -455,7 +455,7 @@ window.AppSession = AppSession;
       callIfFn("updateStatus", true);
       callIfFn("listenStatus");
       callIfFn("listenPomodoro");
-      callIfFn("listenNotice");
+      /* [철거 2026-08-14] listenNotice(머리말 한줄 공지) — 자리에 시계가 앉음 */
       callIfFn("listenNotes");
       callIfFn("listenRoomTodo");     // 📌 방 전체 할 일 진척 (명단 아래 한 줄)
       callIfFn("listenNoticeBoard");  // 📢 공지판 — 안 읽은 게 있으면 단추에 붉은 점

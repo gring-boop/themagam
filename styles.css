@@ -4406,30 +4406,38 @@ html[data-theme-style="ink"] .card-state{
    [2026-08-03] 상단바 공지 핀 · 채팅 머리말 · 뽀모 창 리디자인
    ===================================================================== */
 
-/* ── 공지 핀 — 브랜드 줄의 📌 ── */
-.head-notice{
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  max-width: 34vw;
+/* ── 🕐 머리말 시계 (2026-08-14, 한줄 공지 자리) ──
+   날짜·요일은 옅게, 시각은 진하게, AM/PM 은 작게 — 콩이 정한 모양.
+   숫자는 tabular — 2:59 → 3:00 될 때 폭이 안 흔들리게. */
+.head-clock{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
   background: var(--accent-softer);
-  border: 1px dashed var(--accent-line);
+  border: 1px solid var(--accent-line);
   border-radius: var(--r-full);
-  padding: 4px 12px;
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  color: var(--text);
-  cursor: pointer;
-  transition: background var(--anim-fast);
-}
-.head-notice:hover{ background: var(--accent-soft); }
-.head-notice #head-notice-text{
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 4px 13px;
   white-space: nowrap;
+  user-select: none;
 }
-.head-notice.empty{ opacity: .55; }
+.head-clock-date{
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.head-clock-t{ display: inline-flex; align-items: baseline; gap: 3px; }
+.head-clock-ap{
+  font-size: calc(var(--fs-2xs) * .9);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+.head-clock-time{
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .3px;
+}
+.head-clock-emo{ font-size: var(--fs-sm); }
 
 /* ── 채팅 머리말 — "— Chat" (포인트 획 + 제목 서체) ── */
 #my-info{ font-weight: var(--fw-bold); }

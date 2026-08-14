@@ -1740,3 +1740,51 @@
   window.loadSoundPrefsFromFirebase = loadSoundPrefsFromFirebase;
   window.loadPomoParticipationFromFirebase = loadPomoParticipationFromFirebase;
 
+
+/* =====================================================================
+   🕐 머리말 시계 (2026-08-14) — 한줄 공지가 있던 자리
+
+   "8월 14일 (금)  PM 2:59 ☕" — 날짜·요일은 옅게, 시각은 진하게,
+   PM 은 작게 (콩이 정한 모양). 오른쪽 이모지는 시간대 옷입니다:
+
+     🦉 22시~새벽 2시   올빼미 (이 방의 황금 시간대라 제일 깁니다 ㅋㅋ)
+     🌙 2~5   깊은 밤      🌅 5~7   새벽        🍳 7~9   아침밥
+     ☀️ 9~12  오전         🍚 12~13 점심밥      ☕ 13~15 오후 커피
+     🚶 15~17 산책         🌇 17~18 노을        🍽️ 18~19 저녁밥
+     🌃 19~22 밤 작업
+
+   1초마다 돌지만 하는 일이 글자 몇 개 비교뿐이라 무게는 없습니다.
+   ===================================================================== */
+(function () {
+  "use strict";
+
+  /* [시각, 이모지] — 그 시각부터 이 이모지. 22시 뒤와 2시 전은 🦉 */
+  const CLOCK_EMOJI = [
+    [2, "🌙"], [5, "🌅"], [7, "🍳"], [9, "☀️"], [12, "🍚"],
+    [13, "☕"], [15, "🚶"], [17, "🌇"], [18, "🍽️"], [19, "🌃"], [22, "🦉"]
+  ];
+  const 요일 = ["일", "월", "화", "수", "목", "금", "토"];
+
+  function emojiFor(h) {
+    let e = "🦉";                       // 0~2시 — 올빼미의 연장전
+    for (const [from, emo] of CLOCK_EMOJI) if (h >= from) e = emo;
+    return e;
+  }
+
+  function tickHeadClock() {
+    const d = document.getElementById("head-clock-date");
+    if (!d) return;
+    const n = new Date();
+    d.textContent = `${n.getMonth() + 1}월 ${n.getDate()}일 (${요일[n.getDay()]})`;
+    const h = n.getHours();
+    const ap = document.getElementById("head-clock-ap");
+    const t = document.getElementById("head-clock-time");
+    const emo = document.getElementById("head-clock-emo");
+    if (ap) ap.textContent = h < 12 ? "AM" : "PM";
+    if (t) t.textContent = `${h % 12 || 12}:${String(n.getMinutes()).padStart(2, "0")}`;
+    if (emo) emo.textContent = emojiFor(h);
+  }
+  tickHeadClock();
+  setInterval(tickHeadClock, 1000);
+  window.tickHeadClock = tickHeadClock;
+})();
