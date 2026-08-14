@@ -539,6 +539,8 @@
   function openTab(name) {
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === `panel-${name}`));
+    /* [2026-08-14] 프로필 탭만 두 칸이라 창을 넓힙니다 — CSS 가 이 표식을 봅니다 */
+    document.querySelector("#settings-modal .modal-content")?.setAttribute("data-tab", name);
     if (name === "theme") renderThemePalette();
     if (name === "pomo") { renderPomodoroSoundMini(); applyPomoShape(loadPomoShape()); }
     if (name === "chat") { renderLayoutPick(); window.bindLayoutUI?.(); window.renderSlotMap?.(); }

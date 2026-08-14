@@ -6852,6 +6852,91 @@ body.split-dragging #chat-box3{ user-select: none; }
    서버에는 아무것도 안 적습니다. 카드를 그릴 때 닉네임을 견주기만 해요
    (script_realtime.js 의 ADMIN_NICK) — 그래서 보안규칙도 손댈 게 없습니다.
    순수한 표시이지, 권한을 주는 물건이 아닙니다. */
+/* ── 👤 프로필 탭 두 칸 (2026-08-14) ──
+   탭이 세로로 너무 길어서 두 칸으로 흘립니다. 프로필 탭일 때만 설정
+   창이 넓어져요 (openTab 이 data-tab 표식을 답니다). 좁은 화면에서는
+   도로 한 칸 — 폰에서 두 칸은 글자가 깨알이 됩니다. */
+#settings-modal .modal-content[data-tab="profile"]{ width: min(820px, 100%); }
+.prof-cols{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.prof-col{ min-width: 0; }
+@media (max-width: 720px){
+  #settings-modal .modal-content[data-tab="profile"]{ width: min(460px, 100%); }
+  .prof-cols{ display: block; }
+}
+
+/* ── 🧷 스티커 배치 편집기 (2026-08-14) ── */
+.stk-card{
+  position: relative;
+  width: 168px;
+  height: 200px;
+  margin: 4px auto 0;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--accent-line);
+  border-radius: 10px;
+  overflow: visible;
+  touch-action: none;          /* 폰에서 끌 때 화면이 같이 안 밀리게 */
+}
+.stk-avatar{
+  width: 76px; height: 76px;
+  margin: 14px auto 0;
+  border-radius: 10px;
+  background: var(--fill-2);
+  border: 1px solid var(--border);
+}
+.stk-mockstate{
+  text-align: center; margin-top: 10px;
+  font-size: 10.5px; color: var(--muted);
+}
+.stk-mockname{
+  text-align: center; margin-top: 6px;
+  font-size: 13px; font-weight: var(--fw-bold);
+}
+.stk-mockgoal{
+  text-align: center; margin-top: 2px;
+  font-size: 10px; color: var(--muted);
+}
+.stk-item{
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  z-index: 2;
+}
+.stk-item:active{ cursor: grabbing; }
+.stk-item.is-sel{ outline: 2px dashed var(--accent); outline-offset: 2px; }
+.stk-word{
+  padding: 2.5px 7px;
+  border-radius: 7px;
+  font-size: 10.5px;
+  font-weight: var(--fw-bold);
+  line-height: 1.25;
+  border: 1px solid rgba(255,255,255,.45);
+  box-shadow: 0 1px 2px rgba(40,30,20,.2);
+  max-width: 100%;
+}
+.stk-word.is-tape{ border: none; border-radius: 0; opacity: .9; padding: 3px 11px; }
+.stk-emoji{
+  font-size: 17px; line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(40,30,20,.3));
+}
+
+/* 자유 배치된 스티커 — 기본 자리의 right/bottom 닻을 풀어야 left/top 이
+   먹습니다. white-space 도 풀어서, 오른쪽 벽에 밀리면 글자가 세로로 서요
+   (편집기에서 콩이 발견하고 마음에 들어 해서 기능으로 승격 ㅋㅋ) */
+.card-deco.deco-free{
+  right: auto;
+  bottom: auto;
+  white-space: normal;
+  word-break: keep-all;
+  max-width: 114%;
+}
+
 /* ── 🧲 꾸미기 스티커 (2026-08-13) ──
 
    자리 넷, 기울기는 제각각 — 캐리어에 아무렇게나 붙인 느낌은 이 어긋난

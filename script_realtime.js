@@ -488,11 +488,16 @@
           const stk  = window.sanitizeStickers?.(prof.stickers) || {};
           const stkC = window.sanitizeStickerColors?.(prof.stickerColors) || {};
           const stkS = prof.stickerShape;   // 모양은 사람당 하나 (알약/테이프)
-          const decoA = window.decoStickerHtml?.("a", stk.a, stkC.a, stkS) || "";
-          const decoB = window.decoStickerHtml?.("b", stk.b, stkC.b, stkS) || "";
-          const decoC = window.decoStickerHtml?.("c", stk.c, stkC.c, stkS) || "";
-          const decoD = window.decoStickerHtml?.("d", stk.d, stkC.d, stkS) || "";
-          const decoE = window.decoStickerHtml?.("e", stk.e, stkC.e, stkS) || "";
+          const stkP = window.sanitizeStickerPos?.(prof.stickerPos) || {};
+          const decoA = window.decoStickerHtml?.("a", stk.a, stkC.a, stkS, stkP.a) || "";
+          const decoB = window.decoStickerHtml?.("b", stk.b, stkC.b, stkS, stkP.b) || "";
+          const decoC = window.decoStickerHtml?.("c", stk.c, stkC.c, stkS, stkP.c) || "";
+          const decoD = window.decoStickerHtml?.("d", stk.d, stkC.d, stkS, stkP.d) || "";
+          const decoE = window.decoStickerHtml?.("e", stk.e, stkC.e, stkS, stkP.e) || "";
+          /* 자유 배치된 B·E 는 카드 기준 좌표라 카드에 직접 붙입니다.
+             기본 자리일 때만 프사 칸 안(프사를 따라다님)에 둡니다 */
+          const decoRootExtra = (stkP.b ? decoB : "") + (stkP.e ? decoE : "");
+          const decoAvatar = (stkP.b ? "" : decoB) + (stkP.e ? "" : decoE);
 
           /* 연결 상태 안테나 — 이 사람이 지금 붙어 있는가.
              disconnectedAt 이 남아 있으면 "끊겨서 유예 중"이라는 뜻입니다. */
@@ -558,14 +563,14 @@
                    왼쪽 위 구석입니다. 그래서 .card-body 바깥, 카드 바로
                    아래에 둡니다 (프사 칸 안에 있으면 프사를 따라다녀요). -->
               ${window.workTagChipHtml?.(row, isMine) || ""}
-              ${decoA}${decoC}${decoD}
+              ${decoA}${decoC}${decoD}${decoRootExtra}
               <div class="card-body">
                 <div class="card-avatar-wrap${isMine ? " is-clickable" : ""}"${
                   isMine ? ' data-edit-profile="1" role="button" tabindex="0"'
                          + ' title="프로필 설정 (사진·색·무늬)"' : ""}>
                   ${avatar}
                   ${editBtn}
-                  ${decoB}${decoE}
+                  ${decoAvatar}
                   ${u === ADMIN_NICK
                     ? `<span class="card-admin-stamp" aria-label="방장">방장</span>`
                     : ""}

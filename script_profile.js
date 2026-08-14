@@ -527,6 +527,25 @@ function sanitizeStickerColors(obj) {
 function sanitizeStickerShape(v) {
   return v === "tape" ? "tape" : "pill";
 }
+/* 자유 배치 (2026-08-14) — 자리별 {x, y, r}. 없으면 기본 자리.
+   x·y 는 카드 기준 %, 좌우 -14%까지 삐져나갈 수 있습니다(스티커 맛).
+   r 은 ±20° — 더 돌리면 글자가 뒤집혀요. */
+function sanitizeStickerPos(obj) {
+  const s = (obj && typeof obj === "object") ? obj : {};
+  const out = {};
+  DECO_SLOTS.forEach(k => {
+    const p = s[k];
+    if (!p || typeof p !== "object") return;
+    const x = Number(p.x), y = Number(p.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    out[k] = {
+      x: Math.max(-14, Math.min(104, Math.round(x * 10) / 10)),
+      y: Math.max(-10, Math.min(104, Math.round(y * 10) / 10)),
+      r: Math.max(-20, Math.min(20, Math.round(Number(p.r) || 0)))
+    };
+  });
+  return out;
+}
 
 /* 고른 배경색에서 읽히는 글자색을 만들어냅니다 — 같은 색상(hue)을
    진하게 낮춘 톤. 아무 색을 골라도 글자가 배경에 묻지 않아요.
@@ -559,24 +578,32 @@ function decoInkFor(bgHex) {
 /** 한 자리의 스티커 HTML — 카드를 그리는 쪽(script_realtime.js)이 씁니다.
     빈 자리는 빈 문자열: DOM 자체가 안 생겨서 카드에 흔적이 없어요.
     color 를 주면(낱말일 때만) 그 배경 + 어울리는 진한 글자색. */
-function decoStickerHtml(slot, val, color, shape) {
+function decoStickerHtml(slot, val, color, shape, pos) {
   const v = sanitizeDeco(val);
   if (!v) return "";
+  /* 자유 배치 — 좌표가 있으면 그 자리에, 없으면 기본 자리(CSS 클래스).
+     deco-free 가 기본 자리의 right/bottom 닻을 풀고, 오른쪽 벽에 밀리면
+     글자가 세로로 서는 것도 이 클래스가 허용합니다(white-space). */
+  const free = pos ? " deco-free" : "";
+  const posStyle = pos
+    ? `left:${pos.x}%;top:${pos.y}%;transform:rotate(${pos.r}deg);` : "";
   const w = DECO_WORDS.find(x => x.t === v);
   if (w) {
     const bg = sanitizeHexColor(color) || w.bg;
     const fg = sanitizeHexColor(color) ? decoInkFor(bg) : w.fg;
     const tape = sanitizeStickerShape(shape) === "tape" ? " is-tape" : "";
-    return `<span class="card-deco card-deco-word deco-${slot}${tape}"
-      style="background:${bg};color:${fg}">${escapeHtml(w.t)}</span>`;
+    return `<span class="card-deco card-deco-word deco-${slot}${tape}${free}"
+      style="background:${bg};color:${fg};${posStyle}">${escapeHtml(w.t)}</span>`;
   }
-  return `<span class="card-deco card-deco-emoji deco-${slot}">${v}</span>`;
+  return `<span class="card-deco card-deco-emoji deco-${slot}${free}"
+    style="${posStyle}">${v}</span>`;
 }
 window.DECO_WORDS = DECO_WORDS;
 window.DECO_EMOJIS = DECO_EMOJIS;
 window.sanitizeStickers = sanitizeStickers;
 window.sanitizeStickerColors = sanitizeStickerColors;
 window.sanitizeStickerShape = sanitizeStickerShape;
+window.sanitizeStickerPos = sanitizeStickerPos;
 window.decoStickerHtml = decoStickerHtml;
 
 /* 채팅 말풍선 위에 뜨는 닉네임 색.
@@ -860,7 +887,12 @@ function renderProfilePanel() {
   const curInkGoal = sanitizeHexColor(p.cardGoalColor) || _legacyInk;
   const curInkWh   = sanitizeHexColor(p.cardWhColor)   || _legacyInk;
 
+  /* [2026-08-14] 두 칸 배치 — 탭이 세로로 너무 길었습니다. 왼쪽은 색·배경,
+     오른쪽은 스티커(고르기 → 배치가 세로로 이어지는 동선). 좁은 화면에서는
+     CSS 가 한 칸으로 되돌립니다. */
   host.innerHTML = `
+    <div class="prof-cols">
+    <div class="prof-col">
     <div class="set-block">
       <div class="set-title">프사 사진</div>
       <div class="profile-emoji-row">
@@ -880,19 +912,6 @@ function renderProfilePanel() {
         </div>
       </div>
       <input type="file" id="prof-photo-input" accept="image/*" class="sr-only">
-    </div>
-
-    <div class="set-block">
-      <div class="set-title">채팅 닉네임 색</div>
-      <div class="color-row">
-        <input type="color" id="prof-nickcolor" class="color-well"
-               value="${curNickColor}" aria-label="닉네임 색 고르기">
-        <input type="text" id="prof-nickcolor-hex" class="color-hex"
-               value="${curNickColor}" maxlength="7" spellcheck="false" aria-label="닉네임 색 코드">
-        <button type="button" class="ghost-btn compact" id="prof-nickcolor-reset">기본값</button>
-      </div>
-      <div class="nick-preview" id="prof-nick-preview">${escapeHtml(myNick)}</div>
-      <p class="hint">채팅 말풍선 위에 뜨는 <b>내 이름 색</b>이에요. 다른 분들 화면에도 이 색으로 보입니다.</p>
     </div>
 
     <div class="set-block">
@@ -946,6 +965,21 @@ function renderProfilePanel() {
       </p>
     </div>
 
+    <div class="set-block">
+      <div class="set-title">채팅 닉네임 색</div>
+      <div class="color-row">
+        <input type="color" id="prof-nickcolor" class="color-well"
+               value="${curNickColor}" aria-label="닉네임 색 고르기">
+        <input type="text" id="prof-nickcolor-hex" class="color-hex"
+               value="${curNickColor}" maxlength="7" spellcheck="false" aria-label="닉네임 색 코드">
+        <button type="button" class="ghost-btn compact" id="prof-nickcolor-reset">기본값</button>
+      </div>
+      <div class="nick-preview" id="prof-nick-preview">${escapeHtml(myNick)}</div>
+      <p class="hint">채팅 말풍선 위에 뜨는 <b>내 이름 색</b>이에요. 다른 분들 화면에도 이 색으로 보입니다.</p>
+    </div>
+    </div><!-- /왼칸 -->
+
+    <div class="prof-col">
     <!-- 🧲 꾸미기 스티커 — 자리 다섯, 각자 낱말/표정/비움 -->
     <div class="set-block">
       <div class="set-title">꾸미기 스티커</div>
@@ -993,6 +1027,31 @@ function renderProfilePanel() {
       </p>
     </div>
 
+    <!-- 🧷 스티커 배치 (2026-08-14) — 끌어서 자리, 슬라이더로 기울기 -->
+    <div class="set-block" id="prof-stk-place-block">
+      <div class="set-title">스티커 배치</div>
+      <p class="hint" style="margin-top:0">
+        미니 카드의 스티커를 <b>끌어서</b> 자리를 옮기고, 아래 슬라이더로
+        <b>기울기</b>를 돌려요. 좌우로 살짝 삐져나가게 둘 수도 있고,
+        <b>오른쪽 벽에 바짝 붙이면 글자가 세로로 서요.</b>
+      </p>
+      <div class="stk-card" id="prof-stk-card" aria-label="스티커 배치 미니 카드">
+        <div class="stk-avatar"></div>
+        <div class="stk-mockstate">🔥WRITE🔥</div>
+        <div class="stk-mockname">${escapeHtml(myNick)}</div>
+        <div class="stk-mockgoal">🎯 오늘의 목표</div>
+      </div>
+      <div class="set-row" style="gap:8px; align-items:center; margin-top:9px;">
+        <span class="slot-name" style="flex:0 0 52px;">기울기</span>
+        <input type="range" id="prof-stk-rot" min="-20" max="20" step="1" value="0" disabled
+               aria-label="고른 스티커 기울기">
+        <span id="prof-stk-rotv" style="flex:0 0 34px; text-align:right; font-size:12px;">–</span>
+        <button type="button" class="ghost-btn compact" id="prof-stk-reset">제자리로</button>
+      </div>
+      <p class="hint">고른 스티커: <b id="prof-stk-sel">없음</b> —
+        스티커를 누르면 골라져요. 안 만진 스티커는 기본 자리 그대로입니다.</p>
+    </div>
+
     <!-- 눈사람 배경색 — 사진을 안 올린 사람만 의미가 있으므로 그때만 보입니다 -->
     <div class="set-block${photo ? " hidden" : ""}" id="prof-snowbg-block">
       <div class="set-title">눈사람 배경색</div>
@@ -1012,6 +1071,8 @@ function renderProfilePanel() {
       </div>
       <p class="hint">색 상자를 누르면 자세한 색상 선택 창이 열려요. 코드(#RRGGBB)를 직접 적어도 됩니다.</p>
     </div>
+    </div><!-- /오른칸 -->
+    </div><!-- /prof-cols -->
 
   `;
 
@@ -1139,6 +1200,7 @@ function bindProfilePanel() {
       document.getElementById("prof-deco-shape")?.value);
     saveMyProfile({ stickers, stickerColors, stickerShape });
     window.rerenderUserCards?.();
+    window._renderStkEditor?.();   // 배치 편집기의 미니 카드도 함께 갱신
   }
   document.querySelectorAll("[data-deco-slot]").forEach(sel => {
     sel.onchange = _saveDeco;
@@ -1160,6 +1222,151 @@ function bindProfilePanel() {
       _saveDeco();
     };
   });
+
+  /* ---- 🧷 스티커 배치 편집기 (2026-08-14) ----
+     미니 카드에서 끌어 자리를, 슬라이더로 기울기를 정합니다.
+     대숲 쪽지 끌기와 같은 문법 — % 좌표, 문턱 없이 바로 끌림(편집기니까).
+     저장은 stickerPos — 만진 자리만 적히고, 나머지는 기본 자리입니다. */
+  const _stkDefaults = {
+    a: { x: 64, y: -3, r: 6 },  b: { x: -8, y: 24, r: -8 },
+    e: { x: -12, y: 42, r: -4 }, c: { x: 58, y: 88, r: -5 },
+    d: { x: -5, y: 64, r: 7 }
+  };
+  let _stkSel = "";
+  const _stkCard = document.getElementById("prof-stk-card");
+
+  function _stkState() {
+    const p = window._myProfile || {};
+    return {
+      stickers: sanitizeStickers(p.stickers),
+      colors: sanitizeStickerColors(p.stickerColors),
+      shape: sanitizeStickerShape(p.stickerShape),
+      pos: sanitizeStickerPos(p.stickerPos)
+    };
+  }
+
+  function _stkSaveDebounced() {
+    clearTimeout(_stkSaveDebounced._t);
+    _stkSaveDebounced._t = setTimeout(() => {
+      const pos = {};
+      _stkCard?.querySelectorAll("[data-stk]").forEach(s => {
+        if (s.dataset.custom !== "1") return;
+        pos[s.dataset.stk] = {
+          x: Number(s.dataset.x), y: Number(s.dataset.y), r: Number(s.dataset.r)
+        };
+      });
+      saveMyProfile({ stickerPos: pos });
+      window.rerenderUserCards?.();
+    }, 250);
+  }
+
+  function _stkPaint(s) {
+    s.style.left = s.dataset.x + "%";
+    s.style.top = s.dataset.y + "%";
+    s.style.transform = `rotate(${s.dataset.r}deg)`;
+  }
+
+  function _stkSelect(slot) {
+    _stkSel = slot;
+    const rot = document.getElementById("prof-stk-rot");
+    const rotv = document.getElementById("prof-stk-rotv");
+    const sel = document.getElementById("prof-stk-sel");
+    _stkCard?.querySelectorAll("[data-stk]").forEach(x => {
+      x.classList.toggle("is-sel", x.dataset.stk === slot);
+    });
+    const s = _stkCard?.querySelector(`[data-stk="${slot}"]`);
+    if (sel) sel.textContent = s ? s.textContent : "없음";
+    if (rot) { rot.disabled = !s; rot.value = s ? s.dataset.r : 0; }
+    if (rotv) rotv.textContent = s ? `${s.dataset.r}°` : "–";
+  }
+
+  function renderStkEditor() {
+    if (!_stkCard) return;
+    _stkCard.querySelectorAll("[data-stk]").forEach(x => x.remove());
+    const st = _stkState();
+    ["a", "b", "e", "c", "d"].forEach(k => {
+      const v = st.stickers[k];
+      if (!v) return;
+      const p = st.pos[k] || _stkDefaults[k];
+      const w = DECO_WORDS.find(x => x.t === v);
+      const s = document.createElement("span");
+      s.dataset.stk = k;
+      s.dataset.custom = st.pos[k] ? "1" : "0";
+      s.dataset.x = p.x; s.dataset.y = p.y; s.dataset.r = p.r;
+      if (w) {
+        const bg = st.colors[k] || w.bg;
+        s.className = "stk-item stk-word" + (st.shape === "tape" ? " is-tape" : "");
+        s.style.background = bg;
+        s.style.color = st.colors[k] ? decoInkFor(bg) : w.fg;
+        s.textContent = w.t;
+      } else {
+        s.className = "stk-item stk-emoji";
+        s.textContent = v;
+      }
+      _stkPaint(s);
+      _stkCard.appendChild(s);
+    });
+    _stkSelect(_stkSel && _stkCard.querySelector(`[data-stk="${_stkSel}"]`) ? _stkSel : "");
+  }
+  window._renderStkEditor = renderStkEditor;   // 스티커 선택이 바뀌면 다시 그리게
+
+  if (_stkCard && !_stkCard.__bound) {
+    _stkCard.__bound = true;
+    let drag = null;
+
+    _stkCard.addEventListener("pointerdown", (e) => {
+      const s = e.target.closest("[data-stk]");
+      if (!s) return;
+      _stkSelect(s.dataset.stk);
+      const r = _stkCard.getBoundingClientRect();
+      const sr = s.getBoundingClientRect();
+      drag = { s, dx: e.clientX - sr.left, dy: e.clientY - sr.top, r };
+      s.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+    });
+    _stkCard.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const { s, r } = drag;
+      /* 좌우 -14% 까지 삐져나갈 수 있게 — 콩이 정한 허용치.
+         오른쪽 벽에 바짝 붙이면 글자가 세로로 서는 것도 여기서 나옵니다 */
+      let x = ((e.clientX - r.left - drag.dx) / r.width) * 100;
+      let y = ((e.clientY - r.top - drag.dy) / r.height) * 100;
+      x = Math.max(-14, Math.min(104 - 10, x));
+      y = Math.max(-10, Math.min(96, y));
+      s.dataset.x = Math.round(x * 10) / 10;
+      s.dataset.y = Math.round(y * 10) / 10;
+      s.dataset.custom = "1";
+      _stkPaint(s);
+    });
+    const drop = () => {
+      if (!drag) return;
+      drag = null;
+      _stkSaveDebounced();
+    };
+    _stkCard.addEventListener("pointerup", drop);
+    _stkCard.addEventListener("pointercancel", drop);
+
+    document.getElementById("prof-stk-rot")?.addEventListener("input", (e) => {
+      const s = _stkCard.querySelector(`[data-stk="${_stkSel}"]`);
+      if (!s) return;
+      s.dataset.r = e.target.value;
+      s.dataset.custom = "1";
+      document.getElementById("prof-stk-rotv").textContent = `${e.target.value}°`;
+      _stkPaint(s);
+      _stkSaveDebounced();
+    });
+    document.getElementById("prof-stk-reset")?.addEventListener("click", () => {
+      const s = _stkCard.querySelector(`[data-stk="${_stkSel}"]`);
+      if (!s) return;
+      const d = _stkDefaults[_stkSel];
+      s.dataset.x = d.x; s.dataset.y = d.y; s.dataset.r = d.r;
+      s.dataset.custom = "0";                 // 기본 자리로 — 저장에서 빠집니다
+      _stkPaint(s);
+      _stkSelect(_stkSel);
+      _stkSaveDebounced();
+    });
+  }
+  renderStkEditor();
 
   /* ---- 눈사람 배경색 ---- */
   const bgWell  = document.getElementById("prof-snowbg");
