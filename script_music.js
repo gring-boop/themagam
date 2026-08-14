@@ -267,19 +267,10 @@
   window.musicHasPlayer = musicHasPlayer;
   window.musicTogglePlay = musicTogglePlay;
 
-  /** 기본 키 — 판 꼭대기부터 **볼륨 줄 아랫변**까지 (script_dock.js 가 씁니다).
-      영상 + 볼륨만 보이는 높이로 열려서, 아래 리스트가 작업 중에 안 거슬려요.
-      [2026-08-13 밤] 영상 아랫변 → 볼륨까지로 늘림 (콩 요청 — 캡쳐처럼) */
-  function musicDefaultH() {
-    const p = document.getElementById("dock-panel-music");
-    const slot = document.querySelector("#dock-panel-music .music-vol-row")
-              || document.getElementById("music-player-slot");
-    if (!p || !slot) return 0;
-    const pr = p.getBoundingClientRect(), sr = slot.getBoundingClientRect();
-    if (!pr.height || !sr.height) return 0;
-    return Math.round(sr.bottom - pr.top);
-  }
-  window.musicDefaultH = musicDefaultH;
+  /* [철거 2026-08-14] musicDefaultH("영상까지만 열기")는 하루 만에 뺐습니다 —
+     처음 여는 사람이 까만 상자만 보고 뭘 눌러야 할지 몰랐어요(실제 제보).
+     이제 기본은 리스트·입력칸까지 다 보이고, 줄이는 건 각자 위 가장자리로
+     (150px 까지 — script_dock.js setH). 줄인 키는 기기에 남습니다. */
 
   /* ---------------------------------------------------------------
      알약 불 켜기 — 재생 중이면 [♪ BGM] 알약이 색을 입습니다

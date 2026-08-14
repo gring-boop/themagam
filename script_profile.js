@@ -500,11 +500,23 @@ const DECO_EMOJIS = ["😇","😭","🤩","🔥","😳","😍","😣","🤬","�
    프사 왼쪽에 위아래로 두 장을 겹쳐 붙일 수 있게 됐습니다 */
 const DECO_SLOTS = ["a", "b", "c", "d", "e"];
 
+/* 이모지로만 된 글인가 — 직접 쓴 값이 표정 스티커인지 낱말 스티커인지 가릅니다 */
+function isEmojiOnly(t) {
+  try {
+    return /^(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji_Modifier}|\p{Regional_Indicator}|️|‍)+$/u
+      .test(t);
+  } catch (e) { return false; }
+}
 function sanitizeDeco(v) {
-  const t = String(v || "");
+  const t = String(v || "").trim();
   if (!t) return "";
   if (DECO_WORDS.some(w => w.t === t)) return t;
   if (DECO_EMOJIS.includes(t)) return t;
+  /* [2026-08-14] 직접 쓰기 — 8자까지 (콩이 정함). 목록이 아니어도
+     짧으면 통과합니다. 그리는 쪽이 이스케이프하니 안전해요.
+     이모지는 한 글자가 코드 여러 개라 이모지-전용이면 길이를 후하게. */
+  if (isEmojiOnly(t) && t.length <= 16) return t;
+  if (Array.from(t).length <= 8 && !t.includes("<") && !t.includes(">")) return t;
   return "";
 }
 function sanitizeStickers(obj) {
@@ -543,6 +555,9 @@ function sanitizeStickerPos(obj) {
       y: Math.max(-10, Math.min(104, Math.round(y * 10) / 10)),
       r: Math.max(-20, Math.min(20, Math.round(Number(p.r) || 0)))
     };
+    /* 길이(선택) — 일부러 늘인 폭. 24px 아래는 무의미, 230px 위는 카드 밖 */
+    const w = Math.round(Number(p.w) || 0);
+    if (w >= 24) out[k].w = Math.min(230, w);
   });
   return out;
 }
@@ -583,17 +598,24 @@ function decoStickerHtml(slot, val, color, shape, pos) {
   if (!v) return "";
   /* 자유 배치 — 좌표가 있으면 그 자리에, 없으면 기본 자리(CSS 클래스).
      deco-free 가 기본 자리의 right/bottom 닻을 풀고, 오른쪽 벽에 밀리면
-     글자가 세로로 서는 것도 이 클래스가 허용합니다(white-space). */
+     글자가 세로로 서는 것도 이 클래스가 허용합니다(white-space).
+     pos.w — 일부러 길게 늘인 폭. 테이프를 길게 찢어 붙이는 그 맛
+     (원래 버그였는데 콩이 마음에 들어 해서 기능이 됨 ㅋㅋ) */
   const free = pos ? " deco-free" : "";
   const posStyle = pos
-    ? `left:${pos.x}%;top:${pos.y}%;transform:rotate(${pos.r}deg);` : "";
+    ? `left:${pos.x}%;top:${pos.y}%;transform:rotate(${pos.r}deg);`
+      + (pos.w ? `width:${pos.w}px;` : "")
+    : "";
   const w = DECO_WORDS.find(x => x.t === v);
-  if (w) {
-    const bg = sanitizeHexColor(color) || w.bg;
-    const fg = sanitizeHexColor(color) ? decoInkFor(bg) : w.fg;
+  const isEmo = !w && (DECO_EMOJIS.includes(v) || isEmojiOnly(v));
+  if (!isEmo) {
+    /* 목록 낱말이거나 직접 쓴 문구 — 직접 쓴 것은 잿빛 모래가 기본색 */
+    const base = w || { bg: "#E5E0DA", fg: "#55504A" };
+    const bg = sanitizeHexColor(color) || base.bg;
+    const fg = sanitizeHexColor(color) ? decoInkFor(bg) : base.fg;
     const tape = sanitizeStickerShape(shape) === "tape" ? " is-tape" : "";
     return `<span class="card-deco card-deco-word deco-${slot}${tape}${free}"
-      style="background:${bg};color:${fg};${posStyle}">${escapeHtml(w.t)}</span>`;
+      style="background:${bg};color:${fg};${posStyle}">${escapeHtml(v)}</span>`;
   }
   return `<span class="card-deco card-deco-emoji deco-${slot}${free}"
     style="${posStyle}">${v}</span>`;
@@ -1004,6 +1026,9 @@ function renderProfilePanel() {
         <span class="slot-name" style="flex:0 0 84px;">${label}</span>
         <select id="prof-deco-${k}" class="slot-sel" data-deco-slot="${k}">
           <option value="">(비움)</option>
+          <option value="__custom">✏️ 직접 쓰기…</option>
+          ${cur && !DECO_WORDS.some(w => w.t === cur) && !DECO_EMOJIS.includes(cur)
+            ? `<option value="${escapeHtml(cur)}" selected>✏️ ${escapeHtml(cur)}</option>` : ""}
           <optgroup label="낱말">
             ${DECO_WORDS.map(w => `
               <option value="${w.t}"${w.t === cur ? " selected" : ""}>${w.t}</option>`).join("")}
@@ -1021,6 +1046,7 @@ function renderProfilePanel() {
       }).join("")}
       <p class="hint">
         캐리어에 스티커 붙이듯 카드의 <b>정해진 자리 다섯</b>에 골라 붙여요.
+        <b>✏️ 직접 쓰기</b>로 나만의 문구(8자까지)나 아무 이모지나 넣을 수 있어요.
         비워도 되고 다 붙여도 됩니다. 다른 분들 화면에도 보여요.<br>
         색은 <b>낱말 스티커에만</b> 먹어요 — 글자색은 고른 색에서 읽히게
         저절로 맞춰집니다. [기본]을 누르면 낱말의 원래 색으로 돌아가요.
@@ -1067,6 +1093,14 @@ function renderProfilePanel() {
                aria-label="고른 스티커 기울기">
         <span id="prof-stk-rotv" style="flex:0 0 34px; text-align:right; font-size:12px;">–</span>
         <button type="button" class="ghost-btn compact" id="prof-stk-reset">제자리로</button>
+      </div>
+      <!-- 길이 — 낱말 스티커를 마스킹테이프처럼 길게 찢어 붙이기.
+           맨 왼쪽은 "자동"(글자만큼). 이모지에는 안 먹습니다 -->
+      <div class="set-row" style="gap:8px; align-items:center; margin-top:5px;">
+        <span class="slot-name" style="flex:0 0 44px;">길이</span>
+        <input type="range" id="prof-stk-len" min="0" max="230" step="2" value="0" disabled
+               aria-label="고른 스티커 길이 (맨 왼쪽은 자동)">
+        <span id="prof-stk-lenv" style="flex:0 0 34px; text-align:right; font-size:12px;">–</span>
       </div>
       <p class="hint">고른 스티커: <b id="prof-stk-sel">없음</b> —
         스티커를 누르면 골라져요. 안 만진 스티커는 기본 자리 그대로입니다.</p>
@@ -1203,7 +1237,22 @@ function bindProfilePanel() {
     window._renderStkEditor?.();   // 배치 편집기의 미니 카드도 함께 갱신
   }
   document.querySelectorAll("[data-deco-slot]").forEach(sel => {
-    sel.onchange = _saveDeco;
+    sel.onchange = () => {
+      /* ✏️ 직접 쓰기 — 문구(8자)든 이모지든 하나로 받습니다 */
+      if (sel.value === "__custom") {
+        const t = String(prompt("스티커에 쓸 말 (8자까지 · 이모지도 돼요)") || "").trim();
+        const okv = sanitizeDeco(t);
+        if (!okv || okv === "__custom") { sel.value = ""; _saveDeco(); return; }
+        let opt = Array.from(sel.options).find(o => o.value === okv);
+        if (!opt) {
+          opt = document.createElement("option");
+          opt.value = okv; opt.textContent = "✏️ " + okv;
+          sel.insertBefore(opt, sel.options[2] || null);
+        }
+        sel.value = okv;
+      }
+      _saveDeco();
+    };
   });
   const shapeSel = document.getElementById("prof-deco-shape");
   if (shapeSel) shapeSel.onchange = _saveDeco;
@@ -1251,6 +1300,7 @@ function bindProfilePanel() {
         pos[s.dataset.stk] = {
           x: Number(s.dataset.x), y: Number(s.dataset.y), r: Number(s.dataset.r)
         };
+        if (Number(s.dataset.w) >= 24) pos[s.dataset.stk].w = Number(s.dataset.w);
       });
       saveMyProfile({ stickerPos: pos });
       window.rerenderUserCards?.();
@@ -1261,6 +1311,8 @@ function bindProfilePanel() {
     s.style.left = s.dataset.x + "%";
     s.style.top = s.dataset.y + "%";
     s.style.transform = `rotate(${s.dataset.r}deg)`;
+    const w = Number(s.dataset.w) || 0;
+    s.style.width = w >= 24 ? w + "px" : "";
   }
 
   /* 기본 자리(CSS 닻) 스티커를 좌표(deco-free)로 갈아태웁니다 —
@@ -1281,6 +1333,8 @@ function bindProfilePanel() {
     _stkSel = slot;
     const rot = document.getElementById("prof-stk-rot");
     const rotv = document.getElementById("prof-stk-rotv");
+    const len = document.getElementById("prof-stk-len");
+    const lenv = document.getElementById("prof-stk-lenv");
     const sel = document.getElementById("prof-stk-sel");
     _stkCard?.querySelectorAll("[data-stk]").forEach(x => {
       x.classList.toggle("is-sel", x.dataset.stk === slot);
@@ -1289,6 +1343,11 @@ function bindProfilePanel() {
     if (sel) sel.textContent = s ? s.textContent : "없음";
     if (rot) { rot.disabled = !s; rot.value = s ? s.dataset.r : 0; }
     if (rotv) rotv.textContent = s ? `${s.dataset.r}°` : "–";
+    /* 길이 — 낱말 스티커에만. 이모지는 잠급니다 */
+    const isWord = !!(s && s.classList.contains("card-deco-word"));
+    if (len) { len.disabled = !isWord; len.value = isWord ? (Number(s.dataset.w) || 0) : 0; }
+    if (lenv) lenv.textContent = !isWord ? "–"
+      : (Number(s.dataset.w) >= 24 ? `${s.dataset.w}px` : "자동");
   }
 
   /* [재수술 2026-08-14 2차 — 콩 제안: "아예 찐을 보여주자"]
@@ -1325,7 +1384,7 @@ function bindProfilePanel() {
       const p = st.pos[k];
       el.dataset.custom = p ? "1" : "0";
       el.dataset.r = p ? p.r : 0;
-      if (p) { el.dataset.x = p.x; el.dataset.y = p.y; }
+      if (p) { el.dataset.x = p.x; el.dataset.y = p.y; if (p.w) el.dataset.w = p.w; }
     });
     _stkSelect(_stkSel && _stkCard.querySelector(`[data-stk="${_stkSel}"]`) ? _stkSel : "");
   }
@@ -1378,6 +1437,17 @@ function bindProfilePanel() {
       _stkToFree(s);                      // 기본 자리였으면 그 자리 그대로 좌표화
       s.dataset.r = e.target.value;
       document.getElementById("prof-stk-rotv").textContent = `${e.target.value}°`;
+      _stkPaint(s);
+      _stkSaveDebounced();
+    });
+    /* 길이 — 마스킹테이프처럼 길게. 24px 아래로 내리면 "자동"으로 */
+    document.getElementById("prof-stk-len")?.addEventListener("input", (e) => {
+      const s = _stkCard.querySelector(`[data-stk="${_stkSel}"]`);
+      if (!s || !s.classList.contains("card-deco-word")) return;
+      _stkToFree(s);
+      const v = Number(e.target.value);
+      s.dataset.w = v >= 24 ? v : 0;
+      document.getElementById("prof-stk-lenv").textContent = v >= 24 ? `${v}px` : "자동";
       _stkPaint(s);
       _stkSaveDebounced();
     });

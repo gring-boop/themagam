@@ -6987,6 +6987,10 @@ body.split-dragging #chat-box3{ user-select: none; }
   white-space: normal;
   word-break: keep-all;
   max-width: 114%;
+  /* 길게 늘인 테이프에서 글자는 한가운데 — 긴 띠의 왼쪽 끝에 몰려 있으면
+     찢어 붙인 게 아니라 붙이다 만 것처럼 보여요 */
+  justify-content: center;
+  text-align: center;
 }
 
 .card-admin-stamp{
