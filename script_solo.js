@@ -322,12 +322,83 @@
     return (n >= 1 && n <= 20) ? n : 9;
   }
   function 카드수정(n) {
-    _store()?.setItem(N_KEY, String(Math.max(1, Math.min(20, n | 0))));
+    const v = Math.max(1, Math.min(20, n | 0));
+    /* ★ 값이 그대로면 다시 뽑지 않습니다 — 설정을 열었다 닫기만 해도
+         얼굴이 바뀌면 "왜 자꾸 달라지지" 싶어요 */
+    const 바뀜 = v !== 카드수();
+    _store()?.setItem(N_KEY, String(v));
+    if (바뀜) 뽑기지우기();
     만들기();
     window.renderUserCards?.(window._statusCache);
   }
   window.soloSetCount = 카드수정;
   window.soloGetCount = 카드수;
+
+  /* =====================================================================
+     🎲 오늘 나올 사람 뽑기 (2026-08-15, 지인 요청)
+     ---------------------------------------------------------------------
+     [무엇이 아쉬웠나] 자리를 20개 꾸며 놔도 9장만 켜면 **늘 앞의 9명**만
+     나왔습니다. 자리 번호대로 세웠으니까요. 스무 명을 정성껏 꾸며도
+     뒤쪽 열한 명은 영영 못 보는 셈이었어요.
+
+     [어떻게] 자리(꾸미는 곳)와 오늘 나올 수를 갈랐습니다.
+       만들어 둘 자리 — 1~20, 꾸밈이 사는 곳
+       한 번에 보일 수 — 그중 몇 명이 오늘 나올지
+     내 카드는 늘 나오고, 나머지는 그때그때 뽑습니다.
+
+     [왜 한 번 뽑으면 그대로인가] 카드 하나 고칠 때마다 얼굴이 바뀌면
+     정신이 없습니다. **방을 열 때 한 번** 뽑고, 그 자리(탭)를 닫을
+     때까지 그대로예요. 바로 바꾸고 싶으면 [🎲 다시 섞기].
+     ===================================================================== */
+  const SHOW_KEY = "soloShow";      // 한 번에 보일 수 (기기에 기억)
+  const PICK_KEY = "soloPick";      // 이번에 뽑힌 자리들 (그 탭에서만)
+  const _sess = () => window.AppSession;
+
+  function 보일수() {
+    const n = 카드수();
+    const v = Number(_store()?.getItem(SHOW_KEY));
+    return (v >= 1 && v < n) ? v : n;     // 안 정했거나 전부면 n
+  }
+  function 보일수정(v) {
+    const w = Math.max(1, Math.min(20, v | 0));
+    const 바뀜 = w !== 보일수();
+    _store()?.setItem(SHOW_KEY, String(w));
+    if (바뀜) 뽑기지우기();
+    만들기();
+    window.renderUserCards?.(window._statusCache);
+  }
+  window.soloSetShow = 보일수정;
+  window.soloGetShow = 보일수;
+
+  function 뽑기지우기() { try { _sess()?.removeItem(PICK_KEY); } catch (e) {} }
+  window.soloReshuffle = function () {
+    뽑기지우기();
+    만들기();
+    window.renderUserCards?.(window._statusCache);
+  };
+
+  /** 오늘 나올 자리 번호들 — 0번(내 카드)은 늘 맨 앞 */
+  function 뽑힌자리() {
+    const n = 카드수(), m = 보일수();
+    /* 이미 뽑아 뒀으면 그대로 (지금 수와 맞을 때만) */
+    try {
+      const 옛 = JSON.parse(_sess()?.getItem(PICK_KEY) || "null");
+      if (Array.isArray(옛) && 옛.length === m && 옛.every(i => i >= 0 && i < n)) return 옛;
+    } catch (e) {}
+
+    const 나머지 = [];
+    for (let i = 1; i < n; i++) 나머지.push(i);
+    /* 피셔–예이츠 — 앞에서부터 자르기만 하면 되도록 통째로 섞습니다 */
+    for (let i = 나머지.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [나머지[i], 나머지[j]] = [나머지[j], 나머지[i]];
+    }
+    /* 뽑은 뒤 자리 번호대로 다시 세웁니다 — 순서까지 뒤죽박죽이면
+       "누가 빠졌나" 를 눈으로 못 따라가요. 정렬은 카드 정렬 설정 몫입니다. */
+    const 뽑음 = [0, ...나머지.slice(0, Math.max(0, m - 1))].sort((a, b) => a - b);
+    try { _sess()?.setItem(PICK_KEY, JSON.stringify(뽑음)); } catch (e) {}
+    return 뽑음;
+  }
 
   const 상태들 = ["writing", "writing", "focus", "rest"];
   let _친구 = [];
@@ -350,11 +421,13 @@
   window.soloCardConf = 카드설정;
 
   function 만들기() {
-    const n = 카드수();
     const conf = 카드설정();
     const now = Date.now();
     _친구 = [];
-    for (let i = 0; i < n; i++) {
+    /* ★ 자리 번호(i)는 꾸밈이 사는 곳, 뽑힌자리()는 오늘 나올 사람.
+         꾸밈·이름·목표는 늘 자리 번호를 따라가므로, 오늘 안 나온
+         자리도 아무것도 잃지 않습니다. */
+    뽑힌자리().forEach((i) => {
       const c = conf[String(i)] || {};
       const nick = i === 0 ? 내닉()
                  : (c.nick || (기본이름[i % 기본이름.length] + (i > 16 ? i : "")));
@@ -368,7 +441,8 @@
         tag: i === 0 ? "" : (c.tag !== undefined ? c.tag : 태그들[i % 태그들.length]),
         idx: i
       });
-    }
+    });
+    const n = _친구.length;
     const out = {};
     _친구.forEach((f, i) => {
       out[f.nick] = {
@@ -575,9 +649,11 @@
     const cache = _get("status") || {};
     const names = Object.keys(cache);
     const me = 내닉();
-    /* 자리 번호 — _친구 가 지금 순서를 알고 있습니다 */
-    const found = _친구.findIndex(f => f.nick === nick);
-    if (found < 0) return false;
+    /* ★ 자리 번호는 **화면에 선 순서가 아닙니다.** 오늘 나올 사람을
+         뽑으면서 3번째 카드가 자리 7번일 수 있어요. f.idx 를 봅니다. */
+    const f = _친구.find(f => f.nick === nick);
+    if (!f) return false;
+    const found = f.idx;
     if (found === 0) return false;          // 내 카드는 여기서 못 바꿉니다
 
     const conf = 카드설정();
@@ -600,7 +676,7 @@
     return newNick;
   };
   window.soloCardIndex = function (nick) {
-    return _친구.findIndex(f => f.nick === nick);
+    return _친구.find(f => f.nick === nick)?.idx ?? -1;
   };
 
   window.soloTrimChat = function () {

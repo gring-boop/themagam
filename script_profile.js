@@ -920,13 +920,25 @@ function soloProfileBlockHtml(tgt) {
   const row = (window._statusCache || {})[tgt] || {};
   const tags = window.WORKTAGS || [];
   const n = Number(window.soloGetCount?.() || 9);
+  const m = Number(window.soloGetShow?.() || n);
   return `
     <div class="set-block solo-block">
       <div class="set-title">🧘 혼자 방</div>
       <div class="set-row">
-        <label for="solo-count">카드 수</label>
+        <label for="solo-count">만들어 둘 자리</label>
         <input type="range" id="solo-count" min="1" max="20" step="1" value="${n}">
         <span id="solo-count-val" class="solo-count-val">${n}</span>
+      </div>
+      <div class="set-row">
+        <label for="solo-show">오늘 나올 수</label>
+        <input type="range" id="solo-show" min="1" max="${n}" step="1" value="${m}">
+        <span id="solo-show-val" class="solo-count-val">${m}</span>
+      </div>
+      <div class="set-row">
+        <button type="button" class="ghost-btn compact" id="solo-reshuffle">🎲 다시 섞기</button>
+        <span class="hint" style="margin:0;">
+          ${m >= n ? "만들어 둔 자리가 전부 나옵니다." : `${n}자리 중 ${m}명이 그때그때 뽑혀요.`}
+        </span>
       </div>
       <div class="set-row">
         <label for="solo-card-nick">${isGhost ? "이 카드 이름" : "내 이름"}</label>
@@ -1185,20 +1197,31 @@ function renderProfilePanel() {
 }
 
 function bindSoloProfileBlock() {
+  /* 카드가 줄거나 다시 뽑혀서 지금 고른 카드가 사라졌으면 내 카드로 */
+  const 되돌리기 = () => {
+    if (!(window._statusCache || {})[profileTargetNick()]) {
+      window._profTargetNick = myNick;
+    }
+    renderProfilePanel();
+  };
+
   const cnt = document.getElementById("solo-count");
   const cntVal = document.getElementById("solo-count-val");
   if (cnt) {
     cnt.oninput = () => { if (cntVal) cntVal.textContent = cnt.value; };
     /* 놓았을 때만 다시 짓습니다 — 끄는 동안 매번 지으면 눈이 어지러워요 */
-    cnt.onchange = () => {
-      window.soloSetCount?.(Number(cnt.value));
-      /* 카드가 줄어 지금 고른 카드가 사라졌을 수 있으니 내 카드로 */
-      if (!(window._statusCache || {})[profileTargetNick()]) {
-        window._profTargetNick = myNick;
-      }
-      renderProfilePanel();
-    };
+    cnt.onchange = () => { window.soloSetCount?.(Number(cnt.value)); 되돌리기(); };
   }
+
+  const shw = document.getElementById("solo-show");
+  const shwVal = document.getElementById("solo-show-val");
+  if (shw) {
+    shw.oninput = () => { if (shwVal) shwVal.textContent = shw.value; };
+    shw.onchange = () => { window.soloSetShow?.(Number(shw.value)); 되돌리기(); };
+  }
+
+  const shuf = document.getElementById("solo-reshuffle");
+  if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
 
   const tgt = profileTargetNick();
   const nickIn = document.getElementById("solo-card-nick");
