@@ -476,6 +476,7 @@ window.AppSession = AppSession;
       window.addEventListener("pagehide", _handlePageHide);
       await _writeJoinSystemMessageOnce();
 
+      startIdTokenKeeper();          // 🔑 마지막 인사에 실을 열쇠를 미리 받아 둡니다
       callIfFn("recordAttendance");
       callIfFn("loadPersonalData");
       callIfFn("updateStatus", true);
@@ -614,6 +615,53 @@ window.AppSession = AppSession;
 
   let _leaveBeaconSent = false;
 
+  /* =====================================================================
+     🔑 마지막 인사에 실어 보낼 열쇠 (2026-08-15)
+     ---------------------------------------------------------------------
+     [무엇이 잘못됐었나]
+     창을 닫을 때 sendBeacon 으로 "나갔어요" 와 "내 접속 표시 지우기" 를
+     보냅니다. 그런데 그 요청에 **인증 토큰이 없었습니다.** 보안규칙은
+       "status": { "$nick": { ".write": "auth != null && …" } }
+     라서 서버가 **전부 거부**했어요. 그래서 창을 닫아도 즉시 사라지지
+     않고, 연결이 끊긴 걸 서버가 알아챈 뒤 유예 시간을 다 채웠습니다.
+     (파이어베이스 사용량의 "규칙 거부" 숫자에도 그만큼 쌓였을 거예요)
+
+     [왜 미리 받아 두는가]
+     토큰 받기(getIdToken)는 **약속(Promise)** 입니다. 창이 닫히는
+     순간에는 기다려 줄 시간이 없어요 — 그 자리에서 받으려 하면 요청을
+     쏘기도 전에 페이지가 사라집니다. 그래서 평소에 받아 두었다가
+     그때는 **꺼내 쓰기만** 합니다.
+
+     토큰은 한 시간이면 만료되므로 30분마다, 그리고 탭으로 돌아올 때마다
+     새로 받아 둡니다.
+     ===================================================================== */
+  let _idToken = "";
+  let _idTokenTimer = null;
+
+  async function refreshIdToken() {
+    try {
+      const u = firebase.auth().currentUser;
+      if (!u) return;
+      _idToken = await u.getIdToken();
+    } catch (e) { /* 실패해도 조용히 — 다음 차례에 다시 받습니다 */ }
+  }
+  window.refreshIdToken = refreshIdToken;
+
+  function startIdTokenKeeper() {
+    if (_idTokenTimer) return;
+    refreshIdToken();
+    _idTokenTimer = setInterval(refreshIdToken, 30 * 60 * 1000);
+    /* 탭을 오래 접어 두면 위 타이머가 늦춰집니다 — 돌아올 때 한 번 더 */
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refreshIdToken();
+    });
+  }
+
+  /** REST 주소에 열쇠를 붙입니다 (없으면 그냥 둡니다 — 붙일 게 없을 뿐) */
+  function withAuth(url) {
+    return _idToken ? `${url}&auth=${encodeURIComponent(_idToken)}` : url;
+  }
+
   function _handleBeforeUnload() {
     if (!myNick || _leaveBeaconSent) return;
     _leaveBeaconSent = true;
@@ -634,19 +682,19 @@ window.AppSession = AppSession;
     // 허용되는 text/plain으로 전송 (Firebase REST는 형식 무관하게 본문을 해석함)
     let ok = false;
     try {
-      ok = navigator.sendBeacon(url, new Blob([payload], { type: "text/plain" }));
+      ok = navigator.sendBeacon(withAuth(url), new Blob([payload], { type: "text/plain" }));
     } catch(e) {}
     if (!ok) {
       // 예비 수단: keepalive fetch (언로드 후에도 요청 유지)
-      try { fetch(url, { method: "POST", body: payload, keepalive: true }); } catch(e) {}
+      try { fetch(withAuth(url), { method: "POST", body: payload, keepalive: true }); } catch(e) {}
     }
 
     // status 즉시 제거도 시도 (best-effort)
     try {
       const stUrl = `${firebaseConfig.databaseURL}/status/${encodeURIComponent(myNick)}.json?x-http-method-override=DELETE`;
       let ok2 = false;
-      try { ok2 = navigator.sendBeacon(stUrl, new Blob(["null"], { type: "text/plain" })); } catch(e) {}
-      if (!ok2) fetch(stUrl, { method: "POST", body: "null", keepalive: true });
+      try { ok2 = navigator.sendBeacon(withAuth(stUrl), new Blob(["null"], { type: "text/plain" })); } catch(e) {}
+      if (!ok2) fetch(withAuth(stUrl), { method: "POST", body: "null", keepalive: true });
     } catch(e) {}
   }
 
