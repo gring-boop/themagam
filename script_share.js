@@ -672,6 +672,18 @@
   function syncShareHeights() {
     const list = document.getElementById("user-cards");
     if (!list) return;
+
+    /* ★★ [2026-08-15] 🧘 혼자 방은 키를 맞추지 않습니다.
+       진짜 방의 공유 그림은 **화면을 계속 찍어 보내는 것**이라 비율이
+       제각각이고 언제 바뀔지 몰라서, 액자를 프로필 카드 키에 맞춰 두고
+       그 안에서 잘라 보는 게 맞습니다.
+       혼자 방의 가짜 화면은 **내가 골라 놓아둔 사진 한 장**이에요.
+       비율을 이미 아는데 액자를 남의 키에 맞추면, 사진은 그대로인데
+       위아래에 회색 띠만 생깁니다 (아래쪽 띠는 이름 줄에 가려서
+       "위만 회색으로 잘렸다" 로 보였어요 — 실제 제보).
+       사진 비율대로 액자가 자라게 두는 편이 낫습니다. */
+    if (window.SOLO) return;
+
     const shares = list.querySelectorAll(".share-card");
     if (!shares.length) return;
 

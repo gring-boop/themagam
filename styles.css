@@ -4468,6 +4468,23 @@ body.solo-mode #music-add-btn{ display: none !important; }
 /* 유령 카드도 눌러서 꾸밀 수 있다는 표시 */
 body.solo-mode .card-avatar-wrap{ cursor: pointer; }
 
+/* 🧘 혼자 방의 가짜 화면 — 액자가 **사진 비율대로** 자랍니다 (2026-08-15)
+   진짜 방은 화면을 계속 찍어 보내니 비율이 제각각이라 액자를 카드 키에
+   맞춰 두고 잘라 봅니다. 여기는 내가 골라 둔 사진 한 장이라 비율을 이미
+   알아요. 남의 키에 맞추면 위아래 회색 띠만 생깁니다. */
+body.solo-mode .share-card{ height: auto !important; }
+body.solo-mode .share-shot{
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;          /* 120px 바닥값도 풉니다 — 납작한 사진이 눌립니다 */
+}
+body.solo-mode .share-img{
+  /* 폭에 맞추고 키는 사진이 정합니다. object-fit 은 **적지 않습니다** —
+     이미 제 비율이라 할 일이 없고, 적어 두면 "채우기/전체 보기" 선택과
+     싸우게 돼요 (진짜 방 규칙과 같은 이유). */
+  height: auto;
+}
+
 /* 🧘 혼자 방 — 지금 꾸미는 카드가 내 것이 아닐 때 위에 알려줍니다 */
 .prof-target-bar{
   display:flex; align-items:center; gap:10px;
