@@ -330,7 +330,12 @@
       const todayD = new Date().getDate();
       const isThisMonth = (monthOffset === 0);
 
-      let cntRow = `<tr><th class="rule-h cnt-h"></th><th class="name-h cnt-h">인원</th><th class="sum-h cnt-h"></th><th class="sum-h cnt-h"></th>`;
+      /* [2026-08-15] 인원 칸에 **총원**을 함께 적습니다.
+         아래로 스무 명이 넘어가면 몇 명인지 세느라 눈이 아팠어요.
+         날짜별 인원(오른쪽 숫자들)과 헷갈리지 않게 "총 n명" 으로 씁니다. */
+      let cntRow = `<tr><th class="rule-h cnt-h"></th>` +
+                   `<th class="name-h cnt-h" title="이 달 출석부에 오른 사람 수">인원 <b class="cnt-total">총 ${nicks.length}명</b></th>` +
+                   `<th class="sum-h cnt-h"></th><th class="sum-h cnt-h"></th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
         const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
@@ -350,7 +355,7 @@
       }
       head += "</tr>";
 
-      const rows = nicks.map(n => {
+      const rows = nicks.map((n, 순번) => {
         const vacs = vacByNick[n] || {};
         const mins = minsByNick[n] || {};
 
@@ -419,7 +424,13 @@
           `${표[r.state]} ${attDays}/${r.need}</td>`;
 
         /* 이름 옆 [✕] — 탈퇴 인원 삭제. 늘 있지만 아주 옅게, 마우스를 올리면 진해집니다. */
-        return `<tr>${ruleCell}<td class="name-c"><span class="nmw">` +
+        /* [2026-08-15] 이름 칸을 **열 명씩 묶어** 바탕색을 번갈아 줍니다.
+           표가 가로로 길어서, 오른쪽 끝 날짜를 보다가 왼쪽 이름으로
+           눈을 되돌리면 한 줄씩 밀려 읽기 쉬웠어요. 열 줄짜리 띠가
+           있으면 "위에서 몇 번째 띠" 로 자리를 잡을 수 있습니다. */
+        const 띠 = (Math.floor(순번 / 10) % 2) ? " band-b" : " band-a";
+
+        return `<tr>${ruleCell}<td class="name-c${띠}"><span class="nmw">` +
                  `<span class="nm">${escapeHtml(n)}</span>` +
                  `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>` +
                `</span></td>` +
@@ -538,6 +549,12 @@
     try {
       const v = (await db.ref("config/allow").once("value")).val() || {};
       const nicks = Object.keys(v).filter(n => v[n] === true).sort();
+
+      /* [2026-08-15] 단추 오른쪽에 승인된 사람 수.
+         명단이 길어지면 스크롤 안에 갇혀서 몇 명인지 알 수가 없었어요. */
+      const 수 = el("adm-allow-count");
+      if (수) 수.textContent = nicks.length ? `총 ${nicks.length}명` : "";
+
       box.innerHTML = nicks.length
         ? nicks.map(n => `
             <div class="adm-row">
