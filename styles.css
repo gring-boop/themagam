@@ -6419,6 +6419,62 @@ body.split-dragging #chat-box3{ user-select: none; }
   cursor: default;
   transition: box-shadow var(--anim-fast), transform var(--anim-fast);
 }
+/* =====================================================================
+   ⌨️ 키보드 자랑 (2026-08-15)
+   ---------------------------------------------------------------------
+   쪽지 모양은 그대로 두고, 글 위에 3:1 사진 한 장을 얹습니다.
+   ★ 쪽지 폭(150px)은 안 건드립니다 — 폭이 달라지면 좌표가 %라서
+     예전에 붙여 둔 쪽지들이 전부 조금씩 밀려 보여요.
+   ===================================================================== */
+.fr-shot{
+  aspect-ratio: 3 / 1;
+  margin: -2px 0 7px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(70,55,35,.10);
+  /* 사진이 아직 안 왔을 때 자리만 잡아 둡니다 — 나중에 끼워 넣으면서
+     쪽지 키가 갑자기 자라면 판 전체가 출렁여요 */
+}
+.fr-shot img{
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.fr-model{
+  margin: 0 0 5px;
+  font-size: 10.5px; font-weight: 800; line-height: 1.35;
+  color: var(--fr-fg, #4A4034);
+  word-break: break-all;
+}
+
+/* 쓸 때 — 사진 고르기 칸 */
+.fr-shot-pick{ margin: 6px 0 4px; }
+.fr-shot-pick.has-shot{ position: relative; aspect-ratio: 3 / 1; border-radius: 2px; overflow: hidden; }
+.fr-shot-pick.has-shot img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+.fr-shot-add{
+  width: 100%; padding: 6px 4px;
+  border: 1px dashed rgba(70,55,35,.35); border-radius: 3px;
+  background: rgba(255,255,255,.35);
+  color: var(--fr-sub, #7A6B55);
+  font-size: 10.5px; font-weight: 700; cursor: pointer;
+}
+.fr-shot-add:hover{ background: rgba(255,255,255,.65); }
+.fr-shot-add:disabled{ opacity: .6; cursor: default; }
+.fr-shot-x{
+  position: absolute; top: 3px; right: 3px;
+  width: 18px; height: 18px; border: none; border-radius: 50%;
+  background: rgba(30,24,16,.55); color: #fff;
+  font-size: 10px; line-height: 1; cursor: pointer;
+}
+.fr-shot-x:hover{ background: rgba(30,24,16,.8); }
+.fr-model-in{
+  width: 100%; box-sizing: border-box;
+  margin: 0 0 4px; padding: 4px 6px;
+  border: 1px solid rgba(70,55,35,.28); border-radius: 3px;
+  background: rgba(255,255,255,.55);
+  color: var(--fr-fg, #4A4034);
+  font-size: 10.5px; font-weight: 700; font-family: inherit;
+}
+.fr-model-in::placeholder{ color: var(--fr-sub, #7A6B55); opacity: .75; }
+
 .fr-note:hover{
   box-shadow: 0 6px 16px rgba(70,55,35,.28), 0 1px 2px rgba(70,55,35,.14);
 }

@@ -160,8 +160,23 @@
       rot:    clamp(Number(v.rot) || 0, -3, 3),
       at:     Number(v.at) || 0,
       hearts: Math.max(0, Math.round(Number(v.hearts) || 0)),
-      parent: typeof v.parent === "string" ? v.parent : ""
+      parent: typeof v.parent === "string" ? v.parent : "",
+      /* ⌨️ 사진은 forestImg/{id} 에 따로 삽니다 — 여기엔 "있다"는 표시와
+         모델명만 둡니다 (쪽지 목록을 가볍게 유지하려고) */
+      hasImg: v.hasImg === true,
+      model:  typeof v.model === "string" ? v.model.slice(0, 40) : ""
     };
+  }
+
+  /** 쪽지 하나를 서버에서 지웁니다 — 사진도 함께.
+      ★ 쪽지만 지우고 사진을 두면 아무도 안 보는 40KB 가 영영 남습니다.
+        지우는 자리가 세 군데(답쪽지 고아·시듦·내 손)라 한 곳으로 모았어요. */
+  async function wipe(id) {
+    try { await window.db.ref("forest/" + id).remove(); } catch (e) {}
+    try { await window.db.ref("forestImg/" + id).remove(); } catch (e) {}
+    _imgCache.delete(id);
+    forget(MINE_KEY, id);
+    forget(HEART_KEY, id);
   }
 
   async function loadNotes() {
@@ -186,10 +201,7 @@
        답쪽지 혼자 보드에 나뒹굴 곳이 없어요. 서버에서도 조용히 지웁니다. */
     const ids = new Set(list.map(n => n.id));
     const orphans = list.filter(n => n.parent && !ids.has(n.parent));
-    for (const o of orphans) {
-      try { window.db.ref("forest/" + o.id).remove(); } catch (e) {}
-      forget(MINE_KEY, o.id); forget(HEART_KEY, o.id);
-    }
+    for (const o of orphans) { wipe(o.id); }
     _notes = list.filter(n => !(n.parent && !ids.has(n.parent)));
   }
 
@@ -205,11 +217,14 @@
     const dead = _notes.filter(n => n.at && n.at < cut);
     if (!dead.length) return;
     _notes = _notes.filter(n => !(n.at && n.at < cut));
-    for (const n of dead) {
-      try { await window.db.ref("forest/" + n.id).remove(); } catch (e) {}
-      forget(MINE_KEY, n.id);
-      forget(HEART_KEY, n.id);
-    }
+    for (const n of dead) { await wipe(n.id); }
+
+    /* ★ 주인 없는 사진을 훑어서 걷어내고 싶었지만 **하지 않습니다.**
+       그러려면 forestImg 를 통째로 읽어야 하는데, 그게 바로 사진을
+       따로 뺀 이유(다 내려받지 않기)를 스스로 무너뜨립니다.
+       파이어베이스 자바스크립트 쪽에는 "열쇠만 보기" 가 없어요.
+       대신 **고아를 안 만드는 쪽**으로 갑니다 — 붙이기가 도중에
+       엎어지면 그 자리에서 사진을 지웁니다(postNote 아래 참고). */
   }
 
   /* ---------------------------------------------------------------
@@ -264,6 +279,12 @@
                   --fr-bg:${c.bg}; --fr-fg:${c.fg}; --fr-sub:${c.sub}; z-index:${z};">
         ${mine ? `<button type="button" class="fr-del" data-fr-del="${esc(n.id)}"
                           title="이 쪽지 지우기" aria-label="이 쪽지 지우기">✕</button>` : ""}
+        ${n.hasImg ? `<div class="fr-shot" data-fr-shot="${esc(n.id)}"
+             role="img" aria-label="키보드 사진">${
+               _imgCache.get(n.id)
+                 ? `<img src="${_imgCache.get(n.id)}" alt="키보드 사진" loading="lazy">`
+                 : ""}</div>` : ""}
+        ${n.model ? `<p class="fr-model" title="모델명">⌨️ ${esc(n.model)}</p>` : ""}
         <p class="fr-note-text">${esc(n.text)}</p>
         <div class="fr-note-foot">
           <span class="fr-note-time">${esc(ago(n.at))}</span>
@@ -304,6 +325,21 @@
         <textarea id="fr-text" class="fr-text" maxlength="${MAX_TEXT}"
                   placeholder="아무 말이나 적어요…">${esc(_compose.text)}</textarea>
         <div class="fr-count"><span id="fr-count">${_compose.text.length}</span> / ${MAX_TEXT}</div>
+
+        <!-- ⌨️ 키보드 자랑 — 사진은 넣어도 되고 안 넣어도 됩니다 -->
+        <div class="fr-shot-pick${_compose.shot ? " has-shot" : ""}" id="fr-shot-pick">
+          ${_compose.shot
+            ? `<img src="${_compose.shot}" alt="고른 사진">
+               <button type="button" class="fr-shot-x" data-fr-act="unshot"
+                       title="사진 빼기" aria-label="사진 빼기">✕</button>`
+            : `<button type="button" class="fr-shot-add" data-fr-act="shot">⌨️ 키보드 사진 넣기</button>`}
+        </div>
+        ${_compose.shot ? `
+        <input type="text" id="fr-model" class="fr-model-in" maxlength="${MODEL_MAX}"
+               placeholder="모델명 (예: HHKB Pro 2 무각)" autocomplete="off"
+               value="${esc(_compose.model || "")}">` : ""}
+        <input type="file" id="fr-shot-file" accept="image/*" hidden>
+
         <div class="fr-swatches" role="group" aria-label="쪽지 색 고르기">${swatches}</div>
         <div class="fr-compose-btns">
           <button type="button" class="fr-btn ghost" data-fr-act="cancel">취소</button>
@@ -323,6 +359,91 @@
      새 쪽지는 시간순 맨 끝 = 맨 끝 판에 붙습니다. 다른 판을 보다가
      붙여도 붙인 직후 그 판으로 데려다줘요.
      ===================================================================== */
+  /* =====================================================================
+     ⌨️ 키보드 자랑 — 쪽지에 사진 한 장 (2026-08-15)
+     ---------------------------------------------------------------------
+     [왜 사진을 쪽지 안에 안 넣었나]
+     대숲은 열 때마다 **쪽지를 전부** 내려받습니다(forest 를 통째로 once).
+     사진을 쪽지에 같이 담으면 한 번 열 때마다 모든 사진이 따라와요.
+     40장이면 2MB 가 넘고, 방 전체로 치면 무료치를 한 달 안에 다 씁니다.
+
+     [그래서 두 자리로 나눕니다]
+       forest/{id}      … 지금까지와 똑같음 + hasImg, model
+       forestImg/{id}   … 사진 한 장 (data URL)
+     쪽지 목록은 예전만큼 가볍고, 사진은 **지금 보는 판에 뜬 것만**
+     따로 가져옵니다. 한 번 가져온 것은 이 자리에 기억해 두고요.
+
+     [보안규칙 — 콘솔에 넣어야 합니다]
+       "forestImg": {
+         ".read": "auth != null",
+         "$id": { ".write": "auth != null" }
+       }
+     쪽지와 같은 결입니다 — 익명이라 "글쓴이만" 을 규칙으로 쓸 수 없어요.
+     쪽지를 지우면 사진도 같이 지웁니다.
+     ===================================================================== */
+  const SHOT_W = 660, SHOT_H = 220;          // 3 : 1
+  const SHOT_MAX = 70 * 1024;                // data URL 문자열 상한
+  const MODEL_MAX = 40;                      // 모델명 글자 수
+  const _imgCache = new Map();               // id → data URL (이 자리에만)
+  let   _imgWant = new Set();                // 지금 판에서 기다리는 것
+
+  /** 파일 → 3:1 로 가운데를 잘라 줄인 data URL */
+  function fileToBoardShot(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject(new Error("파일이 없어요."));
+      if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
+      if (file.size > 12 * 1024 * 1024) return reject(new Error("파일이 너무 커요. 12MB 이하로 부탁해요."));
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const cv = document.createElement("canvas");
+          cv.width = SHOT_W; cv.height = SHOT_H;
+          const ctx = cv.getContext("2d");
+          const want = SHOT_W / SHOT_H;
+          let sw = img.width, sh = Math.round(img.width / want);
+          if (sh > img.height) { sh = img.height; sw = Math.round(img.height * want); }
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, SHOT_W, SHOT_H);
+          let out = "";
+          for (const q of [0.82, 0.72, 0.62, 0.52, 0.42]) {
+            out = cv.toDataURL("image/jpeg", q);
+            if (out.length <= SHOT_MAX) break;
+          }
+          if (out.length > SHOT_MAX) return reject(new Error("사진을 충분히 줄이지 못했어요. 다른 사진으로 부탁해요."));
+          resolve(out);
+        } catch (e) { reject(new Error("사진을 바꾸지 못했어요.")); }
+        finally { URL.revokeObjectURL(url); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("사진을 읽지 못했어요.")); };
+      img.src = url;
+    });
+  }
+
+  /** 지금 판에 뜬 사진만 가져옵니다 — 한 장씩, 이미 가진 건 건너뛰고 */
+  async function fetchShots(ids) {
+    if (!window.db) return;
+    const 할것 = ids.filter(id => !_imgCache.has(id) && !_imgWant.has(id));
+    if (!할것.length) return;
+    할것.forEach(id => _imgWant.add(id));
+    for (const id of 할것) {
+      try {
+        const v = (await window.db.ref("forestImg/" + id).once("value")).val();
+        _imgCache.set(id, (typeof v === "string" && v.startsWith("data:image/")) ? v : "");
+      } catch (e) {
+        _imgCache.set(id, "");
+      } finally {
+        _imgWant.delete(id);
+      }
+      /* 한 장 올 때마다 그 자리에만 끼워 넣습니다 — 판 전체를 다시 그리면
+         쪽지를 끌던 손이 튕기고, 열어 둔 답쪽지도 접혀요 */
+      const slot = document.querySelector(`[data-fr-shot="${id}"]`);
+      const src = _imgCache.get(id);
+      if (slot && src) slot.innerHTML = `<img src="${src}" alt="키보드 사진" loading="lazy">`;
+      else if (slot) slot.remove();
+    }
+  }
+
   const PAGE_SIZE = 24;
   let _page = 0;         // 지금 보는 판 (0부터)
 
@@ -359,6 +480,11 @@
     });
     /* 오래된 것부터 z-index 1 씩 — 최신 쪽지가 늘 위에 옵니다.
        답쪽지를 펼친 쪽지는 무더기가 이웃 위로 오도록 한층 더 올립니다 */
+    /* ⌨️ 지금 판에 뜬 사진만 뒤따라 가져옵니다 — 그리기를 막지 않게
+       다음 차례로 미룹니다 (자리는 이미 만들어 두었어요) */
+    const 사진있는것 = roots.filter(n => n.hasImg).map(n => n.id);
+    if (사진있는것.length) setTimeout(() => fetchShots(사진있는것), 0);
+
     return roots.map((n, i) =>
         noteHtml(n, _openReplies.has(n.id) ? roots.length + 1 + i : i + 1,
                  byParent[n.id])).join("")
@@ -428,7 +554,9 @@
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
       color: Math.floor(Math.random() * FOREST_COLORS.length),
-      text: ""
+      text: "",
+      shot: "",      // ⌨️ 고른 사진 (아직 서버에 안 올라간 상태)
+      model: ""
     };
     render();
   }
@@ -459,10 +587,28 @@
       at: Date.now(),
       hearts: 0
     };
+    /* ⌨️ 사진이 있으면 표시만 쪽지에, 알맹이는 따로 */
+    const shot = _compose.shot || "";
+    if (shot) {
+      note.hasImg = true;
+      note.model = String(_compose.model || "").slice(0, MODEL_MAX).trim();
+    }
 
     try {
       const ref = window.db.ref("forest").push();
-      await ref.set(note);
+      /* ★ 사진을 **먼저** 올립니다. 쪽지가 먼저 올라간 뒤 사진이 실패하면
+           "사진이 있다는데 없는 쪽지" 가 남아요. 순서를 뒤집으면
+           최악이 "주인 없는 사진 한 장" 인데, 그건 아래 청소가 걷어냅니다. */
+      if (shot) await window.db.ref("forestImg/" + ref.key).set(shot);
+      try {
+        await ref.set(note);
+      } catch (err) {
+        /* 사진만 올라가고 쪽지가 엎어졌습니다 — 아무도 못 보는 사진이
+           영영 남지 않게 그 자리에서 되돌립니다 */
+        if (shot) { try { await window.db.ref("forestImg/" + ref.key).remove(); } catch (e2) {} }
+        throw err;
+      }
+      if (shot) _imgCache.set(ref.key, shot);
       remember(MINE_KEY, ref.key);      // ← 이 기기에만 남는 기록
       window.achvBump?.("cForest");     // 🏅 대숲지기 (누가 썼는지는 여전히 안 남습니다)
       _notes.push(normalize(ref.key, note));
@@ -506,9 +652,7 @@
     _notes = _notes.filter(v => v.id !== id);
     render();
     try {
-      await window.db.ref("forest/" + id).remove();
-      forget(MINE_KEY, id);
-      forget(HEART_KEY, id);
+      await wipe(id);
     } catch (e) {
       console.warn("[대숲] 쪽지를 지우지 못했어요", e);
       alert("쪽지를 지우지 못했어요. 연결을 확인해 주세요.");
@@ -533,6 +677,9 @@
     const box = root.querySelector(".modal-content") || root;
     box.addEventListener("click", onClick);
     box.addEventListener("input", onInput);
+    /* ⌨️ 파일 고르기 — 작성 카드는 다시 그려지므로 요소마다 달지 않고
+       바깥에서 위임으로 받습니다 (change 는 거품이 올라옵니다) */
+    box.addEventListener("change", onFilePick);
     bindDrag();
   }
 
@@ -598,6 +745,11 @@
       const a = act.getAttribute("data-fr-act");
       if (a === "cancel") cancelCompose();
       else if (a === "post") postNote();
+      else if (a === "shot") el("fr-shot-file")?.click();     // ⌨️ 파일 고르기
+      else if (a === "unshot" && _compose) {
+        _compose.shot = ""; _compose.model = "";
+        render();
+      }
       return;
     }
 
@@ -609,10 +761,31 @@
     openCompose(e);
   }
 
+  async function onFilePick(e) {
+    const inp = e.target;
+    if (!inp || inp.id !== "fr-shot-file" || !_compose) return;
+    const f = inp.files?.[0];
+    inp.value = "";
+    if (!f) return;
+    const btn = document.querySelector(".fr-shot-add");
+    if (btn) { btn.disabled = true; btn.textContent = "줄이는 중…"; }
+    try {
+      _compose.shot = await fileToBoardShot(f);
+      render();
+    } catch (err) {
+      alert(err?.message || "사진을 넣지 못했어요.");
+      if (btn) { btn.disabled = false; btn.textContent = "⌨️ 키보드 사진 넣기"; }
+    }
+  }
+
   function onInput(e) {
     const t = e.target;
     if (t && t.id === "fr-rtext" && _reply) {
       _reply.text = String(t.value || "").slice(0, MAX_TEXT);
+      return;
+    }
+    if (t && t.id === "fr-model" && _compose) {
+      _compose.model = String(t.value || "").slice(0, MODEL_MAX);
       return;
     }
     if (!t || t.id !== "fr-text" || !_compose) return;
