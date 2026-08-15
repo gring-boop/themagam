@@ -345,16 +345,22 @@ function sanitizePhoto(v) {
 /* =====================================================================
    🖥️ 가짜 화면용 — 액자와 같은 비율로 자릅니다 (2026-08-15)
    ---------------------------------------------------------------------
-   [왜 4:5 인가] 공유 액자는 가로로 긴 화면이 아니라 **프로필 카드와
-   같은 크기**입니다. 카드 폭 214px(--card-w)에서 안쪽 여백을 빼면
-   약 198px, 높이는 카드 높이를 따라가 대략 247px — 4:5 에 가까운
-   세로형이에요. 처음에 16:10 으로 잡았다가 위아래가 크게 잘렸습니다.
-   미리 같은 비율로 잘라 두면 무엇이 잘리는지 보고 고를 수 있습니다.
+   [★ 자르지 않습니다 — 2026-08-15 고침]
+   처음에는 액자에 맞춰 16:10 으로, 다음엔 4:5 로 **잘라** 담았습니다.
+   그런데 여기 올리는 건 대개 **화면 캡쳐**예요. 가로로 긴 그림을 세로
+   액자에 맞춰 자르면 이렇게 됩니다:
+       1920×1080 → 가운데 864×1080 만 남음 (가로의 45%)
+   남은 좁은 조각이 액자 가득 늘어나니, 문서가 위아래로 길쭉하게 늘어진
+   것처럼 보였어요. 실제 제보였고, 원본을 절반 넘게 버리고 있었습니다.
+
+   이제 **비율을 그대로 두고 크기만 줄입니다.** 긴 변이 520px 이 되게요.
+   액자에서는 object-fit: contain 으로 통째로 보여주고, 남는 자리는
+   카드 바탕색이 비칩니다 — 진짜 화면 공유의 "전체 보기" 와 같은 방식이에요.
 
    진짜 공유가 보내는 그림(40KB)보다 넉넉하게 잡습니다 — 이건 5초마다
    다시 보내는 게 아니라 한 번 놓아두면 끝이라서요.
    ===================================================================== */
-const SHOT_W = 420, SHOT_H = 525;      // 4 : 5
+const SHOT_BOX = 520;                  // 긴 변을 이만큼으로 줄입니다 (비율은 그대로)
 const SHOT_MAX_BYTES = 90 * 1024;
 
 function fileToShotDataUrl(file) {
@@ -367,16 +373,15 @@ function fileToShotDataUrl(file) {
     const img = new Image();
     img.onload = () => {
       try {
+        /* 비율 그대로, 긴 변만 SHOT_BOX 로 줄입니다 (원본이 더 작으면 그대로) */
+        const k = Math.min(1, SHOT_BOX / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * k));
+        const h = Math.max(1, Math.round(img.height * k));
         const canvas = document.createElement("canvas");
-        canvas.width = SHOT_W; canvas.height = SHOT_H;
+        canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext("2d");
-        /* 가운데를 4:5 로 잘라 담습니다 (찌그러지지 않게) */
-        const want = SHOT_W / SHOT_H;
-        let sw = img.width, sh = Math.round(img.width / want);
-        if (sh > img.height) { sh = img.height; sw = Math.round(img.height * want); }
-        const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
         ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, SHOT_W, SHOT_H);
+        ctx.drawImage(img, 0, 0, w, h);
 
         let out = "";
         for (const q of [0.82, 0.7, 0.6, 0.5, 0.4]) {
@@ -1035,7 +1040,8 @@ function soloProfileBlockHtml(tgt) {
       <p class="hint">
         진짜 화면 공유와 같은 액자에, 고른 사진을 걸어 둡니다. 카드 옆에
         나란히 서요. 위 미리보기가 실제 크기 그대로입니다 —
-        가운데를 4:5(세로형)로 잘라 담아요.
+        <b>사진은 자르지 않고 통째로</b> 넣습니다. 액자보다 납작하면
+        위아래에 카드 바탕색이 비쳐요.
       </p>
     </div>
   </div>`;

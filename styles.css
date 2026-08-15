@@ -4501,7 +4501,10 @@ body.solo-mode .card-avatar-wrap{ cursor: pointer; }
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
 }
-.solo-shot-prev img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+/* ★ contain — 카드에 걸릴 모습 그대로 보여줍니다. 여기만 cover 로 두면
+   미리보기에서는 꽉 차 보이는데 카드에서는 위아래가 비어, 고를 때 판단이
+   어긋나요 (미리보기의 뜻이 사라집니다). */
+.solo-shot-prev img{ width: 100%; height: 100%; object-fit: contain; display: block; }
 .solo-shot-empty{
   text-align: center; line-height: 1.6;
   font-size: 13px; color: var(--text-3, #8A93A2);

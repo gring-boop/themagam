@@ -607,7 +607,10 @@
              30초마다 액자를 **전부 헐고 다시 짓습니다**. 그때 <img> 가
              새 요소가 되어 내 진짜 공유 화면까지 깜빡였어요.
              가짜 화면은 늙지 않으니(위 tickShare 참고) 값은 고정합니다. */
-        out[닉] = { img, at: 1, level: 100, fit: "cover" };
+        /* ★ contain — 잘라내지 않고 통째로 보여줍니다.
+           올릴 때도 안 자르니(script_profile.js 참고), 여기서 잘라내면
+           애써 남겨 둔 바깥쪽이 도로 없어져요. */
+        out[닉] = { img, at: 1, level: 100, fit: "contain" };
       }
     });
     const 옛 = _get("screens") || {};
