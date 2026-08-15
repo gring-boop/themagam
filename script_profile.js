@@ -342,6 +342,55 @@ function sanitizePhoto(v) {
 }
 
 /** File → 정사각 크롭 + 축소 → data URL */
+/* =====================================================================
+   🖥️ 가짜 화면용 — 가로로 긴 사진 (2026-08-15)
+   ---------------------------------------------------------------------
+   프사와 달리 정사각이 아니라 화면 비율(16:10)입니다. 액자가 그 비율
+   이라 미리 맞춰 두면 잘리는 곳을 보고 고를 수 있어요.
+   진짜 공유가 보내는 그림(40KB)보다 조금 넉넉하게 잡습니다 — 이건
+   5초마다 다시 보내는 게 아니라 한 번 놓아두면 끝이라서요.
+   ===================================================================== */
+const SHOT_W = 480, SHOT_H = 300;
+const SHOT_MAX_BYTES = 90 * 1024;
+
+function fileToShotDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error("파일이 없어요."));
+    if (!/^image\//.test(file.type)) return reject(new Error("이미지 파일만 올릴 수 있어요."));
+    if (file.size > PHOTO_INPUT_MAX) return reject(new Error("파일이 너무 커요. 12MB 이하로 올려주세요."));
+
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = SHOT_W; canvas.height = SHOT_H;
+        const ctx = canvas.getContext("2d");
+        /* 가운데를 16:10 으로 잘라 담습니다 (찌그러지지 않게) */
+        const want = SHOT_W / SHOT_H;
+        let sw = img.width, sh = Math.round(img.width / want);
+        if (sh > img.height) { sh = img.height; sw = Math.round(img.height * want); }
+        const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, SHOT_W, SHOT_H);
+
+        let out = "";
+        for (const q of [0.82, 0.7, 0.6, 0.5, 0.4]) {
+          out = canvas.toDataURL("image/jpeg", q);
+          if (out.length <= SHOT_MAX_BYTES) break;
+        }
+        if (out.length > SHOT_MAX_BYTES) {
+          return reject(new Error("이미지를 충분히 줄이지 못했어요. 다른 사진을 써주세요."));
+        }
+        resolve(out);
+      } catch (e) { reject(new Error("이미지를 바꾸지 못했어요.")); }
+      finally { URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("이미지를 읽지 못했어요.")); };
+    img.src = url;
+  });
+}
+
 function fileToSquareDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) return reject(new Error("파일이 없어요."));
@@ -921,7 +970,12 @@ function soloProfileBlockHtml(tgt) {
   const tags = window.WORKTAGS || [];
   const n = Number(window.soloGetCount?.() || 9);
   const m = Number(window.soloGetShow?.() || n);
+  /* data:image 인 것만 통과 — 다른 주소가 끼어들 자리를 안 만듭니다 */
+  const _raw = (profileTargetData() || {}).shareImg;
+  const shot = (typeof _raw === "string" && /^data:image\/(png|jpe?g|webp);base64,/.test(_raw))
+    ? _raw : "";
   return `
+  <div class="solo-row">
     <div class="set-block solo-block">
       <div class="set-title">🧘 혼자 방</div>
       <div class="set-row">
@@ -960,7 +1014,26 @@ function soloProfileBlockHtml(tgt) {
       </div>
       <p class="hint">이름을 바꾸면 이 카드에 붙여둔 꾸밈도 함께 따라갑니다.</p>
       ` : `<p class="hint">내 이름을 바꾸면 꾸밈·메모를 데리고 방을 다시 엽니다. 다른 카드는 눌러서 고르면 목표와 작업 스티커도 여기서 정할 수 있어요.</p>`}
-    </div>`;
+    </div>
+
+    <div class="set-block solo-block">
+      <div class="set-title">🖥️ ${escapeHtml(tgt)}의 화면</div>
+      <div class="solo-shot-prev${shot ? " has-shot" : ""}" id="solo-shot-prev">
+        ${shot ? `<img src="${escapeHtml(shot)}" alt="">`
+               : `<span class="solo-shot-empty">🖥️<br>아직 놓아둔 화면이 없어요</span>`}
+        <span class="solo-shot-foot">${escapeHtml(tgt)}의 화면</span>
+      </div>
+      <div class="set-row" style="margin-top:8px;">
+        <button type="button" class="ghost-btn compact" id="solo-shot-btn">사진 올리기</button>
+        <button type="button" class="ghost-btn compact${shot ? "" : " hidden"}" id="solo-shot-clear">치우기</button>
+        <input type="file" id="solo-shot-file" accept="image/*" class="hidden">
+      </div>
+      <p class="hint">
+        진짜 화면 공유와 같은 액자에, 고른 사진을 걸어 둡니다. 카드 옆에
+        나란히 서요. 16:10 으로 가운데를 잘라 480px 로 줄여 담습니다.
+      </p>
+    </div>
+  </div>`;
 }
 
 function renderProfilePanel() {
@@ -1222,6 +1295,37 @@ function bindSoloProfileBlock() {
 
   const shuf = document.getElementById("solo-reshuffle");
   if (shuf) shuf.onclick = () => { window.soloReshuffle?.(); 되돌리기(); };
+
+  /* 🖥️ 가짜 화면 사진 */
+  const shotBtn = document.getElementById("solo-shot-btn");
+  const shotFile = document.getElementById("solo-shot-file");
+  const shotClr = document.getElementById("solo-shot-clear");
+  if (shotBtn && shotFile) {
+    shotBtn.onclick = () => shotFile.click();
+    shotFile.onchange = async () => {
+      const f = shotFile.files?.[0];
+      shotFile.value = "";
+      if (!f) return;
+      const 옛 = shotBtn.textContent;
+      shotBtn.disabled = true; shotBtn.textContent = "줄이는 중…";
+      try {
+        const url = await fileToShotDataUrl(f);
+        await saveMyProfile({ shareImg: url });
+        window.soloSyncScreens?.();
+        window.renderUserCards?.();
+        renderProfilePanel();
+      } catch (e) {
+        alert(e?.message || "사진을 올리지 못했어요.");
+        shotBtn.disabled = false; shotBtn.textContent = 옛;
+      }
+    };
+  }
+  if (shotClr) shotClr.onclick = async () => {
+    await saveMyProfile({ shareImg: "" });
+    window.soloSyncScreens?.();
+    window.renderUserCards?.();
+    renderProfilePanel();
+  };
 
   const tgt = profileTargetNick();
   const nickIn = document.getElementById("solo-card-nick");

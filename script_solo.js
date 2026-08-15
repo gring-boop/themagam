@@ -475,6 +475,7 @@
          작업 스티커를 붙이는 순간 유령들이 전부 사라진 이유예요.
          전부 진짜 자리에 넣어 두면 진짜 방과 똑같은 길로 흐릅니다. */
     _put("status", out);
+    try { 화면동기(); } catch (e) {}
     return out;
   }
 
@@ -507,6 +508,7 @@
       r.lastSeen = 지금;
     });
     _put("status", cache);
+    화면동기();
     setTimeout(숨쉬기, 30000 + Math.random() * 60000);
   }
 
@@ -533,8 +535,12 @@
      "afterJoinLoadProfile",     // 프꾸 값 읽기
      "startTimelog",             // 작업 시간 쌓기
      "startWordcount",           // ✍️ 글자수 말풍선
-     "renderProfilePanel", "musicInit", "renderShareButton", "startAchv"]
+     "renderProfilePanel", "musicInit", "renderShareButton", "startAchv",
+     "listenScreens"]           // 🖥️ 가짜 화면 액자
       .forEach(fn => { try { window[fn]?.(); } catch (e) {} });
+
+    /* 꾸밈을 다 읽은 뒤에 액자를 채웁니다 */
+    setTimeout(화면동기, 800);
 
     /* 내 카드를 진짜 값으로 한 번 채우고, 그 뒤로도 계속 갱신합니다.
        (진짜 방에서는 join() 이 하던 일입니다) */
@@ -638,6 +644,33 @@
   window.addEventListener("load", () => setTimeout(걷어내기, 500));
 
   /* 메모(채팅)가 무한정 쌓이지 않게 — 최근 500줄만 */
+  /* =====================================================================
+     🖥️ 가짜 화면 공유 (2026-08-15, 지인 요청)
+     ---------------------------------------------------------------------
+     진짜 화면 공유와 **같은 액자**를 쓰되, 안에 든 것은 그냥 사진입니다.
+     실제 캡쳐가 아니니 새로 그릴 것도, 나갈 것도 없어요.
+
+     사진은 users/{닉}/profile.shareImg 에 삽니다 — 프꾸와 같은 자리라
+     이름을 바꿔도 따라오고, 저장도 함께 됩니다. 그림을 그리는 쪽
+     (script_share.js)은 screens/{닉} 을 보므로, 여기서 옮겨 담습니다.
+     ★ screens 는 일부러 저장하지 않습니다(40KB 사진이 쌓이니까요).
+       그래서 방을 열 때마다 profile 에서 다시 채웁니다.
+     ===================================================================== */
+  function 화면동기() {
+    const 명단 = Object.keys(_get("status") || {});
+    const 사람들 = _get("users") || {};
+    const 지금 = Date.now();
+    const out = {};
+    명단.forEach(닉 => {
+      const img = 사람들[닉]?.profile?.shareImg;
+      if (typeof img === "string" && img.startsWith("data:image/")) {
+        out[닉] = { img, at: 지금, level: 100, fit: "cover" };
+      }
+    });
+    _put("screens", out);
+  }
+  window.soloSyncScreens = 화면동기;
+
   /* =====================================================================
      설정 창에서 쓰는 창구 — 카드 하나를 고쳐 씁니다
      ---------------------------------------------------------------------

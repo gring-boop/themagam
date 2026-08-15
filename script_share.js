@@ -478,7 +478,9 @@
       if (!img) continue;
       const at = Number(r.at || 0);
       const age = t - at;
-      if (age > SHARE_DROP_MS) continue;      // 30초 넘게 소식이 없으면 뺍니다
+      /* 🧘 혼자 방의 가짜 화면은 늙지 않습니다 — 보내는 사람이 없으니
+         "소식이 끊겼다" 는 판정이 뜻을 잃어요 */
+      if (!window.SOLO && age > SHARE_DROP_MS) continue;   // 30초 넘게 소식이 없으면 뺍니다
       /* 모르는 값이 오면 예전처럼 "채우기" — 옛 기록과 섞여도 안 깨집니다 */
       const fit = (r.fit === "contain") ? "contain" : "cover";
       rows.push({ nick, img, at, age, fit });
@@ -502,7 +504,9 @@
        · 아래 한 줄 = "닉네임의 화면" + [off] 나란히
      그림은 카드 비율에 맞춰 잘라 넣습니다(양옆이 잘려도 괜찮습니다). */
   function shareCardHtml(row) {
-    const mine = (row.nick === myNick);
+    /* 🧘 혼자 방의 가짜 화면에는 손잡이를 달지 않습니다 —
+       끄기·창 바꾸기는 진짜 공유에만 뜻이 있어요 */
+    const mine = (row.nick === myNick) && !window.SOLO;
     const off = mine
       ? `<button type="button" class="share-off" data-share-stop="1"
                  title="화면 공유 끄기" aria-label="화면 공유 끄기">off</button>`
@@ -540,7 +544,8 @@
     const list = document.getElementById("user-cards");
     if (!list) return;
 
-    const rows = _sharing ? shareRows() : [];
+    /* 🧘 혼자 방은 내가 공유 중이 아니어도 그립니다 (전부 내가 놓아둔 사진) */
+    const rows = (_sharing || window.SOLO) ? shareRows() : [];
     const html = rows.map(shareCardHtml).join("");
     const present = !!list.querySelector(".share-card");
 
@@ -794,6 +799,7 @@
   /* 접속자 정보가 바뀔 때 script_realtime.js 가 다시 칠해 줍니다 */
   window.renderShareButton = renderShareButton;
   window.renderShareCards  = renderShareCards;
+  window.listenScreens     = listenScreens;   // 🧘 혼자 방이 직접 켭니다
   window.isScreenSharing   = () => _sharing;
   window.setShareWidth     = setShareWidth;
   window.setShareFit       = setShareFit;
