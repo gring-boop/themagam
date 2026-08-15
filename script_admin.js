@@ -330,20 +330,58 @@
       const todayD = new Date().getDate();
       const isThisMonth = (monthOffset === 0);
 
-      /* [2026-08-15] 인원 칸에 **총원**을 함께 적습니다.
-         아래로 스무 명이 넘어가면 몇 명인지 세느라 눈이 아팠어요.
-         날짜별 인원(오른쪽 숫자들)과 헷갈리지 않게 "총 n명" 으로 씁니다. */
+      /* =====================================================================
+         [2026-08-15] 머리글을 **두 줄로** 갈랐습니다.
+         ---------------------------------------------------------------------
+           ① 출석 — 그날 실제로 나온 사람 수
+           ② 총원 — 그날 기준 명단에 있던 사람 수 (그날까지 들어온 사람)
+         한 줄일 때는 "8명 나왔다" 만 보이고 **모수를 알 수 없었습니다.**
+         27명 중 8명과 12명 중 8명은 전혀 다른 이야기인데요.
+         요즘 신입이 늘어서, 두 줄을 겹쳐 보면 명단이 자라는 것도 보입니다.
+         ===================================================================== */
+
+      /* 그날 기준 총원 — 각자 처음 나타난 날(born)을 세어 누적합니다.
+         born 은 아래 멤버 줄에서도 쓰는 값이라 여기서 한 번에 구해 둡니다
+         (같은 계산을 두 번 하면 언젠가 어긋나요). */
+      const bornOf = {};
+      nicks.forEach(n => {
+        let b = firstSeen ? firstSeen[n] : null;
+        const vs = vacByNick[n] || {};
+        Object.keys(vs).forEach(d => {
+          if (vs[d] === true && (!b || d < b)) b = d;
+        });
+        bornOf[n] = b || null;
+      });
+      const totalByDay = {};
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
+        /* firstSeen 을 못 읽었으면 언제 들어왔는지 알 수 없습니다 —
+           그때는 지금 명단 수를 그대로 씁니다(줄이 비면 더 헷갈려요) */
+        totalByDay[dk] = firstSeen
+          ? nicks.filter(n => bornOf[n] && bornOf[n] <= dk).length
+          : nicks.length;
+      }
+
       let cntRow = `<tr><th class="rule-h cnt-h"></th>` +
-                   `<th class="name-h cnt-h" title="이 달 출석부에 오른 사람 수">인원 <b class="cnt-total">총 ${nicks.length}명</b></th>` +
+                   `<th class="name-h cnt-h" title="그날 실제로 나온 사람 수">출석</th>` +
                    `<th class="sum-h cnt-h"></th><th class="sum-h cnt-h"></th>`;
+      let totRow = `<tr><th class="rule-h cnt-h tot-h"></th>` +
+                   `<th class="name-h cnt-h tot-h" title="그날 기준 명단에 있던 사람 수">총원 <b class="cnt-total">지금 ${nicks.length}명</b></th>` +
+                   `<th class="sum-h cnt-h tot-h"></th><th class="sum-h cnt-h tot-h"></th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
         const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
+        const we = (dow === 0 || dow === 6) ? " we" : "";
         const c = cntByDay[dk] || 0;
-        const cls = "cnt" + (dow === 0 || dow === 6 ? " we" : "") + (c === 0 ? " zero" : "");
-        cntRow += `<th class="${cls}">${c === 0 ? "" : c}</th>`;
+        const t = totalByDay[dk] || 0;
+        cntRow += `<th class="cnt${we}${c === 0 ? " zero" : ""}">${c === 0 ? "" : c}</th>`;
+        /* 앞날(아직 안 온 날)은 비워 둡니다 — 오늘 총원이 미리 찍혀 있으면
+           "그날 이미 27명이었다" 로 읽혀요 */
+        const 앞날 = isThisMonth && d > todayD;
+        totRow += `<th class="cnt tot${we}${(t === 0 || 앞날) ? " zero" : ""}">${(t === 0 || 앞날) ? "" : t}</th>`;
       }
       cntRow += "</tr>";
+      totRow += "</tr>";
 
       let head = `<tr><th class="rule-h" title="한 달 ${RULE_DAYS}일 규칙 — 늦게 들어온 분은 있었던 날수에 비례해 기준을 낮춥니다">규칙</th>` +
                  `<th class="name-h">이름</th><th class="sum-h">출석</th><th class="sum-h">휴가</th>`;
@@ -361,10 +399,8 @@
 
         /* 이 사람이 처음 나타난 날 — 출석과 휴가 중 이른 쪽.
            (vacations 는 위에서 달을 안 가리고 통째로 읽어 옵니다) */
-        let born = firstSeen ? firstSeen[n] : null;
-        Object.keys(vacs).forEach(d => {
-          if (vacs[d] === true && (!born || d < born)) born = d;
-        });
+        /* 위 머리글에서 이미 구해 둔 값을 씁니다 (두 번 세면 언젠가 어긋나요) */
+        const born = bornOf[n];
 
         /* 이 달에서 "아직 없었던" 날이 며칠까지인가.
            ★ 한 번도 나타난 적이 없으면(born 이 없으면) 이 달 전체가
@@ -438,7 +474,7 @@
       }).join("");
 
       body.classList.remove("adm-msg");
-      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${head}${rows}</table></div>`;
+      body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
       bindDig(body);
     } catch (e) {
       console.warn("[adm attendance]", e);
