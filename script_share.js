@@ -679,9 +679,15 @@
        안 그러면 한 번 커진 값이 계속 눌러앉습니다. */
     shares.forEach(el => { el.style.height = ""; });
 
+    /* ★★ [고침 2026-08-15] 재는 자를 맞춥니다.
+       getBoundingClientRect 는 **확대된 뒤**의 화면 값이고, style.height 는
+       **확대 전**의 요소 값입니다. 95% 로 줄여 놓으면 잰 값이 이미 0.95배라,
+       그걸 그대로 입히면 공유 카드만 5% 짧아졌어요 (실제 제보).
+       100% 로 돌리면 멀쩡해 보이니 더 찾기 어려운 종류의 어긋남입니다. */
+    const z = (window.uiZoom?.() || 1);
     let h = 0;
     list.querySelectorAll(".user-card:not(.share-card)").forEach(el => {
-      h = Math.max(h, el.getBoundingClientRect().height);
+      h = Math.max(h, el.getBoundingClientRect().height / z);
     });
     if (!h) return;                       // 프로필 카드가 아직 없으면 그대로 둡니다
     shares.forEach(el => { el.style.height = Math.round(h) + "px"; });

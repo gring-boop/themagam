@@ -748,7 +748,9 @@
       const pid = g.dataset.dockGrip;
       const p = el("dock-panel-" + pid);
       if (!p) return;
-      _grip = { pid, y: e.clientY, h: p.getBoundingClientRect().height };
+      /* ★ 여기도 자를 맞춥니다 — 잰 값(화면)과 넣을 값(요소)이 다릅니다.
+         안 맞추면 95% 에서 판을 잡는 순간 5% 쪼그라듭니다. */
+      _grip = { pid, y: e.clientY, h: p.getBoundingClientRect().height / Z() };
       p.classList.add("resizing");
       g.setPointerCapture?.(e.pointerId);
       e.preventDefault();
@@ -756,15 +758,16 @@
 
     document.addEventListener("pointermove", (e) => {
       if (!_grip) return;
-      /* 위로 끌수록(=clientY 가 작아질수록) 커집니다 */
-      setH(_grip.pid, _grip.h + (_grip.y - e.clientY));
+      /* 위로 끌수록(=clientY 가 작아질수록) 커집니다.
+         마우스가 움직인 거리도 화면 값이라 요소 기준으로 바꿔 줍니다 */
+      setH(_grip.pid, _grip.h + (_grip.y - e.clientY) / Z());
     });
 
     const 놓기 = () => {
       if (!_grip) return;
       const p = el("dock-panel-" + _grip.pid);
       p?.classList.remove("resizing");
-      const h = Math.round(p?.getBoundingClientRect().height || 0);
+      const h = Math.round((p?.getBoundingClientRect().height || 0) / Z());
       if (h) saveH(_grip.pid, h);
       _grip = null;
     };
