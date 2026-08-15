@@ -4468,21 +4468,22 @@ body.solo-mode #music-add-btn{ display: none !important; }
 /* 유령 카드도 눌러서 꾸밀 수 있다는 표시 */
 body.solo-mode .card-avatar-wrap{ cursor: pointer; }
 
-/* 🧘 혼자 방의 가짜 화면 — 액자가 **사진 비율대로** 자랍니다 (2026-08-15)
-   진짜 방은 화면을 계속 찍어 보내니 비율이 제각각이라 액자를 카드 키에
-   맞춰 두고 잘라 봅니다. 여기는 내가 골라 둔 사진 한 장이라 비율을 이미
-   알아요. 남의 키에 맞추면 위아래 회색 띠만 생깁니다. */
-body.solo-mode .share-card{ height: auto !important; }
-body.solo-mode .share-shot{
+/* 🖥️ 가짜 화면 고르기 — 잘라 보기 / 전체 보기 (2026-08-15) */
+.solo-fit-row{ display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.solo-fit-row .hint{ margin: 0; }
+.solo-fit-btn{
   flex: 0 0 auto;
-  height: auto;
-  min-height: 0;          /* 120px 바닥값도 풉니다 — 납작한 사진이 눌립니다 */
+  padding: 4px 10px;
+  border: 1px solid var(--line, #E3E7EE);
+  border-radius: 999px;
+  background: var(--panel, #fff);
+  color: var(--text-2, #5A6473);
+  font-size: 12px; font-weight: 700; cursor: pointer;
 }
-body.solo-mode .share-img{
-  /* 폭에 맞추고 키는 사진이 정합니다. object-fit 은 **적지 않습니다** —
-     이미 제 비율이라 할 일이 없고, 적어 두면 "채우기/전체 보기" 선택과
-     싸우게 돼요 (진짜 방 규칙과 같은 이유). */
-  height: auto;
+.solo-fit-btn[aria-pressed="true"]{
+  border-color: var(--accent, #4A140D);
+  background: var(--fill-1, #F2F4F8);
+  color: var(--text, #2E3440);
 }
 
 /* 🧘 혼자 방 — 지금 꾸미는 카드가 내 것이 아닐 때 위에 알려줍니다 */
@@ -4521,7 +4522,11 @@ body.solo-mode .share-img{
 /* ★ contain — 카드에 걸릴 모습 그대로 보여줍니다. 여기만 cover 로 두면
    미리보기에서는 꽉 차 보이는데 카드에서는 위아래가 비어, 고를 때 판단이
    어긋나요 (미리보기의 뜻이 사라집니다). */
-.solo-shot-prev img{ width: 100%; height: 100%; object-fit: contain; display: block; }
+/* 미리보기는 카드에 걸릴 모습 **그대로** — 고른 방식을 그대로 따릅니다.
+   여기와 카드가 다르면 미리보기의 뜻이 사라져요. */
+.solo-shot-prev img{ width: 100%; height: 100%; display: block; }
+.solo-shot-prev.fit-cover img{ object-fit: cover; }
+.solo-shot-prev.fit-contain img{ object-fit: contain; }
 .solo-shot-empty{
   text-align: center; line-height: 1.6;
   font-size: 13px; color: var(--text-3, #8A93A2);

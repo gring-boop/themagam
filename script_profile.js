@@ -983,6 +983,9 @@ function soloProfileBlockHtml(tgt) {
   const _raw = (profileTargetData() || {}).shareImg;
   const shot = (typeof _raw === "string" && /^data:image\/(png|jpe?g|webp);base64,/.test(_raw))
     ? _raw : "";
+  /* 잘라 보기(cover) 가 기본입니다 — 액자를 꽉 채워야 카드 줄이 가지런해요.
+     가로로 긴 화면 캡쳐처럼 잘리면 곤란한 사진은 전체 보기로 바꿉니다. */
+  const fitC = ((profileTargetData() || {}).shareFit === "contain") ? "contain" : "cover";
   return `
   <div class="solo-row">
     <div class="set-block solo-block">
@@ -1027,7 +1030,7 @@ function soloProfileBlockHtml(tgt) {
 
     <div class="set-block solo-block">
       <div class="set-title">🖥️ ${escapeHtml(tgt)}의 화면</div>
-      <div class="solo-shot-prev${shot ? " has-shot" : ""}" id="solo-shot-prev">
+      <div class="solo-shot-prev${shot ? " has-shot" : ""} fit-${fitC}" id="solo-shot-prev">
         ${shot ? `<img src="${escapeHtml(shot)}" alt="">`
                : `<span class="solo-shot-empty">🖥️<br>아직 놓아둔 화면이 없어요</span>`}
         <span class="solo-shot-foot">${escapeHtml(tgt)}의 화면</span>
@@ -1037,6 +1040,16 @@ function soloProfileBlockHtml(tgt) {
         <button type="button" class="ghost-btn compact${shot ? "" : " hidden"}" id="solo-shot-clear">치우기</button>
         <input type="file" id="solo-shot-file" accept="image/*" class="hidden">
       </div>
+      ${shot ? `
+      <div class="solo-fit-row">
+        <button type="button" class="solo-fit-btn" data-solo-fit="cover"
+                aria-pressed="${fitC === "cover" ? "true" : "false"}">꽉 채우기</button>
+        <button type="button" class="solo-fit-btn" data-solo-fit="contain"
+                aria-pressed="${fitC === "contain" ? "true" : "false"}">전체 보기</button>
+        <span class="hint">${fitC === "cover"
+          ? "액자를 꽉 채워요. 넘치는 쪽은 잘립니다."
+          : "사진을 통째로 보여줘요. 남는 쪽은 바탕색."}</span>
+      </div>` : ""}
       <p class="hint">
         진짜 화면 공유와 같은 액자에, 고른 사진을 걸어 둡니다. 카드 옆에
         나란히 서요. 위 미리보기가 실제 크기 그대로입니다 —
@@ -1331,6 +1344,15 @@ function bindSoloProfileBlock() {
       }
     };
   }
+  document.querySelectorAll("[data-solo-fit]").forEach(b => {
+    b.onclick = async () => {
+      await saveMyProfile({ shareFit: b.dataset.soloFit });
+      window.soloSyncScreens?.();
+      window.renderUserCards?.();
+      renderProfilePanel();
+    };
+  });
+
   if (shotClr) shotClr.onclick = async () => {
     await saveMyProfile({ shareImg: "" });
     window.soloSyncScreens?.();
