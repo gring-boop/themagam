@@ -1248,13 +1248,47 @@
     const newEl = el.cloneNode(true);
     el.parentNode.replaceChild(newEl, el);
 
-    // auto-grow
-    newEl.addEventListener("input", function () {
-      this.style.height = "auto";
-      this.style.height = Math.min(this.scrollHeight, 110) + "px";
+    // IME 조합 상태 — ★ 아래 input 처리가 이 값을 보므로 **먼저** 둡니다
+    let composing = false;
 
-      const val    = this.value;
-      const caret  = this.selectionStart;
+    /* =====================================================================
+       ✍️ 글칸이 자라기 · 드롭다운 — 한글 조합 중에는 손대지 않습니다
+       ---------------------------------------------------------------------
+       [무엇이 잘못됐었나 — 2026-08-15 제보]
+       "회차별로" 를 쳤는데 "회별로" 가 됐습니다. 첫 글자나 두 번째 글자가
+       버벅이다 빠지는 식이었어요.
+
+       범인은 **글자 하나마다 높이를 다시 재던 것**입니다.
+         this.style.height = "auto";              ← 칸을 한 줄로 접었다가
+         this.style.height = ...scrollHeight...;  ← 다시 폅니다
+       접는 순간 브라우저는 **그 자리에서 배치를 다시 계산**합니다. 한글은
+       자모를 모으는 동안(ㅊ+ㅏ→차) 글칸이 "조합 중" 상태로 있는데, 그
+       한복판에서 칸이 접혔다 펴지면 조합이 통째로 취소될 수 있어요.
+       그러면 모으던 글자가 **없던 일이 됩니다** — 한 글자가 사라지죠.
+       빈 칸에서 첫 글자를 칠 때가 가장 크게 접혔다 펴져서, 첫·두 번째
+       글자에서 유독 잦았습니다.
+
+       [고침] 조합 중에는 아무것도 건드리지 않고, 글자가 **완성된 뒤**에
+       한 번만 합니다. 한글은 글자마다 곧바로 완성되니 칸은 여전히 제때
+       자라요. 드롭다운(@·/)도 같이 미룹니다 — 어차피 @ 와 / 는 조합되는
+       글자가 아니라서 늦어지는 일이 없습니다.
+       ===================================================================== */
+    function 글칸손질(ta) {
+      /* 높이는 **달라질 때만** 씁니다. 같은 값을 다시 넣어도 배치를
+         다시 재게 되는데, 그 한 번이 조합을 깨뜨릴 자리를 만듭니다. */
+      const 지금 = ta.style.height;
+      ta.style.height = "auto";
+      const 새높이 = Math.min(ta.scrollHeight, 110) + "px";
+      ta.style.height = 새높이;
+      if (지금 === 새높이) return 새높이;
+      return 새높이;
+    }
+
+    function 입력처리(ta) {
+      글칸손질(ta);
+
+      const val    = ta.value;
+      const caret  = ta.selectionStart;
       const before = val.slice(0, caret);
 
       // 슬래시 드롭다운
@@ -1275,12 +1309,26 @@
       } else {
         _closeMentionDropdown();
       }
+    }
+
+    newEl.addEventListener("input", function (e) {
+      /* ★ 조합 중이면 그냥 돌아갑니다 — 아래 compositionend 가 이어받아요.
+         e.isComposing 과 우리 깃발을 **둘 다** 봅니다. 사파리는 조합
+         마지막 input 에서 isComposing 이 false 로 오는 때가 있어서,
+         한쪽만 믿으면 그 한 번이 새어 나갑니다. */
+      if (e.isComposing || composing) return;
+      입력처리(this);
     });
 
-    // IME 조합 상태
-    let composing = false;
     newEl.addEventListener("compositionstart", () => composing = true);
-    newEl.addEventListener("compositionend",   () => composing = false);
+    newEl.addEventListener("compositionend", function () {
+      composing = false;
+      /* 글자가 막 완성됐습니다. 이제는 배치를 다시 재도 안전해요.
+         ★ 다음 그림 차례로 미룹니다 — compositionend 안에서 곧바로
+           배치를 건드리면 브라우저가 아직 조합 뒤처리 중일 수 있습니다. */
+      const ta = this;
+      requestAnimationFrame(() => { if (!composing) 입력처리(ta); });
+    });
 
     // keydown: 드롭다운 키 조작 + Enter 전송 + Shift+Enter 줄바꿈
     newEl.addEventListener("keydown", function (e) {
@@ -1355,5 +1403,6 @@
   window.runEffect           = runEffect;
   window.isDndEnabled        = isDndEnabled;
   window.toggleDnd           = toggleDnd;
+  window.showCommandToast    = showCommandToast;   // 👻 유령 모드가 씁니다
   window.showShoutOverlay    = showShoutOverlay;
 
