@@ -3475,6 +3475,10 @@ input[type="range"]:focus{ box-shadow: none; }
   min-width: 0;
 }
 .font-ctl{ display: flex; align-items: center; gap: 2px; min-width: 0; }
+/* 🔍 화면 확대·축소 — 글자 크기 조절 바로 오른쪽.
+   하는 일이 다르니 살짝 띄워서 "다른 단추"임을 눈에 보이게 합니다. */
+.zoom-ctl{ margin-left: 6px; }
+.zoom-ctl .font-pill{ min-width: 44px; text-align: center; cursor: pointer; }
 
 /* -------- 채팅 접힘 -------- */
 body.chat-collapsed .chat-sidebar{ display: none; }

@@ -561,76 +561,15 @@
        (스티커는 남깁니다. 그게 재미라고 하셨어요)
      ===================================================================== */
   /* =====================================================================
-     🔍 화면 확대·축소 — 머리말의 [− 18px +] 자리를 물려받습니다
+     🔍 화면 확대·축소 — 여기서는 [− 18px +] 자리를 **물려받습니다**
      ---------------------------------------------------------------------
-     [왜 바꾸는가] 글자 크기 조절은 **채팅 글자만** 굵어집니다. 카드도
-     알약도 그대로라, 화면이 작다고 느낄 때 정작 도움이 안 됐어요.
-     확대·축소는 방 전체가 같이 커집니다.
-
-     [왜 CSS zoom 인가] transform: scale 은 자리만 늘려서 스크롤과 클릭
-     좌표가 어긋납니다. zoom 은 배치를 다시 계산해서 그런 일이 없어요.
-     크롬·사파리·파이어폭스 모두 씁니다.
-
-     ★ 진짜 더마감은 손대지 않습니다 — 여기는 혼자 방 파일이에요.
+     알맹이는 script_zoom.js 한 곳에 있습니다(진짜 방과 같은 코드).
+     다른 점은 자리뿐이에요 — 진짜 방은 글자 크기 조절 옆에 나란히
+     붙지만, 혼자 방은 글자 크기 조절을 걷어내고 그 자리를 씁니다.
      ===================================================================== */
-  const ZOOM_KEY = "soloZoom";
-  const ZOOM_MIN = 70, ZOOM_MAX = 130, ZOOM_STEP = 5;
-
-  function 배율() {
-    const v = Number(_store()?.getItem(ZOOM_KEY));
-    return (v >= ZOOM_MIN && v <= ZOOM_MAX) ? v : 100;
-  }
-  function 배율적용(v) {
-    const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(v / ZOOM_STEP) * ZOOM_STEP));
-    _store()?.setItem(ZOOM_KEY, String(z));
-    /* ★ [고침 2026-08-15] body 가 아니라 **뿌리(html)** 에 겁니다.
-         body 에 걸면 화면에 고정된 것들(바텀 알약 줄)이 배율만큼 위로
-         떠오릅니다 — 고정 좌표는 화면을 기준으로 재는데, 그 화면이
-         이미 줄어든 몸통 안이라 어긋나요. 뿌리에 걸면 브라우저 자체
-         확대와 같은 취급이라 고정 요소도 제자리를 지킵니다.
-       100% 일 때는 아예 손대지 않습니다 — zoom:1 만 걸려 있어도
-         어떤 브라우저는 글꼴을 다시 그려서 미세하게 흐려 보여요 */
-    document.documentElement.style.zoom = (z === 100) ? "" : (z / 100);
-    document.body.style.zoom = "";
-    /* ★★ [고침 2026-08-15] 바텀 알약 줄이 바닥에서 붕 뜨던 것.
-         몸통 높이가 100dvh 인데, 화면 단위(dvh)는 확대를 모릅니다.
-         95% 로 줄이면 "화면 높이만큼" 잡은 몸통이 95% 로 그려져서
-         아래 5% 가 빈 채로 남아요. 확대한 만큼 미리 키워 둡니다. */
-    const f = z / 100;
-    document.body.style.height = (z === 100) ? "" : (window.innerHeight / f) + "px";
-    const pill = document.getElementById("solo-zoom-pill");
-    if (pill) pill.textContent = z + "%";
-    return z;
-  }
-  window.soloZoom = 배율적용;
-  /* 창 크기가 바뀌면 몸통 높이를 다시 잽니다 (위 계산이 화면 높이를 씁니다) */
-  window.addEventListener("resize", () => { try { 배율적용(배율()); } catch (e) {} });
-  /* 다른 파일이 좌표를 잴 때 쓰는 창구.
-     마우스 좌표·getBoundingClientRect 는 **화면 기준(확대된 뒤)** 이고,
-     style.left·offsetWidth 는 **요소 기준(확대 전)** 입니다. 둘을 섞으면
-     판이 커서를 못 따라가고, 오른쪽 끝에서 먼저 막혀요 — 실제로 그랬습니다.
-     진짜 방에는 이 함수가 없으니 (window.uiZoom?.() || 1) 로 늘 1 입니다. */
-  window.uiZoom = () => 배율() / 100;
-
-  function 확대축소달기() {
-    const ctl = document.querySelector(".font-ctl");
-    if (!ctl) return;
-    ctl.innerHTML = `
-      <button class="font-btn" type="button" id="solo-zoom-out" aria-label="화면 축소">−</button>
-      <span id="solo-zoom-pill" class="font-pill" aria-live="polite"
-            role="button" tabindex="0" title="눌러서 100% 로">100%</span>
-      <button class="font-btn" type="button" id="solo-zoom-in" aria-label="화면 확대">+</button>`;
-    document.getElementById("solo-zoom-out").onclick = () => 배율적용(배율() - ZOOM_STEP);
-    document.getElementById("solo-zoom-in").onclick  = () => 배율적용(배율() + ZOOM_STEP);
-    const pill = document.getElementById("solo-zoom-pill");
-    /* 눌러서 제자리로 — 한참 만졌다가 되돌리기가 은근히 번거로워요 */
-    pill.onclick = () => 배율적용(100);
-    pill.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); 배율적용(100); } };
-    배율적용(배율());
-  }
 
   function 걷어내기() {
-    확대축소달기();
+    window.mountZoomCtl?.("replace");
     ["dock-pill-chatty", "dock-pill-pub", "alive-btn",
      "chatty-tab", "chat-tab-chatty"].forEach(id => {
       const el = document.getElementById(id);
@@ -671,9 +610,18 @@
         out[닉] = { img, at: 1, level: 100, fit: "cover" };
       }
     });
-    const 옛 = _get("screens");
+    const 옛 = _get("screens") || {};
+
+    /* ★★ [고침 2026-08-15] 내가 **진짜로** 화면을 공유 중이면 그 자리는
+         건드리지 않고 그대로 옮겨 옵니다.
+         여기서 screens 를 통째로 새로 쓰는데, 진짜 공유가 5초마다 넣어
+         두는 내 그림이 매번 지워졌습니다. 30~90초마다 내 화공이 사라졌다
+         5초 뒤에 되살아난 이유예요 — 가짜를 채우면서 진짜를 쓸어버린 셈. */
+    const 나 = 내닉();
+    if (window.isScreenSharing?.() === true && 옛[나]) out[나] = 옛[나];
+
     /* 달라진 게 없으면 아예 건드리지 않습니다 — 듣는 쪽도 안 깨워요 */
-    if (JSON.stringify(옛 || {}) === JSON.stringify(out)) return;
+    if (JSON.stringify(옛) === JSON.stringify(out)) return;
     _put("screens", out);
   }
   window.soloSyncScreens = 화면동기;
