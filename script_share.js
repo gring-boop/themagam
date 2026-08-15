@@ -638,6 +638,12 @@
          있는 시간은 세어지지 않아요. */
     try { window.achvShareTick?.(1000); } catch (e) {}
 
+    /* 🧘 혼자 방의 가짜 화면은 늙지 않습니다 — 보내는 사람이 없으니
+       "소식이 끊겼다" 는 판정이 뜻을 잃어요.
+       ★ 이걸 빠뜨려서, 걸어 둔 사진이 20초에 흐려지고 30초에 사라졌다가
+         다시 나타났습니다. shareRows 쪽만 막고 여기를 놓쳤어요. */
+    if (window.SOLO) return;
+
     const t = now();
     document.querySelectorAll(".share-card").forEach(card => {
       const at = Number(card.getAttribute("data-share-at") || 0);

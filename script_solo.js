@@ -659,14 +659,21 @@
   function 화면동기() {
     const 명단 = Object.keys(_get("status") || {});
     const 사람들 = _get("users") || {};
-    const 지금 = Date.now();
     const out = {};
     명단.forEach(닉 => {
       const img = 사람들[닉]?.profile?.shareImg;
       if (typeof img === "string" && img.startsWith("data:image/")) {
-        out[닉] = { img, at: 지금, level: 100, fit: "cover" };
+        /* ★ at 을 매번 Date.now() 로 두면 안 됩니다. 그리는 쪽은 만든
+             HTML 이 직전과 같을 때만 손을 안 대는데, at 이 계속 달라지면
+             30초마다 액자를 **전부 헐고 다시 짓습니다**. 그때 <img> 가
+             새 요소가 되어 내 진짜 공유 화면까지 깜빡였어요.
+             가짜 화면은 늙지 않으니(위 tickShare 참고) 값은 고정합니다. */
+        out[닉] = { img, at: 1, level: 100, fit: "cover" };
       }
     });
+    const 옛 = _get("screens");
+    /* 달라진 게 없으면 아예 건드리지 않습니다 — 듣는 쪽도 안 깨워요 */
+    if (JSON.stringify(옛 || {}) === JSON.stringify(out)) return;
     _put("screens", out);
   }
   window.soloSyncScreens = 화면동기;

@@ -4481,10 +4481,16 @@ body.solo-mode .card-avatar-wrap{ cursor: pointer; }
 .solo-row > .set-block{ flex: 1 1 0; min-width: 0; margin: 0; }
 @media (max-width: 900px){ .solo-row{ flex-direction: column; } }
 
-/* 진짜 공유 액자와 같은 비율(16:10)로 미리 보여줍니다 */
+/* 진짜 공유 액자와 **같은 크기 그대로** 미리 보여줍니다.
+   폭을 칸 가득 늘리면 4:5 라 세로로 한참 길어지고, 실제로 어떻게
+   보일지도 가늠이 안 됩니다. 카드 폭(--card-w)에서 안쪽 여백을 뺀
+   크기로 두고 가운데에 세웁니다. */
 .solo-shot-prev{
   position: relative;
-  aspect-ratio: 16 / 10;
+  width: calc(var(--card-w, 214px) - 16px);
+  max-width: 100%;
+  margin: 0 auto;
+  aspect-ratio: 4 / 5;
   border-radius: var(--r-md, 10px);
   border: 1px solid var(--line, #E3E7EE);
   background: var(--fill-1, #F2F4F8);
