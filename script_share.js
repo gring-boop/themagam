@@ -298,6 +298,7 @@
     _attachStream(stream);
 
     _sharing = true;
+    _표시남기기(true);
 
     /* 창이 그냥 닫혀도 내 그림이 서버에 남지 않게 미리 예약해 둡니다 */
     try { await db.ref("screens/" + myNick).onDisconnect().remove(); } catch (e) {}
@@ -314,6 +315,7 @@
   async function stopScreenShare() {
     const wasSharing = _sharing;
     _sharing = false;
+    _표시남기기(false);          // 내 손으로 껐으니 다음에 안 물어봅니다
 
     if (_timer)    { clearInterval(_timer);    _timer = null; }
     if (_agoTimer) { clearInterval(_agoTimer); _agoTimer = null; }
@@ -339,6 +341,60 @@
       try { await db.ref("screens/" + myNick).remove(); } catch (e) {}
     }
   }
+
+  /* =====================================================================
+     🖥️ 돌아오면 다시 켤지 물어봅니다 (2026-08-15)
+     ---------------------------------------------------------------------
+     [먼저, 자동으로는 안 됩니다 — 브라우저가 막습니다]
+     화면 공유는 "이 창을 보여줄게" 를 **그때그때 사람이 고르는** 방식이라,
+     카메라·마이크처럼 한 번 허락해 두는 권한이 아예 없습니다. 크롬은
+     사람이 누른 직후가 아니면 고르기 창을 띄우는 것 자체를 거부해요.
+     새로고침하면 화면 줄기도 함께 끊깁니다. 그래서 "저절로 다시 켜기" 는
+     지금의 웹에서는 만들 수 없어요 — 남의 화면이 몰래 다시 나가는 일을
+     막으려는 규칙이라, 뚫을 방법을 찾는 것도 옳지 않습니다.
+
+     [대신 할 수 있는 것]
+     "아까 공유 중이었다" 는 것만 이 기기에 적어 두고, 돌아오면 머리말
+     단추를 **깜빡여서** 알려 줍니다. 한 번 누르면 바로 고르기 창이
+     떠요 — 메뉴를 찾아 들어갈 일이 없어집니다.
+
+     ★ 내 손으로 끈 경우에는 표시를 지웁니다. 끝낸 사람에게 다시
+       권하는 건 참견이니까요. 표시는 6시간만 삽니다 — 어제 켰던 것을
+       오늘 아침에 묻는 건 눈치 없는 짓이에요.
+     ===================================================================== */
+  const RESUME_KEY = "shareWasOn";
+  const RESUME_TTL = 6 * 60 * 60 * 1000;
+
+  function _표시남기기(켬) {
+    try {
+      if (켬) window.AppStore?.setItem(RESUME_KEY, String(Date.now()));
+      else    window.AppStore?.removeItem(RESUME_KEY);
+    } catch (e) {}
+  }
+  function _표시있나() {
+    try {
+      const t = Number(window.AppStore?.getItem(RESUME_KEY) || 0);
+      if (!t) return false;
+      if (Date.now() - t > RESUME_TTL) { _표시남기기(false); return false; }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /** 입장한 뒤에 한 번 — 아까 공유 중이었으면 단추를 깜빡입니다 */
+  function offerResume() {
+    if (_sharing || !supported() || !myNick) return;
+    if (!_표시있나()) return;
+    const btn = document.getElementById("share-btn");
+    if (!btn) return;
+    btn.classList.add("share-resume");
+    btn.title = "아까 화면을 공유하고 있었어요 — 눌러서 다시 켜기";
+    /* 깜빡임은 눌렀을 때 · 30초 뒤에 스스로 멎습니다. 계속 깜빡이면
+       "안 끄면 안 되나" 싶어져요 */
+    const 그만 = () => btn.classList.remove("share-resume");
+    btn.addEventListener("click", 그만, { once: true });
+    setTimeout(그만, 30000);
+  }
+  window.offerShareResume = offerResume;
 
   async function toggleScreenShare() {
     if (!supported()) { alert(SHARE_UNSUPPORTED); return; }
@@ -805,6 +861,10 @@
   /* 접속자 정보가 바뀔 때 script_realtime.js 가 다시 칠해 줍니다 */
   window.renderShareButton = renderShareButton;
   window.renderShareCards  = renderShareCards;
+  /* 입장이 끝난 뒤에 한 번 물어봅니다 (카드·채팅이 먼저 떠야 하니 조금 뒤에) */
+  window.addEventListener("load", () => {
+    setTimeout(() => { try { offerResume(); } catch (e) {} }, 4000);
+  });
   window.listenScreens     = listenScreens;   // 🧘 혼자 방이 직접 켭니다
   window.isScreenSharing   = () => _sharing;
   window.setShareWidth     = setShareWidth;

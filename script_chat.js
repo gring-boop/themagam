@@ -1284,9 +1284,8 @@
       return 새높이;
     }
 
-    function 입력처리(ta) {
-      글칸손질(ta);
-
+    /* 드롭다운(@ · /)만 다시 봅니다 — 배치를 건드리지 않아 조합 중에도 안전 */
+    function 드롭다운손질(ta) {
       const val    = ta.value;
       const caret  = ta.selectionStart;
       const before = val.slice(0, caret);
@@ -1311,6 +1310,11 @@
       }
     }
 
+    function 입력처리(ta) {
+      글칸손질(ta);
+      드롭다운손질(ta);
+    }
+
     newEl.addEventListener("input", function (e) {
       /* ★ 조합 중이면 그냥 돌아갑니다 — 아래 compositionend 가 이어받아요.
          e.isComposing 과 우리 깃발을 **둘 다** 봅니다. 사파리는 조합
@@ -1323,11 +1327,19 @@
     newEl.addEventListener("compositionstart", () => composing = true);
     newEl.addEventListener("compositionend", function () {
       composing = false;
-      /* 글자가 막 완성됐습니다. 이제는 배치를 다시 재도 안전해요.
-         ★ 다음 그림 차례로 미룹니다 — compositionend 안에서 곧바로
-           배치를 건드리면 브라우저가 아직 조합 뒤처리 중일 수 있습니다. */
       const ta = this;
-      requestAnimationFrame(() => { if (!composing) 입력처리(ta); });
+
+      /* ★★ [고침 2026-08-15] 드롭다운은 **미루면 안 됩니다.**
+           "/방가" 를 치고 곧바로 엔터를 누르면, 미뤄 둔 갱신이 아직
+           안 돌아서 목록이 "/" 만 쳤을 때 그대로였습니다. 그래서 맨 위에
+           있던 /운세 가 들어갔어요 (실제 제보). 엔터는 조합이 끝난
+           **그 순간** 날아오므로, 목록은 여기서 바로 맞춰 둡니다.
+           배치를 안 건드리는 일이라 조합을 깨뜨리지도 않아요. */
+      드롭다운손질(ta);
+
+      /* 배치(높이)만 다음 그림 차례로 미룹니다 — 조합 뒤처리 중에
+         칸을 접었다 펴면 그게 바로 글자가 씹히던 원인이었습니다. */
+      requestAnimationFrame(() => { if (!composing) 글칸손질(ta); });
     });
 
     // keydown: 드롭다운 키 조작 + Enter 전송 + Shift+Enter 줄바꿈
@@ -1338,7 +1350,27 @@
         if (e.key === "ArrowUp")   { e.preventDefault(); _moveSlashSel(-1); return; }
         if (e.key === "Escape")    { e.preventDefault(); _closeSlashDropdown(); return; }
         if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !composing) {
+          /* ★ 고르기 직전에 **지금 글칸**을 다시 봅니다.
+             조합이 끝나는 차례와 엔터가 오는 차례는 브라우저·입력기마다
+             달라서, 어느 한쪽을 믿으면 언젠가 어긋납니다. 여기서 한 번
+             더 맞추면 차례가 어떻든 고른 대로 들어가요. */
+          드롭다운손질(this);
+
+          /* ★ 다 쳤으면 그냥 보냅니다.
+             "/방가" 처럼 명령어를 **끝까지** 친 뒤의 엔터는 "고르겠다"가
+             아니라 "보내겠다" 입니다. 예전에는 여기서 목록의 것을 글칸에
+             넣기만 해서 엔터를 한 번 더 눌러야 했어요.
+             (hasText 명령어는 뒤에 글이 더 붙으므로 그대로 둡니다) */
+          const 친것 = this.value.trim();
+          if (SLASH_COMMANDS[친것] && !SLASH_COMMANDS[친것].hasText) {
+            _closeSlashDropdown();
+            e.preventDefault();
+            send();
+            return;
+          }
+
           e.preventDefault();
+          if (!_slashActive) { send(); return; }   // 맞는 게 없으면 그냥 보냅니다
           const sel = document.getElementById("mention-dropdown")
             ?.querySelectorAll(".mention-item")?.[_slashSelIdx];
           if (sel) { _insertSlash(sel.dataset.cmd); return; }

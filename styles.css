@@ -6731,6 +6731,24 @@ body.split-dragging #chat-box3{ user-select: none; }
 }
 .icon-btn.share-on:hover{ background: var(--danger-soft); }
 
+/* [2026-08-15] 아까 공유 중이었어요 — 돌아왔을 때 단추만 조용히 깜빡입니다.
+   화면 공유는 브라우저가 "그때그때 사람이 고르기" 를 강제해서 저절로
+   다시 켤 수가 없습니다. 대신 찾아 들어갈 일 없이 한 번에 누르도록만.
+   ★ 30초 뒤에 스스로 멎습니다 (script_share.js). 계속 깜빡이면 재촉이 돼요. */
+@keyframes share-resume-blink{
+  0%, 100%{ box-shadow: 0 0 0 0 transparent; }
+  50%     { box-shadow: 0 0 0 3px var(--danger-soft); }
+}
+.icon-btn.share-resume{
+  color: var(--danger);
+  border-color: var(--danger-line);
+  animation: share-resume-blink 1.4s ease-in-out infinite;
+}
+/* 움직임이 불편한 분에게는 깜빡이지 않고 색으로만 알립니다 */
+@media (prefers-reduced-motion: reduce){
+  .icon-btn.share-resume{ animation: none; box-shadow: 0 0 0 2px var(--danger-soft); }
+}
+
 /* [2026-08-07] 남이 공유 중 — 같은 붉은 계열이되 한 겹 옅게.
 
    내가 켰을 때(.share-on)와 색을 똑같이 하면 "내가 켠 건가?" 하고
