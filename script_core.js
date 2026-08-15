@@ -330,7 +330,11 @@ window.AppSession = AppSession;
       _presenceDisconnectArmed = false;
       try { armPresenceOnDisconnect(); } catch (e) {}
       try { db.ref(`status/${myNick}/disconnectedAt`).remove(); } catch (e) {}
-      callIfFn("updateStatus", false);
+      /* ★ 끊긴 사이에 서버 쪽 내 줄이 어떻게 됐는지 알 수 없습니다.
+         "같은 화면이면 안 보내기"(script_realtime.js)가 이 한 번을
+         건너뛰지 않도록, 기억해 둔 지문을 지우고 통째로 다시 보냅니다. */
+      window.forgetStatusSig?.();
+      callIfFn("updateStatus", true);
     });
   }
 

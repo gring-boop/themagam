@@ -702,6 +702,15 @@
     })[code] || "status-rest";
   }
 
+  /* 마지막으로 **실제로 보낸** 줄의 지문과 시각 — 같은 화면이면 안 보내려고 */
+  let _lastSentSig = "";
+  let _lastSentAt  = 0;
+  const STATUS_KEEPALIVE_MS = 5 * 60 * 1000;   // 아무것도 안 변해도 5분에 한 번은
+
+  /** 기억해 둔 지문을 지웁니다 — 다시 이어졌을 때처럼 "서버에 뭐가 남아
+      있는지 알 수 없는" 순간에 부릅니다 (script_core.js 재연결 자리). */
+  window.forgetStatusSig = function () { _lastSentSig = ""; _lastSentAt = 0; };
+
   function updateStatus(force = false) {
     if (!myNick) return;
 
@@ -741,7 +750,7 @@
       window.backupLocal?.();
     }
 
-    db.ref("status/" + myNick).set({
+    const 보낼것 = {
       emoji: myEmoji,
       /* [2026-08-13] 언제 들어왔는지 — 카드 정렬(접속 순서)이 씁니다 */
       joinedAt: Number(window._myJoinTimestamp?.() || 0),
@@ -768,7 +777,48 @@
       lastSeen: firebase.database.ServerValue.TIMESTAMP,
       // 살아 있다는 뜻 — 끊김 표시를 지웁니다
       disconnectedAt: null
+    };
+
+    /* =====================================================================
+       💸 같은 화면이면 안 보냅니다 (2026-08-15)
+       ---------------------------------------------------------------------
+       [무엇이 낭비였나] 한 사람이 한 번 쓰면 그 줄이 **접속한 모두**에게
+       내려갑니다. 그래서 통신량이 사람 수의 제곱으로 늘어요. 그런데
+         · 카드에 찍히는 시간은 **분 단위** 입니다 ("4h 58m")
+         · 30초마다 보내니 **두 번 중 한 번은 똑같은 글자** 를 만들었습니다
+         · 쉬는 중(BREAK)·자리비움(AWAY)에는 시간이 아예 안 늘어나는데도
+           꼬박꼬박 보냈습니다
+       사용량을 재 보니 보름에 4.87GB, 이대로면 무료치 10GB에 닿았어요.
+
+       [어떻게] 보내기 직전에 "남들 화면에 보일 것이 달라졌나" 만 봅니다.
+       workMs 는 **분으로 반올림해서** 견줍니다 — 초가 흐르는 건 아무
+       화면에도 안 나타나니까요. 달라진 게 없으면 그냥 돌아갑니다.
+
+       [그래도 5분에 한 번은 보냅니다]
+       lastSeen 이 영영 안 갱신되면 곤란합니다. 나갔는지는 onDisconnect 와
+       30분 유예가 판정하지만, 그게 실패했을 때 고아 기록을 걷어내는
+       안전망(ONLINE_STALE_MS 12시간)이 lastSeen 을 봐요. 5분이면 12시간
+       기준에 견줘 아주 넉넉합니다.
+
+       ★ force(=true) 로 부르는 자리(입장·상태 바꾸기·저장)는 이 검사를
+         건너뜁니다. 사람이 뭘 한 순간에는 바로 보여야 하니까요.
+       ===================================================================== */
+    const 지문 = JSON.stringify({
+      ...보낼것,
+      /* 견줄 때만 바꿔 끼웁니다 — 초는 화면에 안 나타나므로 분으로 */
+      workMs: Math.round(Number(보낼것.workMs || 0) / 60000),
+      lastSeen: 0
     });
+    const 지금 = Date.now();
+    if (!force
+        && 지문 === _lastSentSig
+        && (지금 - _lastSentAt) < STATUS_KEEPALIVE_MS) {
+      return;                                  // 남들 화면이 그대로예요
+    }
+    _lastSentSig = 지문;
+    _lastSentAt = 지금;
+
+    db.ref("status/" + myNick).set(보낼것);
   }
 
   // =====================================================
