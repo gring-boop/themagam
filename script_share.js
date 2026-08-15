@@ -704,7 +704,74 @@
   /* 1초마다 끊김만 살핍니다 — 카드를 다시 만들지 않으므로 깜빡이지 않아요.
      20초가 넘으면 흐리게, 30초가 넘으면 카드를 뺍니다.
      ("n초 전" 글자는 뺐습니다 — 화면이 흐려지는 것만으로 충분해서요) */
+  /* =====================================================================
+     💤 자리비움이 길어지면 공유를 스스로 끕니다 (2026-08-15)
+     ---------------------------------------------------------------------
+     [왜] 켜 둔 채 자리를 뜨는 일이 잦습니다. 두어 시간씩 이어지기도 해요.
+     그동안 내 화면은 계속 나가고, 통신량도 계속 씁니다. 무엇보다
+     **자리에 없는 사람의 화면이 계속 보이는 건 본인이 원한 게 아닙니다.**
+
+     [언제] 자리비움(away) 으로 넘어간 뒤 5분. 자동감지가 바꿔 준 것이든
+     손으로 고른 것이든 똑같이 셉니다.
+
+     [왜 곧바로가 아니라 5분인가] 상태를 잘못 눌렀다가 되돌리는 일이
+     있고, 자동감지도 20분 무입력이라 이미 한참 기다린 뒤예요. 5분이면
+     "잘못 눌렀네" 하고 돌아올 틈은 되면서, 두 시간을 흘려보내지도
+     않습니다. 자리로 돌아오면 세던 것은 없던 일이 됩니다.
+
+     [끄고 나서] 조용히 끄지 않고 알려 줍니다 — 껐는지 몰라서 "왜
+     아무도 내 화면을 안 보지" 하는 일이 없게요.
+     ===================================================================== */
+  const AWAY_STOP_MS = 5 * 60 * 1000;
+  let _awaySince = 0;
+  let _stoppedByAway = false;      // 자리비움 때문에 껐다 — 돌아오면 알려주려고
+  let _awayWatchTimer = null;
+
+  function _myStatusNow() {
+    return document.getElementById("db-status")?.value || "";
+  }
+
+  function _watchAway() {
+    const away = (_myStatusNow() === "away");
+
+    /* 자리로 돌아왔습니다 — 껐다고 알려주고, 다시 켜기 쉽게 단추를 깜빡입니다.
+       ★ 알림을 끌 때가 아니라 **돌아왔을 때** 띄우는 이유: 자리비움 중에
+         띄워 봐야 못 봅니다. 토스트는 몇 초 뒤 사라지니까요. */
+    if (!away && _stoppedByAway) {
+      _stoppedByAway = false;
+      try {
+        window.showCommandToast?.("💤 자리비움이 길어져 화면 공유를 꺼 두었어요. 🖥️ 를 누르면 다시 켤 수 있어요.");
+      } catch (e) {}
+      try { offerResume(); } catch (e) {}
+    }
+
+    if (!_sharing) { _awaySince = 0; return; }
+    if (!away)     { _awaySince = 0; return; }        // 자리에 있어요
+
+    const t = Date.now();
+    if (!_awaySince) { _awaySince = t; return; }
+    if (t - _awaySince < AWAY_STOP_MS) return;
+
+    _awaySince = 0;
+    _stoppedByAway = true;
+    stopScreenShare();
+    /* ★ 내 손으로 끈 게 아니니 "아까 공유 중이었다" 표시는 남겨 둡니다.
+       (stopScreenShare 가 지우므로 여기서 도로 세웁니다) */
+    _표시남기기(true);
+  }
+
+  /* 공유를 끈 뒤에도 "돌아왔나" 는 지켜봐야 합니다 — tickShare 는 공유
+     중일 때만 도니까요. 30초에 한 번이면 충분합니다. */
+  function _startAwayWatcher() {
+    if (_awayWatchTimer) return;
+    _awayWatchTimer = setInterval(_watchAway, 30 * 1000);
+  }
+  window.addEventListener("load", () => setTimeout(_startAwayWatcher, 5000));
+
   function tickShare() {
+    /* ★ 자리비움 검사는 혼자 방에서도 돕니다 — 아래 SOLO 반환보다 먼저 */
+    _watchAway();
+
     /* 🏅 👀 관심이 필요해 — 공유한 시간을 1초씩 업적 쪽에 알립니다.
        ★ 이 타이머는 **내가 공유 중일 때만** 돕니다(startScreenShare 에서
          켜고 stopScreenShare 에서 끕니다). 그래서 남의 화면을 보고만
