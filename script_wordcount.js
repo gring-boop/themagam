@@ -96,21 +96,21 @@
   let _mineLines = [];
 
   /* =====================================================================
-     📅 지난 기록 되짚기 (2026-08-16)
+     📅 지난 메모 되짚기 (2026-08-16) — ✍️ 내 메모 탭에서만
      ---------------------------------------------------------------------
-     [무엇을 하나] 오늘·내 메모 탭에서 ‹ › 로 **일주일 전까지** 넘겨 봅니다.
+     [왜 메모에만] 처음엔 오늘 탭에서도 지난 날을 볼 수 있게 했는데,
+     방장 말대로 **지난 글자수를 다시 볼 이유가 없습니다.** 그건 이미
+     [내 기록] 탭의 요일 그래프가 보여줘요. 되짚고 싶은 건 "그날 내가
+     뭐라고 적었더라" 쪽입니다.
 
-     [통신량 — 걱정하실까 봐]
-       · 나만 보는 줄(메모·할 일)은 이미 이 기기에 2주치가 있습니다. 0.
-       · 방의 글자수 기록은 그날 것을 **그때 한 번만** 내려받고 기억해
-         둡니다(once, 캐시). 다시 그 날짜로 가도 안 받아요.
-       · 하루치가 대략 10KB 안팎이라, 일주일을 다 넘겨봐도 70KB 남짓입니다.
-     ★ 실시간으로 듣지 않습니다(on 이 아니라 once) — 지난 날은 더 늘어날
-       일이 없으니까요. 듣기로 걸어 두면 그만큼 계속 열려 있게 됩니다.
+     [덕분에 통신량 0] 메모는 이미 이 기기에 2주치가 있습니다. 지난
+     날짜를 아무리 넘겨봐도 **서버에 한 번도 묻지 않아요.** 한때는
+     그날의 wordfeed 를 받아오게 해 뒀는데, 그 코드를 통째로 걷어냈습니다.
+     ★ 되살리고 싶어지면 먼저 물어보세요 — 지난 날을 훑는 일은 하루치
+       10KB 씩 쌓이고, 정작 잘 안 보게 됩니다.
      ===================================================================== */
   const BACK_MAX = 6;        // 오늘 포함 이레
   let _back = 0;             // 0 = 오늘, 1 = 어제 …
-  const _pastFeed = {};      // { 날짜: [기록] } — 한 번 받으면 기억
 
   function 보는날() {
     return _back === 0 ? dayKey() : dayKey(new Date(Date.now() - _back * 86400000));
@@ -120,21 +120,6 @@
     if (_back === 1) return "어제";
     const k = 보는날(), d = new Date(k + "T00:00:00");
     return `${d.getMonth() + 1}/${d.getDate()}(${DOW_NAMES[d.getDay()]})`;
-  }
-
-  async function 지난것가져오기(day) {
-    if (_pastFeed[day] || !window.db) return;
-    _pastFeed[day] = [];                       // 두 번 받지 않게 먼저 자리를 잡습니다
-    try {
-      const snap = await window.db.ref(`wordfeed/${day}`).orderByChild("at").once("value");
-      const v = snap.val() || {};
-      _pastFeed[day] = Object.values(v)
-        .filter(f => f && f.type !== "pomo")
-        .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
-    } catch (e) {
-      _pastFeed[day] = [];
-    }
-    render();
   }
 
   function loadMine() {
@@ -387,35 +372,25 @@
       rows.scrollTop = rows.scrollHeight;
     } else {
       /* 오늘 탭 — 흐르는 기록. 순위도 막대도 없습니다. */
-      if (_back === 0) {
-        const roomSum = Object.values(_today)
-          .reduce((a, v) => a + Number(v?.total || 0), 0);
-        big.textContent  = fmt(roomSum);
-        unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
-      } else {
-        const 날 = 보는날();
-        const 방 = _week[날] || {};
-        const 합 = Object.values(방).reduce((a, v) => a + Number(v?.total || 0), 0);
-        big.textContent  = fmt(합);
-        unit.textContent = `자 · ${보는날말()} 방 전체 · 나 ${fmt(Number(방[me()]?.total || 0))}자`;
-      }
+      const roomSum = Object.values(_today)
+        .reduce((a, v) => a + Number(v?.total || 0), 0);
+      big.textContent  = fmt(roomSum);
+      unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
       rows.innerHTML = drawFeed(mergedFeed());
       /* 새 줄이 아래에 붙으므로 맨 아래를 보여줍니다 */
       rows.scrollTop = rows.scrollHeight;
     }
 
-    /* 날짜 넘기기 줄 — 오늘·내 메모 탭에서만 */
+    /* 날짜 넘기기 줄 — ✍️ 내 메모 탭에서만 */
     const nav = el("wc-daynav");
     if (nav) {
-      nav.hidden = (_tab === "me");
+      nav.hidden = (_tab !== "memo");
       const t = el("wc-day-t");
       if (t) t.textContent = 보는날말();
       const pv = el("wc-day-prev"), nx = el("wc-day-next");
       if (pv) pv.disabled = _back >= BACK_MAX;
       if (nx) nx.disabled = _back <= 0;
     }
-    /* 지난 날인데 아직 안 받아 왔으면 지금 받습니다 */
-    if (_tab === "today" && _back > 0) 지난것가져오기(보는날());
 
     if (hint) {
       hint.textContent = (mine.base === null || mine.base === undefined)
@@ -611,14 +586,12 @@
   /* 방의 글자수 기록 + 내 뽀모 알림을 시간순으로 섞습니다.
      오늘 탭에서만 씁니다 — '내 기록' 탭은 숫자만 봅니다. */
   function mergedFeed() {
-    const 날 = 보는날();
-    const 내줄 = _mineLines.filter(x => x.day === 날);
-    /* 지난 날이면 서버 기록은 받아 둔 것을, 뽀모 알림은 오늘 것만 */
-    const 방줄 = (_back === 0) ? _feed : (_pastFeed[날] || []);
-    const 뽀모 = (_back === 0) ? _pomoLines : [];
-    if (!뽀모.length && !내줄.length) return 방줄;
-    return 방줄.concat(뽀모, 내줄)
-               .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+    /* 오늘 탭은 늘 **오늘**입니다 — 되짚기는 내 메모 탭에만 있어요 */
+    const 오늘 = dayKey();
+    const 내줄 = _mineLines.filter(x => x.day === 오늘);
+    if (!_pomoLines.length && !내줄.length) return _feed;
+    return _feed.concat(_pomoLines, 내줄)
+                .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
   }
 
   /* 뽀모 쪽(script_realtime.js)에서 부릅니다 */
