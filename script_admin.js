@@ -266,13 +266,19 @@
 
     try {
       /* 노드 단위 묶음 읽기 — 달 전체 attendance 1번, 멤버별 vacations·timeSegs(그 달) 각 1번 */
-      const [asnap, nickSnap, firstSeen] = await Promise.all([
+      const [asnap, nickSnap, firstSeen, wsnap] = await Promise.all([
         db.ref("attendance").orderByKey()
           .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value"),
         db.ref("nickOwner").once("value"),
-        loadFirstSeen()
+        loadFirstSeen(),
+        /* ✍️ 한 달치 글자수 — 아래 그래프가 씁니다. 날짜 범위로 한 번에
+           받아 오므로 요청은 하나예요(하루씩 31번 부르면 안 됩니다).
+           한 달 50KB 안팎 — 관리자 페이지는 방장만 가끔 열어서 괜찮습니다. */
+        db.ref("wordlog").orderByKey()
+          .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")
       ]);
       const attMonth = asnap.val() || {};
+      const wordMonth = wsnap.val() || {};
       const nicks = Object.keys(nickSnap.val() || {}).sort((a, b) => a.localeCompare(b, "ko"));
       if (!nicks.length) { body.innerHTML = "아직 기록이 없어요."; return; }
 
@@ -476,6 +482,9 @@
       /* 📈 한 달 흐름 — 위 머리글이 쓰는 값 그대로 (2026-08-16) */
       그래프그리기({ ymKey, daysInMonth, base, cntByDay, totalByDay, isThisMonth, todayD });
 
+      /* ✍️ 한 달 글자수 흐름 (2026-08-16) */
+      글자수그래프({ ymKey, daysInMonth, base, wordMonth, nickSet, isThisMonth, todayD });
+
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
       bindDig(body);
@@ -502,12 +511,14 @@
        그려지면 "망했나?" 로 읽혀요.
      ===================================================================== */
   let _차트값 = null;
+  let _글자값 = null;
   let _차트타이머 = null;
   window.addEventListener("resize", () => {
     clearTimeout(_차트타이머);
     _차트타이머 = setTimeout(() => {
       /* 칸 너비를 재서 그리므로, 창이 바뀌면 다시 그려야 1:1 이 유지됩니다 */
       if (_차트값) { try { 그래프그리기(_차트값); } catch (e) {} }
+      if (_글자값) { try { 글자수그래프(_글자값); } catch (e) {} }
     }, 150);
   });
 
@@ -599,6 +610,137 @@
         ${날짜}
       </svg>
       <p class="adm-chart-note">옅은 세로 띠는 주말${isThisMonth ? " · 점선은 오늘 · 오늘 뒤는 아직 안 그립니다" : ""}</p>`;
+  }
+
+  /* =====================================================================
+     ✍️ 한 달 글자수 흐름 (2026-08-16)
+     ---------------------------------------------------------------------
+     [왜 개인별 선을 안 긋는가]
+     이 방은 처음부터 "순위표처럼 보이지 않게" 만들어 왔습니다 — 글자수
+     피드도 일부러 두 줄로 흩어 놨어요. 관리자 화면에 개인별 선을 그으면
+     그걸 공유하는 순간 그 원칙이 무너집니다. 적게 쓴 사람이 위축되면
+     참여가 늘기는커녕 줄어요. 그래서 **방 전체**와 **몇 명이 적었나**
+     두 가지만 봅니다.
+
+     [왜 한 그래프에 두 선을 안 겹치는가]
+     글자수는 만 단위, 사람은 열몇 명입니다. 자가 다른 둘을 같은 그림에
+     겹치면 **거짓 비교**가 돼요. 글자수는 꺾은선, 사람 수는 아래 얇은
+     막대 띠 — 형태를 갈라 둡니다.
+
+     [값] wordlog/{날짜}/{닉}.total 을 그날치 합으로 봅니다.
+     명단(nickOwner)에 없는 옛 기록은 뺍니다 — 표와 같은 규칙이에요.
+     ===================================================================== */
+  /** 1234567 → "1,234,567" — 큰 숫자는 세 자리마다 끊어야 읽힙니다 */
+  const comma = (n) => Number(n || 0).toLocaleString("ko-KR");
+
+  function 글자수그래프(d) {
+    const box = el("adm-word-chart");
+    if (!box) return;
+    _글자값 = d;
+
+    const { ymKey, daysInMonth, base, wordMonth, nickSet, isThisMonth, todayD } = d;
+    const 끝날 = isThisMonth ? Math.min(todayD, daysInMonth) : daysInMonth;
+    if (끝날 < 1) { box.innerHTML = ""; return; }
+
+    /* 날짜별 합계와 참여 인원 */
+    const 합 = {}, 사람 = {};
+    const 참여자 = new Set();
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      const 그날 = wordMonth[k] || {};
+      let sum = 0, n = 0;
+      Object.keys(그날).forEach(닉 => {
+        if (!nickSet.has(닉)) return;                  // 명단에 없는 옛 기록
+        const t = Number(그날[닉]?.total || 0);
+        if (t <= 0) return;                            // 0 자는 참여로 안 셉니다
+        sum += t; n++; 참여자.add(닉);
+      });
+      합[k] = sum; 사람[k] = n;
+    }
+
+    const 총합 = Object.values(합).reduce((a, b) => a + b, 0);
+    const 적은날 = Object.values(합).filter(v => v > 0).length;
+    const 평균 = 적은날 ? Math.round(총합 / 적은날) : 0;
+
+    if (!총합) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">한 달 글자수</span></div>
+        <p class="adm-chart-sub">아직 이 달에 올라온 글자수가 없어요.</p>`;
+      return;
+    }
+
+    const 칸폭 = Math.max(520, Math.round(box.clientWidth || 900));
+    const W = 칸폭, H = 168, L = 46, R = 12, T = 18;
+    const 선바닥 = 108, 막대바닥 = 146;                 // 위: 꺾은선 / 아래: 막대 띠
+    const X = (day) => L + (daysInMonth <= 1 ? 0 : (day - 1) / (daysInMonth - 1) * (W - L - R));
+
+    let 최대 = 0; for (let i = 1; i <= 끝날; i++) 최대 = Math.max(최대, 합[`${ymKey}-${String(i).padStart(2, "0")}`] || 0);
+    /* 자는 만 단위로 올려 잡습니다 — 3만 7천이면 4만까지 */
+    const 단위 = 최대 > 40000 ? 20000 : 10000;
+    최대 = Math.max(단위, Math.ceil(최대 / 단위) * 단위);
+    const Y = (v) => T + (선바닥 - T) - (v / 최대) * (선바닥 - T);
+
+    let 최대인 = 1; for (let i = 1; i <= 끝날; i++) 최대인 = Math.max(최대인, 사람[`${ymKey}-${String(i).padStart(2, "0")}`] || 0);
+
+    const 만 = (v) => v >= 10000 ? `${Math.round(v / 10000)}만` : String(v);
+
+    /* 주말 띠 */
+    let 주말 = "";
+    const 한칸 = (W - L - R) / (daysInMonth - 1);
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dow = new Date(base.getFullYear(), base.getMonth(), i).getDay();
+      if (dow !== 0 && dow !== 6) continue;
+      주말 += `<rect x="${Math.max(L, X(i) - 한칸 / 2).toFixed(1)}" y="${T}" width="${한칸.toFixed(1)}" height="${선바닥 - T}" fill="#F5F1E7"/>`;
+    }
+
+    let 눈금 = "";
+    [0, 최대 / 2, 최대].forEach(v => {
+      눈금 += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" stroke="${v === 0 ? "#DCCFBC" : "#EFE6D8"}" stroke-width="1"/>`
+            + `<text x="${L - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#A0917E">${만(v)}</text>`;
+    });
+
+    let 선 = [];
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      선.push(`${X(i).toFixed(1)},${Y(합[k] || 0).toFixed(1)}`);
+    }
+
+    /* 아래 막대 띠 — 그날 글자수를 기록한 멤버 수 */
+    let 막대 = "";
+    const 막대높 = 막대바닥 - (선바닥 + 12);
+    const 막대폭 = Math.max(3, Math.min(9, 한칸 * 0.55));
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      const n = 사람[k] || 0;
+      if (!n) continue;
+      const h = Math.max(2, (n / 최대인) * 막대높);
+      막대 += `<rect x="${(X(i) - 막대폭 / 2).toFixed(1)}" y="${(막대바닥 - h).toFixed(1)}" width="${막대폭.toFixed(1)}" height="${h.toFixed(1)}" fill="#9FE1CB"/>`;
+    }
+
+    const 끝키 = `${ymKey}-${String(끝날).padStart(2, "0")}`;
+
+    box.innerHTML = `
+      <div class="adm-chart-h">
+        <span class="adm-chart-t">한 달 글자수</span>
+        <span style="flex:1"></span>
+        <span class="adm-chart-lg"><i style="background:#1D9E75"></i>방 전체</span>
+        <span class="adm-chart-lg"><i style="background:#9FE1CB"></i>기록한 멤버</span>
+      </div>
+      <p class="adm-word-sum">
+        이 달 <b>${comma(총합)}자</b> · 하루 평균 <b>${comma(평균)}자</b> ·
+        <b class="hot">${참여자.size}명</b>이 참여했어요
+      </p>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ymKey} 방 전체 글자수와 기록한 멤버 수">
+        ${주말}${눈금}
+        <polyline fill="none" stroke="#1D9E75" stroke-width="2" stroke-linejoin="round" points="${선.join(" ")}"/>
+        <circle cx="${X(끝날).toFixed(1)}" cy="${Y(합[끝키] || 0).toFixed(1)}" r="3.5" fill="#1D9E75"/>
+        <text x="${(X(끝날) - 8).toFixed(1)}" y="${(Y(합[끝키] || 0) - 8).toFixed(1)}" text-anchor="end"
+              font-size="11.5" fill="#0F6E56" font-weight="700">${comma(합[끝키] || 0)}자</text>
+        ${isThisMonth ? `<line x1="${X(끝날).toFixed(1)}" y1="${T}" x2="${X(끝날).toFixed(1)}" y2="${막대바닥}"
+                               stroke="#B3372B" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>` : ""}
+        <line x1="${L}" y1="${막대바닥}" x2="${W - R}" y2="${막대바닥}" stroke="#DCCFBC" stroke-width="1"/>
+        ${막대}
+        <text x="${L}" y="${H - 4}" font-size="10.5" fill="#A0917E">글자수 기록한 멤버</text>
+      </svg>`;
   }
 
   /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제

@@ -302,6 +302,12 @@
     .adm-chart-sub{ margin: 0 0 8px; font-size: 12px; color: #A0917E; }
     .adm-chart svg{ width: 100%; height: auto; display: block; }
     .adm-chart-note{ margin: 8px 0 0; font-size: 12px; color: #8A7B68; line-height: 1.6; }
+    /* ✍️ 글자수 요약 한 줄 — 숫자보다 "몇 명이 참여했나" 가 눈에 남게 */
+    .adm-word-sum{
+      margin: 0 0 10px; font-size: 13px; color: #6B5B48; line-height: 1.6;
+    }
+    .adm-word-sum b{ font-weight: 800; color: #4A3F33; }
+    .adm-word-sum b.hot{ color: #0F6E56; }
 
     /* [2026-08-15] 단추 줄 오른쪽에 붙는 인원 수 */
     .adm-count{
@@ -436,6 +442,12 @@
              관리자 페이지를 무겁게 할 이유가 없습니다. -->
         <div class="adm-chart" id="adm-att-chart"></div>
 
+        <!-- [2026-08-16] ✍️ 한 달 글자수 — 방 전체 꺾은선 + 기록한 멤버 막대.
+             ★ 개인별 선은 일부러 안 긋습니다. 이 방은 "순위표처럼 보이지
+               않게" 를 지켜 왔어요 — 관리자 화면이라도 그걸 깨면, 공유하는
+               순간 적게 쓴 사람이 위축됩니다. -->
+        <div class="adm-chart" id="adm-word-chart"></div>
+
         <div class="adm-msg" id="adm-att-msg"></div>
       </div>
 
@@ -558,7 +570,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608161604"></script>
+  <script src="script_admin.js?v=202608161636"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)
