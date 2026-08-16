@@ -308,6 +308,7 @@
     }
     .adm-word-sum b{ font-weight: 800; color: #4A3F33; }
     .adm-word-sum b.hot{ color: #0F6E56; }
+    .adm-word-sum b.warm{ color: #854F0B; }
 
     /* [2026-08-15] 단추 줄 오른쪽에 붙는 인원 수 */
     .adm-count{
@@ -447,6 +448,10 @@
                않게" 를 지켜 왔어요 — 관리자 화면이라도 그걸 깨면, 공유하는
                순간 적게 쓴 사람이 위축됩니다. -->
         <div class="adm-chart" id="adm-word-chart"></div>
+
+        <!-- [2026-08-16] ⏱️ 한 달 작업 시간 — 방 전체 꺾은선 + 한 사람당 막대.
+             값은 출석부 표가 이미 읽어 둔 것을 더할 뿐이라 서버 요청 0. -->
+        <div class="adm-chart" id="adm-time-chart"></div>
 
         <div class="adm-msg" id="adm-att-msg"></div>
       </div>

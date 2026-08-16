@@ -485,6 +485,9 @@
       /* ✍️ 한 달 글자수 흐름 (2026-08-16) */
       글자수그래프({ ymKey, daysInMonth, base, wordMonth, nickSet, isThisMonth, todayD });
 
+      /* ⏱️ 한 달 작업 시간 (2026-08-16) — 표가 이미 읽어 둔 minsByNick 그대로 */
+      시간그래프({ ymKey, daysInMonth, base, minsByNick, isThisMonth, todayD });
+
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
       bindDig(body);
@@ -512,6 +515,7 @@
      ===================================================================== */
   let _차트값 = null;
   let _글자값 = null;
+  let _시간값 = null;
   let _차트타이머 = null;
   window.addEventListener("resize", () => {
     clearTimeout(_차트타이머);
@@ -519,6 +523,7 @@
       /* 칸 너비를 재서 그리므로, 창이 바뀌면 다시 그려야 1:1 이 유지됩니다 */
       if (_차트값) { try { 그래프그리기(_차트값); } catch (e) {} }
       if (_글자값) { try { 글자수그래프(_글자값); } catch (e) {} }
+      if (_시간값) { try { 시간그래프(_시간값); } catch (e) {} }
     }, 150);
   });
 
@@ -740,6 +745,143 @@
         <line x1="${L}" y1="${막대바닥}" x2="${W - R}" y2="${막대바닥}" stroke="#DCCFBC" stroke-width="1"/>
         ${막대}
         <text x="${L}" y="${H - 4}" font-size="10.5" fill="#A0917E">글자수 기록한 멤버</text>
+      </svg>`;
+  }
+
+  /* =====================================================================
+     ⏱️ 한 달 작업 시간 (2026-08-16)
+     ---------------------------------------------------------------------
+     [값] 새로 읽지 않습니다 — 출석부 표가 셀에 시간을 찍으려고 이미
+     사람마다 하루치를 구해 뒀어요(minsByNick). 그걸 더하기만 합니다.
+     서버 요청 0.
+
+     [왜 "한 사람당" 을 함께 보나]
+     총 시간만 보면 **사람이 늘어서** 늘어난 건지 **다들 더 오래 앉아
+     있어서** 늘어난 건지 알 수 없습니다. 총 시간이 오르는데 한 사람당은
+     그대로면 사람이 는 것, 둘 다 오르면 방이 달아오른 것이에요.
+     인원 자체는 위 출석 그래프가 이미 보여주므로 여기서는 안 그립니다.
+
+     ★ 작업 시간은 "자리에 있었던 시간" 입니다. 오래 앉아 있는 게 곧
+       잘한 것은 아니에요. 멤버에게 보여줄 때는 "이만큼 같이 있었어요"
+       쪽으로 읽히게 두는 게 이 방의 결에 맞습니다.
+     ===================================================================== */
+  function 시간그래프(d) {
+    const box = el("adm-time-chart");
+    if (!box) return;
+    _시간값 = d;
+
+    const { ymKey, daysInMonth, base, minsByNick, isThisMonth, todayD } = d;
+    const 끝날 = isThisMonth ? Math.min(todayD, daysInMonth) : daysInMonth;
+    if (끝날 < 1) { box.innerHTML = ""; return; }
+
+    /* 날짜별 합계(분)와 그날 앉아 있던 사람 수 */
+    const 합 = {}, 사람 = {};
+    Object.keys(minsByNick).forEach(닉 => {
+      const per = minsByNick[닉] || {};
+      Object.keys(per).forEach(k => {
+        const m = Number(per[k] || 0);
+        if (m <= 0) return;
+        합[k] = (합[k] || 0) + m;
+        사람[k] = (사람[k] || 0) + 1;
+      });
+    });
+
+    let 총분 = 0;
+    for (let i = 1; i <= 끝날; i++) 총분 += 합[`${ymKey}-${String(i).padStart(2, "0")}`] || 0;
+    if (!총분) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">한 달 작업 시간</span></div>
+        <p class="adm-chart-sub">아직 이 달에 쌓인 작업 시간이 없어요.</p>`;
+      return;
+    }
+
+    const 있는날 = [];
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      if ((합[k] || 0) > 0) 있는날.push(k);
+    }
+    const 하루평균 = Math.round(총분 / 있는날.length);
+    /* 한 사람당 = 그날 앉아 있던 사람으로 나눈 뒤 평균 — 사람 수가 날마다
+       달라서, 총분을 총인원으로 한 번에 나누면 붐빈 날에 끌려갑니다 */
+    const 인당들 = 있는날.map(k => (합[k] || 0) / Math.max(1, 사람[k] || 1));
+    const 인당 = Math.round(인당들.reduce((a, b) => a + b, 0) / 인당들.length);
+
+    const 시간글 = (분) => {
+      const h = Math.floor(분 / 60), m = Math.round(분 % 60);
+      if (h && m) return `${comma(h)}시간 ${m}분`;
+      if (h) return `${comma(h)}시간`;
+      return `${m}분`;
+    };
+
+    const 칸폭 = Math.max(520, Math.round(box.clientWidth || 900));
+    const W = 칸폭, H = 168, L = 46, R = 12, T = 18;
+    const 선바닥 = 108, 막대바닥 = 146;
+    const X = (day) => L + (daysInMonth <= 1 ? 0 : (day - 1) / (daysInMonth - 1) * (W - L - R));
+
+    let 최대 = 0;
+    for (let i = 1; i <= 끝날; i++) 최대 = Math.max(최대, 합[`${ymKey}-${String(i).padStart(2, "0")}`] || 0);
+    최대 = Math.max(60, Math.ceil(최대 / 60 / 20) * 20 * 60);      // 20시간 단위로 올림
+    const Y = (v) => T + (선바닥 - T) - (v / 최대) * (선바닥 - T);
+
+    let 최대인당 = 1;
+    있는날.forEach((k, i) => { 최대인당 = Math.max(최대인당, 인당들[i]); });
+
+    /* 주말 띠 */
+    let 주말 = "";
+    const 한칸 = (W - L - R) / (daysInMonth - 1);
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dow = new Date(base.getFullYear(), base.getMonth(), i).getDay();
+      if (dow !== 0 && dow !== 6) continue;
+      주말 += `<rect x="${Math.max(L, X(i) - 한칸 / 2).toFixed(1)}" y="${T}" width="${한칸.toFixed(1)}" height="${선바닥 - T}" fill="#F5F1E7"/>`;
+    }
+
+    let 눈금 = "";
+    [0, 최대 / 2, 최대].forEach(v => {
+      눈금 += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" stroke="${v === 0 ? "#DCCFBC" : "#EFE6D8"}" stroke-width="1"/>`
+            + `<text x="${L - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#A0917E">${v ? Math.round(v / 60) + "h" : 0}</text>`;
+    });
+
+    const 선 = [];
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      선.push(`${X(i).toFixed(1)},${Y(합[k] || 0).toFixed(1)}`);
+    }
+
+    /* 아래 막대 띠 — 그날 앉아 있던 사람 한 명당 평균 */
+    let 막대 = "";
+    const 막대높 = 막대바닥 - (선바닥 + 12);
+    const 막대폭 = Math.max(3, Math.min(9, 한칸 * 0.55));
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      if (!(합[k] > 0)) continue;
+      const v = (합[k] || 0) / Math.max(1, 사람[k] || 1);
+      const h = Math.max(2, (v / 최대인당) * 막대높);
+      막대 += `<rect x="${(X(i) - 막대폭 / 2).toFixed(1)}" y="${(막대바닥 - h).toFixed(1)}" width="${막대폭.toFixed(1)}" height="${h.toFixed(1)}" fill="#FAC775"/>`;
+    }
+
+    const 끝키 = `${ymKey}-${String(끝날).padStart(2, "0")}`;
+
+    box.innerHTML = `
+      <div class="adm-chart-h">
+        <span class="adm-chart-t">한 달 작업 시간</span>
+        <span style="flex:1"></span>
+        <span class="adm-chart-lg"><i style="background:#BA7517"></i>방 전체</span>
+        <span class="adm-chart-lg"><i style="background:#FAC775"></i>한 사람당</span>
+      </div>
+      <p class="adm-word-sum">
+        이 달 <b>${시간글(총분)}</b> · 하루 평균 <b>${시간글(하루평균)}</b> ·
+        한 사람당 하루 <b class="warm">${시간글(인당)}</b>
+      </p>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ymKey} 방 전체 작업 시간과 한 사람당 평균">
+        ${주말}${눈금}
+        <polyline fill="none" stroke="#BA7517" stroke-width="2" stroke-linejoin="round" points="${선.join(" ")}"/>
+        <circle cx="${X(끝날).toFixed(1)}" cy="${Y(합[끝키] || 0).toFixed(1)}" r="3.5" fill="#BA7517"/>
+        <text x="${(X(끝날) - 8).toFixed(1)}" y="${(Y(합[끝키] || 0) - 8).toFixed(1)}" text-anchor="end"
+              font-size="11.5" fill="#854F0B" font-weight="700">${Math.round((합[끝키] || 0) / 60)}h</text>
+        ${isThisMonth ? `<line x1="${X(끝날).toFixed(1)}" y1="${T}" x2="${X(끝날).toFixed(1)}" y2="${막대바닥}"
+                               stroke="#B3372B" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>` : ""}
+        <line x1="${L}" y1="${막대바닥}" x2="${W - R}" y2="${막대바닥}" stroke="#DCCFBC" stroke-width="1"/>
+        ${막대}
+        <text x="${L}" y="${H - 4}" font-size="10.5" fill="#A0917E">한 사람당 평균</text>
       </svg>`;
   }
 
