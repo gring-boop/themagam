@@ -501,9 +501,21 @@
      ★ 앞날은 그리지 않습니다. 아직 안 온 날에 0 으로 뚝 떨어지는 선이
        그려지면 "망했나?" 로 읽혀요.
      ===================================================================== */
+  let _차트값 = null;
+  let _차트타이머 = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(_차트타이머);
+    _차트타이머 = setTimeout(() => {
+      /* 칸 너비를 재서 그리므로, 창이 바뀌면 다시 그려야 1:1 이 유지됩니다 */
+      if (_차트값) { try { 그래프그리기(_차트값); } catch (e) {} }
+    }, 150);
+  });
+
   function 그래프그리기(d) {
     const box = el("adm-att-chart");
     if (!box) return;
+
+    _차트값 = d;                       // 창 크기가 바뀌면 다시 그리려고
 
     const { ymKey, daysInMonth, base, cntByDay, totalByDay, isThisMonth, todayD } = d;
     const 끝날 = isThisMonth ? Math.min(todayD, daysInMonth) : daysInMonth;
@@ -517,7 +529,14 @@
     }
     최대 = Math.max(10, Math.ceil(최대 / 10) * 10);
 
-    const W = 660, H = 200, L = 34, R = 14, T = 20, B = 32;
+    /* ★★ [고침 2026-08-16] "진격의 거인 그래프" 를 고칩니다.
+       viewBox 를 660 으로 못 박고 width:100% 로 늘였더니, 1400px 짜리
+       카드에서 2.12배로 부풀었습니다 — 높이 424px, 글자 10px 이 21px.
+       표보다 그래프가 커졌어요.
+       이제 **칸 너비를 재서 그 값을 그대로 viewBox 로** 씁니다.
+       1 칸 = 1 픽셀이 되니 높이도 글자도 적은 값 그대로예요. */
+    const 칸폭 = Math.max(520, Math.round(box.clientWidth || 900));
+    const W = 칸폭, H = 200, L = 30, R = 12, T = 16, B = 28;
     const 폭 = W - L - R, 높 = H - T - B;
     const X = (day) => L + (daysInMonth <= 1 ? 0 : (day - 1) / (daysInMonth - 1) * 폭);
     const Y = (v) => T + 높 - (v / 최대) * 높;
@@ -544,14 +563,14 @@
     let 눈금 = "";
     [0, 최대 / 2, 최대].forEach(v => {
       눈금 += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" stroke="${v === 0 ? "#DCCFBC" : "#EFE6D8"}" stroke-width="1"/>`
-            + `<text x="${L - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#A0917E">${v}</text>`;
+            + `<text x="${L - 6}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#A0917E">${v}</text>`;
     });
 
     /* 날짜 눈금 — 1 · 6 · 11 … 다 적으면 표가 됩니다 */
     let 날짜 = "";
     for (let i = 1; i <= daysInMonth; i += 5) {
       const 오늘인가 = isThisMonth && i === todayD;
-      날짜 += `<text x="${X(i).toFixed(1)}" y="${H - 14}" text-anchor="middle" font-size="10"
+      날짜 += `<text x="${X(i).toFixed(1)}" y="${H - 14}" text-anchor="middle" font-size="10.5"
                      fill="${i <= 끝날 ? (오늘인가 ? "#B3372B" : "#A0917E") : "#C9BCA9"}">${i}</text>`;
     }
 
@@ -575,8 +594,8 @@
                                stroke="#B3372B" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>` : ""}
         <circle cx="${X(끝날).toFixed(1)}" cy="${Y(끝총).toFixed(1)}" r="3" fill="#B9A88F"/>
         <circle cx="${X(끝날).toFixed(1)}" cy="${Y(끝출).toFixed(1)}" r="3.5" fill="#B3372B"/>
-        <text x="${(X(끝날) + 12).toFixed(1)}" y="${(Y(끝총) - 3).toFixed(1)}" font-size="11" fill="#8A7B68">${끝총}</text>
-        <text x="${(X(끝날) + 12).toFixed(1)}" y="${(Y(끝출) + 4).toFixed(1)}" font-size="11" fill="#B3372B" font-weight="700">${끝출}</text>
+        <text x="${(X(끝날) + 12).toFixed(1)}" y="${(Y(끝총) - 3).toFixed(1)}" font-size="11.5" fill="#8A7B68">${끝총}</text>
+        <text x="${(X(끝날) + 12).toFixed(1)}" y="${(Y(끝출) + 4).toFixed(1)}" font-size="11.5" fill="#B3372B" font-weight="700">${끝출}</text>
         ${날짜}
       </svg>
       <p class="adm-chart-note">옅은 세로 띠는 주말${isThisMonth ? " · 점선은 오늘 · 오늘 뒤는 아직 안 그립니다" : ""}</p>`;
