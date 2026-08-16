@@ -1,0 +1,366 @@
+/* TheMagam © 링가링 · 무단 복제·재배포 금지 */
+/* =====================================================================
+   TheMagam — 🙋 Help (script_help.js, 2026-08-16)
+
+   [무엇인가]
+   "이거 맞나요?" 하고 후다닥 묻는 자리. 맞춤법·띄어쓰기·단어 고르기·
+   문장 다듬기 — 짧게 묻고 가볍게 답합니다.
+
+   [완전 익명 — 대숲과 같은 방식]
+   서버에 닉네임을 **아예 적지 않습니다.** 관리자도 누가 썼는지 볼
+   방법이 없어요. "내 글" 이라는 표시(✕ 단추, 맨 위 올리기)는 이 기기의
+   AppStore 가 기억할 뿐이라, 다른 기기에서는 남의 글과 똑같이 보입니다.
+
+   [채택도 하트도 없습니다 — 일부러]
+   처음에는 "이 답이 맞았어요(채택)" 와 하트를 넣으려다 뺐습니다.
+   방장 말이 맞아요 — **채택은 은근히 자존심 문제**라, 고르는 순간
+   안 뽑힌 답을 단 사람이 머쓱해집니다. 그러면 다음부터 아무도 답을
+   안 달아요. 급할 때 후다닥 묻는 자리인데 답이 안 달리면 끝입니다.
+
+   대신 **✓ 확인 스티커**를 붙입니다. "봤어요 · 도움 됐어요" 정도의
+   가벼운 표시고, **여러 사람이 겹쳐 붙일 수 있습니다.** 고르는 게
+   아니라 쌓이는 것이라 아무도 떨어뜨리지 않아요.
+
+   [줄 세우는 차례]
+     ① 이 기기에서 내가 쓴 글      — 답이 달렸나 궁금하니까
+     ② 아직 답이 없는 글           — 위에 있어야 지나가다 눈이 갑니다
+     ③ 나머지 (최신순)
+   ★ ②가 이 판의 핵심입니다. 그냥 시간순으로 쌓으면 답 없는 질문이
+     아래로 가라앉아 영영 답을 못 받아요.
+
+   [2주 뒤 사라집니다]
+   대숲은 30일인데 여기는 14일입니다. 급한 물음이라 오래 둘 이유가
+   없고, 짧게 도는 편이 "가볍게 물어도 되는 곳" 이라는 인상에 맞아요.
+
+   [보안규칙 — 콘솔 적용 필요]
+     "help": {
+       ".read": "auth != null",
+       "$id": { ".write": "auth != null" }
+     }
+   대숲과 같은 결입니다 — 익명이라 "글쓴이만" 을 규칙으로 쓸 수 없어요.
+   화면에서 이 기기가 기억하는 내 글에만 ✕ 를 보여 주는 방식입니다.
+   ===================================================================== */
+(function () {
+  "use strict";
+
+  const MAX_TEXT  = 300;                 // 짧게 묻는 자리라 길지 않게
+  const KEEP_MS   = 14 * 24 * 60 * 60 * 1000;
+  const MINE_KEY  = "helpMine";          // 이 기기가 쓴 글
+  const CHECK_KEY = "helpChecks";        // 이 기기가 ✓ 붙인 글
+
+  let _rows = [];
+  let _ref = null;
+  let _bound = false;
+  let _busy = false;
+  let _reply = null;                     // { parent, text }
+
+  const el = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  /* ---- 이 기기만 아는 것 ---- */
+  function readSet(key) {
+    try {
+      const arr = JSON.parse(window.AppStore?.getItem(key) || "[]");
+      return Array.isArray(arr) ? arr.filter(x => typeof x === "string") : [];
+    } catch (e) { return []; }
+  }
+  function writeSet(key, arr) {
+    try { window.AppStore?.setItem(key, JSON.stringify(arr.slice(-500))); } catch (e) {}
+  }
+  function isMine(id)  { return readSet(MINE_KEY).indexOf(id) >= 0; }
+  function didCheck(id){ return readSet(CHECK_KEY).indexOf(id) >= 0; }
+  function remember(key, id) {
+    const arr = readSet(key);
+    if (arr.indexOf(id) < 0) { arr.push(id); writeSet(key, arr); }
+  }
+  function forget(key, id) { writeSet(key, readSet(key).filter(x => x !== id)); }
+
+  /* ---- 서버에서 읽어 온 줄 다듬기 ---- */
+  function normalize(id, v) {
+    if (!v || typeof v !== "object") return null;
+    const text = String(v.text || "").slice(0, MAX_TEXT);
+    if (!text.trim()) return null;
+    return {
+      id,
+      text,
+      at: Number(v.at) || 0,
+      parent: typeof v.parent === "string" ? v.parent : "",
+      checks: Math.max(0, Math.round(Number(v.checks) || 0))
+    };
+  }
+
+  function 언제(at) {
+    if (!at) return "";
+    const 분 = Math.floor((Date.now() - at) / 60000);
+    if (분 < 1) return "방금";
+    if (분 < 60) return `${분}분 전`;
+    const 시 = Math.floor(분 / 60);
+    if (시 < 24) return `${시}시간 전`;
+    const 날 = Math.floor(시 / 24);
+    return `${날}일 전`;
+  }
+
+  /* =====================================================================
+     줄 세우기 — 내 글 · 답 없는 글 · 나머지
+     ===================================================================== */
+  function 정렬된질문() {
+    const 뿌리 = _rows.filter(r => !r.parent);
+    const 답수 = {};
+    _rows.forEach(r => { if (r.parent) 답수[r.parent] = (답수[r.parent] || 0) + 1; });
+
+    return 뿌리
+      .map(r => ({ ...r, 답: 답수[r.id] || 0, 내것: isMine(r.id) }))
+      .sort((a, b) => {
+        /* ① 내 글이 맨 위 — 이 기기에서만 그렇습니다 */
+        if (a.내것 !== b.내것) return a.내것 ? -1 : 1;
+        /* ② 답 없는 글이 그다음 — 안 그러면 영영 답을 못 받아요 */
+        const a없 = a.답 === 0, b없 = b.답 === 0;
+        if (a없 !== b없) return a없 ? -1 : 1;
+        /* ③ 최신순 */
+        return b.at - a.at;
+      });
+  }
+
+  function 답들(parentId) {
+    return _rows.filter(r => r.parent === parentId).sort((a, b) => a.at - b.at);
+  }
+
+  /* =====================================================================
+     그리기
+     ===================================================================== */
+  function 답HTML(r) {
+    const on = didCheck(r.id);
+    return `
+      <div class="help-a${r.checks ? " has-check" : ""}">
+        <div class="help-a-h">
+          <span class="help-t">${esc(언제(r.at))}</span>
+          <span class="help-sp"></span>
+          ${isMine(r.id) ? `<button type="button" class="help-x" data-help-del="${esc(r.id)}"
+                                    title="내 답 지우기" aria-label="내 답 지우기">✕</button>` : ""}
+          <button type="button" class="help-check${on ? " is-on" : ""}"
+                  data-help-check="${esc(r.id)}"
+                  aria-pressed="${on ? "true" : "false"}"
+                  title="${on ? "확인 스티커를 뗍니다" : "확인했어요"}">✓ ${r.checks || 0}</button>
+        </div>
+        <p class="help-a-t">${esc(r.text)}</p>
+      </div>`;
+  }
+
+  function 질문HTML(q) {
+    const as = 답들(q.id);
+    const 쓰는중 = _reply && _reply.parent === q.id;
+    return `
+      <div class="help-q${q.답 ? "" : " waiting"}${q.내것 ? " mine" : ""}" data-help-q="${esc(q.id)}">
+        <div class="help-q-h">
+          ${q.내것 ? `<span class="help-tag mine">내 글</span>` : ""}
+          ${q.답 ? `<span class="help-t">답 ${q.답}</span>`
+                 : `<span class="help-tag wait">답 기다리는 중</span>`}
+          <span class="help-t">${esc(언제(q.at))}</span>
+          <span class="help-sp"></span>
+          ${isMine(q.id) ? `<button type="button" class="help-x" data-help-del="${esc(q.id)}"
+                                    title="내 글 지우기" aria-label="내 글 지우기">✕</button>` : ""}
+        </div>
+        <p class="help-q-t">${esc(q.text)}</p>
+        ${as.map(답HTML).join("")}
+        ${쓰는중 ? `
+          <div class="help-write">
+            <textarea id="help-reply" class="help-in" maxlength="${MAX_TEXT}"
+                      placeholder="가볍게 한 줄이면 돼요">${esc(_reply.text)}</textarea>
+            <div class="help-write-b">
+              <button type="button" class="fr-btn ghost" data-help-act="cancel">취소</button>
+              <button type="button" class="fr-btn" data-help-act="reply">답 달기</button>
+            </div>
+          </div>`
+        : `<button type="button" class="help-more" data-help-reply="${esc(q.id)}">+ 답 달기</button>`}
+      </div>`;
+  }
+
+  function render() {
+    const box = el("help-board");
+    if (!box) return;
+    const qs = 정렬된질문();
+    const 기다림 = qs.filter(q => q.답 === 0).length;
+
+    const 머리 = `
+      <div class="help-head">
+        <span class="help-title">🙋 Help</span>
+        <span class="help-sub">이 표현 맞나요?</span>
+        <span class="help-sp"></span>
+        ${기다림 ? `<span class="help-tag wait">답 기다리는 중 ${기다림}</span>` : ""}
+      </div>`;
+
+    const 목록 = qs.length
+      ? qs.map(질문HTML).join("")
+      : `<p class="help-empty">아직 물어본 게 없어요.<br>
+         맞춤법이든 단어든, 아래에 후다닥 적어 보세요.</p>`;
+
+    box.innerHTML = 머리 + `<div class="help-list">${목록}</div>` + `
+      <div class="help-ask">
+        <input type="text" id="help-new" maxlength="${MAX_TEXT}" autocomplete="off"
+               placeholder="맞춤법·단어·문장 무엇이든">
+        <button type="button" class="fr-btn" data-help-act="ask">올리기</button>
+      </div>
+      <p class="help-note">🔒 이름은 서버에도 남지 않아요 · 2주 뒤 사라집니다</p>`;
+  }
+
+  /* =====================================================================
+     서버
+     ===================================================================== */
+  function listen() {
+    if (_ref || !window.db) return;
+    _ref = window.db.ref("help");
+    _ref.on("value", snap => {
+      const raw = snap.val() || {};
+      const list = [];
+      Object.keys(raw).forEach(id => {
+        const r = normalize(id, raw[id]);
+        if (r) list.push(r);
+      });
+      /* 부모가 사라진 답은 걷어냅니다 — 대숲의 답쪽지와 같은 이유예요 */
+      const ids = new Set(list.map(r => r.id));
+      _rows = list.filter(r => !(r.parent && !ids.has(r.parent)));
+      render();
+      sweep();
+    });
+  }
+
+  /** 2주 지난 것은 조용히 걷어냅니다 (실패해도 아무 말 하지 않습니다) */
+  async function sweep() {
+    if (!window.db || window.FOREST_NO_WITHER) return;
+    const cut = Date.now() - KEEP_MS;
+    const dead = _rows.filter(r => r.at && r.at < cut);
+    if (!dead.length) return;
+    for (const r of dead) {
+      try { await window.db.ref("help/" + r.id).remove(); } catch (e) {}
+      forget(MINE_KEY, r.id); forget(CHECK_KEY, r.id);
+    }
+  }
+
+  async function 올리기(text, parent) {
+    const t = String(text || "").trim().slice(0, MAX_TEXT);
+    if (!t || _busy || !window.db) return;
+    _busy = true;
+    try {
+      const ref = window.db.ref("help").push();
+      const 줄 = { text: t, at: Date.now(), checks: 0 };
+      if (parent) 줄.parent = parent;
+      await ref.set(줄);
+      remember(MINE_KEY, ref.key);      // ← 이 기기에만
+    } catch (e) {
+      alert("올리지 못했어요. 연결을 확인해 주세요.");
+    } finally { _busy = false; }
+  }
+
+  async function 지우기(id) {
+    if (!isMine(id)) return;
+    if (!confirm("지울까요? 되돌릴 수 없어요.")) return;
+    try {
+      await window.db.ref("help/" + id).remove();
+      /* 질문을 지우면 그 아래 답도 함께 (부모 없는 답은 나뒹굽니다) */
+      for (const r of _rows.filter(x => x.parent === id)) {
+        try { await window.db.ref("help/" + r.id).remove(); } catch (e) {}
+        forget(MINE_KEY, r.id); forget(CHECK_KEY, r.id);
+      }
+      forget(MINE_KEY, id); forget(CHECK_KEY, id);
+    } catch (e) {
+      alert("지우지 못했어요.");
+    }
+  }
+
+  /** ✓ 확인 스티커 — 여러 사람이 겹쳐 붙습니다. 내 것은 다시 눌러 뗍니다. */
+  async function 확인(id) {
+    const r = _rows.find(x => x.id === id);
+    if (!r || !window.db) return;
+    const 붙임 = didCheck(id);
+    try {
+      await window.db.ref("help/" + id + "/checks")
+        .transaction(v => Math.max(0, (Number(v) || 0) + (붙임 ? -1 : 1)));
+      if (붙임) forget(CHECK_KEY, id); else remember(CHECK_KEY, id);
+      render();
+    } catch (e) {}
+  }
+
+  /* =====================================================================
+     손가락
+     ★ 대숲에서 데인 자리 — 판 안쪽 상자에 답니다. 겉껍데기에 달면
+       .modal-content 의 stopPropagation 에 막혀 클릭이 통째로 죽어요.
+     ===================================================================== */
+  function bind() {
+    const host = el("dock-body-help");
+    if (!host || _bound) return;
+    _bound = true;
+
+    host.addEventListener("click", (e) => {
+      const del = e.target.closest("[data-help-del]");
+      if (del) { 지우기(del.dataset.helpDel); return; }
+
+      const chk = e.target.closest("[data-help-check]");
+      if (chk) { 확인(chk.dataset.helpCheck); return; }
+
+      const rep = e.target.closest("[data-help-reply]");
+      if (rep) {
+        _reply = { parent: rep.dataset.helpReply, text: "" };
+        render();
+        el("help-reply")?.focus();
+        return;
+      }
+
+      const act = e.target.closest("[data-help-act]");
+      if (!act) return;
+      const a = act.dataset.helpAct;
+      if (a === "cancel") { _reply = null; render(); return; }
+      if (a === "reply" && _reply) {
+        const t = String(el("help-reply")?.value || "").trim();
+        const p = _reply.parent;
+        _reply = null;
+        올리기(t, p).then(render);
+        return;
+      }
+      if (a === "ask") {
+        const inp = el("help-new");
+        const t = String(inp?.value || "").trim();
+        if (!t) return;
+        if (inp) inp.value = "";
+        올리기(t, "");
+      }
+    });
+
+    /* 엔터로 바로 — 한글 조합 중은 무시합니다 (이 방에서 여러 번 데인 자리) */
+    host.addEventListener("keydown", (e) => {
+      const t = e.target;
+      if (!t || (t.id !== "help-new" && t.id !== "help-reply")) return;
+      if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+      e.preventDefault();
+      if (t.id === "help-new") {
+        const v = String(t.value || "").trim();
+        if (!v) return;
+        t.value = "";
+        올리기(v, "");
+      } else if (_reply) {
+        const v = String(t.value || "").trim();
+        const p = _reply.parent;
+        _reply = null;
+        올리기(v, p).then(render);
+      }
+    });
+
+    /* 답 쓰던 내용은 다시 그려도 살아남게 */
+    host.addEventListener("input", (e) => {
+      if (e.target?.id === "help-reply" && _reply) _reply.text = e.target.value;
+    });
+  }
+
+  /** 알약 판이 열릴 때 부릅니다 */
+  function openHelp() {
+    const host = el("dock-body-help");
+    if (host && !el("help-board")) {
+      host.innerHTML = `<div class="help-board" id="help-board"></div>`;
+    }
+    bind();
+    listen();
+    render();
+  }
+  window.openHelp = openHelp;
+})();

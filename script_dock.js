@@ -91,6 +91,10 @@
        가르는 기준선 역할입니다. */
     { id: "todo",   label: "",                   stay: false, size: 0, move: null, inline: true },
     { id: "wcall",  label: "📓 Letters 전체 기록", stay: true, size: 0,   move: null, modal: true },
+    /* [2026-08-16] 🙋 Help — "이거 맞나요?" 하고 후다닥 묻는 익명 자리.
+       맞춤법·단어·문장. 채택도 하트도 없고 ✓ 확인 스티커만 겹쳐 붙습니다
+       (채택은 은근히 자존심 문제라 아무도 답을 안 달게 돼요). */
+    { id: "help",   label: "🙋 Help",             stay: true,  size: 1.35, move: null, drag: true, resize: true },
     { id: "achv",   label: "🏅 업적",             stay: false, size: 1,   move: null },
     /* 고리가 자리를 많이 먹어서 1.1 → 0.77 (70%). 고리 자체도 아래
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
@@ -625,6 +629,7 @@
     if (pid === "chat")   { window.markChatRead?.("main");   window.scrollChatToBottom?.(true); }
     if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
     if (pid === "pub")    window.openPubReview?.();
+    if (pid === "help")   window.openHelp?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);

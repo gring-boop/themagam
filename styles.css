@@ -4530,6 +4530,98 @@ html[data-unzoom] #dock-bar{
 }
 
 /* =====================================================================
+   🙋 Help — 익명 교정 문답 (2026-08-16)
+   ---------------------------------------------------------------------
+   ★ 가볍게 보여야 합니다. 급할 때 후다닥 묻는 자리인데 화면이 진지하면
+     아무도 안 열어요. 테두리는 얇게, 답은 왼쪽에 선 하나만 긋습니다.
+   ★ 채택도 하트도 없습니다 — ✓ 확인 스티커만 겹쳐 붙어요.
+   ===================================================================== */
+.help-board{
+  display: flex; flex-direction: column;
+  height: 100%; min-height: 0;
+  padding: 10px 12px; gap: 8px;
+}
+.help-head{ display: flex; align-items: baseline; gap: 8px; flex: none; }
+.help-title{ font-size: 14px; font-weight: 800; color: var(--text); }
+.help-sub{ font-size: 12px; color: var(--text-3, #8A93A2); }
+.help-sp{ flex: 1; }
+.help-t{ font-size: 11px; color: var(--text-3, #8A93A2); }
+
+.help-tag{
+  font-size: 11px; font-weight: 700;
+  border-radius: 999px; padding: 1px 8px;
+}
+.help-tag.wait{ background: var(--accent-soft); color: var(--accent); }
+.help-tag.mine{ background: var(--fill-1, #F2F4F8); color: var(--text-2, #5A6473); }
+
+.help-list{ flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+.help-q{
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  padding: 9px 11px; margin-bottom: 7px;
+  background: var(--surface);
+}
+/* 답 없는 질문은 테두리만 물들입니다 — 배경까지 칠하면 "문제 있는 글"
+   처럼 보여요. 지나가다 눈에 걸리기만 하면 됩니다. */
+.help-q.waiting{ border-color: var(--accent-line, rgba(179,55,43,.28)); }
+.help-q-h{ display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.help-q-t{ margin: 0 0 7px; font-size: 14px; line-height: 1.6; color: var(--text); word-break: break-word; }
+
+.help-a{
+  border-left: 2px solid var(--border);
+  padding: 5px 0 5px 10px; margin: 5px 0;
+}
+.help-a.has-check{ border-left-color: var(--ok, #2FA36B); }
+.help-a-h{ display: flex; align-items: center; gap: 6px; }
+.help-a-t{ margin: 2px 0 0; font-size: 13px; line-height: 1.6;
+           color: var(--text-2, #5A6473); word-break: break-word; }
+
+.help-x{
+  border: none; background: transparent; cursor: pointer;
+  color: rgba(90,70,40,.28); font-size: 11px; padding: 1px 3px; font-weight: 700;
+}
+.help-x:hover{ color: var(--danger, #B3372B); }
+
+.help-check{
+  flex: 0 0 auto; cursor: pointer;
+  border: 1px solid var(--line, #E3E7EE); border-radius: 999px;
+  background: transparent; color: var(--text-3, #8A93A2);
+  font-size: 11px; font-weight: 700; padding: 1px 8px; font-family: inherit;
+}
+.help-check:hover{ background: var(--fill-1, #F2F4F8); }
+.help-check.is-on{
+  border-color: var(--ok, #2FA36B); color: var(--ok, #2FA36B);
+  background: rgba(47,163,107,.10);
+}
+
+.help-more{
+  border: none; background: transparent; cursor: pointer;
+  color: var(--text-3, #8A93A2); font-size: 12px; padding: 2px 0; font-family: inherit;
+}
+.help-more:hover{ color: var(--text); }
+
+.help-write{ margin-top: 6px; }
+.help-in{
+  width: 100%; box-sizing: border-box; resize: none;
+  min-height: 52px; padding: 6px 8px;
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm, 8px);
+  background: var(--surface); color: var(--text);
+  font: inherit; font-size: 13px; line-height: 1.5;
+}
+.help-write-b{ display: flex; gap: 5px; justify-content: flex-end; margin-top: 5px; }
+
+.help-ask{ display: flex; gap: 5px; flex: none; }
+.help-ask input{
+  flex: 1 1 auto; min-width: 0;
+  font: inherit; font-size: 13.5px; padding: 6px 9px;
+  border: 1px solid var(--border-strong); border-radius: var(--r-sm, 8px);
+  background: var(--surface); color: var(--text);
+}
+.help-note{ margin: 0; font-size: 11px; color: var(--text-3, #8A93A2); flex: none; }
+.help-empty{ font-size: 13px; color: var(--text-3, #8A93A2); line-height: 1.7; }
+
+/* =====================================================================
    ✍️ Letters 의 메모·할 일 줄 (2026-08-16)
    ---------------------------------------------------------------------
    콩트의 Work Log 를 가져왔습니다. 이 줄은 **나만 봅니다** — 서버로
