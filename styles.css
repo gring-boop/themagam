@@ -82,6 +82,7 @@
   --border: rgba(0,0,0,.10);
 
   --panel:   rgba(255,255,255,.86);
+  --panel-solid: rgba(255,255,255,.97);   /* ✍️ Work Log 처럼 읽는 판 */
   --panel2:  rgba(255,255,255,.78);
   --surface: rgba(255,255,255,.72);
 
@@ -101,6 +102,13 @@
   --modal-border: rgba(0,0,0,.10);
   --focus-bg: #fff;
 
+  /* ★★ [고침 2026-08-16] --text-dim 이 **한 번도 정의된 적이 없었습니다.**
+     여덟 군데(글자수 창의 흐르는 줄·닉네임·빈 칸 안내 등)가 이 값을
+     보고 있었는데, 없는 변수라 그냥 부모 색을 물려받고 있었어요.
+     이제 제 값을 줍니다 — 본문보다 옅되 배경 그림 위에서도 읽히는 선.
+     ★ 짙게 잡은 이유: 이 글자들은 방 배경 그림 위에 얹힙니다.
+       흔한 회색(.5 언저리)으로 두면 밝은 배경에서 사라져요. */
+  --text-dim:     rgba(28,30,34,.78);
   --muted:        rgba(60,60,67,.72);
   --muted-strong: rgba(60,60,67,.88);
   --sub-muted:    rgba(60,60,67,.75);
@@ -210,6 +218,7 @@
     --border: rgba(255,255,255,.10);
 
     --panel:   rgba(22,24,28,.96);
+    --panel-solid: rgba(22,24,28,.99);
     --panel2:  rgba(22,24,28,.90);
     --surface: rgba(22,24,28,.88);
 
@@ -223,6 +232,7 @@
     --modal-border: rgba(255,255,255,.12);
     --focus-bg: rgba(22,24,28,.96);
 
+    --text-dim:     rgba(240,241,245,.76);      /* 어두운 테마 */
     --muted:        rgba(235,235,245,.62);
     --muted-strong: rgba(235,235,245,.84);
     --sub-muted:    rgba(235,235,245,.64);
@@ -4218,6 +4228,8 @@ body.side-collapsed .side-rail{
   /* [2026-08-16] 흐르는 줄만 0.5px 키웁니다 — 말풍선은 그대로.
      11.5 → 12 (--fs-2xs 를 건드리면 방 전체가 따라 커져서 여기서만) */
   font-size: 12px;
+  /* 짙게, 다만 검정은 아니게 — 검정은 종이 위에서 너무 세게 박힙니다 */
+  color: rgba(28,30,34,.88);
   word-break: break-all;
 }
 .wc-feed-sys b{ color: var(--text); font-weight: var(--fw-medium); }
@@ -4537,11 +4549,14 @@ html[data-unzoom] #dock-bar{
 .wc-slash-i b{ color: var(--text, #2E3440); }
 .wc-slash-i:hover{ background: var(--fill-1, #F2F4F8); }
 
-/* 📅 날짜 넘기기 — 오늘·내 메모 탭에서 일주일 전까지 (2026-08-16) */
+/* 📅 날짜 넘기기 — 탭 줄 왼쪽 끝 (2026-08-16)
+   ★ 탭에 margin-left:auto 를 줍니다. 판 안에서는 제목(.wc-title)이
+     감춰지므로, 날짜 칸이 없는 탭(내 기록)에서는 탭 하나만 남아
+     왼쪽으로 붙어 버려요. 밀어내기를 탭 쪽에 두면 늘 오른쪽입니다. */
 .wc-daynav{
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  flex: none; margin: 2px 0 4px;
+  display: flex; align-items: center; gap: 6px; flex: none;
 }
+.wc-tabs{ margin-left: auto; }
 .wc-day-b{
   width: 22px; height: 22px; padding: 0;
   border: 1px solid var(--line, #E3E7EE); border-radius: 6px;
@@ -4561,13 +4576,13 @@ html[data-unzoom] #dock-bar{
    글자가 세로로 쏟아졌습니다. 나만 보는 줄은 .wc-priv 로 갈랐습니다. */
 .wc-priv{
   display: block;                    /* 위 .wc-mine 과 헷갈리지 않게 못 박음 */
+  color: rgba(28,30,34,.86);         /* 나만 보는 줄도 또렷하게 (검정은 아니게) */
   margin-left: auto;                 /* 오른쪽으로 — 내 혼잣말 */
   max-width: 88%;
   border: 1px dashed var(--line, #E3E7EE);
   border-radius: var(--r-md, 10px);
   padding: 6px 10px;
   font-size: 13px; line-height: 1.6;   /* 12.5 → 13 (2026-08-16) */
-  color: var(--text-2, #5A6473);
 }
 .wc-priv-t{ float: right; margin-left: 8px; font-size: 10.5px; color: var(--text-3, #8A93A2); }
 .wc-priv-memo .wc-priv-x{ color: var(--text, #2E3440); }
@@ -8507,6 +8522,16 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   box-shadow: 0 -6px 28px rgba(0,0,0,.16);
   overflow: hidden;
 }
+/* ✍️ Work Log — 이 판만 덜 비치게 (2026-08-16)
+   다른 판은 잠깐 열었다 닫지만 여기는 **읽고 쓰는 자리**입니다. 메모와
+   일지가 흐르는데 뒤에 그림이 비치면 글자가 묻혀요. 흐림도 조금 더
+   줍니다 — 뒤가 뭉개질수록 앞 글자가 또렷해집니다. */
+#dock-panel-wc{
+  background: var(--panel-solid, rgba(255,255,255,.97));
+  backdrop-filter: blur(12px) saturate(1.04);
+  -webkit-backdrop-filter: blur(12px) saturate(1.04);
+}
+
 /* 수다방은 대화가 오래 이어지는 곳이라 폭도 넓힙니다 */
 
 /* 🍅 Pomodoro 360 → 288 (80%). 고리와 단추뿐이라 넓을 이유가 없어요 */
