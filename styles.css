@@ -12,6 +12,11 @@
    [1] TOKENS — 기반 스케일
    ===================================================================== */
 :root{
+  /* 원고지 격자 — script_zoom.js 가 화면 배율에 맞춰 다시 넣습니다.
+     여기 값은 배율이 1일 때의 원래 값(칸 24px, 선 1px)입니다. */
+  --grid-p: 24px;      /* 한 칸 (선 포함) */
+  --grid-gap: 23px;    /* 선이 시작되는 자리 = 칸 − 선 굵기 */
+
   /* ---- 모션 ---- */
   --anim: 220ms cubic-bezier(.2,.8,.2,1);
   --anim-fast: 140ms cubic-bezier(.2,.8,.2,1);
@@ -1376,20 +1381,28 @@ body.conn-down .user-card.is-me .card-conn i:nth-child(4){ opacity: .22; }
 }
 
 /* 🖼️ 방 배경 (2026-08-14) — 그림 위에 테마 종이색 덮개.
-   [고침 같은 날] 카드 마당에만 깔았더니 헤드·바텀 띠가 섬처럼 따로
+   [고침 2026-08-14] 카드 마당에만 깔았더니 헤드·바텀 띠가 섬처럼 따로
    놀았습니다("따로 놀아" — 콩). 몸통(body)에 깔면 헤드부터 알약 줄까지
-   화면 전체가 한 장으로 이어져요. 네 겹을 쌓습니다(위부터):
-   [원고지 격자 2겹 — 테마 것 그대로] + [덮개] + [그림]. */
+   화면 전체가 한 장으로 이어져요.
+
+   네 겹을 쌓습니다(위부터): [원고지 격자 2겹] + [덮개] + [그림].
+
+   ★ 격자는 그대로 둡니다. 한때 걷어냈다가 되돌렸어요 — 방장이 격자를
+     좋아합니다. 들쭉날쭉해 보이던 건 격자 탓이 아니라 **간격이 화면
+     점에 안 떨어져서**였고, 그건 위 body 규칙에서 변수로 고쳤습니다. */
 body.room-bg-on{
   background-image:
-    repeating-linear-gradient(90deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px),
-    repeating-linear-gradient( 0deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 var(--grid-gap), var(--grid-line, transparent) var(--grid-gap) var(--grid-p)),
+    repeating-linear-gradient( 0deg, transparent 0 var(--grid-gap), var(--grid-line, transparent) var(--grid-gap) var(--grid-p)),
     linear-gradient(var(--room-veil, rgba(250,246,236,.82)),
                     var(--room-veil, rgba(250,246,236,.82))),
     var(--room-bg-img, none);
   background-size: auto, auto, auto, cover;
   background-position: 0 0, 0 0, 0 0, center;
   background-repeat: repeat, repeat, no-repeat, no-repeat;
+  /* 배경 그림은 화면에 붙여 둡니다 — 카드가 많아 몸통이 길어져도
+     그림이 늘어나거나 따라 흐르지 않게 */
+  background-attachment: scroll, scroll, scroll, fixed;
 }
 
 .user-cards-grid{
@@ -4233,10 +4246,17 @@ body.side-collapsed .side-rail{
 /* [고침 2026-08-04] 원고지 격자를 잉크 전용에서 모든 테마 공용으로.
    색은 applyTheme 이 --grid-line 으로 넣습니다 (잉크는 인주색,
    나머지는 각 테마의 포인트색을 옅게). 변수가 없으면 투명이라 무해. */
+/* ★★ [고침 2026-08-15] 24px·1px 을 그대로 쓰지 않고 **변수**로 받습니다.
+   화면 배율이 딱 떨어지지 않으면(맥의 조정된 해상도, 확대·축소) 24px 이
+   실제 화면 점 개수로 나눌 때 소수가 됩니다. 그러면 어떤 칸은 한 점
+   넓고 어떤 선은 굵어져서, 일정한 간격으로 넓은 칸이 반복돼 보여요
+   ("일정하게 간격이 넓어지는 칸이 있길래" — 콩).
+   script_zoom.js 가 화면 배율을 재서 **화면 점에 딱 떨어지는 값**을
+   넣어 줍니다. 변수가 없으면 예전 값(24px/1px)으로 돕니다. */
 body{
   background-image:
-    repeating-linear-gradient(90deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px),
-    repeating-linear-gradient( 0deg, transparent 0 23px, var(--grid-line, transparent) 23px 24px);
+    repeating-linear-gradient(90deg, transparent 0 var(--grid-gap), var(--grid-line, transparent) var(--grid-gap) var(--grid-p)),
+    repeating-linear-gradient( 0deg, transparent 0 var(--grid-gap), var(--grid-line, transparent) var(--grid-gap) var(--grid-p));
 }
 html[data-theme-style="ink"] .modal-title,
 html[data-theme-style="ink"] .set-title,

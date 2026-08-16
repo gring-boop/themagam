@@ -83,10 +83,52 @@
     document.documentElement.style.setProperty("--unzoom", 되돌림);
     document.documentElement.toggleAttribute("data-unzoom", !!되돌림);
 
+    격자맞춤(f);
+
     const pill = document.getElementById("zoom-pill");
     if (pill) pill.textContent = z + "%";
     return z;
   }
+
+  /* =====================================================================
+     📐 원고지 격자를 화면 점에 딱 맞춥니다 (2026-08-15)
+     ---------------------------------------------------------------------
+     [무엇이 이상했나] 격자는 24px 마다 1px 선을 긋습니다. 그런데 화면
+     한 점(device pixel)과 CSS 1px 이 늘 같지는 않아요 —
+       · 맥의 "조정된 해상도" 는 배율이 1.6·1.8 처럼 어중간하고
+       · 확대·축소를 하면 거기에 또 곱해집니다
+     그러면 24px 이 화면 점으로는 43.2 점 같은 소수가 됩니다. 브라우저는
+     점 단위로만 그릴 수 있으니 43·43·44·43·44… 로 반올림하며 그리고,
+     그 오차가 쌓여 **일정한 간격으로 넓은 칸**이 생깁니다
+     ("일정하게 간격이 넓어지는 칸이 있길래" — 콩). 물결무늬(모아레)와
+     같은 원리라, 눈에 아주 잘 띕니다.
+
+     [고침] 24 에 가장 가까우면서 **화면 점 개수가 정수**가 되는 칸 너비를
+     골라 씁니다. 배율 1.8 이면 24 → 43.2 대신 43/1.8 = 23.889px.
+     화면에서는 43 점이 정확히 반복되니 모든 칸이 똑같아집니다.
+     선 굵기도 같은 방식으로 정수 점에 맞춥니다.
+     ★ 눈에 보이는 차이는 없습니다 — 한 칸이 최대 반 점 달라질 뿐이에요.
+       달라지는 건 "고르다" 하나입니다.
+     ===================================================================== */
+  function 격자맞춤(f) {
+    const 화면배 = (window.devicePixelRatio || 1) * (f || 1);
+    const r = document.documentElement.style;
+    if (!isFinite(화면배) || 화면배 <= 0) {
+      r.removeProperty("--grid-p"); r.removeProperty("--grid-gap");
+      return;
+    }
+    /* 칸 24px · 선 1px 에 가장 가까우면서 화면 점 개수가 정수인 값 */
+    const 칸점 = Math.max(1, Math.round(24 * 화면배));
+    const 선점 = Math.max(1, Math.round(1 * 화면배));
+    const 칸 = 칸점 / 화면배;
+    const 선 = 선점 / 화면배;
+    r.setProperty("--grid-p", 칸.toFixed(4) + "px");
+    r.setProperty("--grid-gap", (칸 - 선).toFixed(4) + "px");
+  }
+
+  /* 창을 다른 화면(외장 모니터)으로 옮기면 화면 배율이 달라집니다 —
+     그때도 다시 맞춰야 해요. resize 는 그 순간에도 옵니다. */
+  window.addEventListener("load", () => { try { 격자맞춤(배율() / 100); } catch (e) {} });
 
   /** 좌표를 재는 파일들이 부르는 자 — 100% 면 1 */
   window.uiZoom = () => 배율() / 100;
