@@ -4572,7 +4572,7 @@ html[data-unzoom] #dock-bar{
   border-left: 2px solid var(--border);
   padding: 5px 0 5px 10px; margin: 5px 0;
 }
-.help-a.has-check{ border-left-color: var(--ok, #2FA36B); }
+.help-a.has-check{ border-left-color: rgba(186,117,23,.45); }
 .help-a-h{ display: flex; align-items: center; gap: 6px; }
 .help-a-t{ margin: 2px 0 0; font-size: 13px; line-height: 1.6;
            color: var(--text-2, #5A6473); word-break: break-word; }
@@ -4590,9 +4590,11 @@ html[data-unzoom] #dock-bar{
   font-size: 11px; font-weight: 700; padding: 1px 8px; font-family: inherit;
 }
 .help-check:hover{ background: var(--fill-1, #F2F4F8); }
+/* 💡 는 켜지면 "불이 들어온" 느낌으로 — 초록 체크보다 이쪽이
+   "아하!" 에 맞습니다 (맞다/틀리다가 아니라 알았다는 뜻이라서요) */
 .help-check.is-on{
-  border-color: var(--ok, #2FA36B); color: var(--ok, #2FA36B);
-  background: rgba(47,163,107,.10);
+  border-color: rgba(186,117,23,.45); color: #854F0B;
+  background: rgba(250,199,117,.20);
 }
 
 .help-more{
@@ -4618,6 +4620,19 @@ html[data-unzoom] #dock-bar{
   border: 1px solid var(--border-strong); border-radius: var(--r-sm, 8px);
   background: var(--surface); color: var(--text);
 }
+/* 채팅의 ↑ 단추와 같은 결, 크기만 작게 (44 → 32).
+   Help 는 한 줄 묻는 자리라 글칸도 낮아서, 44 면 혼자 우뚝합니다. */
+.help-send{
+  flex: 0 0 auto; width: 32px; height: 32px;
+  border-radius: var(--r-sm, 8px);
+  background: var(--accent-soft); color: var(--on-accent-btn);
+  border: 1px solid var(--accent-line);
+  font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer;
+  font-family: inherit;
+  transition: transform var(--anim-fast), background var(--anim-fast);
+}
+.help-send:hover{ background: var(--accent-softer, var(--fill-1)); }
+.help-send:active{ transform: scale(.96); }
 .help-note{ margin: 0; font-size: 11px; color: var(--text-3, #8A93A2); flex: none; }
 .help-empty{ font-size: 13px; color: var(--text-3, #8A93A2); line-height: 1.7; }
 

@@ -17,9 +17,11 @@
    안 뽑힌 답을 단 사람이 머쓱해집니다. 그러면 다음부터 아무도 답을
    안 달아요. 급할 때 후다닥 묻는 자리인데 답이 안 달리면 끝입니다.
 
-   대신 **✓ 확인 스티커**를 붙입니다. "봤어요 · 도움 됐어요" 정도의
+   대신 **💡 아하 스티커**를 붙입니다. "아하! 도움 됐어요" 정도의
    가벼운 표시고, **여러 사람이 겹쳐 붙일 수 있습니다.** 고르는 게
    아니라 쌓이는 것이라 아무도 떨어뜨리지 않아요.
+   ★ 전구인 이유 — ✓ 는 "맞다/틀리다" 로 읽혀서 은근히 심사하는 결이
+     됩니다. 💡 는 "나도 알았다" 라 답한 사람도 본 사람도 편해요.
 
    [줄 세우는 차례]
      ① 이 기기에서 내가 쓴 글      — 답이 달렸나 궁금하니까
@@ -46,7 +48,7 @@
   const MAX_TEXT  = 300;                 // 짧게 묻는 자리라 길지 않게
   const KEEP_MS   = 14 * 24 * 60 * 60 * 1000;
   const MINE_KEY  = "helpMine";          // 이 기기가 쓴 글
-  const CHECK_KEY = "helpChecks";        // 이 기기가 ✓ 붙인 글
+  const CHECK_KEY = "helpChecks";        // 이 기기가 💡 붙인 글
 
   let _rows = [];
   let _ref = null;
@@ -142,7 +144,7 @@
           <button type="button" class="help-check${on ? " is-on" : ""}"
                   data-help-check="${esc(r.id)}"
                   aria-pressed="${on ? "true" : "false"}"
-                  title="${on ? "확인 스티커를 뗍니다" : "확인했어요"}">✓ ${r.checks || 0}</button>
+                  title="${on ? "아하 스티커를 뗍니다" : "아하! 도움 됐어요"}">💡 ${r.checks || 0}</button>
         </div>
         <p class="help-a-t">${esc(r.text)}</p>
       </div>`;
@@ -200,7 +202,11 @@
       <div class="help-ask">
         <input type="text" id="help-new" maxlength="${MAX_TEXT}" autocomplete="off"
                placeholder="맞춤법·단어·문장 무엇이든">
-        <button type="button" class="fr-btn" data-help-act="ask">올리기</button>
+        <!-- [2026-08-16] 채팅의 ↑ 단추와 같은 결. "올리기" 라는 글자가
+             네모나게 앉아 있으면 판이 무거워 보입니다 — 가볍게 묻는
+             자리라 손잡이도 가벼워야 해요. -->
+        <button type="button" class="help-send" data-help-act="ask"
+                aria-label="올리기" title="올리기">↑</button>
       </div>
       <p class="help-note">🔒 이름은 서버에도 남지 않아요 · 2주 뒤 사라집니다</p>`;
   }
@@ -269,7 +275,7 @@
     }
   }
 
-  /** ✓ 확인 스티커 — 여러 사람이 겹쳐 붙습니다. 내 것은 다시 눌러 뗍니다. */
+  /** 💡 아하 스티커 — 여러 사람이 겹쳐 붙습니다. 내 것은 다시 눌러 뗍니다. */
   async function 확인(id) {
     const r = _rows.find(x => x.id === id);
     if (!r || !window.db) return;
