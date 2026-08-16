@@ -484,6 +484,9 @@
         await db.ref(`users/${myNick}/musicMine`).push({ vid, title, at: Date.now() });
       } else {
         await db.ref("music").push({ vid, title, nick: myNick, at: Date.now() });
+        /* 방 전체가 보는 추천 리스트에 올렸을 때만 붉은 점.
+           나의 리스트(musicMine)는 남이 볼 수 없으니 알릴 것도 없어요. */
+        window.dockMarkNew?.("music");
 
         /* 상한 정리 — 넘친 만큼 오래된 것부터 (추천만. 나의 리스트는
            꽉 차면 거절합니다 — 아끼는 곡을 자동으로 지우면 서운해요) */

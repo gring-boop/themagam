@@ -460,6 +460,10 @@ window.AppSession = AppSession;
       // ✅ 3-3) ♪ BGM — 추천 리스트 구독 시작 (판은 dock 이 이미 만들어 둠)
       try { window.musicInit?.(); } catch(e){ console.warn("[musicInit failed]", e); }
 
+      // ✅ 3-4) 🔴 새 글 빨간 점 — 품평·살려주세요·BGM
+      //         숫자 세 개(newmark)만 듣습니다. 게시판 본문은 판을 열 때 받아요.
+      try { window.dockWatchNew?.(); } catch(e){ console.warn("[dockWatchNew failed]", e); }
+
       armPresenceOnDisconnect();
       bindConnectionWatcher();
 

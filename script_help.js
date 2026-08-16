@@ -262,6 +262,7 @@
       if (parent) 줄.parent = parent;
       await ref.set(줄);
       remember(MINE_KEY, ref.key);      // ← 이 기기에만
+      window.dockMarkNew?.("help");     // 알약에 붉은 점 (내 기기는 빼고)
     } catch (e) {
       alert("올리지 못했어요. 연결을 확인해 주세요.");
     } finally { _busy = false; }

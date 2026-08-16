@@ -636,6 +636,7 @@
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
     dot(id, false);
+    if (NEW_BOARDS.indexOf(id) >= 0) 봤다(id, _newAt[id] || Date.now());
   }
 
   /** 하나만 닫기 — **판** id 를 받습니다 */
@@ -692,6 +693,74 @@
     el("dock-dot-" + id)?.classList.toggle("hidden", !on);
   }
   window.dockDot = dot;
+
+  /* =====================================================================
+     🔴 새 글 빨간 점 — 🏢 출판사 품평 · 🆘 살려주세요 · ♪ BGM (2026-08-17)
+     ---------------------------------------------------------------------
+     [무엇을 하나] 공지처럼, 안 본 새 글이 있으면 알약에 붉은 점이 뜹니다.
+     판을 열면 사라져요. 개수는 세지 않습니다 — 게시판은 "몇 개" 보다
+     "새 게 있나" 가 궁금한 자리라, 숫자는 도리어 부담이 됩니다.
+
+     [★ 왜 게시판을 통째로 구독하지 않았나 — 여기가 핵심입니다]
+     가장 쉬운 길은 세 게시판을 입장할 때부터 듣게 하는 것이었습니다.
+     그런데 품평(pubreview)과 살려주세요(help)는 **판을 열 때에만**
+     듣도록 일부러 그렇게 짜 두었어요. 안 여는 사람에게는 한 글자도
+     안 보내려고요. 점 하나 띄우자고 이걸 풀면, 방에 들어온 **모든**
+     사람이 매번 게시판 전체를 내려받습니다. 8월에 통신량이 15일 만에
+     4.87GB 까지 갔던 걸 생각하면 그 반대로 가야 합니다.
+
+     [그래서 — 표식만 봅니다]
+     newmark/{게시판} 에 **마지막으로 글이 올라온 시각(숫자 하나)** 만
+     적습니다. 셋을 다 합쳐 60바이트 남짓이에요. 글이 올라올 때마다
+     이 숫자만 오갑니다. 글 내용은 판을 열 때 받는 그대로고요.
+     ★ limitToLast(1) 로 해결하려다 접었습니다 — 품평은
+       pubreview/{출판사}/{글} 로 한 겹 깊어서 자식이 글이 아니라
+       출판사 묶음이고, help 는 .indexOn 없이 정렬하면 **전부**
+       내려받은 뒤 브라우저에서 고릅니다. 아낀 게 없어져요.
+
+     [처음 온 기기]
+     본 적 없는 기기에 점 세 개가 켜져 있으면 반가운 게 아니라 숙제입니다.
+     기억이 없으면 "지금까지는 다 본 것" 으로 치고 조용히 시작해요.
+     ===================================================================== */
+  const NEW_BOARDS = ["pub", "help", "music"];
+  const SEEN_KEY = (id) => "dockSeen:" + id;
+  const _newAt = {};
+
+  function 본시각(id) {
+    const v = window.AppStore?.getItem(SEEN_KEY(id));
+    return (v == null || v === "") ? null : (Number(v) || 0);
+  }
+  function 봤다(id, at) {
+    try { window.AppStore?.setItem(SEEN_KEY(id), String(Number(at) || 0)); } catch (e) {}
+  }
+  function 새글표시(id) {
+    const at = Number(_newAt[id]) || 0;
+    /* 판을 보고 있으면 곧 읽은 것입니다 — 보는 앞에서 점이 켜지면 이상해요 */
+    if (_open.has(panelOf(id))) { 봤다(id, at); dot(id, false); return; }
+    const 본 = 본시각(id);
+    if (본 === null) { 봤다(id, at); dot(id, false); return; }   // 처음 온 기기
+    dot(id, at > 본);
+  }
+
+  /** 글을 올린 쪽에서 부릅니다 — "여기 새 글" 이라고 표식만 찍어요 */
+  window.dockMarkNew = function (board) {
+    if (NEW_BOARDS.indexOf(board) < 0) return;
+    _newAt[board] = Date.now();
+    /* 내가 올린 글로 내 점이 켜지면 안 되니, 내 쪽은 먼저 본 것으로 */
+    봤다(board, _newAt[board]);
+    dot(board, false);
+    try { window.db?.ref("newmark/" + board).set(_newAt[board]); } catch (e) {}
+  };
+
+  /** 표식 듣기 — 입장한 뒤에 한 번 부릅니다 (script_core.js) */
+  window.dockWatchNew = function () {
+    if (!window.db || window._dockNewOn) return;
+    window._dockNewOn = true;
+    window.db.ref("newmark").on("value", snap => {
+      const v = snap.val() || {};
+      NEW_BOARDS.forEach(id => { _newAt[id] = Number(v[id]) || 0; 새글표시(id); });
+    }, err => console.warn("[새 글 표식] 못 받아왔어요", err));
+  };
 
   /* =====================================================================
      안 읽음 표시를 원래 있던 것에서 그대로 가져옵니다

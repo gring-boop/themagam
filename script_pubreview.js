@@ -335,6 +335,7 @@
     try {
       const ref = window.db.ref("pubreview/" + pid).push();
       await ref.set({ text, at: Date.now(), hearts: 0 });
+      window.dockMarkNew?.("pub");
       _addMine(MINE_KEY, ref.key);
       render();   // ✕ 가 바로 보이게 (키를 기억한 **뒤에** 한 번 더)
     } catch (e) {
@@ -355,6 +356,7 @@
     try {
       const ref = window.db.ref("pubs").push();
       await ref.set(genre ? { name, genre, at: Date.now() } : { name, at: Date.now() });
+      window.dockMarkNew?.("pub");
       _openPub = ref.key;
     } catch (e) {
       console.warn("[품평] 출판사를 추가하지 못했어요", e);
