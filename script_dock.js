@@ -96,7 +96,12 @@
        CSS 에서 줄입니다 — 판만 줄이면 안이 잘려요. */
     { id: "pomo",   label: "🍅 Pomodoro",         stay: true,  size: 0.77, move: "#pomo-block", drag: true },
     /* 글자수만 유독 높아서 카드 맨 윗줄까지 올라왔습니다. 1.45 → 1.23 (85%) */
-    { id: "wc",     label: "✍️ Letters",          stay: true,  size: 1.23, move: "#wordcount-block", drag: true }
+    /* [2026-08-16] ✍️ Letters → Work Log.
+       숫자만 적던 자리에 메모와 할 일 명령이 붙으면서, 이제 하는 일이
+       "글자수" 보다 넓어졌습니다. 콩트에서 쓰던 이름을 그대로 씁니다.
+       ★ resize: true — 일지가 길어지니 챗처럼 위 가장자리를 잡아
+         키울 수 있어야 합니다 (2026-08-16 방장 요청). */
+    { id: "wc",     label: "✍️ Work Log",        stay: true,  size: 1.23, move: "#wordcount-block", drag: true, resize: true }
   ];
 
   /* 업적 판 높이를 1 로 봅니다 — 다른 판은 여기에 곱해서 정합니다 */

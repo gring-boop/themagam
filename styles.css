@@ -4189,6 +4189,10 @@ body.side-collapsed .side-rail{
 .wc-feed.me .wc-said-line{ justify-content:flex-end; }
 
 .wc-said{
+  /* ★ [2026-08-16] 말풍선은 **지금 크기 그대로** 둡니다 (방장 요청).
+     .wc-feed 에서 물려받으면 아래 줄들을 키울 때 같이 커지므로,
+     여기에 못 박아 둡니다. */
+  font-size: 12.5px;
   display:inline-flex; align-items:baseline; gap:5px;
   max-width: 85%;
   padding: 5px 10px;
@@ -4211,7 +4215,9 @@ body.side-collapsed .side-rail{
   margin-top: 4px;
   text-align: center;          /* 방이 알려주는 말이라 가운데 */
   color: var(--text-dim);
-  font-size: var(--fs-2xs);
+  /* [2026-08-16] 흐르는 줄만 0.5px 키웁니다 — 말풍선은 그대로.
+     11.5 → 12 (--fs-2xs 를 건드리면 방 전체가 따라 커져서 여기서만) */
+  font-size: 12px;
   word-break: break-all;
 }
 .wc-feed-sys b{ color: var(--text); font-weight: var(--fw-medium); }
@@ -4510,12 +4516,9 @@ html[data-unzoom] #dock-bar{
    합니다. 가운데가 아니라 오른쪽으로 붙이고 옅은 점선만 둘러
    "혼잣말" 처럼 보이게 했어요.
    ===================================================================== */
-.wc-memoline{ position: relative; margin-top: 6px; }
+/* 글자수 칸과 사이를 붙입니다 — 안내는 위쪽 #wc-log 가 대신해요 */
+.wc-memoline{ position: relative; margin: 0 0 5px; }
 .wc-memoline input{ width: 100%; box-sizing: border-box; }
-.wc-hint{
-  margin: 3px 2px 0; min-height: 15px;
-  font-size: 11px; color: var(--text-3, #8A93A2);
-}
 .wc-slash{
   position: absolute; left: 0; right: 0; bottom: calc(100% + 4px);
   z-index: 30;
@@ -4540,7 +4543,7 @@ html[data-unzoom] #dock-bar{
   border: 1px dashed var(--line, #E3E7EE);
   border-radius: var(--r-md, 10px);
   padding: 6px 10px;
-  font-size: 12.5px; line-height: 1.6;
+  font-size: 13px; line-height: 1.6;   /* 12.5 → 13 (2026-08-16) */
   color: var(--text-2, #5A6473);
 }
 .wc-mine-t{ float: right; margin-left: 8px; font-size: 10.5px; color: var(--text-3, #8A93A2); }

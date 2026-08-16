@@ -523,11 +523,13 @@
     return true;
   }
 
+  /* [고침 2026-08-16] 메모칸 아래에 힌트 줄을 따로 뒀더니 글자수 칸과
+     사이가 벌어졌습니다. 위쪽에 이미 안내 줄(#wc-log)이 있어요 —
+     거기를 같이 씁니다. 줄이 하나 줄고 간격도 붙습니다. */
   function 메모힌트(msg) {
-    const h = el("wc-memo-hint");
-    if (!h) return;
-    h.textContent = msg || "";
-    if (msg) setTimeout(() => { if (h.textContent === msg) h.textContent = ""; }, 3000);
+    if (!msg) return;
+    say(msg);
+    setTimeout(() => { const b = el("wc-log"); if (b && b.textContent === msg) b.textContent = ""; }, 3000);
   }
 
   /* 방의 글자수 기록 + 내 뽀모 알림을 시간순으로 섞습니다.
