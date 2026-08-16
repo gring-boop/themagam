@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608161604">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608161604">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608161630">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608161630">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608161604">
+  <link rel="manifest" href="manifest.json?v=202608161630">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608161604" />
+  <link rel="stylesheet" href="styles.css?v=202608161630" />
 </head>
 
 <body class="dock-mode">
@@ -410,6 +410,22 @@
           </p>
         </div>
 
+        <!-- [2026-08-16] 채팅 글꼴 — 머리말에서 옮겨 왔습니다.
+             한 번 맞춰 놓으면 다시 건드릴 일이 별로 없는 값이라
+             머리말보다 여기가 맞아요. 하는 일은 그대로입니다
+             (채팅 말풍선 글자만 커집니다 — 카드는 안 바뀌어요). -->
+        <div class="set-block">
+          <div class="set-title">채팅 글자 크기</div>
+          <div class="set-row" style="gap:8px; align-items:center;">
+            <div class="font-ctl">
+              <button class="font-btn" type="button" onclick="decreaseFont()" aria-label="글씨 작게">−</button>
+              <span id="font-size-pill" class="font-pill" aria-live="polite" aria-label="현재 글씨 크기">18px</span>
+              <button class="font-btn" type="button" onclick="increaseFont()" aria-label="글씨 크게">+</button>
+            </div>
+            <span class="hint" style="margin:0;">채팅 말풍선 글자만 바뀝니다. 카드는 그대로예요.</span>
+          </div>
+        </div>
+
         <div class="set-block">
           <div class="set-title">창이 좁아지면 보여줄 창</div>
           <select id="set-narrow-panel" class="w-full">
@@ -638,11 +654,10 @@
           </svg><span class="icon-btn-label">설정</span>
         </button>
 
-        <div class="font-ctl">
-          <button class="font-btn" type="button" onclick="decreaseFont()" aria-label="글씨 작게">−</button>
-          <span id="font-size-pill" class="font-pill" aria-live="polite" aria-label="현재 글씨 크기">18px</span>
-          <button class="font-btn" type="button" onclick="increaseFont()" aria-label="글씨 크게">+</button>
-        </div>
+        <!-- [2026-08-16] 채팅 글꼴 크기는 설정 > 채팅 탭으로 옮겼습니다.
+             자주 건드리는 값이 아닌데 머리말 자리를 차지하고 있었어요.
+             여기 남은 것은 🔍 화면 확대·축소뿐입니다 (script_zoom.js 가 채웁니다). -->
+        <div class="font-ctl zoom-ctl" id="zoom-ctl"></div>
 
         <button class="icon-btn danger labeled" type="button" onclick="leaveRoom()" aria-label="나가기" title="나가기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1121,45 +1136,45 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608161604"></script>
+<script src="script_demo.js?v=202608161630"></script>
 <!-- 🧘 혼자 방 (?solo=1) — demo 와 같은 이유로 맨 앞쪽에 실립니다.
      script_core.js 가 database() 를 부르기 전에 갈아 끼워야 해요. -->
-<script src="script_solo.js?v=202608161604"></script>
-<script src="fortune_data.js?v=202608161604"></script>
-<script src="script_core.js?v=202608161604"></script>
-<script src="script_auth.js?v=202608161604"></script>
-<script src="script_ui.js?v=202608161604"></script>
-<script src="script_chat.js?v=202608161604"></script>
-<script src="script_chatty.js?v=202608161604"></script>
-<script src="script_data.js?v=202608161604"></script>
-<script src="script_realtime.js?v=202608161604"></script>
-<script src="script_dock.js?v=202608161604"></script>
-<script src="script_music.js?v=202608161604"></script>
-<script src="script_wordcount.js?v=202608161604"></script>
-<script src="script_timelog.js?v=202608161604"></script>
-<script src="script_idledetect.js?v=202608161604"></script>
-<script src="script_alive.js?v=202608161604"></script>
-<script src="script_profile.js?v=202608161604"></script>
-<script src="script_mywork.js?v=202608161604"></script>
-<script src="script_forest.js?v=202608161604"></script>
-<script src="script_pubreview.js?v=202608161604"></script>
-<script src="script_notice.js?v=202608161604"></script>
-<script src="script_achv.js?v=202608161604"></script>
-<script src="script_reactions.js?v=202608161604"></script>
-<script src="script_note.js?v=202608161604"></script>
+<script src="script_solo.js?v=202608161630"></script>
+<script src="fortune_data.js?v=202608161630"></script>
+<script src="script_core.js?v=202608161630"></script>
+<script src="script_auth.js?v=202608161630"></script>
+<script src="script_ui.js?v=202608161630"></script>
+<script src="script_chat.js?v=202608161630"></script>
+<script src="script_chatty.js?v=202608161630"></script>
+<script src="script_data.js?v=202608161630"></script>
+<script src="script_realtime.js?v=202608161630"></script>
+<script src="script_dock.js?v=202608161630"></script>
+<script src="script_music.js?v=202608161630"></script>
+<script src="script_wordcount.js?v=202608161630"></script>
+<script src="script_timelog.js?v=202608161630"></script>
+<script src="script_idledetect.js?v=202608161630"></script>
+<script src="script_alive.js?v=202608161630"></script>
+<script src="script_profile.js?v=202608161630"></script>
+<script src="script_mywork.js?v=202608161630"></script>
+<script src="script_forest.js?v=202608161630"></script>
+<script src="script_pubreview.js?v=202608161630"></script>
+<script src="script_notice.js?v=202608161630"></script>
+<script src="script_achv.js?v=202608161630"></script>
+<script src="script_reactions.js?v=202608161630"></script>
+<script src="script_note.js?v=202608161630"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608161604"></script>
+<script src="script_worktag.js?v=202608161630"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608161604"></script>
-<script src="script_share.js?v=202608161604"></script>
+<script src="script_sticker.js?v=202608161630"></script>
+<script src="script_share.js?v=202608161630"></script>
 <!-- 🔍 화면 확대·축소 — 머리말 [− 18px +] 오른쪽에 나란히.
      다른 파일들은 (window.uiZoom?.() || 1) 처럼 **부를 때** 물어보므로
      싣는 차례는 상관없습니다. 없으면 100% 로 봅니다. -->
-<script src="script_zoom.js?v=202608161604"></script>
-<script src="script_manual.js?v=202608161604"></script>
-<script src="script_guard.js?v=202608161604"></script>
+<script src="script_zoom.js?v=202608161630"></script>
+<script src="script_manual.js?v=202608161630"></script>
+<script src="script_guard.js?v=202608161630"></script>
 
 <script>
   window.addEventListener("load", () => {

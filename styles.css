@@ -4167,7 +4167,8 @@ body.side-collapsed .side-rail{
 .wc-bar{ flex:0 0 auto; height:4px; border-radius:var(--r-full);
          background: var(--accent); opacity:.45; max-width:40%; min-width:3px; }
 .wc-n{ flex:0 0 auto; font-variant-numeric: tabular-nums; font-weight: var(--fw-medium); }
-.wc-row.me .wc-nm{ color: var(--accent); font-weight: var(--fw-medium); }
+/* 순위 줄의 내 이름도 같은 결로 (2026-08-16) */
+.wc-row.me .wc-nm{ color: var(--me); font-weight: var(--fw-medium); }
 .wc-empty{ font-size: var(--fs-xs); color: var(--text-dim); }
 
 .wc-log{ margin:0; min-height:16px; font-size: var(--fs-2xs);
@@ -4215,10 +4216,16 @@ body.side-collapsed .side-rail{
   border: 1px solid var(--border);
   word-break: break-all;
 }
+/* ★★ [고침 2026-08-16] 워크로그만 다른 색을 쓰고 있었습니다.
+   내 말풍선은 방 전체가 --me 를 씁니다 — 채팅도, 뽀모의 도는 막대·고리도요.
+   여기만 --accent 라 뽀모 창을 나란히 띄우면 색이 따로 놀았어요.
+   ("뽀모와 워크 로그 색상이 따로 놀아" — 콩)
+   ★ 새로 "내 것" 을 칠할 일이 생기면 --me 를 쓰세요. --accent 는 방의
+     포인트색이라 강조·머리말 쪽입니다. */
 .wc-feed.me .wc-said{
-  background: var(--accent);
+  background: var(--me);
   border-color: transparent;
-  color: #fff;
+  color: var(--me-text);
 }
 .wc-said-nm{ font-size: var(--fs-2xs); color: var(--text-dim);
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -4249,7 +4256,7 @@ body.side-collapsed .side-rail{
   color: var(--text);
 }
 .wc-feed:has(.wc-pomo-line){ text-align: center; }
-.wc-feed.me .wc-feed-sys b{ color: var(--accent); }
+.wc-feed.me .wc-feed-sys b{ color: var(--me); }
 
 /* 설정 → 📊 나의 기록 — 팝업에서 쓰던 조각을 그대로 씁니다.
    팝업보다 폭이 좁으니 위아래 여백만 조금 줄입니다. */
@@ -4611,7 +4618,7 @@ html[data-unzoom] #dock-bar{
 .wc-priv-h{ font-weight: 800; color: var(--text, #2E3440); margin-bottom: 4px; }
 .wc-priv-g{ display: flex; gap: 7px; margin: 2px 0; }
 .wc-priv-gd{ flex: 0 0 auto; font-weight: 700; color: var(--text-3, #8A93A2); }
-.wc-priv-g.today .wc-priv-gd{ color: var(--accent, #4A140D); }
+.wc-priv-g.today .wc-priv-gd{ color: var(--me, #0A84FF); }
 .wc-priv-g.late  .wc-priv-gd{ color: var(--danger, #B3372B); }
 .wc-priv-gi{ min-width: 0; }
 .wc-priv-none{ color: var(--text-3, #8A93A2); }
@@ -4804,9 +4811,12 @@ html[data-theme-style="night"] .pomo-bar-time{
 /* ── 맨 위 헤더 — 양쪽에 프로필 카드 폭만큼 숨 쉴 자리 ──
    [고침 2026-08-06] 버튼이 늘어 줄이 넘치기 시작해서, 여백을
    카드 폭의 80% 로 줄였습니다 (214px → 약 171px). */
+/* [2026-08-16] 양쪽 여백을 80% 로 (0.8 → 0.64).
+   카드 마당과 눈금을 맞추려고 카드 폭에 기대어 잡은 값입니다 —
+   숫자를 그냥 px 로 바꾸면 카드 폭이 달라질 때 어긋나니 비율은 그대로. */
 .app-head{
-  padding-left: calc(var(--card-w) * 0.8);
-  padding-right: calc(var(--card-w) * 0.8);
+  padding-left: calc(var(--card-w) * 0.64);
+  padding-right: calc(var(--card-w) * 0.64);
 }
 @media (max-width: 1100px){
   .app-head{ padding-left: 16px; padding-right: 16px; }

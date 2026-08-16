@@ -569,7 +569,7 @@
      ===================================================================== */
 
   function 걷어내기() {
-    window.mountZoomCtl?.("replace");
+    window.mountZoomCtl?.();
     ["dock-pill-chatty", "dock-pill-pub", "alive-btn",
      "chatty-tab", "chat-tab-chatty"].forEach(id => {
       const el = document.getElementById(id);

@@ -143,9 +143,7 @@
   });
 
   /* ---------------------------------------------------------------
-     머리말에 단추 달기
-       "beside"  — 글자 크기 조절 **오른쪽에** 나란히 (진짜 더마감)
-       "replace" — 글자 크기 조절 자리를 **물려받음** (🧘 혼자 방)
+     머리말 제 자리(#zoom-ctl)에 단추 달기
      --------------------------------------------------------------- */
   function 단추HTML() {
     return `
@@ -174,27 +172,21 @@
     return true;
   }
 
-  function 달기(mode) {
-    const ctl = document.querySelector(".font-ctl");
+  /* ★★ [고침 2026-08-16] 예전에는 머리말의 글자 크기 조절(.font-ctl)을
+     찾아 그 **옆에** 끼워 넣었습니다. 그런데 글자 크기 조절이 설정 창
+     안으로 옮겨 가면서, 그걸 따라가면 확대·축소도 설정 창에 들어가
+     버립니다. 이제 머리말에 제 자리(#zoom-ctl)를 두고 거기만 채웁니다.
+     ★ 자리를 못 찾으면 아무것도 하지 않습니다 — 엉뚱한 데 붙는 것보다
+       안 보이는 편이 낫고, 그러면 index.html 을 보러 가게 되니까요. */
+  function 달기() {
+    const ctl = document.getElementById("zoom-ctl");
     if (!ctl) return false;
     if (document.getElementById("zoom-pill")) return true;   // 이미 달렸어요
-
-    if (mode === "replace") {
-      ctl.innerHTML = 단추HTML();
-    } else {
-      const box = document.createElement("div");
-      box.className = "font-ctl zoom-ctl";
-      box.innerHTML = 단추HTML();
-      ctl.insertAdjacentElement("afterend", box);
-    }
+    ctl.innerHTML = 단추HTML();
     return 손가락();
   }
   window.mountZoomCtl = 달기;
 
-  /* 진짜 방에서는 알아서 나란히 답니다.
-     🧘 혼자 방은 script_solo.js 가 걷어내기 때에 "replace" 로 부릅니다 —
-     거기서는 글자 크기 조절을 아예 걷어내니까요. */
-  window.addEventListener("load", () => {
-    setTimeout(() => { if (!window.SOLO) 달기("beside"); }, 300);
-  });
+  /* 두 방 모두 머리말 제 자리에 답니다 */
+  window.addEventListener("load", () => { setTimeout(달기, 300); });
 })();
