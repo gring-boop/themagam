@@ -95,6 +95,48 @@
   const MINE_MAX = 400;
   let _mineLines = [];
 
+  /* =====================================================================
+     📅 지난 기록 되짚기 (2026-08-16)
+     ---------------------------------------------------------------------
+     [무엇을 하나] 오늘·내 메모 탭에서 ‹ › 로 **일주일 전까지** 넘겨 봅니다.
+
+     [통신량 — 걱정하실까 봐]
+       · 나만 보는 줄(메모·할 일)은 이미 이 기기에 2주치가 있습니다. 0.
+       · 방의 글자수 기록은 그날 것을 **그때 한 번만** 내려받고 기억해
+         둡니다(once, 캐시). 다시 그 날짜로 가도 안 받아요.
+       · 하루치가 대략 10KB 안팎이라, 일주일을 다 넘겨봐도 70KB 남짓입니다.
+     ★ 실시간으로 듣지 않습니다(on 이 아니라 once) — 지난 날은 더 늘어날
+       일이 없으니까요. 듣기로 걸어 두면 그만큼 계속 열려 있게 됩니다.
+     ===================================================================== */
+  const BACK_MAX = 6;        // 오늘 포함 이레
+  let _back = 0;             // 0 = 오늘, 1 = 어제 …
+  const _pastFeed = {};      // { 날짜: [기록] } — 한 번 받으면 기억
+
+  function 보는날() {
+    return _back === 0 ? dayKey() : dayKey(new Date(Date.now() - _back * 86400000));
+  }
+  function 보는날말() {
+    if (_back === 0) return "오늘";
+    if (_back === 1) return "어제";
+    const k = 보는날(), d = new Date(k + "T00:00:00");
+    return `${d.getMonth() + 1}/${d.getDate()}(${DOW_NAMES[d.getDay()]})`;
+  }
+
+  async function 지난것가져오기(day) {
+    if (_pastFeed[day] || !window.db) return;
+    _pastFeed[day] = [];                       // 두 번 받지 않게 먼저 자리를 잡습니다
+    try {
+      const snap = await window.db.ref(`wordfeed/${day}`).orderByChild("at").once("value");
+      const v = snap.val() || {};
+      _pastFeed[day] = Object.values(v)
+        .filter(f => f && f.type !== "pomo")
+        .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+    } catch (e) {
+      _pastFeed[day] = [];
+    }
+    render();
+  }
+
   function loadMine() {
     try {
       const raw = JSON.parse(window.AppStore?.getItem(MINE_KEY) || "[]");
@@ -330,16 +372,50 @@
         + (myFeed.length
             ? drawFeed(myFeed)
             : `<div class="wc-empty">오늘 올린 기록이 아직 없어요.</div>`);
+    } else if (_tab === "memo") {
+      /* ✍️ 내 메모 — 명령 없이 적은 혼잣말만. 전부 나만 보는 줄입니다.
+         할 일 담기·완료·모아보기와 뽀모 알림은 뺍니다 — 그것들은
+         "무슨 일이 있었나" 이고, 여기는 "내가 뭐라고 적었나" 예요. */
+      const 날 = 보는날();
+      const 내메모 = _mineLines.filter(x => x.day === 날 && x.kind === "memo");
+      big.textContent  = String(내메모.length);
+      unit.textContent = `줄 · ${보는날말()} 내 메모`;
+      rows.innerHTML = 내메모.length
+        ? drawFeed(내메모)
+        : `<div class="wc-empty">${보는날말()}에 적어 둔 메모가 없어요.<br>
+           아래 칸에 그냥 적으면 여기 쌓입니다.</div>`;
+      rows.scrollTop = rows.scrollHeight;
     } else {
       /* 오늘 탭 — 흐르는 기록. 순위도 막대도 없습니다. */
-      const roomSum = Object.values(_today)
-        .reduce((a, v) => a + Number(v?.total || 0), 0);
-      big.textContent  = fmt(roomSum);
-      unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
+      if (_back === 0) {
+        const roomSum = Object.values(_today)
+          .reduce((a, v) => a + Number(v?.total || 0), 0);
+        big.textContent  = fmt(roomSum);
+        unit.textContent = "자 · 오늘 방 전체 · 나 " + fmt(mine.total || 0) + "자";
+      } else {
+        const 날 = 보는날();
+        const 방 = _week[날] || {};
+        const 합 = Object.values(방).reduce((a, v) => a + Number(v?.total || 0), 0);
+        big.textContent  = fmt(합);
+        unit.textContent = `자 · ${보는날말()} 방 전체 · 나 ${fmt(Number(방[me()]?.total || 0))}자`;
+      }
       rows.innerHTML = drawFeed(mergedFeed());
       /* 새 줄이 아래에 붙으므로 맨 아래를 보여줍니다 */
       rows.scrollTop = rows.scrollHeight;
     }
+
+    /* 날짜 넘기기 줄 — 오늘·내 메모 탭에서만 */
+    const nav = el("wc-daynav");
+    if (nav) {
+      nav.hidden = (_tab === "me");
+      const t = el("wc-day-t");
+      if (t) t.textContent = 보는날말();
+      const pv = el("wc-day-prev"), nx = el("wc-day-next");
+      if (pv) pv.disabled = _back >= BACK_MAX;
+      if (nx) nx.disabled = _back <= 0;
+    }
+    /* 지난 날인데 아직 안 받아 왔으면 지금 받습니다 */
+    if (_tab === "today" && _back > 0) 지난것가져오기(보는날());
 
     if (hint) {
       hint.textContent = (mine.base === null || mine.base === undefined)
@@ -535,13 +611,14 @@
   /* 방의 글자수 기록 + 내 뽀모 알림을 시간순으로 섞습니다.
      오늘 탭에서만 씁니다 — '내 기록' 탭은 숫자만 봅니다. */
   function mergedFeed() {
-    /* 오늘 것만 섞습니다 — 지난 메모는 기기에 남아 있지만 오늘 탭은
-       오늘의 흐름을 보는 자리예요 */
-    const 오늘 = dayKey();
-    const 내줄 = _mineLines.filter(x => x.day === 오늘);
-    if (!_pomoLines.length && !내줄.length) return _feed;
-    return _feed.concat(_pomoLines, 내줄)
-                .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+    const 날 = 보는날();
+    const 내줄 = _mineLines.filter(x => x.day === 날);
+    /* 지난 날이면 서버 기록은 받아 둔 것을, 뽀모 알림은 오늘 것만 */
+    const 방줄 = (_back === 0) ? _feed : (_pastFeed[날] || []);
+    const 뽀모 = (_back === 0) ? _pomoLines : [];
+    if (!뽀모.length && !내줄.length) return 방줄;
+    return 방줄.concat(뽀모, 내줄)
+               .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
   }
 
   /* 뽀모 쪽(script_realtime.js)에서 부릅니다 */
@@ -573,25 +650,25 @@
          오른쪽에 작은 자물쇠를 두어 "이건 나만 본다"를 눈에 남깁니다. */
       if (f.type === "mine") {
         const tm2 = (f.at && window.formatHHMM)
-          ? `<span class="wc-mine-t">${window.formatHHMM(f.at)}</span>` : "";
+          ? `<span class="wc-priv-t">${window.formatHHMM(f.at)}</span>` : "";
         if (f.kind === "list") {
           const L = f.list || {};
           const 줄 = (L.묶음 || []).map(g => `
-            <div class="wc-mine-g${g.밀림 ? " late" : ""}${g.오늘인가 ? " today" : ""}">
-              <span class="wc-mine-gd">${esc(g.이름)}</span>
-              <span class="wc-mine-gi">${g.항목.map(esc).join(" · ")}</span>
+            <div class="wc-priv-g${g.밀림 ? " late" : ""}${g.오늘인가 ? " today" : ""}">
+              <span class="wc-priv-gd">${esc(g.이름)}</span>
+              <span class="wc-priv-gi">${g.항목.map(esc).join(" · ")}</span>
             </div>`).join("");
           const 없는 = (L.없는날 || []).length
-            ? `<div class="wc-mine-g"><span class="wc-mine-gd">날짜 없음</span>
-               <span class="wc-mine-gi">${L.없는날.map(esc).join(" · ")}</span></div>` : "";
-          return `<div class="wc-feed"><div class="wc-mine">
+            ? `<div class="wc-priv-g"><span class="wc-priv-gd">날짜 없음</span>
+               <span class="wc-priv-gi">${L.없는날.map(esc).join(" · ")}</span></div>` : "";
+          return `<div class="wc-feed"><div class="wc-priv">
             ${tm2}
-            <div class="wc-mine-h">📋 할 일 ${L.총 || 0}개${L.밀린수 ? ` · 밀림 ${L.밀린수}` : ""}</div>
-            ${줄 || 없는 ? 줄 + 없는 : `<div class="wc-mine-none">안 끝난 할 일이 없어요</div>`}
+            <div class="wc-priv-h">📋 할 일 ${L.총 || 0}개${L.밀린수 ? ` · 밀림 ${L.밀린수}` : ""}</div>
+            ${줄 || 없는 ? 줄 + 없는 : `<div class="wc-priv-none">안 끝난 할 일이 없어요</div>`}
           </div></div>`;
         }
-        return `<div class="wc-feed"><div class="wc-mine wc-mine-${esc(f.kind || "memo")}">
-          ${tm2}<span class="wc-mine-x">${esc(f.msg || "")}</span>
+        return `<div class="wc-feed"><div class="wc-priv wc-priv-${esc(f.kind || "memo")}">
+          ${tm2}<span class="wc-priv-x">${esc(f.msg || "")}</span>
         </div></div>`;
       }
 
@@ -1136,6 +1213,7 @@
     host.querySelectorAll("[data-wc-tab]").forEach(b => {
       b.addEventListener("click", () => {
         _tab = b.dataset.wcTab;
+        _back = 0;                     // 탭을 옮기면 오늘부터 — 안 그러면 어제가 따라옵니다
         host.querySelectorAll("[data-wc-tab]").forEach(x => {
           const on = x === b;
           x.classList.toggle("on", on);
@@ -1143,6 +1221,14 @@
         });
         render();
       });
+    });
+
+    /* 📅 날짜 넘기기 */
+    el("wc-day-prev")?.addEventListener("click", () => {
+      if (_back < BACK_MAX) { _back++; render(); }
+    });
+    el("wc-day-next")?.addEventListener("click", () => {
+      if (_back > 0) { _back--; render(); }
     });
 
     render();

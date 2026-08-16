@@ -4537,7 +4537,30 @@ html[data-unzoom] #dock-bar{
 .wc-slash-i b{ color: var(--text, #2E3440); }
 .wc-slash-i:hover{ background: var(--fill-1, #F2F4F8); }
 
-.wc-mine{
+/* 📅 날짜 넘기기 — 오늘·내 메모 탭에서 일주일 전까지 (2026-08-16) */
+.wc-daynav{
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  flex: none; margin: 2px 0 4px;
+}
+.wc-day-b{
+  width: 22px; height: 22px; padding: 0;
+  border: 1px solid var(--line, #E3E7EE); border-radius: 6px;
+  background: transparent; color: var(--text-2, #5A6473);
+  font-size: 13px; line-height: 1; cursor: pointer;
+}
+.wc-day-b:hover:not(:disabled){ background: var(--fill-1, #F2F4F8); }
+.wc-day-b:disabled{ opacity: .3; cursor: default; }
+.wc-day-t{
+  min-width: 74px; text-align: center;
+  font-size: 12px; font-weight: 700; color: var(--text-2, #5A6473);
+}
+
+/* ★★ [고침 2026-08-16] 클래스 이름이 이미 쓰이고 있었습니다.
+   .wc-mine 은 위쪽 "300 자 · 오늘 방 전체" 머리줄의 이름이에요
+   (display:flex). 같은 이름을 쓰는 바람에 할 일 목록이 가로로 늘어서고
+   글자가 세로로 쏟아졌습니다. 나만 보는 줄은 .wc-priv 로 갈랐습니다. */
+.wc-priv{
+  display: block;                    /* 위 .wc-mine 과 헷갈리지 않게 못 박음 */
   margin-left: auto;                 /* 오른쪽으로 — 내 혼잣말 */
   max-width: 88%;
   border: 1px dashed var(--line, #E3E7EE);
@@ -4546,15 +4569,15 @@ html[data-unzoom] #dock-bar{
   font-size: 13px; line-height: 1.6;   /* 12.5 → 13 (2026-08-16) */
   color: var(--text-2, #5A6473);
 }
-.wc-mine-t{ float: right; margin-left: 8px; font-size: 10.5px; color: var(--text-3, #8A93A2); }
-.wc-mine-memo .wc-mine-x{ color: var(--text, #2E3440); }
-.wc-mine-h{ font-weight: 800; color: var(--text, #2E3440); margin-bottom: 4px; }
-.wc-mine-g{ display: flex; gap: 7px; margin: 2px 0; }
-.wc-mine-gd{ flex: 0 0 auto; font-weight: 700; color: var(--text-3, #8A93A2); }
-.wc-mine-g.today .wc-mine-gd{ color: var(--accent, #4A140D); }
-.wc-mine-g.late  .wc-mine-gd{ color: var(--danger, #B3372B); }
-.wc-mine-gi{ min-width: 0; }
-.wc-mine-none{ color: var(--text-3, #8A93A2); }
+.wc-priv-t{ float: right; margin-left: 8px; font-size: 10.5px; color: var(--text-3, #8A93A2); }
+.wc-priv-memo .wc-priv-x{ color: var(--text, #2E3440); }
+.wc-priv-h{ font-weight: 800; color: var(--text, #2E3440); margin-bottom: 4px; }
+.wc-priv-g{ display: flex; gap: 7px; margin: 2px 0; }
+.wc-priv-gd{ flex: 0 0 auto; font-weight: 700; color: var(--text-3, #8A93A2); }
+.wc-priv-g.today .wc-priv-gd{ color: var(--accent, #4A140D); }
+.wc-priv-g.late  .wc-priv-gd{ color: var(--danger, #B3372B); }
+.wc-priv-gi{ min-width: 0; }
+.wc-priv-none{ color: var(--text-3, #8A93A2); }
 
 /* 🖥️ 가짜 화면 고르기 — 잘라 보기 / 전체 보기 (2026-08-15) */
 .solo-fit-row{ display: flex; align-items: center; gap: 6px; margin-top: 6px; }
