@@ -154,7 +154,14 @@
     const pr = pill.getBoundingClientRect();
     const hr = host.getBoundingClientRect();
     const w = p.offsetWidth || 360;
-    return { x: (pr.left + pr.width / 2) - hr.left - w / 2, y: 0 };
+    /* ★★ [고침 2026-08-15] 여기도 자가 섞여 있었습니다.
+       pr·hr 은 화면 값이고 w(offsetWidth)는 요소 값이에요.
+       **화면에서 잰 거리**를 먼저 구하고, 그것만 배율로 나눠 판이 사는
+       자리(요소 기준)로 옮깁니다. 그러면 알약이 되돌려 확대돼 있든
+       아니든(머리말·알약 줄은 제 크기로 두니까요) 늘 맞습니다. */
+    const z = (window.uiZoom?.() || 1);
+    const 알약가운데 = pr.left + pr.width / 2;      // 화면 기준
+    return { x: (알약가운데 - hr.left) / z - w / 2, y: 0 };
   }
 
   /* 화면 배율 — 🧘 혼자 방의 확대·축소. 진짜 방에서는 늘 1 입니다.

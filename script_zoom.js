@@ -46,6 +46,23 @@
     return (v >= MIN && v <= MAX) ? v : 100;
   }
 
+  /* =====================================================================
+     🧭 머리말과 알약 줄은 줄이지 않습니다 (2026-08-15)
+     ---------------------------------------------------------------------
+     [무엇이 불편했나] 확대·축소는 화면을 통째로 바꿉니다. 카드를 더 많이
+     보려고 줄였더니 **시계와 알약 글씨까지 작아져서** 안 보였어요.
+     정작 줄이고 싶었던 건 카드와 판이고, 손잡이는 그대로여야 합니다.
+
+     [어떻게] zoom 은 겹치면 곱해집니다. 뿌리에 0.95 를 걸고 머리말에
+     1/0.95 를 걸면 그 안쪽만 정확히 제 크기로 돌아와요. 좌표 계산은
+     전부 그대로 둡니다 — uiZoom() 이 여전히 화면 전체의 배율이고,
+     카드·판·팝업이 다 그 안에 있으니까요.
+     ★ 되돌릴 곳은 **머리말(.app-head)과 알약 줄(.dock-bar)** 둘뿐입니다.
+       떠오르는 판(#dock-panels)은 줄어드는 쪽이 맞아요 — 화면을 넓게
+       쓰려고 줄이는 건데 판이 그대로면 뜻이 없습니다.
+     ===================================================================== */
+  const 손잡이는그대로 = () => !!window.SOLO;   // 🧘 혼자 방에서 먼저 씁니다
+
   function 배율적용(v) {
     const z = Math.max(MIN, Math.min(MAX, Math.round(v / STEP) * STEP));
     try { 곳간()?.setItem(KEY(), String(z)); } catch (e) {}
@@ -56,6 +73,11 @@
     document.body.style.zoom = "";
     const f = z / 100;
     document.body.style.height = (z === 100) ? "" : (window.innerHeight / f) + "px";
+
+    /* 되돌려 키울 값 — CSS 가 이 값을 읽어 머리말·알약 줄에만 겁니다 */
+    const 되돌림 = (z === 100 || !손잡이는그대로()) ? "" : String(1 / f);
+    document.documentElement.style.setProperty("--unzoom", 되돌림);
+    document.documentElement.toggleAttribute("data-unzoom", !!되돌림);
 
     const pill = document.getElementById("zoom-pill");
     if (pill) pill.textContent = z + "%";

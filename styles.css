@@ -4468,6 +4468,20 @@ body.solo-mode #music-add-btn{ display: none !important; }
 /* 유령 카드도 눌러서 꾸밀 수 있다는 표시 */
 body.solo-mode .card-avatar-wrap{ cursor: pointer; }
 
+/* =====================================================================
+   🧭 확대·축소해도 머리말과 알약 줄은 제 크기 (2026-08-15)
+   ---------------------------------------------------------------------
+   zoom 은 겹치면 곱해집니다. 뿌리에 0.95, 여기에 1/0.95 를 걸면 이
+   안쪽만 정확히 제자리로 돌아와요. 카드를 더 보려고 줄였는데 시계와
+   알약 글씨까지 작아지면 곤란하니까요.
+   ★ 떠오르는 판(#dock-panels)에는 걸지 않습니다 — 화면을 넓게 쓰려고
+     줄이는 건데 판이 그대로면 뜻이 없어요.
+   ===================================================================== */
+html[data-unzoom] .app-head,
+html[data-unzoom] #dock-bar{
+  zoom: var(--unzoom, 1);
+}
+
 /* 🖥️ 가짜 화면 고르기 — 잘라 보기 / 전체 보기 (2026-08-15) */
 .solo-fit-row{ display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .solo-fit-row .hint{ margin: 0; }
