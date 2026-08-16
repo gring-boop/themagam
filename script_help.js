@@ -188,7 +188,10 @@
     const 머리 = `
       <div class="help-head">
         <span class="help-title">🙋 Help</span>
-        <span class="help-sub">이 표현 맞나요?</span>
+        <!-- [2026-08-16] "이 표현 맞나요?" 에서 바꿨습니다.
+             맞다/틀리다를 묻는 말투는 답하는 쪽에 정답을 요구하게 돼요.
+             "같이 고민해 주세요" 는 확신이 없어도 거들 수 있는 말입니다. -->
+        <span class="help-sub">이 표현 어때요? 같이 고민해 주세요! 😭</span>
         <span class="help-sp"></span>
         ${기다림 ? `<span class="help-tag wait">답 기다리는 중 ${기다림}</span>` : ""}
       </div>`;
