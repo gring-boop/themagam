@@ -82,7 +82,6 @@
   --border: rgba(0,0,0,.10);
 
   --panel:   rgba(255,255,255,.86);
-  --panel-solid: rgba(255,255,255,.97);   /* ✍️ Work Log 처럼 읽는 판 */
   --panel2:  rgba(255,255,255,.78);
   --surface: rgba(255,255,255,.72);
 
@@ -218,7 +217,6 @@
     --border: rgba(255,255,255,.10);
 
     --panel:   rgba(22,24,28,.96);
-    --panel-solid: rgba(22,24,28,.99);
     --panel2:  rgba(22,24,28,.90);
     --surface: rgba(22,24,28,.88);
 
@@ -8556,10 +8554,21 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
 }
 /* ✍️ Work Log — 이 판만 덜 비치게 (2026-08-16)
    다른 판은 잠깐 열었다 닫지만 여기는 **읽고 쓰는 자리**입니다. 메모와
-   일지가 흐르는데 뒤에 그림이 비치면 글자가 묻혀요. 흐림도 조금 더
-   줍니다 — 뒤가 뭉개질수록 앞 글자가 또렷해집니다. */
+   일지가 흐르는데 뒤에 그림이 비치면 글자가 묻혀요.
+
+   ★★ [고침 같은 날] 처음에는 --panel-solid 라는 값을 따로 만들어
+      흰색으로 박아 뒀습니다. 그런데 테마마다 판 색이 다릅니다 —
+      기본 테마의 판은 따뜻한 미색(255,253,246)인데 여기만 순백이라
+      뽀모 창과 나란히 두면 색이 달라 보였어요 ("워크로그 배경색이
+      안 바뀌었어" — 콩). 값을 새로 만들면 테마가 늘 때마다 같이
+      챙겨야 하고, 빠뜨리면 오늘처럼 됩니다.
+
+      그래서 **같은 --panel 을 두 겹** 깝니다. 96% 를 두 번 겹치면
+      99.8% 가 되니 덜 비치면서, 색은 테마의 판 색 **그대로**예요.
+      테마가 아무리 늘어도 따로 챙길 게 없습니다. */
 #dock-panel-wc{
-  background: var(--panel-solid, rgba(255,255,255,.97));
+  background-color: var(--panel);
+  background-image: linear-gradient(var(--panel), var(--panel));
   backdrop-filter: blur(12px) saturate(1.04);
   -webkit-backdrop-filter: blur(12px) saturate(1.04);
 }
