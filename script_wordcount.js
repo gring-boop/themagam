@@ -72,6 +72,47 @@
      새로고침하면 사라집니다 — 지나간 알림이라 남길 이유가 없어요. */
   let _pomoLines = [];
 
+  /* =====================================================================
+     ✍️ 메모 · 할 일 명령 — **나만 보는 줄** (2026-08-16)
+     ---------------------------------------------------------------------
+     콩(방장)이 개인으로 쓰던 작업 프로그램 "콩트" 의 Work Log 를
+     가져왔습니다. 숫자만 적으면 예전 그대로, 글만 적으면 메모,
+     "/" 로 시작하면 할 일 명령이에요.
+
+     [왜 나만 보나] 이 피드는 **모두가 같이 봅니다** — 서로의 글자수가
+     흐르는 자리예요. 그런데 "6화 초고 시작!!!" 이나 "내일 할 일에
+     담았어요" 는 혼잣말입니다. 남의 화면에 흐르면 정작 글자수 기록이
+     밀려나고, 무엇보다 혼잣말을 편히 못 적게 돼요.
+     그래서 서버에 올리지 않고 **이 기기에** 적습니다 — 통신량 0.
+
+     [뽀모 알림과 다른 점] 뽀모 알림(_pomoLines)은 기억에만 두고
+     새로고침하면 사라집니다. 지나간 알림이라 남길 이유가 없어서요.
+     메모는 **다시 읽으려고 적는 것**이라 기기에 저장하고, 콩트와 같이
+     14일치를 남깁니다.
+     ===================================================================== */
+  const MINE_KEY = "wcMine";        // 이 기기에만 — 서버로 안 나갑니다
+  const MINE_DAYS = 14;             // 콩트와 같이 2주치
+  const MINE_MAX = 400;
+  let _mineLines = [];
+
+  function loadMine() {
+    try {
+      const raw = JSON.parse(window.AppStore?.getItem(MINE_KEY) || "[]");
+      const from = dayKey(new Date(Date.now() - (MINE_DAYS - 1) * 86400000));
+      _mineLines = Array.isArray(raw) ? raw.filter(x => x && (x.day || "") >= from) : [];
+    } catch (e) { _mineLines = []; }
+  }
+  function saveMine() {
+    if (_mineLines.length > MINE_MAX) _mineLines = _mineLines.slice(-MINE_MAX);
+    try { window.AppStore?.setItem(MINE_KEY, JSON.stringify(_mineLines)); } catch (e) {}
+  }
+  function addMine(kind, msg, extra) {
+    _mineLines.push({ ...(extra || {}), type: "mine", kind, msg: String(msg || ""),
+                      at: Date.now(), day: dayKey() });
+    saveMine();
+    render();
+  }
+
   /* 뽀모도로 알림도 같은 자리에 흐르므로, 글자수 기록이 밀려나지 않게
      넉넉히 잡습니다 (하루치라 양은 크지 않습니다) */
   const FEED_MAX = 200;   // 너무 길어지지 않게 최근 것만 봅니다
@@ -307,11 +348,198 @@
     }
   }
 
+  /* =====================================================================
+     "/" 명령 읽기 — 콩트에서 그대로 옮겼습니다 (일정 계열만 뺌)
+     ---------------------------------------------------------------------
+       /할일        · /할일 18            뒤 3일 ~ 앞 7일 모아보기
+       /완료 내용                          최근 3주 안에서 찾아 체크
+       /오늘 /내일 /모레 /글피 내용         그 날 할 일에 담기
+       /월 … /일 내용                      다음에 오는 그 요일
+       /18  /8-18  /8.18  /8/18 내용       그 날짜
+     ★ 명령 이름을 콩트와 **똑같이** 둡니다. 방장이 두 곳을 오가며 쓰고,
+       멤버에게 설명할 때도 말이 하나여야 해요.
+     ===================================================================== */
+  const DOW_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+  const SLASH_HELP = [
+    { cmd: "/오늘",  what: "오늘 할 일에 담기" },
+    { cmd: "/내일",  what: "내일 할 일에 담기" },
+    { cmd: "/모레",  what: "모레 할 일에 담기" },
+    { cmd: "/글피",  what: "사흘 뒤 할 일에 담기" },
+    { cmd: "/완료",  what: "할 일 체크하기" },
+    { cmd: "/할일",  what: "이번 주 할 일 모아보기" }
+  ];
+
+  function parseSlash(raw) {
+    const t = String(raw || "").trim();
+    /* /할일 · /할일 18 — 기간 요약 */
+    const li = t.match(/^\/(할일|할\s*일|list|목록)(?:\s+(\S+))?$/);
+    if (li) {
+      let base = dayKey();
+      if (li[2]) {
+        const sub = parseSlash("/" + li[2] + " x");
+        if (sub && sub.key) base = sub.key;
+      }
+      return { list: true, key: base };
+    }
+    const m = t.match(/^\/(\S+)\s+(.+)$/);
+    if (!m) return null;
+    const word = m[1], body = m[2].trim();
+    if (!body) return null;
+
+    const now = new Date();
+    const plus = (n) => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+n); return d; };
+
+    if (/^(완료|done|끝)$/i.test(word)) return { done: true, text: body };
+    if (/^(오늘|today)$/i.test(word))   return { key: dayKey(), text: body };
+    if (/^(내일|tomorrow)$/i.test(word))return { key: dayKey(plus(1)), text: body };
+    if (/^모레$/.test(word))            return { key: dayKey(plus(2)), text: body };
+    if (/^글피$/.test(word))            return { key: dayKey(plus(3)), text: body };
+
+    /* 요일 — 다음에 오는 그 요일 (오늘이면 다음 주) */
+    const dowIdx = DOW_NAMES.indexOf(word.replace(/요일$/, ""));
+    if (dowIdx >= 0) {
+      let diff = (dowIdx - now.getDay() + 7) % 7;
+      if (diff === 0) diff = 7;
+      return { key: dayKey(plus(diff)), text: body };
+    }
+    /* 8-18 · 8.18 · 8/18 → 월-일 */
+    let mm = word.match(/^(\d{1,2})[-./](\d{1,2})$/);
+    if (mm) {
+      const mo = parseInt(mm[1], 10), da = parseInt(mm[2], 10);
+      if (mo >= 1 && mo <= 12 && da >= 1 && da <= 31) {
+        let y = now.getFullYear();
+        if (mo < now.getMonth() + 1) y += 1;      // 지난 달이면 내년
+        return { key: dayKey(new Date(y, mo - 1, da)), text: body };
+      }
+    }
+    /* 18 → 이번 달 18일 (지났으면 다음 달) */
+    mm = word.match(/^(\d{1,2})$/);
+    if (mm) {
+      const da = parseInt(mm[1], 10);
+      if (da >= 1 && da <= 31) {
+        let y = now.getFullYear(), mo = now.getMonth();
+        if (da < now.getDate()) { mo += 1; if (mo > 11) { mo = 0; y += 1; } }
+        return { key: dayKey(new Date(y, mo, da)), text: body };
+      }
+    }
+    return null;
+  }
+  window.wcParseSlash = parseSlash;      // 검사와 시험이 씁니다
+
+  /** 날짜를 사람 말로 — "오늘" · "8/18(월)" */
+  function 날말(k) {
+    if (k === dayKey()) return "오늘";
+    const d = new Date(k + "T00:00:00");
+    return `${d.getMonth() + 1}/${d.getDate()}(${DOW_NAMES[d.getDay()]})`;
+  }
+
+  /* ---------------------------------------------------------------
+     명령 실행 — 할 일은 기존 자리(users/{닉}/todos)를 그대로 씁니다.
+     새 저장소를 만들지 않아요. 🗂️ 나의 작업에서 보던 그 목록입니다.
+     --------------------------------------------------------------- */
+
+  /** /완료 — 오늘 기준 뒤로 3주 ~ 앞으로 두 달 안에서 비슷한 이름 찾기 */
+  function 완료처리(text) {
+    const 찾을것 = String(text).replace(/\s+/g, "").toLowerCase();
+    const 앞 = dayKey(new Date(Date.now() - 21 * 86400000));
+    const 뒤 = dayKey(new Date(Date.now() + 60 * 86400000));
+    const 목록 = (window.getTodoItems?.() || []).filter(x => x && !x.done && !x.archived);
+    /* 날짜가 가까운 것부터 — 오늘 것을 먼저 집습니다 */
+    const 후보 = 목록.filter(x => {
+      if (!x.due) return true;                       // 날짜 없는 것도 대상
+      return x.due >= 앞 && x.due <= 뒤;
+    }).filter(x => String(x.text || "").replace(/\s+/g, "").toLowerCase().includes(찾을것));
+    if (!후보.length) return null;
+    후보.sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+    const hit = 후보[0];
+    try { window.toggleTodoDone?.(hit.id); } catch (e) { return null; }
+    return hit;
+  }
+
+  /** /할일 — 기준일에서 뒤 3일 ~ 앞 7일, 안 끝난 것만 */
+  function 모아보기(baseKey) {
+    const base = new Date(baseKey + "T00:00:00");
+    const 옮김 = (n) => { const x = new Date(base); x.setDate(x.getDate() + n); return dayKey(x); };
+    const 처음 = 옮김(-3), 끝 = 옮김(7), 오늘 = dayKey();
+    const 목록 = (window.getTodoItems?.() || []).filter(x => x && !x.done && !x.archived);
+
+    const 날별 = {};
+    let 없는날 = [];
+    목록.forEach(x => {
+      const d = x.due;
+      if (!d) { 없는날.push(x.text); return; }
+      if (d < 처음 || d > 끝) return;
+      (날별[d] = 날별[d] || []).push(x.text);
+    });
+    const 묶음 = Object.keys(날별).sort().map(k => ({
+      key: k, 밀림: k < 오늘, 오늘인가: k === 오늘,
+      이름: k === 오늘 ? "오늘" : (k < 오늘 ? "밀림 " + 날말(k) : 날말(k)),
+      항목: 날별[k]
+    }));
+    const 총 = 묶음.reduce((n, g) => n + g.항목.length, 0) + 없는날.length;
+    const 밀린수 = 묶음.filter(g => g.밀림).reduce((n, g) => n + g.항목.length, 0);
+    return { 묶음, 없는날, 총, 밀린수, 기준: 날말(baseKey) };
+  }
+
+  /** 글칸에 적힌 것을 실행합니다. 숫자 기록과 함께 불립니다. */
+  function 메모처리() {
+    const inp = el("wc-memo");
+    const raw = String(inp?.value || "").trim();
+    if (!raw) return false;
+
+    const cmd = parseSlash(raw);
+
+    if (cmd && cmd.list) {
+      const r = 모아보기(cmd.key);
+      addMine("list", "", { list: r });
+      if (inp) inp.value = "";
+      메모힌트("");
+      return true;
+    }
+    if (cmd && cmd.done) {
+      const hit = 완료처리(cmd.text);
+      if (!hit) { 메모힌트("그런 할 일을 못 찾았어요 🤔"); return true; }
+      addMine("done", `✓ 완료 — ${hit.text}`);
+      if (inp) inp.value = "";
+      메모힌트("완료 처리했어요");
+      return true;
+    }
+    if (cmd && cmd.key) {
+      try { window.addTodoWithDue?.(cmd.text, cmd.key); }
+      catch (e) { 메모힌트("담지 못했어요"); return true; }
+      addMine("todo", `📌 ${날말(cmd.key)} 할 일 — ${cmd.text}`);
+      if (inp) inp.value = "";
+      메모힌트(`${날말(cmd.key)} 할 일에 담았어요`);
+      return true;
+    }
+    if (/^\//.test(raw)) {           // 명령처럼 생겼는데 못 알아들음
+      메모힌트("그런 명령은 없어요 — /할일 을 쳐보세요");
+      return true;
+    }
+    /* 그냥 메모 */
+    addMine("memo", raw);
+    if (inp) inp.value = "";
+    메모힌트("");
+    return true;
+  }
+
+  function 메모힌트(msg) {
+    const h = el("wc-memo-hint");
+    if (!h) return;
+    h.textContent = msg || "";
+    if (msg) setTimeout(() => { if (h.textContent === msg) h.textContent = ""; }, 3000);
+  }
+
   /* 방의 글자수 기록 + 내 뽀모 알림을 시간순으로 섞습니다.
      오늘 탭에서만 씁니다 — '내 기록' 탭은 숫자만 봅니다. */
   function mergedFeed() {
-    if (!_pomoLines.length) return _feed;
-    return _feed.concat(_pomoLines).sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+    /* 오늘 것만 섞습니다 — 지난 메모는 기기에 남아 있지만 오늘 탭은
+       오늘의 흐름을 보는 자리예요 */
+    const 오늘 = dayKey();
+    const 내줄 = _mineLines.filter(x => x.day === 오늘);
+    if (!_pomoLines.length && !내줄.length) return _feed;
+    return _feed.concat(_pomoLines, 내줄)
+                .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
   }
 
   /* 뽀모 쪽(script_realtime.js)에서 부릅니다 */
@@ -339,6 +567,32 @@
       /* [추가 2026-08-04] 뽀모도로 알림 — 채팅방 대신 여기(오늘 탭)에
          가운데 줄로 흐릅니다. 버튼 누른 사람 nick 으로 저장되지만
          방이 알려주는 말이라 이름은 보여주지 않습니다. */
+      /* ✍️ 나만 보는 줄 — 메모 · 할 일 (2026-08-16)
+         오른쪽에 작은 자물쇠를 두어 "이건 나만 본다"를 눈에 남깁니다. */
+      if (f.type === "mine") {
+        const tm2 = (f.at && window.formatHHMM)
+          ? `<span class="wc-mine-t">${window.formatHHMM(f.at)}</span>` : "";
+        if (f.kind === "list") {
+          const L = f.list || {};
+          const 줄 = (L.묶음 || []).map(g => `
+            <div class="wc-mine-g${g.밀림 ? " late" : ""}${g.오늘인가 ? " today" : ""}">
+              <span class="wc-mine-gd">${esc(g.이름)}</span>
+              <span class="wc-mine-gi">${g.항목.map(esc).join(" · ")}</span>
+            </div>`).join("");
+          const 없는 = (L.없는날 || []).length
+            ? `<div class="wc-mine-g"><span class="wc-mine-gd">날짜 없음</span>
+               <span class="wc-mine-gi">${L.없는날.map(esc).join(" · ")}</span></div>` : "";
+          return `<div class="wc-feed"><div class="wc-mine">
+            ${tm2}
+            <div class="wc-mine-h">📋 할 일 ${L.총 || 0}개${L.밀린수 ? ` · 밀림 ${L.밀린수}` : ""}</div>
+            ${줄 || 없는 ? 줄 + 없는 : `<div class="wc-mine-none">안 끝난 할 일이 없어요</div>`}
+          </div></div>`;
+        }
+        return `<div class="wc-feed"><div class="wc-mine wc-mine-${esc(f.kind || "memo")}">
+          ${tm2}<span class="wc-mine-x">${esc(f.msg || "")}</span>
+        </div></div>`;
+      }
+
       if (f.type === "pomo") {
         /* [고침 2026-08-04] 시각은 붙이지 않습니다 — 방이 알려주는 말이라
            글자수 기록과 달리 '언제'가 중요하지 않아요 (사용자 요청). */
@@ -497,7 +751,18 @@
        갈아탄 직후에는 기준이 비어 있으므로, 적은 숫자가 자연스럽게 출발선이 됩니다. */
     rolloverIfNeeded();
     const v = inputVal();
-    if (v === null) { say("숫자를 적어주세요."); return; }
+
+    /* ✍️ [2026-08-16] 숫자가 없으면 메모칸만 처리합니다.
+       콩트와 같은 동작이에요 — 숫자만·글만·둘 다 전부 됩니다.
+       ★ 메모는 나만 보는 줄이라 서버로 안 나갑니다(메모처리 참고). */
+    if (v === null) {
+      if (메모처리()) return;
+      say("숫자를 적어주세요.");
+      return;
+    }
+    /* 숫자와 글을 함께 적었으면, 글은 나만 보는 줄로 따로 남깁니다 */
+    메모처리();
+
     if (!me()) { say("잠시만요, 아직 준비 중이에요."); return; }
 
     const mine = myRow();
@@ -814,6 +1079,44 @@
       if (e.key === "Enter") { e.preventDefault(); saveYday(); }
       if (e.key === "Escape") { el("wc-yday")?.setAttribute("hidden", ""); }
     });
+
+    /* ✍️ 메모칸 — 엔터로 바로, 그리고 "/" 를 치면 명령 목록 */
+    const memo = el("wc-memo");
+    if (memo && !memo._wcBound) {
+      memo._wcBound = true;
+      memo.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+        e.preventDefault();
+        /* 숫자도 적혀 있으면 함께 기록합니다 (콩트와 같은 동작) */
+        const n = el("wc-input");
+        if (n && String(n.value).trim() !== "") { el("wc-send")?.click(); return; }
+        메모처리();
+      });
+      memo.addEventListener("input", () => {
+        const v = String(memo.value || "");
+        const box = el("wc-slash");
+        if (!box) return;
+        if (!/^\//.test(v) || /\s/.test(v)) { box.hidden = true; box.innerHTML = ""; return; }
+        const q = v.slice(1);
+        const 후보 = SLASH_HELP.filter(c => !q || c.cmd.includes(q));
+        if (!후보.length) { box.hidden = true; box.innerHTML = ""; return; }
+        box.innerHTML = 후보.map(c =>
+          `<button type="button" class="wc-slash-i" data-slash="${c.cmd}">
+             <b>${c.cmd}</b> <span>${esc(c.what)}</span></button>`).join("");
+        box.hidden = false;
+      });
+      el("wc-slash")?.addEventListener("mousedown", (e) => {
+        const b = e.target.closest("[data-slash]");
+        if (!b) return;
+        e.preventDefault();
+        memo.value = b.dataset.slash + " ";
+        el("wc-slash").hidden = true;
+        memo.focus();
+      });
+      memo.addEventListener("blur", () => {
+        setTimeout(() => { const b = el("wc-slash"); if (b) b.hidden = true; }, 120);
+      });
+    }
 
     el("wc-input")?.addEventListener("keydown", (e) => {
       /* 한글 조합 중의 Enter 는 무시 — 숫자 칸이지만 습관대로 둡니다 */

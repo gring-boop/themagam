@@ -4502,6 +4502,57 @@ html[data-unzoom] #dock-bar{
   zoom: var(--unzoom, 1);
 }
 
+/* =====================================================================
+   ✍️ Letters 의 메모·할 일 줄 (2026-08-16)
+   ---------------------------------------------------------------------
+   콩트의 Work Log 를 가져왔습니다. 이 줄은 **나만 봅니다** — 서버로
+   나가지 않아요. 그래서 남의 글자수 말풍선과 확실히 달라 보여야
+   합니다. 가운데가 아니라 오른쪽으로 붙이고 옅은 점선만 둘러
+   "혼잣말" 처럼 보이게 했어요.
+   ===================================================================== */
+.wc-memoline{ position: relative; margin-top: 6px; }
+.wc-memoline input{ width: 100%; box-sizing: border-box; }
+.wc-hint{
+  margin: 3px 2px 0; min-height: 15px;
+  font-size: 11px; color: var(--text-3, #8A93A2);
+}
+.wc-slash{
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 4px);
+  z-index: 30;
+  background: var(--panel, #fff);
+  border: 1px solid var(--line, #E3E7EE);
+  border-radius: var(--r-md, 10px);
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(40,35,25,.14);
+}
+.wc-slash-i{
+  display: block; width: 100%; text-align: left;
+  padding: 6px 10px; border: none; background: transparent;
+  font-size: 12px; color: var(--text-2, #5A6473); cursor: pointer;
+  font-family: inherit;
+}
+.wc-slash-i b{ color: var(--text, #2E3440); }
+.wc-slash-i:hover{ background: var(--fill-1, #F2F4F8); }
+
+.wc-mine{
+  margin-left: auto;                 /* 오른쪽으로 — 내 혼잣말 */
+  max-width: 88%;
+  border: 1px dashed var(--line, #E3E7EE);
+  border-radius: var(--r-md, 10px);
+  padding: 6px 10px;
+  font-size: 12.5px; line-height: 1.6;
+  color: var(--text-2, #5A6473);
+}
+.wc-mine-t{ float: right; margin-left: 8px; font-size: 10.5px; color: var(--text-3, #8A93A2); }
+.wc-mine-memo .wc-mine-x{ color: var(--text, #2E3440); }
+.wc-mine-h{ font-weight: 800; color: var(--text, #2E3440); margin-bottom: 4px; }
+.wc-mine-g{ display: flex; gap: 7px; margin: 2px 0; }
+.wc-mine-gd{ flex: 0 0 auto; font-weight: 700; color: var(--text-3, #8A93A2); }
+.wc-mine-g.today .wc-mine-gd{ color: var(--accent, #4A140D); }
+.wc-mine-g.late  .wc-mine-gd{ color: var(--danger, #B3372B); }
+.wc-mine-gi{ min-width: 0; }
+.wc-mine-none{ color: var(--text-3, #8A93A2); }
+
 /* 🖥️ 가짜 화면 고르기 — 잘라 보기 / 전체 보기 (2026-08-15) */
 .solo-fit-row{ display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .solo-fit-row .hint{ margin: 0; }
