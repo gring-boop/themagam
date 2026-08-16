@@ -1819,64 +1819,56 @@
   const PHOTO_KEY = "roomBgPhoto";  // 내 사진 (dataURL, 줄여서)
   const VEIL_DEF = 82;
 
-  /* ---- 기본 배경 5종 — 납작한 색면 SVG ---- */
+  /* =====================================================================
+     ---- 기본 배경 — 🖍️ 짱구 9장 (2026-08-15) ----
+     ---------------------------------------------------------------------
+     [바뀐 것] 예전에는 사무실·스터디 카페·서재·야외 카페·창가를 **SVG 로
+     코드 안에 그려** 넣었습니다. 한 장에 1~2KB 라 가볍긴 했지만 납작한
+     색면이라 밋밋했어요. 방장 요청으로 짱구 그림 9장으로 바꿉니다.
+
+     [파일로 두는 이유] SVG 는 코드였지만 이건 사진입니다. data URL 로
+     품으면 script 가 그만큼 무거워지고, 안 고른 배경까지 매번 받게 돼요.
+     bg/ 폴더에 두면 **고른 사람만, 한 번만** 받고 그 뒤로는 브라우저가
+     기억합니다.
+
+     [통신량] 이 그림들은 깃허브 페이지가 내보냅니다 — 파이어베이스와
+     아무 상관이 없어요. 무료치를 축내지 않습니다.
+
+     [크기] 긴 변 1600px, 75~250KB. 배경은 덮개(기본 82%) 아래로 은은하게
+     비치는 것이라 이보다 클 이유가 없습니다. 원본 30MB → 1.4MB.
+     ===================================================================== */
   const 장면 = {
-    office: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
-      <rect width='640' height='400' fill='#8A9BAE'/><rect width='640' height='144' fill='#AFC4D6'/>
-      <rect x='38' y='24' width='128' height='96' fill='#D9E7F0' stroke='#7E93A6' stroke-width='8'/>
-      <rect x='205' y='24' width='128' height='96' fill='#D9E7F0' stroke='#7E93A6' stroke-width='8'/>
-      <rect x='500' y='32' width='83' height='80' rx='6' fill='#6E8296'/>
-      <rect y='144' width='640' height='32' fill='#7E93A6'/>
-      <rect x='51' y='192' width='166' height='52' rx='6' fill='#B08D63'/><rect x='77' y='244' width='32' height='64' fill='#8A6B48'/>
-      <rect x='358' y='192' width='166' height='52' rx='6' fill='#B08D63'/><rect x='384' y='244' width='32' height='64' fill='#8A6B48'/>
-      <rect x='64' y='164' width='51' height='28' rx='4' fill='#5F7488'/><rect x='410' y='164' width='51' height='28' rx='4' fill='#5F7488'/>
-      <path d='M600 376c0-52-12-96-29-96s-29 44-29 96z' fill='#5E7A5E'/><path d='M48 384c0-40-9-72-22-72s-22 32-22 72z' fill='#5E7A5E'/></svg>`,
-    studycafe: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
-      <rect width='640' height='400' fill='#B9A28A'/><rect width='640' height='150' fill='#8A7460'/>
-      <rect x='30' y='30' width='580' height='14' fill='#6E5B4A'/><rect x='30' y='78' width='580' height='14' fill='#6E5B4A'/>
-      <g fill='#D9C9B4'><rect x='60' y='44' width='22' height='34'/><rect x='96' y='44' width='22' height='34'/><rect x='150' y='44' width='22' height='34'/>
-      <rect x='300' y='44' width='22' height='34'/><rect x='352' y='44' width='22' height='34'/><rect x='500' y='44' width='22' height='34'/></g>
-      <g fill='#C4B29B'><rect x='210' y='92' width='22' height='34'/><rect x='420' y='92' width='22' height='34'/><rect x='545' y='92' width='22' height='34'/></g>
-      <rect y='150' width='640' height='20' fill='#6E5B4A'/>
-      <rect x='60' y='210' width='220' height='16' rx='4' fill='#7E695A'/><rect x='150' y='226' width='24' height='100' fill='#5E4E42'/>
-      <rect x='360' y='210' width='220' height='16' rx='4' fill='#7E695A'/><rect x='450' y='226' width='24' height='100' fill='#5E4E42'/>
-      <rect x='96' y='176' width='40' height='34' rx='4' fill='#4E4238'/><rect x='396' y='176' width='40' height='34' rx='4' fill='#4E4238'/>
-      <circle cx='560' cy='196' r='12' fill='#D9C9B4'/></svg>`,
-    library: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
-      <rect width='640' height='400' fill='#6E5B4A'/>
-      <g><rect x='24' y='24' width='180' height='352' fill='#5A4A3C'/><rect x='230' y='24' width='180' height='352' fill='#5A4A3C'/><rect x='436' y='24' width='180' height='352' fill='#5A4A3C'/></g>
-      <g fill='#8A7460'><rect x='36' y='48' width='156' height='10'/><rect x='36' y='128' width='156' height='10'/><rect x='36' y='208' width='156' height='10'/><rect x='36' y='288' width='156' height='10'/>
-      <rect x='242' y='48' width='156' height='10'/><rect x='242' y='128' width='156' height='10'/><rect x='242' y='208' width='156' height='10'/><rect x='242' y='288' width='156' height='10'/>
-      <rect x='448' y='48' width='156' height='10'/><rect x='448' y='128' width='156' height='10'/><rect x='448' y='208' width='156' height='10'/><rect x='448' y='288' width='156' height='10'/></g>
-      <g fill='#B3372B'><rect x='44' y='70' width='14' height='56'/><rect x='260' y='150' width='14' height='56'/><rect x='530' y='230' width='14' height='56'/></g>
-      <g fill='#C9974A'><rect x='66' y='76' width='12' height='50'/><rect x='290' y='156' width='12' height='50'/><rect x='466' y='70' width='12' height='56'/></g>
-      <g fill='#5E7A5E'><rect x='86' y='72' width='13' height='54'/><rect x='318' y='152' width='13' height='54'/><rect x='494' y='236' width='13' height='50'/></g>
-      <g fill='#D9C9B4'><rect x='108' y='78' width='11' height='48'/><rect x='340' y='158' width='11' height='48'/><rect x='560' y='74' width='11' height='52'/>
-      <rect x='128' y='150' width='12' height='56'/><rect x='362' y='230' width='12' height='56'/><rect x='448' y='150' width='12' height='56'/></g></svg>`,
-    terrace: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
-      <rect width='640' height='400' fill='#BFD9E8'/><circle cx='540' cy='64' r='36' fill='#F5E6B8'/>
-      <path d='M0 240 L120 150 L240 240 Z' fill='#8FA98F'/><path d='M160 240 L300 130 L440 240 Z' fill='#7A967A'/><path d='M380 240 L520 160 L640 240 Z' fill='#8FA98F'/>
-      <rect y='240' width='640' height='160' fill='#C9B491'/>
-      <ellipse cx='120' cy='250' rx='70' ry='14' fill='#E0524E'/><rect x='112' y='250' width='16' height='60' fill='#8A6B48'/>
-      <ellipse cx='420' cy='250' rx='70' ry='14' fill='#E0524E'/><rect x='412' y='250' width='16' height='60' fill='#8A6B48'/>
-      <circle cx='120' cy='330' r='26' fill='#B08D63'/><circle cx='420' cy='330' r='26' fill='#B08D63'/>
-      <path d='M610 384c0-56-13-104-31-104s-31 48-31 104z' fill='#5E7A5E'/><path d='M62 390c0-44-10-80-24-80s-24 36-24 80z' fill='#5E7A5E'/></svg>`,
-    window: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 400'>
-      <rect width='640' height='400' fill='#EDE3D2'/>
-      <rect x='140' y='30' width='360' height='280' rx='10' fill='#B9CFE0' stroke='#8A7460' stroke-width='14'/>
-      <rect x='313' y='30' width='14' height='280' fill='#8A7460'/><rect x='140' y='163' width='360' height='14' fill='#8A7460'/>
-      <circle cx='240' cy='90' r='26' fill='#F5E6B8'/>
-      <path d='M140 310 h360' stroke='#8A7460' stroke-width='10'/>
-      <rect x='100' y='30' width='26' height='290' fill='#C97F5E'/><rect x='514' y='30' width='26' height='290' fill='#C97F5E'/>
-      <rect x='60' y='330' width='520' height='16' rx='6' fill='#B08D63'/>
-      <ellipse cx='560' cy='322' rx='24' ry='10' fill='#5E7A5E'/><rect x='552' y='296' width='16' height='26' fill='#5E7A5E'/>
-      <rect x='90' y='306' width='40' height='24' rx='4' fill='#D9C9B4'/></svg>`
+    field:    "bg/field.jpg",      // 🦋 들판
+    cloud:    "bg/cloud.jpg",      // ☁️ 구름 보는 날
+    country:  "bg/country.jpg",    // 🚙 시골길
+    pool:     "bg/pool.jpg",       // 🏊 물놀이
+    cafe:     "bg/cafe.jpg",       // ☕ 벚꽃 카페
+    toys:     "bg/toys.jpg",       // 🧸 장난감
+    seaside:  "bg/seaside.jpg",    // 🚌 바닷가 정류장
+    campfire: "bg/campfire.jpg",   // 🔥 밤 모닥불
+    books:    "bg/books.jpg"       // 📚 책방 앞
+  };
+
+  /* 옛 이름으로 저장해 둔 분들을 데려옵니다 — 안 하면 배경이 그냥
+     사라져서 "설정이 날아갔나" 싶어집니다 (가장 가까운 그림으로) */
+  const 옛이름 = {
+    office: "cloud", studycafe: "cafe", library: "books",
+    terrace: "field", window: "seaside"
   };
 
   function 그림주소(id) {
     if (id === "custom") return AppStore.getItem(PHOTO_KEY) || "";
-    const s = 장면[id];
-    return s ? "data:image/svg+xml;utf8," + encodeURIComponent(s.replace(/\n\s*/g, " ")) : "";
+    return 장면[id] || "";
+  }
+
+  /** 저장된 값 읽기 — 옛 이름이면 새 이름으로 바꿔 두고 돌려줍니다 */
+  function 지금배경() {
+    let id = AppStore.getItem(BG_KEY) || "none";
+    if (옛이름[id]) {
+      id = 옛이름[id];
+      try { AppStore.setItem(BG_KEY, id); } catch (e) {}
+    }
+    return id;
   }
 
   /* ---- 적용 — 몸통(body)에 그림+덮개를 깝니다.
@@ -1885,7 +1877,7 @@
   function applyRoomBg() {
     const b = document.body;
     if (!b) return;
-    const id = AppStore.getItem(BG_KEY) || "none";
+    const id = 지금배경();
     const src = id === "none" ? "" : 그림주소(id);
     if (!src) {
       b.classList.remove("room-bg-on");
@@ -1933,7 +1925,7 @@
     if (!sel || sel.__bound) return;
     sel.__bound = true;
 
-    sel.value = AppStore.getItem(BG_KEY) || "none";
+    sel.value = 지금배경();
     const v0 = Math.max(40, Math.min(96, Number(AppStore.getItem(VEIL_KEY)) || VEIL_DEF));
     if (rng) rng.value = v0;
     if (val) val.textContent = v0 + "%";
@@ -1954,7 +1946,7 @@
     if (file) file.onchange = () => {
       const f = file.files && file.files[0];
       file.value = "";
-      if (!f) { sel.value = AppStore.getItem(BG_KEY) || "none"; return; }
+      if (!f) { sel.value = 지금배경(); return; }
       shrinkPhoto(f, (url) => {
         if (!url) { alert("사진을 읽지 못했어요."); return; }
         try {
