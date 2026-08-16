@@ -473,6 +473,9 @@
                `<td class="sum-c">${attDays}</td><td class="sum-c">${vacDays}</td>${cells}</tr>`;
       }).join("");
 
+      /* 📈 한 달 흐름 — 위 머리글이 쓰는 값 그대로 (2026-08-16) */
+      그래프그리기({ ymKey, daysInMonth, base, cntByDay, totalByDay, isThisMonth, todayD });
+
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
       bindDig(body);
@@ -480,6 +483,103 @@
       console.warn("[adm attendance]", e);
       body.innerHTML = "불러오지 못했어요.";
     }
+  }
+
+  /* =====================================================================
+     📈 한 달 흐름 — 총원 · 출석 꺾은선 (2026-08-16)
+     ---------------------------------------------------------------------
+     [왜 두 줄인가] 출석 8명이 24명 중 8명인지 12명 중 8명인지는 전혀
+     다른 이야기입니다. 모수 없이 출석만 보면 판단이 어긋나요. 두 줄이
+     벌어지면 "사람은 느는데 안 나온다" 가 눈에 바로 들어옵니다.
+
+     [값] 새로 계산하지 않습니다 — 머리글 두 줄이 쓰는 cntByDay ·
+     totalByDay 를 그대로 받습니다. 서버에 더 묻는 것도 없어요.
+
+     [라이브러리 없이] Chart.js 같은 걸 부르면 관리자 페이지가 그만큼
+     무거워집니다. 선 두 개 긋는 그림이라 SVG 로 충분해요.
+
+     ★ 앞날은 그리지 않습니다. 아직 안 온 날에 0 으로 뚝 떨어지는 선이
+       그려지면 "망했나?" 로 읽혀요.
+     ===================================================================== */
+  function 그래프그리기(d) {
+    const box = el("adm-att-chart");
+    if (!box) return;
+
+    const { ymKey, daysInMonth, base, cntByDay, totalByDay, isThisMonth, todayD } = d;
+    const 끝날 = isThisMonth ? Math.min(todayD, daysInMonth) : daysInMonth;
+    if (끝날 < 1) { box.innerHTML = ""; return; }
+
+    /* 자 — 총원이 가장 큰 값이라 그걸 기준으로. 10 단위로 올려 잡습니다 */
+    let 최대 = 0;
+    for (let i = 1; i <= 끝날; i++) {
+      const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+      최대 = Math.max(최대, totalByDay[k] || 0, cntByDay[k] || 0);
+    }
+    최대 = Math.max(10, Math.ceil(최대 / 10) * 10);
+
+    const W = 660, H = 200, L = 34, R = 14, T = 20, B = 32;
+    const 폭 = W - L - R, 높 = H - T - B;
+    const X = (day) => L + (daysInMonth <= 1 ? 0 : (day - 1) / (daysInMonth - 1) * 폭);
+    const Y = (v) => T + 높 - (v / 최대) * 높;
+
+    const 점 = (map) => {
+      const out = [];
+      for (let i = 1; i <= 끝날; i++) {
+        const k = `${ymKey}-${String(i).padStart(2, "0")}`;
+        out.push(`${X(i).toFixed(1)},${Y(Number(map[k] || 0)).toFixed(1)}`);
+      }
+      return out.join(" ");
+    };
+
+    /* 주말 띠 — 출석이 뚝 떨어져도 놀라지 않게 */
+    let 주말 = "";
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dow = new Date(base.getFullYear(), base.getMonth(), i).getDay();
+      if (dow !== 0 && dow !== 6) continue;
+      const x0 = X(i) - 폭 / (daysInMonth - 1) / 2;
+      주말 += `<rect x="${Math.max(L, x0).toFixed(1)}" y="${T}" width="${(폭 / (daysInMonth - 1)).toFixed(1)}" height="${높}" fill="#F5F1E7"/>`;
+    }
+
+    /* 가로 눈금 — 0 · 절반 · 최대 */
+    let 눈금 = "";
+    [0, 최대 / 2, 최대].forEach(v => {
+      눈금 += `<line x1="${L}" y1="${Y(v).toFixed(1)}" x2="${W - R}" y2="${Y(v).toFixed(1)}" stroke="${v === 0 ? "#DCCFBC" : "#EFE6D8"}" stroke-width="1"/>`
+            + `<text x="${L - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#A0917E">${v}</text>`;
+    });
+
+    /* 날짜 눈금 — 1 · 6 · 11 … 다 적으면 표가 됩니다 */
+    let 날짜 = "";
+    for (let i = 1; i <= daysInMonth; i += 5) {
+      const 오늘인가 = isThisMonth && i === todayD;
+      날짜 += `<text x="${X(i).toFixed(1)}" y="${H - 14}" text-anchor="middle" font-size="10"
+                     fill="${i <= 끝날 ? (오늘인가 ? "#B3372B" : "#A0917E") : "#C9BCA9"}">${i}</text>`;
+    }
+
+    const 끝키 = `${ymKey}-${String(끝날).padStart(2, "0")}`;
+    const 끝총 = Number(totalByDay[끝키] || 0), 끝출 = Number(cntByDay[끝키] || 0);
+
+    box.innerHTML = `
+      <div class="adm-chart-h">
+        <span class="adm-chart-t">한 달 흐름</span>
+        <span style="flex:1"></span>
+        <span class="adm-chart-lg"><i style="background:#B9A88F"></i>총원</span>
+        <span class="adm-chart-lg"><i style="background:#B3372B"></i>출석</span>
+      </div>
+      <p class="adm-chart-sub">${ymKey.replace("-", "년 ")}월${isThisMonth ? ` · 오늘 ${todayD}일` : ""}</p>
+      <svg viewBox="0 0 ${W} ${H}" role="img"
+           aria-label="${ymKey} 총원과 출석 꺾은선 그래프">
+        ${주말}${눈금}
+        <polyline fill="none" stroke="#B9A88F" stroke-width="2" stroke-linejoin="round" points="${점(totalByDay)}"/>
+        <polyline fill="none" stroke="#B3372B" stroke-width="2" stroke-linejoin="round" points="${점(cntByDay)}"/>
+        ${isThisMonth ? `<line x1="${X(끝날).toFixed(1)}" y1="${T}" x2="${X(끝날).toFixed(1)}" y2="${T + 높}"
+                               stroke="#B3372B" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>` : ""}
+        <circle cx="${X(끝날).toFixed(1)}" cy="${Y(끝총).toFixed(1)}" r="3" fill="#B9A88F"/>
+        <circle cx="${X(끝날).toFixed(1)}" cy="${Y(끝출).toFixed(1)}" r="3.5" fill="#B3372B"/>
+        <text x="${(X(끝날) + 12).toFixed(1)}" y="${(Y(끝총) - 3).toFixed(1)}" font-size="11" fill="#8A7B68">${끝총}</text>
+        <text x="${(X(끝날) + 12).toFixed(1)}" y="${(Y(끝출) + 4).toFixed(1)}" font-size="11" fill="#B3372B" font-weight="700">${끝출}</text>
+        ${날짜}
+      </svg>
+      <p class="adm-chart-note">옅은 세로 띠는 주말${isThisMonth ? " · 점선은 오늘 · 오늘 뒤는 아직 안 그립니다" : ""}</p>`;
   }
 
   /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제

@@ -503,7 +503,14 @@
     if (!후보.length) return null;
     후보.sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
     const hit = 후보[0];
-    try { window.toggleTodoDone?.(hit.id); } catch (e) { return null; }
+    /* ★★ [고침 2026-08-16] 두 번째 인수를 빠뜨렸었습니다.
+       toggleTodoDone(id, done) 은 done 을 **받아서** 그대로 씁니다 —
+       안 주면 undefined → !!undefined → false 라, 완료가 아니라
+       **완료를 푸는** 셈이었어요. 화면에는 "완료 처리했어요" 가 떴는데
+       🗂️ 나의 작업에는 체크가 안 되던 이유입니다 (실제 제보).
+       ★ 이름이 toggleTodoDone(토글) 인데 실제로는 값을 받는 함수예요.
+         부를 때 반드시 true 를 함께 주세요. */
+    try { window.toggleTodoDone?.(hit.id, true); } catch (e) { return null; }
     return hit;
   }
 
