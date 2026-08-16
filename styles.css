@@ -4071,14 +4071,18 @@ body.side-collapsed .side-rail{
 .wc-block{
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  /* [2026-08-16] 8px → 4px. 아래 입력 묶음을 반으로 좁히려고 낮췄고,
+     위쪽 두 자리는 아래 규칙에서 4px 을 되돌려 줍니다. */
+  gap: var(--sp-1);
   padding: var(--sp-3);
   margin-top: var(--sp-2);
   border-top: 1px solid var(--border);
   min-height: 0;
   flex: 1 1 auto;
 }
-.wc-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2); flex:none; }
+.wc-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2); flex:none;
+          margin-bottom: var(--sp-1); }          /* 위쪽은 예전 간격 유지 */
+.wc-rows{ margin-bottom: var(--sp-1); }          /* 기록과 입력칸 사이만 한 뼘 */
 .wc-title{ font-weight: var(--fw-bold); font-size: var(--fs-sm); }
 
 .wc-tabs{ display:flex; gap:3px; }
@@ -4529,7 +4533,20 @@ html[data-unzoom] #dock-bar{
    "혼잣말" 처럼 보이게 했어요.
    ===================================================================== */
 /* 글자수 칸과 사이를 붙입니다 — 안내는 위쪽 #wc-log 가 대신해요 */
-.wc-memoline{ position: relative; margin: 0 0 5px; }
+/* =====================================================================
+   ✍️ 아래 입력 묶음 — 간격을 반으로, 그리고 고르게 (2026-08-16)
+   ---------------------------------------------------------------------
+   [무엇이 어긋났나] .wc-block 은 flex 세로 묶음이라 자식 사이가 gap
+   8px 으로 벌어집니다. 그런데 메모칸에만 margin-bottom: 5px 를 따로
+   줘 놔서, 그 한 자리만 13px 이었어요 — 눈에는 "여기만 뜬다" 로 보입니다.
+   ★ gap 이 있는 묶음 안에서 margin 을 더하면 **둘이 합쳐집니다.**
+     간격을 맞추려면 margin 을 지우고 gap 하나로 다스려야 해요.
+
+   [어떻게] 아래 네 줄(안내·메모칸·글자수칸·단추줄)만 4px 로 좁힙니다.
+   위쪽(숫자 머리·흐르는 기록)은 그대로 둡니다 — 거기까지 붙이면
+   답답해져요. 묶음의 gap 을 4px 로 낮추고, 위쪽에만 4px 을 되돌려 줍니다.
+   ===================================================================== */
+.wc-memoline{ position: relative; margin: 0; }
 .wc-memoline input{ width: 100%; box-sizing: border-box; }
 .wc-slash{
   position: absolute; left: 0; right: 0; bottom: calc(100% + 4px);
@@ -4556,6 +4573,11 @@ html[data-unzoom] #dock-bar{
 .wc-daynav{
   display: flex; align-items: center; gap: 6px; flex: none;
 }
+/* ★★ [고침 2026-08-16] hidden 을 걸어도 계속 보였습니다.
+   `hidden` 은 브라우저 기본 규칙 `[hidden]{display:none}` 으로 감춰지는데,
+   우리가 적은 `display:flex` 가 그보다 세서 이깁니다. 스타일에 display 를
+   적은 요소에 hidden 을 쓸 때는 **이 한 줄을 반드시 함께** 둬야 해요. */
+.wc-daynav[hidden]{ display: none; }
 .wc-tabs{ margin-left: auto; }
 .wc-day-b{
   width: 22px; height: 22px; padding: 0;
