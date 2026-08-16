@@ -4542,8 +4542,9 @@ html[data-unzoom] #dock-bar{
   padding: 10px 12px; gap: 8px;
 }
 .help-head{ display: flex; align-items: baseline; gap: 8px; flex: none; }
-.help-title{ font-size: 14px; font-weight: 800; color: var(--text); }
-.help-sub{ font-size: 12px; color: var(--text-3, #8A93A2); }
+/* [2026-08-16] .help-title 은 걷어냈습니다 — 판 머리말이 이미 이름을
+   보여줘서 두 줄이 겹쳤어요. 여기는 부제 한 줄만 섭니다. */
+.help-sub{ font-size: 12.5px; font-weight: 700; color: var(--text-2, #5A6473); }
 .help-sp{ flex: 1; }
 .help-t{ font-size: 11px; color: var(--text-3, #8A93A2); }
 
