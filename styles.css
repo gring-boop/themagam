@@ -7524,7 +7524,16 @@ body.split-dragging #chat-box3{ user-select: none; }
   align-items: center;
   padding: 3.5px 9px;
   border-radius: 8px;
-  font-size: calc(var(--fs-sm) * .88);
+  /* [줄임 2026-08-17] .88 → .79 (90%).
+     부방장이 넷 생기고 나서 보니 방장 스티커가 카드밭에서 혼자 도드라져
+     컸습니다. 다만 **부방장보다 작아지면 안 됩니다** — 자리가 위인
+     사람의 이름표가 더 작으면 위계가 뒤집혀 보이니까요.
+     그게 바닥선이라 여기까지만 줄였습니다:
+       방장   10.7px · 두 글자 · 좌우 여백 9px → 상자 약 41.8px
+       부방장  9.7px · 세 글자 · 좌우 여백 5px → 상자 약 40.9px
+     ★ 여백까지 함께 줄이면(9 → 8.5) 상자가 40.8px 이 되어 **부방장보다
+       작아집니다.** 그래서 글자만 줄이고 여백은 그대로 뒀어요. */
+  font-size: calc(var(--fs-sm) * .79);
   font-weight: var(--fw-bold);
   line-height: 1.25;
   letter-spacing: .02em;
