@@ -224,6 +224,28 @@
     return { need, state: "bad" };
   }
 
+  /* =====================================================================
+     🏖️ 휴가 상한도 입장일 비례로 (2026-08-17)
+     ---------------------------------------------------------------------
+     의무 출석만 비율로 줄고 휴가는 늘 7일이었습니다. 그래서 25일에
+     들어온 분은 남은 7일을 전부 휴가로 찍어 의무를 0으로 만들 수
+     있었어요 — 늦게 들어올수록 규칙이 헐거워졌습니다.
+
+       상한 = 반올림( 멤버였던 날 ÷ 그 달 날수 × 7 )   (최소 1일)
+
+     ★ 여기서는 휴가를 빼지 않습니다 (자기를 물고 돌아요).
+     ★ 최소 1일 — 31일에 들어와도 하루는 쉴 수 있게.
+     ★ script_mywork.js 의 vacCapOf 와 **같은 셈법**이어야 합니다.
+       고치면 둘 다 고쳐야 해요 (checks 가 어긋남을 잡습니다).
+     ===================================================================== */
+  const VAC_DAYS = 7;         // ★ script_mywork.js 와 같은 값이어야 합니다
+
+  function vacCapOf({ daysInMonth, beforeN }) {
+    const member = daysInMonth - beforeN;
+    if (member <= 0) return 0;                         // 아직 멤버가 아니던 달
+    return Math.max(1, Math.round((member / daysInMonth) * VAC_DAYS));
+  }
+
   async function loadFirstSeen() {
     if (_firstSeen) return _firstSeen;
     const out = {};
@@ -390,7 +412,8 @@
       totRow += "</tr>";
 
       let head = `<tr><th class="rule-h" title="한 달 ${RULE_DAYS}일 규칙 — 늦게 들어온 분은 있었던 날수에 비례해 기준을 낮춥니다">규칙</th>` +
-                 `<th class="name-h">이름</th><th class="sum-h">출석</th><th class="sum-h">휴가</th>`;
+                 `<th class="name-h">이름</th><th class="sum-h">출석</th>` +
+                 `<th class="sum-h" title="쓴 휴가 / 이 달 상한 — 상한은 입장일에 따라 ${VAC_DAYS}일에서 비율로 줄어요">휴가</th>`;
       for (let d = 1; d <= daysInMonth; d++) {
         const dk = `${ymKey}-${String(d).padStart(2, "0")}`;
         const dow = new Date(base.getFullYear(), base.getMonth(), d).getDay();
@@ -465,6 +488,18 @@
           `<td class="rule-c ${r.state}" title="기준 ${r.need}일 · ${말[r.state]}">` +
           `${표[r.state]} ${attDays}/${r.need}</td>`;
 
+        /* ── 🏖️ 휴가 칸 (2026-08-17) ──
+           "쓴 날 / 이 달 상한". 상한은 입장일에 따라 줄어듭니다.
+           ★ 넘친 사람(상한이 줄기 전에 찍어 둔 날)은 붉게만 보입니다 —
+             이미 쓴 휴가를 뒤늦게 뺏지는 않아요. */
+        const vacCap = vacCapOf({ daysInMonth, beforeN });
+        const vacOver = vacDays > vacCap;
+        const vacCell =
+          `<td class="sum-c vac-c${vacOver ? " over" : ""}" title="${
+            vacOver ? `상한 ${vacCap}일을 넘겨 찍힌 휴가예요 (상한이 줄기 전에 찍은 날 — 그대로 둡니다)`
+                    : `이 달 상한 ${vacCap}일 · 한 달을 꽉 채우면 ${VAC_DAYS}일`
+          }">${vacDays}/${vacCap}</td>`;
+
         /* 이름 옆 [✕] — 탈퇴 인원 삭제. 늘 있지만 아주 옅게, 마우스를 올리면 진해집니다. */
         /* [2026-08-15] 이름 칸을 **열 명씩 묶어** 바탕색을 번갈아 줍니다.
            표가 가로로 길어서, 오른쪽 끝 날짜를 보다가 왼쪽 이름으로
@@ -476,7 +511,7 @@
                  `<span class="nm">${escapeHtml(n)}</span>` +
                  `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>` +
                `</span></td>` +
-               `<td class="sum-c">${attDays}</td><td class="sum-c">${vacDays}</td>${cells}</tr>`;
+               `<td class="sum-c">${attDays}</td>${vacCell}${cells}</tr>`;
       }).join("");
 
       /* 📈 한 달 흐름 — 위 머리글이 쓰는 값 그대로 (2026-08-16) */

@@ -168,12 +168,61 @@
      script_realtime.js 의 toggleMyVacation 을 쓰지 않는 이유:
      그 함수는 끝에 showMyAttendance() 를 불러 **옛 출석 팝업**을
      띄웁니다. 여기서 부르면 팝업이 두 개 겹쳐요. */
-  /* 🏖️ 한 달 휴가 상한 (2026-08-13, 콩의 결정)
+  /* =====================================================================
+     🏖️ 휴가 상한 (2026-08-13 콩의 결정 · 2026-08-17 입장일 비례로 고침)
+     ---------------------------------------------------------------------
+     [왜 상한이 있나]
      상한이 없으면 "이번 달 못 채울 것 같다 → 휴가 30일!" 로 18일 규칙이
      통째로 무력화됩니다. 7일이면 다 써도 의무가 14일 밑으로 안 내려가요.
+
+     [왜 고정 7일이 문제였나 — 2026-08-17]
+     의무 출석은 입장일에 따라 비율로 줄어드는데 휴가만 늘 7일이었습니다.
+     그래서 **25일에 들어온 사람은 남은 7일을 전부 휴가로 찍어** 의무를
+     0으로 만들 수 있었어요. 늦게 들어올수록 규칙이 헐거워지는 셈입니다.
+
+     [셈법 — 의무 출석과 같은 비례식]
+       상한 = 반올림( 멤버였던 날 ÷ 그 달 날수 × 7 )   (최소 1일)
+     ★ 여기서는 휴가를 빼지 않습니다 — 휴가 상한을 정하는 데 휴가를
+       쓰면 자기를 물고 도는 셈이 됩니다.
+     ★ **최소 1일**은 보장합니다. 31일에 들어온 사람도 하루는 쉴 수
+       있어야 해요 (반올림만 하면 0.23 → 0일이 됩니다).
+
+     31일 달 기준 — 1일 입장 7일 · 11일 입장 5일 · 21일 입장 2일 ·
+     29일 입장 1일.
+
+     ★ 상한이 낮아져 **이미 찍은 휴가가 넘치는 경우**는 건드리지
+       않습니다 (7/5 처럼 붉게 보일 뿐). 켜는 것만 막고, 푸는 길은
+       늘 열어 둡니다.
      ★ 상한을 넘는 사정(장기 부재)은 휴가가 아니라 방장과 상의할 일 —
-       안내 문구가 그 길을 알려줍니다. */
-  const VAC_CAP = 7;
+       안내 문구가 그 길을 알려줍니다.
+     ===================================================================== */
+  const VAC_DAYS = 7;   // ★ script_admin.js 와 같은 값이어야 합니다
+
+  /* 내가 이 방에 처음 나타난 날 — 출석과 휴가 중 이른 쪽.
+     (휴가만 찍힌 날도 "이미 멤버였다" 는 뜻이라 함께 봅니다) */
+  function bornDay() {
+    return [...Object.keys(_days), ...Object.keys(_vacs)].sort()[0] || null;
+  }
+
+  /* 이 달에서 "아직 없었던" 날이 며칠인가 */
+  function beforeNOf(y, m, daysInMonth) {
+    const born = bornDay();
+    if (!born || born <= dateStr(y, m, 1)) return 0;
+    let n = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (dateStr(y, m, d) >= born) break;
+      n++;
+    }
+    return n;
+  }
+
+  /* 🏖️ 이 달 휴가 상한 — ★ script_admin.js 의 vacCapOf 와 같은 셈법 */
+  function vacCapOf(y, m) {
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const member = daysInMonth - beforeNOf(y, m, daysInMonth);
+    if (member <= 0) return 0;                       // 아직 멤버가 아니던 달
+    return Math.max(1, Math.round((member / daysInMonth) * VAC_DAYS));
+  }
 
   function vacCountOfMonth(ym) {
     return Object.keys(_vacs).filter(k => k.startsWith(ym)).length;
@@ -186,8 +235,11 @@
     const next = !_vacs[ds];
 
     /* 켜는 것만 막습니다 — 끄는 것은 언제나 됩니다 (풀 길은 늘 열려 있게) */
-    if (next && vacCountOfMonth(ds.slice(0, 7)) >= VAC_CAP) {
-      alert(`🏖️ 휴가는 한 달에 ${VAC_CAP}일까지예요.\n더 길게 쉬어야 하는 사정이 있으면 방장에게 말씀해 주세요!`);
+    const cap = vacCapOf(Number(ds.slice(0, 4)), Number(ds.slice(5, 7)) - 1);
+    if (next && vacCountOfMonth(ds.slice(0, 7)) >= cap) {
+      alert(`🏖️ 이 달 휴가는 ${cap}일까지예요.\n` +
+            `들어온 날부터 남은 날수에 맞춰 정해집니다 (한 달을 꽉 채우면 ${VAC_DAYS}일).\n` +
+            `더 길게 쉬어야 하는 사정이 있으면 방장에게 말씀해 주세요!`);
       return;
     }
 
@@ -230,15 +282,11 @@
     const 이달끝날 = dateStr(y, m, daysInMonth);
     if (이달첫날 > today) return null;                  // 다음 달 — 셀 것이 없어요
 
-    /* 입장 전 날 세기 — 내 기록(출석·휴가)의 첫 날 이전은 셈에서 뺍니다 */
-    const born = [...Object.keys(_days), ...Object.keys(_vacs)].sort()[0] || null;
-    let beforeN = 0;
-    if (born && born > 이달첫날) {
-      for (let d = 1; d <= daysInMonth; d++) {
-        if (dateStr(y, m, d) >= born) break;
-        beforeN++;
-      }
-    }
+    /* 입장 전 날 세기 — 내 기록(출석·휴가)의 첫 날 이전은 셈에서 뺍니다.
+       ★ 휴가 상한(vacCapOf)도 같은 beforeNOf 를 씁니다 — 두 숫자가
+         같은 자를 쓰게 해야 "의무는 줄었는데 휴가는 안 줄었네" 가
+         안 생깁니다. */
+    const beforeN = beforeNOf(y, m, daysInMonth);
     const member = daysInMonth - beforeN;
     const eff = Math.max(0, member - vacCount);
     const need = Math.round((eff / daysInMonth) * RULE_DAYS);
@@ -254,7 +302,8 @@
     }
     const state = attended >= need ? "ok"
                 : (이번달인가 && attended + daysLeft >= need) ? "maybe" : "bad";
-    return { need, daysInMonth, vacCount, beforeN, daysLeft, state, 이번달인가 };
+    return { need, daysInMonth, vacCount, beforeN, daysLeft, state, 이번달인가,
+             vacCap: vacCapOf(y, m) };
   }
 
   function ruleHtml(y, m, attended, vacCount) {
@@ -283,6 +332,13 @@
       ? ` (이번 달: ${r.daysInMonth}일 중 ${조각.join(" · ")} → <b>${r.need}일</b>)`
       : "";
 
+    /* 🏖️ 상한도 입장일에 따라 줄어듭니다 (2026-08-17).
+       달을 꽉 채운 사람에게는 굳이 "비율" 을 설명하지 않습니다 —
+       7일이 그냥 7일인 사람에게는 없는 이야기라서요. */
+    const 휴가줄 = r.vacCap >= VAC_DAYS
+      ? `(한 달 ${VAC_DAYS}일까지)`
+      : `(이 달은 <b>${r.vacCap}일</b>까지 — 늦게 들어온 만큼 ${VAC_DAYS}일에서 비율로 줄어요)`;
+
     return `
       <div class="mw-rule">
         <div class="mw-rule-head">
@@ -293,7 +349,7 @@
         <p class="mw-rule-why">
           한 달 <b>${RULE_DAYS}일</b>이 기준이에요 — 달이 며칠이든 같아요.<br>
           이 달 중간에 들어왔으면 있은 날만큼 비율로 줄고,
-          🏖️ <b>휴가를 찍으면 그만큼 자동으로 내려가요</b> (한 달 ${VAC_CAP}일까지)${셈}
+          🏖️ <b>휴가를 찍으면 그만큼 자동으로 내려가요</b> ${휴가줄}${셈}
         </p>
       </div>`;
   }
@@ -350,7 +406,17 @@
 
       <div class="mw-calfoot">
         <span>${esc(me())} · 이 달 <b>${attended}일</b> 출석했어요</span>
-        <span>🏖️ 이번 달 휴가 <b>${vacCount}일</b></span>
+        ${(() => {
+          /* 🏖️ 쓴 날 / 이 달 상한 (2026-08-17). 상한은 입장일에 따라
+             줄어듭니다 — vacCapOf 참고. 넘친 사람은 붉게만 보이고
+             막지는 않습니다 (상한이 낮아지기 전에 찍어 둔 것). */
+          const cap = vacCapOf(y, m);
+          const over = vacCount > cap;
+          return `<span class="mw-vac${over ? " over" : ""}"
+                        title="휴가는 들어온 날부터 남은 날수에 맞춰 정해져요 (한 달을 꽉 채우면 ${VAC_DAYS}일)${
+                          over ? " — 상한이 줄기 전에 찍어 둔 날은 그대로 둡니다" : ""}">
+                    🏖️ 이 달 휴가 <b>${vacCount}/${cap}일</b></span>`;
+        })()}
       </div>
       ${ruleHtml(y, m, attended, vacCount)}
       <p class="mw-calhint">

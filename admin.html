@@ -355,6 +355,10 @@
       color: #B3372B; background: rgba(179,55,43,.10);
     }
     .adm-att-table td.sum-c{ background: #FDF7F0; font-weight: 700; }
+    /* 🏖️ 휴가 칸 — "쓴 날/이 달 상한" (2026-08-17). 상한은 입장일 비례.
+       숫자가 둘이라 조금 넓히고, 넘긴 사람만 붉게 (막지는 않습니다). */
+    .adm-att-table td.vac-c{ font-variant-numeric: tabular-nums; font-size: 11px; white-space: nowrap; }
+    .adm-att-table td.vac-c.over{ color: #A33127; background: #F8D9D6; }
     .adm-att-table td.cell{ font-variant-numeric: tabular-nums; font-size: 11px; color: #4A3F33; }
     .adm-att-table td.cell.vac{ background: #F5E3B8; }
     .adm-att-table td.cell.short{ background: #F3D9D3; }
@@ -575,7 +579,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608161636"></script>
+  <script src="script_admin.js?v=202608171253"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

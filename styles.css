@@ -5977,6 +5977,14 @@ body.split-dragging #chat-box3{ user-select: none; }
   color: #6B5F52;
 }
 .mw-calfoot b{ color: #B3372B; }
+/* 🏖️ 상한을 넘긴 휴가 (2026-08-17) — 상한이 줄기 전에 찍어 둔 날입니다.
+   막지는 않고 눈에만 띄게 합니다. 점선 밑줄은 "설명이 붙어 있다"는 표시 */
+.mw-calfoot .mw-vac{ cursor: help; }
+.mw-calfoot .mw-vac.over{
+  color: #B3372B;
+  text-decoration: underline dotted rgba(179,55,43,.5);
+  text-underline-offset: 3px;
+}
 .mw-calhint{
   margin: 6px 0 0;
   text-align: center;
