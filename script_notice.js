@@ -73,8 +73,17 @@
 
   const el   = id => document.getElementById(id);
   const esc  = s => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
+  /* [2026-08-17] 공지 쓰기는 운영진도 합니다.
+     보안규칙(notice/list/$id)이 이미 열려 있는데 여기서 방장만 보게 두면,
+     권한은 있고 단추는 없는 이상한 상태가 됩니다 — 콘솔로는 되는데
+     화면으로는 안 되는 셈이라 최소권한 원칙에도 어긋나요.
+     ★ canAdmin() 은 script_realtime.js 것이고, 입장할 때 한 번 읽어 둔
+       staff 깃발을 봅니다. 없으면(그 파일이 안 실린 화면) uid 로만 봅니다. */
   const isAdmin = () => {
-    try { return firebase.auth().currentUser?.uid === ADMIN_UID; } catch (e) { return false; }
+    try {
+      if (typeof window.canAdmin === "function") return window.canAdmin();
+      return firebase.auth().currentUser?.uid === ADMIN_UID;
+    } catch (e) { return false; }
   };
 
   const tagLabel = id => (TAGS.find(t => t.id === id) || TAGS[2]).label;

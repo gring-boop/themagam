@@ -457,6 +457,11 @@ window.AppSession = AppSession;
       //         (브라우저는 클릭 전에 소리를 못 내게 막습니다. 지금이 그 클릭 직후예요)
       try { await window.afterJoinInitAlive?.(); } catch(e){ console.warn("[afterJoinInitAlive failed]", e); }
 
+      // ✅ 3-2-1) 🛡️ 운영진인지 한 번 확인 — 숨은 문(머리말 인원수 더블클릭)이
+      //           이 값을 봅니다. 문을 누를 때마다 서버에 물으면 굼떠 보여요.
+      //           못 읽어도 조용히 넘어갑니다 (그러면 문이 안 열릴 뿐).
+      try { await window.refreshStaffFlag?.(); } catch(e){ console.warn("[refreshStaffFlag failed]", e); }
+
       // ✅ 3-3) ♪ BGM — 추천 리스트 구독 시작 (판은 dock 이 이미 만들어 둠)
       try { window.musicInit?.(); } catch(e){ console.warn("[musicInit failed]", e); }
 

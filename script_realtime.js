@@ -1642,9 +1642,40 @@
      · 관리자여도 한 번 누른 것만으로는 열리지 않습니다.
        그 자리는 지나가다 스칠 수 있는 곳이라, 단일 클릭으로 열면
        PIN 창이 불쑥 뜨는 오작동이 잦습니다. 그래서 더블클릭입니다. */
+  /* =====================================================================
+     🛡️ 숨은 문은 방장 + 운영진에게 열립니다 (2026-08-17)
+     ---------------------------------------------------------------------
+     예전에는 `myNick === ADMIN_NICK` 하나로 갈렸습니다. 운영진 넷이
+     늘면서 서버의 staff 명단을 봐야 하는데, 문을 누를 때마다 서버에
+     물으면 더블클릭이 굼떠 보입니다. 그래서 **입장 직후 한 번** 읽어
+     두고 그 값을 씁니다.
+
+     ★ 명단에 없으면 문은 **아무 반응이 없습니다** — "권한이 없습니다"
+       같은 말을 띄우면 거기 문이 있다는 걸 알려주는 셈이라서요.
+     ★ 못 읽었으면(끊김 등) false 로 둡니다. 안전한 쪽으로 틀리게.
+     ★ 이건 문고리일 뿐입니다. 진짜 자물쇠는 보안규칙이에요.
+     ===================================================================== */
+  let _isStaff = false;
+
+  async function refreshStaffFlag() {
+    _isStaff = false;
+    try {
+      const uid = firebase.auth().currentUser?.uid;
+      if (!uid) return;
+      _isStaff = (await db.ref("staff/" + uid).once("value")).exists();
+    } catch (e) { _isStaff = false; }
+  }
+  window.refreshStaffFlag = refreshStaffFlag;
+
+  /* 방장이거나 운영진인가 */
+  function canAdmin() {
+    return myNick === ADMIN_NICK || _isStaff;
+  }
+  window.canAdmin = canAdmin;
+
   function openAdminPage() {
     /* 숨은 문 밖에서(콘솔 등) 불러도 같은 검사를 지납니다 */
-    if (myNick !== ADMIN_NICK) return;
+    if (!canAdmin()) return;
     if (!requireAdminPin()) return;
     window.open("admin.html", "_blank");
   }
@@ -1656,7 +1687,7 @@
     hc._doorBound = true;
     /* 겉모습은 그대로 둡니다 — cursor·title 을 손대면 티가 나니까요 */
     hc.addEventListener("dblclick", () => {
-      if (myNick !== ADMIN_NICK) return;   // 관리자가 아니면 무반응
+      if (!canAdmin()) return;   // 방장·운영진이 아니면 무반응
       openAdminPage();
     });
   }

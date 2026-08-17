@@ -8,10 +8,36 @@
      · 닉네임→가짜 이메일 변환 (script_auth.js 와 동일한 방식)
      · 관리자 닉네임·PIN (script_realtime.js 의 것과 동일하게 유지)
 
-   접속 흐름: ① 관리자 닉네임+비밀번호 로그인 → ② PIN → 대시보드.
-   관리자 닉네임이 아니면 ①에서 막혀 PIN 화면까지 가지 못합니다.
+   접속 흐름: ① 닉네임+비밀번호 로그인 → ② PIN → 대시보드.
+   방장이거나 🛡️ 운영진 명단에 있어야 ①을 지날 수 있습니다.
    PIN 은 진짜 잠금장치가 아닙니다 — 파괴적 동작의 실수 방지용이고,
    진짜 방어는 파이어베이스 보안 규칙이 합니다.
+
+   =====================================================================
+   🛡️ 두 층 — 방장 · 운영진 (2026-08-17)
+   ---------------------------------------------------------------------
+   운영진 4명이 늘면서 권한을 둘로 갈랐습니다.
+
+     · 운영진 — 출석·휴가 보기, 공지 쓰기, 대숲 글 **하나씩** 지우기와
+                30일 정리, 품평 명패 고치기, 입장 승인/차단,
+                채팅 히스토리 설정, 출입 기록, 성실 멤버 돌리기
+     · 방장만 — 멤버 명단에서 지우기, 오늘 글자수 초기화,
+                채팅·수다방 통째 삭제, **대숲 전체 비우기**,
+                공지/품평/설정 트리 통째 삭제, 운영진 명단 관리
+
+   ★ 가르는 기준은 "되돌릴 수 있는가" 하나입니다. 글 하나 지우기는
+     운영진, **판을 비우는 것**은 방장. 보안규칙도 같은 결로 짰습니다 —
+     그릇(부모) 층은 방장만, 잎(자식) 층만 운영진에게 열어서, `remove()`
+     한 줄로 트리가 통째로 날아가는 길을 막았습니다.
+
+   ★ 이 파일에서 버튼을 감추는 것은 **예의**입니다. 진짜 자물쇠는
+     보안규칙이에요 — 파괴적인 노드는 서버가 방장 uid 만 받습니다.
+     화면에서 감추기만 하고 규칙을 안 고치면 아무 소용이 없고,
+     규칙만 고치고 화면을 안 고치면 눌러도 조용히 실패해서 더 나빠요.
+     둘 다 해야 합니다.
+   ★ 명단은 서버의 `staff/{uid} = 닉` 한 곳에 있습니다. 닉이 아니라
+     **uid** 로 두는 이유 — 닉은 바뀌지만(0813 방장 닉 변경) uid 는
+     안 바뀌기 때문입니다. 보안규칙도 uid 로만 사람을 알아봅니다.
    ===================================================================== */
 (function () {
   "use strict";
@@ -22,8 +48,11 @@
      ※ 메인 앱(script_realtime.js) 맨 위에 같은 값이 있습니다.
        두 파일은 반드시 함께 고쳐야 해요 — 동기 필요!
      ===================================================================== */
-  const ADMIN_NICK = "링가링🍄";     // ← 관리자 닉네임 (2026-08-13 그링링🍄 → 링가링🍄 · script_realtime.js 와 동기)
-  const ADMIN_PIN  = "09129823";     // ← 관리자 PIN
+  const ADMIN_NICK = "링가링🍄";     // ← 방장 닉네임 (2026-08-13 그링링🍄 → 링가링🍄 · script_realtime.js 와 동기)
+  const ADMIN_PIN  = "09129823";     // ← 공용 PIN (방장·운영진이 같이 씁니다)
+  /* ★ 보안규칙에 하드코딩된 방장 uid 와 같아야 합니다.
+     닉이 바뀌어도 uid 는 안 바뀌므로, "누가 방장인가" 의 진짜 기준은 이쪽입니다. */
+  const ADMIN_UID  = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
 
   /* ★ script_core.js 의 firebaseConfig 와 동기 유지 — 코어가 바뀌면 여기도 */
   const firebaseConfig = {
@@ -43,6 +72,16 @@
   const auth = firebase.auth();
 
   let myNick = "";
+  /* 🛡️ 내가 방장인가 — 로그인 뒤에 정해집니다.
+     운영진이면 false 이고, 방장 전용 단추가 화면에서 사라집니다. */
+  let isOwner = false;
+  /* ★ 문지기를 지났는가 (2026-08-17).
+     PIN 칸은 `display:none` 일 뿐 처음부터 DOM 에 있습니다. 숨은 것도
+     `.click()` 은 멀쩡히 발화해서, 로그인 화면에서 콘솔로 PIN 단추만
+     눌러도 대시보드가 열렸습니다 (PIN 은 공개 배포된 js 안에 평문).
+     서버 규칙이 막아 주니 자료가 새지는 않았지만, "관리 페이지를
+     감춘다" 는 설계가 통째로 무의미해집니다. 그래서 깃발을 하나 둡니다. */
+  let passedLogin = false;
 
   // ------------------------------------------------- 작은 도우미들
   function el(id) { return document.getElementById(id); }
@@ -80,13 +119,20 @@
     if (!nick) { msg("adm-login-msg", "닉네임을 입력해주세요.", true); return; }
     if (pw.length < 6) { msg("adm-login-msg", "비밀번호는 6자 이상이에요.", true); return; }
 
-    /* 관리자 닉네임이 아니면 여기서 끝 — PIN 화면까지 가지 못합니다.
-       문구를 일부러 뭉뚱그립니다. "그 닉이 아니에요" 처럼 말해버리면
-       관리자 닉네임을 찾는 힌트를 주는 셈이라서요. */
-    if (nick !== ADMIN_NICK) {
-      msg("adm-login-msg", "로그인 정보가 올바르지 않아요.", true);
-      return;
-    }
+    /* =====================================================================
+       [2026-08-17] 닉네임만 보고 미리 막지 않습니다.
+       ---------------------------------------------------------------------
+       예전에는 여기서 `nick !== ADMIN_NICK` 이면 곧장 돌려보냈습니다.
+       운영진이 넷 늘면서 그럴 수 없게 됐어요 — **누가 운영진인지는
+       서버의 staff 명단에 있고, 그건 로그인해야 읽을 수 있습니다.**
+
+       그래서 순서를 바꿉니다: 먼저 제 계정으로 로그인 → 그 다음
+       "이 uid 가 방장이거나 운영진인가" 를 서버에 묻습니다.
+       ★ 남의 계정으로 들어오는 길이 열리는 것이 아닙니다. 로그인은
+         제 닉·제 비밀번호로만 되고, 아니면 파이어베이스가 막아요.
+       ★ 통과하지 못하면 **로그인을 도로 끊습니다**(signOut). 어중간하게
+         로그인된 채로 두면 콘솔에서 이것저것 찔러볼 수 있으니까요.
+       ===================================================================== */
 
     const btn = el("adm-login-btn");
     btn.disabled = true;
@@ -107,7 +153,28 @@
         msg("adm-login-msg", "비밀번호가 달라요.", true);
         return;
       }
+
+      /* 🛡️ 문지기 — 방장이거나 운영진 명단에 있어야 지납니다.
+         staff/{내 uid} 는 "제 것만" 읽도록 규칙이 열려 있어서, 남의
+         명단은 못 보고 자기 자격만 확인할 수 있습니다. */
+      const uid = auth.currentUser?.uid || "";
+      isOwner = (uid === ADMIN_UID);
+      let allowed = isOwner;
+      if (!allowed) {
+        try {
+          allowed = (await db.ref("staff/" + uid).once("value")).exists();
+        } catch (e) { allowed = false; }
+      }
+      if (!allowed) {
+        /* 문구를 뭉뚱그립니다 — "운영진이 아니에요" 라고 말해버리면
+           이 페이지가 무엇인지 알려주는 셈이라서요. */
+        try { await auth.signOut(); } catch (e) {}
+        msg("adm-login-msg", "로그인 정보가 올바르지 않아요.", true);
+        return;
+      }
+
       myNick = nick;
+      passedLogin = true;
       msg("adm-login-msg", "");
       el("adm-login").style.display = "none";
       el("adm-pin-card").style.display = "";
@@ -121,6 +188,10 @@
 
   // ------------------------------------------------- ② PIN
   function doPin() {
+    /* ★ 로그인을 지나지 않았으면 아무 반응이 없습니다 (2026-08-17).
+       "먼저 로그인하세요" 라고 말해 주면, 숨은 단추를 찾아 누른 사람에게
+       여기가 진짜 문이라고 알려주는 셈이라서요. */
+    if (!passedLogin || !auth.currentUser) return;
     const p = el("adm-pin")?.value || "";
     if (p === ADMIN_PIN) {
       try { sessionStorage.setItem("adminPinOk", "true"); } catch (e) {}
@@ -131,8 +202,10 @@
   }
 
   function openDash() {
+    if (!passedLogin || !auth.currentUser) return;   // ★ 같은 문지기
     el("adm-pin-card").style.display = "none";
     el("adm-dash").style.display = "block";
+    paintRole();
     showMyUid();
     loadAttendance(0);
     loadPinnedMessage();
@@ -140,6 +213,41 @@
     loadForest();
     loadAllowList();
     loadBanList();
+    if (isOwner) loadStaffList();
+  }
+
+  /* =====================================================================
+     🛡️ 방장 전용 자리 감추기 (2026-08-17)
+     ---------------------------------------------------------------------
+     `data-owner-only` 가 붙은 것은 방장에게만 보입니다.
+
+     ★ 감추기(display:none)이지 잠그기(disabled)가 아닙니다 — 흐릿하게
+       남겨 두면 "왜 안 눌리지?" 하고 계속 눌러 보게 돼요. 아예 없는
+       편이 조용합니다.
+     ★ 다시 말하지만 이건 예의일 뿐입니다. 진짜 자물쇠는 보안규칙.
+     ===================================================================== */
+  /* 방장 전용 동작 앞에 세우는 문지기.
+     화면에서 이미 감췄지만, 단축키·오래된 탭·개발자도구로 함수를 직접
+     부르는 길이 남습니다. 서버가 어차피 막지만 — 그때 뜨는 것은
+     "permission denied" 라는 영문 에러예요. 여기서 먼저 사람 말로
+     알려주는 편이 낫습니다. */
+  function ownerOnly(what) {
+    if (isOwner) return true;
+    alert(`${what}은(는) 방장만 할 수 있어요.`);
+    return false;
+  }
+
+  function paintRole() {
+    document.querySelectorAll("[data-owner-only]").forEach(n => {
+      n.style.display = isOwner ? "" : "none";
+    });
+    const tag = el("adm-role");
+    if (tag) {
+      tag.textContent = isOwner ? "방장" : "운영진";
+      tag.classList.toggle("staff", !isOwner);
+    }
+    const who = el("adm-who");
+    if (who) who.textContent = myNick;
   }
 
   // ------------------------------------------------- ③-0 내 계정 uid
@@ -509,7 +617,10 @@
 
         return `<tr>${ruleCell}<td class="name-c${띠}"><span class="nmw">` +
                  `<span class="nm">${escapeHtml(n)}</span>` +
-                 `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>` +
+                 /* ✕ 지우기는 방장에게만 — 운영진 화면에는 아예 없습니다 */
+                 (isOwner
+                   ? `<button type="button" class="del-x" data-del-nick="${escapeHtml(n)}" title="명단에서 지우기">✕</button>`
+                   : "") +
                `</span></td>` +
                `<td class="sum-c">${attDays}</td>${vacCell}${cells}</tr>`;
       }).join("");
@@ -940,6 +1051,7 @@
      ------------------------------------------------------------------- */
   async function removeMember(nick) {
     if (!nick) return;
+    if (!ownerOnly("멤버를 명단에서 지우는 것")) return;
     if (!confirm(
       `${nick}님을 명단에서 지울까요? 출석·휴가·작업시간·글자수 기록이 모두 삭제되고 되돌릴 수 없어요.\n` +
       `채팅에 남은 지난 말은 그대로 남아요.`
@@ -1006,8 +1118,10 @@
        config/allow/{닉네임} = true   승인 명단 — 여기 있어야 **새로** 만들 수 있음
        config/ban/{닉네임}   = true   내보낸 사람 — 있으면 아무것도 못 함
 
-     config 는 이미 **방장만 쓸 수 있게** 잠겨 있어서, 이 두 칸도 자동으로
-     방장 전용입니다.
+     [2026-08-17] config 통째는 방장만이고, **allow · ban 두 칸만** 운영진에게
+     열려 있습니다. config 를 통으로 열면 운영진이 `config` 를 remove() 해서
+     승인 명단과 차단 명단을 한 번에 날릴 수 있었어요 (allow 는 [전부] 로
+     되살릴 수 있지만 ban 은 그대로 사라집니다).
 
      ★ 막는 일은 화면이 아니라 **보안규칙(서버)** 이 합니다. 개발자도구로
        무엇을 하든 안 뚫려요. 여기 화면은 그 명단을 손보는 곳일 뿐입니다.
@@ -1017,6 +1131,86 @@
      잠급니다** — 기록은 그대로 두고, 마음이 바뀌면 풀 수 있어요.
      낯선 사람에게 쓸 때는 이쪽이 맞습니다.
      ===================================================================== */
+  /* =====================================================================
+     🛡️ 운영진 명단 (2026-08-17) — staff/{uid} = 닉네임
+     ---------------------------------------------------------------------
+     [왜 uid 로 두나]
+     닉은 바뀝니다 (0813 에 방장 닉이 그링링🍄 → 링가링🍄 로 바뀌었죠).
+     uid 는 계정이 살아 있는 한 그대로고, **보안규칙이 사람을 알아보는
+     유일한 이름**이 uid 입니다. 그래서 열쇠는 uid, 값은 사람이 알아보기
+     위한 닉네임입니다.
+
+     [그런데 방장은 uid 를 모릅니다]
+     콘솔을 열어 찾아오라고 하면 아무도 안 씁니다. 그래서 **닉네임을
+     적으면 nickOwner/{닉} 에서 uid 를 대신 찾아** 넣습니다. 명단에
+     이름과 uid 앞자리를 같이 보여줘서 나중에 알아볼 수 있게 해요.
+
+     [닉을 바꾼 사람이 있으면]
+     명단의 닉 표기는 그때 적힌 이름 그대로 남습니다 (uid 는 그대로라
+     권한은 멀쩡해요). 헷갈리면 지웠다 다시 넣으면 됩니다.
+
+     ★ staff 쓰기는 보안규칙에서 **방장 uid 만** 받습니다. 운영진이
+       콘솔로 자기 동료를 늘리는 길은 없어요.
+     ===================================================================== */
+  async function loadStaffList() {
+    const box = el("adm-staff-list");
+    if (!box) return;
+    try {
+      const v = (await db.ref("staff").once("value")).val() || {};
+      const uids = Object.keys(v);
+      const 수 = el("adm-staff-count");
+      if (수) 수.textContent = uids.length ? `총 ${uids.length}명` : "";
+
+      box.innerHTML = uids.length
+        ? uids.map(u => `
+            <div class="adm-row">
+              <span class="n">${escapeHtml(v[u] || "(이름 없음)")}</span>
+              <span class="s" title="${escapeHtml(u)}">${escapeHtml(u.slice(0, 8))}…</span>
+              <button class="adm-btn ghost" data-staff-del="${escapeHtml(u)}">내리기</button>
+            </div>`).join("")
+        : "아직 운영진이 없어요. 아래에 닉네임을 적어 올려 주세요. (방장은 명단에 없어도 늘 들어옵니다)";
+    } catch (e) {
+      box.textContent = "불러오지 못했어요.";
+    }
+  }
+
+  async function addStaff(nickRaw) {
+    if (!ownerOnly("운영진 명단 관리")) return;
+    const nick = String(nickRaw || "").trim();
+    if (!nick) { msg("adm-staff-msg", "닉네임을 적어 주세요.", true); return; }
+    if (nick === ADMIN_NICK) {
+      msg("adm-staff-msg", "방장은 명단에 없어도 늘 들어와요.", true); return;
+    }
+    try {
+      /* 닉 → uid. 도장이 없으면 아직 방에 들어온 적 없는 사람입니다. */
+      const uid = (await db.ref("nickOwner/" + nick).once("value")).val();
+      if (!uid) {
+        msg("adm-staff-msg", `${nick} — 아직 방에 들어온 적이 없는 닉네임이에요. 메인 방에서 한 번 입장한 뒤에 올려 주세요.`, true);
+        return;
+      }
+      await db.ref("staff/" + uid).set(nick);
+      const inp = el("adm-staff-nick"); if (inp) inp.value = "";
+      await loadStaffList();
+      msg("adm-staff-msg", `🛡️ ${nick} — 이제 관리 페이지에 들어올 수 있어요. (본인은 다시 로그인해야 반영돼요)`);
+    } catch (e) {
+      msg("adm-staff-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
+  async function delStaff(uid) {
+    if (!ownerOnly("운영진 명단 관리")) return;
+    const name = el("adm-staff-list")?.querySelector(`[data-staff-del="${CSS.escape(uid)}"]`)
+                   ?.closest(".adm-row")?.querySelector(".n")?.textContent || uid;
+    if (!confirm(`${name} 님을 운영진에서 내릴까요?\n관리 페이지에 못 들어오게 됩니다. (방 이용은 그대로예요)`)) return;
+    try {
+      await db.ref("staff/" + uid).remove();
+      await loadStaffList();
+      msg("adm-staff-msg", `${name} — 운영진에서 내렸어요.`);
+    } catch (e) {
+      msg("adm-staff-msg", "지우지 못했어요. " + (e.code || e.message || ""), true);
+    }
+  }
+
   async function loadAllowList() {
     const box = el("adm-allow-list");
     if (!box) return;
@@ -1204,6 +1398,7 @@
   }
   /* script_realtime.js 의 clearAllChat 과 같은 순서 */
   async function clearChat() {
+    if (!ownerOnly("채팅 통째 삭제")) return;
     if (!confirm("정말 채팅을 모두 삭제할까요? (되돌릴 수 없어요!)")) return;
     try {
       const now = Date.now();
@@ -1216,6 +1411,7 @@
     }
   }
   async function clearChatty() {
+    if (!ownerOnly("수다방 통째 삭제")) return;
     if (!confirm("정말 Chatty(수다방)를 모두 삭제할까요? (되돌릴 수 없어요!)")) return;
     try {
       await db.ref("messages2").remove();
@@ -1579,6 +1775,7 @@
   // ------------------------------------------------- ③-4 글자수
   /* script_realtime.js 의 clearAllWordcount 와 같은 노드를 지웁니다 */
   async function clearWordcount() {
+    if (!ownerOnly("오늘 글자수 초기화")) return;
     if (!confirm("오늘의 글자수 기록을 초기화할까요?\n모두의 오늘 기록·말풍선이 지워집니다. (되돌릴 수 없어요!)")) return;
     const day = dayKey(new Date());
     try {
@@ -1667,6 +1864,9 @@
 
   /* 전체 비우기 — 되돌릴 수 없어서 confirm 을 두 번 받습니다 */
   async function clearForest() {
+    /* [2026-08-17] 이것도 되돌릴 수 없는 일입니다 — 개별 삭제·30일 정리는
+       운영진도 하지만, 판을 통째로 비우는 것은 방장만. */
+    if (!ownerOnly("대숲 전체 비우기")) return;
     if (!confirm("정말 대숲의 쪽지를 모두 지울까요? (되돌릴 수 없어요!)")) return;
     if (!confirm("한 번 더 확인할게요.\n대숲이 완전히 비워집니다. 계속할까요?")) return;
     try {
@@ -1712,6 +1912,16 @@
       if (!el("adm-log-modal")?.hasAttribute("hidden")) closeAttendLog();
     });
     /* 🔐 입장 승인 · 🚫 내보내기 */
+    /* 🛡️ 운영진 명단 (방장에게만 보이는 칸) */
+    el("adm-staff-add")?.addEventListener("click", () => addStaff(el("adm-staff-nick")?.value));
+    el("adm-staff-nick")?.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.isComposing) addStaff(el("adm-staff-nick")?.value);
+    });
+    el("adm-staff-list")?.addEventListener("click", e => {
+      const b = e.target.closest("[data-staff-del]");
+      if (b) delStaff(b.getAttribute("data-staff-del"));
+    });
+
     el("adm-allow-add")?.addEventListener("click", () => addAllow(el("adm-allow-nick")?.value));
     el("adm-allow-nick")?.addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.isComposing) addAllow(el("adm-allow-nick")?.value);

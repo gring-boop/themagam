@@ -43,12 +43,17 @@
   /* ♥ 공감은 2026-08-12 에 화면에서 뺐습니다 — hearts 필드는 서버에
      남아 있으니, 되살리고 싶으면 그리는 쪽만 다시 붙이면 됩니다. */
 
-  /* 명패 고치기·지우기는 **방장만**입니다 (보안규칙도 그렇게 잠겨 있어요).
+  /* 명패 고치기·지우기는 **방장과 운영진**입니다 (2026-08-17 운영진 추가.
+     그 전에는 방장만이었어요 — 보안규칙 pubs/$pid 도 함께 열렸습니다).
      댓글이 잔뜩 달린 명패를 아무나 고치면, 품평이 통째로 엉뚱한 회사에
-     붙습니다. 잘못 등록된 명패는 방장에게 말해서 정리하는 걸로요. */
+     붙습니다. 그래서 일반 멤버에게는 여전히 안 열립니다.
+     ★ 명패를 **통째로 비우는 것**(pubs 루트)은 규칙에서 방장만입니다. */
   const ADMIN_UID = "ABM1ZJndrqaV3gpYUs03SV9qglr1";
   const isAdmin = () => {
-    try { return firebase.auth().currentUser?.uid === ADMIN_UID; } catch (e) { return false; }
+    try {
+      if (typeof window.canAdmin === "function") return window.canAdmin();
+      return firebase.auth().currentUser?.uid === ADMIN_UID;
+    } catch (e) { return false; }
   };
 
   /* ── 🔍 찾기 (2026-08-12) ──
