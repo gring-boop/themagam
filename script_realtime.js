@@ -285,6 +285,44 @@
     } catch (e) {}
   }
 
+  /* =====================================================================
+     🏷️ 부방장 명단 (2026-08-17) — config/vice/{닉} = true
+     ---------------------------------------------------------------------
+     방장 스티커는 상수 하나(ADMIN_NICK)를 견주면 그만이었는데, 부방장은
+     넷이고 바뀔 수 있습니다. 그렇다고 상수 배열로 박아 두면 **운영진
+     명단(staff)과 두 곳을 고쳐야** 해서 언젠가 어긋나요.
+
+     그래서 관리 페이지에서 운영진을 올리고 내릴 때 이 칸도 함께
+     적습니다 — 명단은 하나, 적히는 곳만 둘입니다.
+
+     [왜 staff 를 그대로 안 읽나]
+     staff 는 **uid 를 열쇠로** 두고, 보안규칙에서 운영진 본인과 방장만
+     읽을 수 있습니다. 카드는 모두가 보는 것이라 일반 멤버도 읽을 수
+     있어야 해요. config 는 이미 `.read: true` 라 딱 맞습니다
+     (쓰기는 방장만이라 아무나 자기 이름을 넣을 수는 없습니다).
+
+     ★ 닉을 바꾸면 이 칸은 옛 이름으로 남습니다 — 권한(staff, uid 기준)은
+       멀쩡하고 스티커만 안 붙어요. 관리 페이지에서 내렸다 올리면 맞습니다.
+       (대시보드를 열 때 staff 를 보고 저절로 맞추기도 합니다)
+     ===================================================================== */
+  let _vice = {};
+  function listenVice() {
+    try {
+      db.ref("config/vice").on("value", s => {
+        _vice = s.val() || {};
+        if (_statusCache) renderUserCards(_statusCache);
+      });
+    } catch (e) {}
+  }
+
+  /* 카드 프사에 붙는 이름표 — 방장이 먼저입니다 (방장이 부방장 명단에도
+     들어 있으면 '방장' 하나만 붙어요. 둘 다 붙으면 겹칩니다). */
+  function stampHtml(u) {
+    if (u === ADMIN_NICK) return `<span class="card-admin-stamp" aria-label="방장">방장</span>`;
+    if (_vice[u] === true) return `<span class="card-admin-stamp is-vice" aria-label="부방장">부방장</span>`;
+    return "";
+  }
+
   function dropBanned(data) {
     if (!data || !_banned) return data;
     let hit = false;
@@ -299,6 +337,7 @@
   function listenStatus() {
     _seenOnline = null;   // 다시 붙을 때는 씨앗부터 (옛 목록으로 오알림 방지)
     listenBans();
+    listenVice();          // 🏷️ 부방장 스티커 명단 (config/vice)
     _statusRef = db.ref("status");
     _statusRef.on("value", snap => {
       const data = dropBanned(snap.val() || null);
@@ -564,9 +603,7 @@
                   ${avatar}
                   ${editBtn}
                   ${decoAvatar}
-                  ${u === ADMIN_NICK
-                    ? `<span class="card-admin-stamp" aria-label="방장">방장</span>`
-                    : ""}
+                  ${stampHtml(u)}
                 </div>
 
                 <div class="card-side">
@@ -1429,8 +1466,25 @@
   /* [철거 2026-08-14] reserveOutOnDisconnect — 퇴장을 대신 적어주던
      서버 예약. 퇴장 기록 자체를 접으면서 함께 걷었습니다. */
 
-  /* 오래된 날짜를 지웁니다. 입장할 때 한 번만 훑어요. */
+  /* =====================================================================
+     🧹 오래된 날짜 정리 — **방장 브라우저에서만** (2026-08-17)
+     ---------------------------------------------------------------------
+     예전에는 누가 입장하든 이 둘이 돌았습니다. 그러려면 보안규칙이
+     `attendance` · `attendlog` 를 **로그인한 아무에게나** 열어 둬야 했고,
+     실제로 `.write: "auth != null"` 이었습니다. 그 말은 멤버 누구나
+     콘솔에서 `db.ref('attendance').remove()` 한 줄로 **전 기간 출석을
+     날릴 수 있었다**는 뜻이에요. 출석은 이 방 운영의 근간 자료입니다.
+
+     정리는 하루에 한 번 누가 하든 결과가 같은 일이라, 방장 한 사람이
+     맡아도 아무 문제가 없습니다. 방장은 매일 들어오니까요.
+     ★ 오래 안 들어오면 정리가 밀릴 뿐, 기록이 어긋나지는 않습니다
+       (보관 기간이 attendance 1000일 · attendlog 180일로 넉넉해요).
+     ===================================================================== */
+  function 정리할차례인가() { return myNick === ADMIN_NICK; }
+
+  /* 오래된 날짜를 지웁니다. 방장이 입장할 때 한 번만 훑어요. */
   async function sweepAttendLog() {
+    if (!정리할차례인가()) return;
     try {
       const cutoff = ymd(Date.now() - (ATTENDLOG_KEEP_DAYS - 1) * DAY_MS);
       const old = await db.ref("attendlog").orderByKey().endAt(cutoff).once("value");
@@ -1460,12 +1514,16 @@
 
       /* 보관 기간이 지난 것만 골라 지웁니다.
          예전에는 attendance 전체를 내려받아 훑었는데, 1000일치가 쌓이면
-         접속할 때마다 그 전부를 받게 됩니다. 오래된 구간만 조회하도록 바꿨습니다. */
-      const cutoff = ymd(Date.now() - (ATTEND_KEEP_DAYS - 1) * DAY_MS);
-      const oldSnap = await db.ref("attendance").orderByKey().endAt(cutoff).once("value");
-      const updates = {};
-      oldSnap.forEach(c => { if (c.key && c.key < cutoff) updates[c.key] = null; });
-      if (Object.keys(updates).length) await db.ref("attendance").update(updates);
+         접속할 때마다 그 전부를 받게 됩니다. 오래된 구간만 조회하도록 바꿨습니다.
+         ★ [2026-08-17] 이 정리도 방장 몫입니다 — 위 정리할차례인가() 주석 참고.
+           덕분에 남는 사람들은 이 조회조차 안 하게 되어 통신량도 줍니다. */
+      if (정리할차례인가()) {
+        const cutoff = ymd(Date.now() - (ATTEND_KEEP_DAYS - 1) * DAY_MS);
+        const oldSnap = await db.ref("attendance").orderByKey().endAt(cutoff).once("value");
+        const updates = {};
+        oldSnap.forEach(c => { if (c.key && c.key < cutoff) updates[c.key] = null; });
+        if (Object.keys(updates).length) await db.ref("attendance").update(updates);
+      }
 
       // ---- 개인 출석맵 ----
       const uref = db.ref(`users/${myNick}/attend`);

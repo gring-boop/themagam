@@ -1169,6 +1169,18 @@
               <button class="adm-btn ghost" data-staff-del="${escapeHtml(u)}">내리기</button>
             </div>`).join("")
         : "아직 운영진이 없어요. 아래에 닉네임을 적어 올려 주세요. (방장은 명단에 없어도 늘 들어옵니다)";
+
+      /* 🏷️ 스티커 명단(config/vice)이 어긋나 있으면 여기서 맞춥니다.
+         두 곳에 적히는 이상 언젠가는 어긋납니다 — 콘솔로 한쪽만 손댔거나,
+         스티커를 적는 중에 연결이 끊겼거나. 대시보드를 열 때마다 조용히
+         맞춰 두면 "권한은 있는데 스티커가 없다" 는 일이 안 생겨요.
+         ★ 다른 곳이 있을 때만 씁니다 (같으면 아무 요청도 안 보냅니다). */
+      const 있어야할 = new Set(uids.map(u => v[u]).filter(Boolean));
+      const 지금 = (await db.ref("config/vice").once("value")).val() || {};
+      const 고칠것 = {};
+      있어야할.forEach(n => { if (지금[n] !== true) 고칠것[n] = true; });
+      Object.keys(지금).forEach(n => { if (!있어야할.has(n)) 고칠것[n] = null; });
+      if (Object.keys(고칠것).length) await db.ref("config/vice").update(고칠것);
     } catch (e) {
       box.textContent = "불러오지 못했어요.";
     }
@@ -1189,9 +1201,13 @@
         return;
       }
       await db.ref("staff/" + uid).set(nick);
+      /* 🏷️ 카드에 붙는 부방장 스티커 명단도 함께 (config/vice/{닉}).
+         staff 는 uid 열쇠라 일반 멤버가 못 읽습니다 — 카드는 모두가
+         보는 것이라 누구나 읽을 수 있는 config 에 이름을 하나 더 적어요. */
+      await db.ref("config/vice/" + nick).set(true);
       const inp = el("adm-staff-nick"); if (inp) inp.value = "";
       await loadStaffList();
-      msg("adm-staff-msg", `🛡️ ${nick} — 이제 관리 페이지에 들어올 수 있어요. (본인은 다시 로그인해야 반영돼요)`);
+      msg("adm-staff-msg", `🛡️ ${nick} — 이제 관리 페이지에 들어올 수 있고, 카드에 🏷️ 부방장 스티커가 붙어요. (본인은 다시 로그인해야 반영돼요)`);
     } catch (e) {
       msg("adm-staff-msg", "저장하지 못했어요. " + (e.code || e.message || ""), true);
     }
@@ -1204,8 +1220,11 @@
     if (!confirm(`${name} 님을 운영진에서 내릴까요?\n관리 페이지에 못 들어오게 됩니다. (방 이용은 그대로예요)`)) return;
     try {
       await db.ref("staff/" + uid).remove();
+      /* 스티커도 같이 뗍니다 — 권한만 내리고 이름표를 남겨 두면
+         멤버들은 아직 부방장인 줄 압니다. */
+      if (name) await db.ref("config/vice/" + name).remove();
       await loadStaffList();
-      msg("adm-staff-msg", `${name} — 운영진에서 내렸어요.`);
+      msg("adm-staff-msg", `${name} — 운영진에서 내렸어요. (🏷️ 스티커도 뗐어요)`);
     } catch (e) {
       msg("adm-staff-msg", "지우지 못했어요. " + (e.code || e.message || ""), true);
     }
