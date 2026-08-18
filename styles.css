@@ -557,6 +557,30 @@ html[data-is-dark="true"] .card-conn{
 .card-conn i:nth-child(3){ height: 7.5px; }
 .card-conn i:nth-child(4){ height: 10px; }
 
+/* ── 📱 폰 접속 표시 (2026-08-17, A안) ──
+   접속 막대 바로 오른쪽. 폰인 사람에게만 붙습니다 — PC 가 다수라
+   PC 에 다 붙이면 시끄럽기만 해요.
+   접속 막대가 absolute(top 4 · left 5, 받침 포함 약 20px)라 이것도
+   absolute 로 그 옆에 앉힙니다. 반투명 받침도 같은 결로. */
+.card-device{
+  position: absolute;
+  top: 3px;
+  left: 27px;
+  z-index: 2;
+  font-size: 9.5px;
+  line-height: 1;
+  padding: 2px 2.5px;
+  border-radius: 4px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 0 0 .5px rgba(0,0,0,.06);
+  opacity: .85;
+  pointer-events: none;   /* 카드 아래칸 클릭(목표·투두)을 가리지 않게 */
+}
+html[data-is-dark="true"] .card-device{
+  background: rgba(20,22,26,.60);
+  box-shadow: 0 0 0 .5px rgba(255,255,255,.10);
+}
+
 /* 끊김 — 붉게 바꾸고, 높은 막대 둘은 흐리게 죽입니다.
    색을 못 가리는 분도 "막대가 줄었다"로 알 수 있게요. */
 .card-conn.off{

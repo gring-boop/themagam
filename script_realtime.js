@@ -629,6 +629,11 @@
                       title="${connOk ? "연결됨" : "연결이 끊겼어요 (곧 돌아올 수 있어요)"}">
                   <i></i><i></i><i></i><i></i>
                 </span>
+                ${/* [2026-08-17] 📱 폰 접속 표시 — 접속 점 바로 옆 (A안, 콩 선택).
+                     폰인 사람에게만 붙습니다. PC 가 다수라 PC 에 다 붙이면
+                     시끄럽기만 해요. 값은 status 의 onPhone (updateStatus 참고). */
+                   row.onPhone === true
+                     ? `<span class="card-device" title="폰으로 접속 중">📱</span>` : ""}
                 <div class="card-name">${escapeHtml(u)}</div>
                 <div class="card-goal" title="${escapeHtml(row.todayGoalText || "")}"><div class="goal-line">🎯 ${goalText}</div></div>
                 ${metaBlock}
@@ -799,6 +804,13 @@
     const shareOn = (typeof window.isScreenSharing === "function")
       ? window.isScreenSharing() === true : false;
 
+    /* [2026-08-17] 📱 폰 접속인지 — 참/거짓 한 칸.
+       window.isMobile 은 script_ui.js 가 입장 전에 이미 정해 둔 값이라
+       새로 재는 것도 없습니다. 접속 신호에 10바이트쯤 얹힐 뿐이에요.
+       ★ 0813에 보류한 users/{닉}/lastDevice(기록으로 남기기)와는 다른
+         물건입니다 — 이건 접속 중인 동안만 실려 다니고 서버에 안 쌓여요. */
+    const onPhone = window.isMobile === true;
+
     if (force) {
       window.saveDailyLog?.();
       window.backupLocal?.();
@@ -819,6 +831,7 @@
       pomoRunning,
       pomoPhase: pomoPhaseNow,
       shareOn,
+      onPhone,
       /* [2026-08-09] 작업 스티커. 자정 초기화를 그만두면서 날짜 칸
          (tagDay)은 뺐습니다 — 보는 쪽에서 안 쓰는 값이라서요. */
       /* ★ 여기에 || "draft" 를 쓰면 안 됩니다.
