@@ -321,6 +321,35 @@
     }
     .adm-hour-chip:hover{ background: rgba(163,88,70,.08); }
     .adm-hour-chip.on{ background: #4A140D; color: #FFFDF6; border-color: transparent; }
+    /* 그래프 4개 — 2×2 (2026-08-18). 그래프가 clientWidth 를 재서 그리므로
+       칸이 좁아지면 알아서 좁게 그립니다. 900px 아래에선 도로 한 줄. */
+    .adm-chart-grid{
+      display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px;
+    }
+    .adm-chart-grid .adm-chart{ min-width: 0; }
+    @media (max-width: 900px){ .adm-chart-grid{ grid-template-columns: 1fr; } }
+    /* 🔥 연속 출석 순위 — 16명씩 두 칸 */
+    .adm-streak-cols{
+      display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px;
+    }
+    @media (max-width: 760px){ .adm-streak-cols{ grid-template-columns: 1fr; } }
+    .adm-streak-row{
+      display: flex; align-items: center; gap: 8px; padding: 5px 2px;
+      border-bottom: 1px dashed rgba(150,120,80,.35); font-size: 12.5px;
+    }
+    .adm-streak-row.dead{ opacity: .5; }
+    .adm-streak-row .rk{ flex: 0 0 26px; text-align: center; font-weight: 800; color: #8A7B68; }
+    .adm-streak-row .rk.m{ font-size: 15px; }
+    .adm-streak-row .nm{ flex: 0 0 96px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .adm-streak-row .bw{ flex: 1; height: 12px; border-radius: 999px; background: #F1E9DC; overflow: hidden; }
+    .adm-streak-row .bw i{ display: block; height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, #E8A03C, #D9433A); }
+    .adm-streak-row.dead .bw i{ background: #C9BCA9; }
+    .adm-streak-row .ct{ flex: 0 0 56px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .adm-streak-row .ct small{ font-weight: 400; color: #8A7B68; }
+    .adm-streak-row .td{ flex: 0 0 56px; text-align: right; font-size: 10.5px; }
+    .adm-streak-row .td.ok{ color: #2E6B2B; }
+    .adm-streak-row .td.wait{ color: #B98A12; }
     /* ✍️ 글자수 요약 한 줄 — 숫자보다 "몇 명이 참여했나" 가 눈에 남게 */
     .adm-word-sum{
       margin: 0 0 10px; font-size: 13px; color: #6B5B48; line-height: 1.6;
@@ -473,6 +502,9 @@
              (script_admin.js 의 cntByDay · totalByDay). 서버에 더 묻지
              않아요. 라이브러리도 안 씁니다 — SVG 몇 줄이면 되는 그림이라
              관리자 페이지를 무겁게 할 이유가 없습니다. -->
+        <!-- [2026-08-18] 그래프 4개를 2×2 로 — 세로로 네 개를 쌓으니
+             페이지가 한없이 길어졌습니다 (콩 요청). 좁은 화면에선 도로 한 줄. -->
+        <div class="adm-chart-grid">
         <div class="adm-chart" id="adm-att-chart"></div>
 
         <!-- [2026-08-16] ✍️ 한 달 글자수 — 방 전체 꺾은선 + 기록한 멤버 막대.
@@ -488,6 +520,10 @@
         <!-- 🕐 시간대별 접속 (2026-08-18) — "보통 몇 시에 몇 명이 있나".
              표가 이미 읽어 둔 timeSegs 원본 구간을 접어 셉니다. -->
         <div class="adm-chart" id="adm-hour-chart"></div>
+        </div><!-- /adm-chart-grid -->
+
+        <!-- 🔥 연속 출석 순위 (2026-08-18) — 오늘 기준, 16명씩 두 칸 -->
+        <div class="adm-chart" id="adm-streak"></div>
 
         <div class="adm-msg" id="adm-att-msg"></div>
       </div>
@@ -633,7 +669,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608181108"></script>
+  <script src="script_admin.js?v=202608181119"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

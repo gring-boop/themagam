@@ -419,6 +419,7 @@
          알 수 없어서요. 같은 자료를 한 번 더 읽지 않으려는 것뿐,
          서버 요청은 그대로입니다. */
       const segsByNick = {};  // { 닉: {날짜: [{a,b}, …]} }
+      const streakByNick = {}; // { 닉: {count, lastDay} | null }
       await Promise.all(nicks.map(async n => {
         try {
           vacByNick[n] = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
@@ -449,6 +450,11 @@
           minsByNick[n] = per;
           segsByNick[n] = rawPer;
         } catch (e) { minsByNick[n] = {}; segsByNick[n] = {}; }
+        /* 🔥 연속 출석 — 입장할 때 각자 브라우저가 이미 계산해 둔 값
+           (attend/streak = {count, lastDay})을 읽기만 합니다. */
+        try {
+          streakByNick[n] = (await db.ref(`users/${n}/attend/streak`).once("value")).val() || null;
+        } catch (e) { streakByNick[n] = null; }
       }));
 
       /* 날짜별 출석 인원 수 — 그날 attendance 기록(firstAt/at)이 있는 사람만 셉니다.
@@ -644,6 +650,9 @@
 
       /* 🕐 시간대별 접속 (2026-08-18) — 같은 timeSegs 의 원본 구간 재활용 */
       시간대그래프({ ymKey, daysInMonth, base, segsByNick, isThisMonth, todayD });
+
+      /* 🔥 연속 출석 순위 (2026-08-18) — 달과 무관하게 늘 오늘 기준 */
+      연속출석순위(streakByNick);
 
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
@@ -1185,6 +1194,79 @@
         if (_시간대값) 시간대그래프(_시간대값);
       });
     });
+  }
+
+  /* =====================================================================
+     🔥 연속 출석 순위 (2026-08-18) — 멤버 전원 줄 세우기
+     ---------------------------------------------------------------------
+     attend/streak = {count, lastDay} 는 각자 입장할 때 이미 계산해 둔
+     값입니다. 여기서는 읽어서 줄만 세워요 — 제일 가벼운 통계.
+
+     [산 것과 죽은 것]
+       lastDay = 오늘   → 살아 있음, 오늘 ✓
+       lastDay = 어제   → 살아 있음, 오늘 아직 (오늘 지나면 끊길 사람)
+       그보다 오래됨    → 끊김 — 다음 입장 때 1로 돌아갑니다. 맨 아래 흐리게.
+     ★ 휴가를 내도 끊깁니다 (콩 확정 2026-08-18) — 진짜 나온 날만 연속.
+
+     [두 칸] 인원이 많아 한 줄로 세우면 아래가 한없이 길어집니다.
+     16명씩 나눠 왼쪽 1~16위, 오른쪽 17위~. 달 넘기기와 무관하게
+     늘 오늘 기준이라 다시 그릴 일도 없어요.
+     ===================================================================== */
+  function 연속출석순위(streakByNick) {
+    const box = el("adm-streak");
+    if (!box) return;
+
+    const 오늘 = dayKey(new Date());
+    const 어제 = dayKey(new Date(Date.now() - 86400000));
+
+    const rows = Object.keys(streakByNick).map(n => {
+      const st = streakByNick[n];
+      const count = Number(st?.count || 0);
+      const last = st?.lastDay || "";
+      const alive = count > 0 && (last === 오늘 || last === 어제);
+      return { n, count: alive ? count : 0, alive, today: last === 오늘 };
+    });
+    /* 산 사람은 일수 내림차순, 끊긴 사람은 맨 아래 가나다 */
+    rows.sort((a, b) =>
+      (b.alive - a.alive) || (b.count - a.count) || a.n.localeCompare(b.n, "ko"));
+
+    if (!rows.length || !rows.some(r => r.alive)) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">🔥 연속 출석</span></div>
+        <p class="adm-chart-sub">아직 이어지고 있는 연속 출석이 없어요.</p>`;
+      return;
+    }
+
+    const max = Math.max(...rows.map(r => r.count), 1);
+    const 메달 = ["🥇", "🥈", "🥉"];
+    const 줄 = (r, i) => {
+      const rk = (i < 3 && r.alive)
+        ? `<span class="rk m">${메달[i]}</span>` : `<span class="rk">${i + 1}</span>`;
+      const td = !r.alive ? `<span class="td">끊김</span>`
+        : r.today ? `<span class="td ok">오늘 ✓</span>`
+                  : `<span class="td wait">오늘 아직</span>`;
+      const w = r.alive ? Math.max(6, r.count / max * 100) : 3;
+      return `<div class="adm-streak-row${r.alive ? "" : " dead"}">
+        ${rk}<span class="nm">${escapeHtml(r.n)}</span>
+        <span class="bw"><i style="width:${w.toFixed(1)}%"></i></span>
+        <span class="ct">${r.alive ? `${r.count}<small>일</small>` : "—"}</span>${td}
+      </div>`;
+    };
+
+    /* 16명씩 두 칸 — 반씩이 아니라 **첫 칸을 꽉 채우고** 넘칩니다.
+       10명일 때 5:5 로 갈리면 오른쪽 칸이 괜히 허전해요. */
+    const 왼쪽 = rows.slice(0, 16), 오른쪽 = rows.slice(16);
+    box.innerHTML = `
+      <div class="adm-chart-h">
+        <span class="adm-chart-t">🔥 연속 출석</span>
+        <span style="flex:1"></span>
+        <span class="adm-chart-lg">오늘 기준 · 하루 빠지면 1로</span>
+      </div>
+      <div class="adm-streak-cols">
+        <div>${왼쪽.map((r, i) => 줄(r, i)).join("")}</div>
+        <div>${오른쪽.map((r, i) => 줄(r, i + 16)).join("")}</div>
+      </div>
+      <p class="adm-chart-note">🏖️ 휴가를 내도 연속은 끊겨요 — 진짜 나온 날만 셉니다.
+        노란 "오늘 아직"인 분은 오늘이 지나면 끊겨요.</p>`;
   }
 
   /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제
