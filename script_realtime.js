@@ -315,6 +315,15 @@
     } catch (e) {}
   }
 
+  /* 📚 낱장 가장자리 선 — 고른 색을 82%로 어둡게 (color-mix 대신 JS 로,
+     인라인 style 에 계산식을 넣는 것보다 값이 들어가는 편이 안전해서) */
+  function darkenHex(hex, f = 0.82) {
+    const n = parseInt(hex.slice(1), 16);
+    const d = (v) => Math.round(v * f);
+    return "#" + [d(n >> 16 & 255), d(n >> 8 & 255), d(n & 255)]
+      .map(v => v.toString(16).padStart(2, "0")).join("");
+  }
+
   /* 카드 프사에 붙는 이름표 — 방장이 먼저입니다 (방장이 부방장 명단에도
      들어 있으면 '방장' 하나만 붙어요. 둘 다 붙으면 겹칩니다). */
   function stampHtml(u) {
@@ -509,8 +518,17 @@
             : "";
           const patId   = window.sanitizePattern?.(prof.cardPattern) || "none";
           const patCol  = window.sanitizeHexColor?.(prof.patColor) || "#D8DEE8";
-          const cardStyle = (cardBg || patId !== "none")
-            ? ` style="${cardBg ? `--cbg:${cardBg};` : ""}--cpat:${patCol};"`
+          /* 📚 낱장 색 (2026-08-18) — 카드 가장자리 겹친 종이 두 장.
+             고른 색이 그대로 진하게 들어가고, 가장자리 선만 같은 색을
+             살짝 어둡게 — 두 장을 같은 색으로 고르면 한 덩어리로 붙어
+             보여서요. 인라인 변수라 테마 낱장색(스튜디오·다크)보다 셉니다. */
+          const pg1 = window.sanitizeHexColor?.(prof.pageC1) || "";
+          const pg2 = window.sanitizeHexColor?.(prof.pageC2) || "";
+          const pgStyle =
+            (pg1 ? `--pg1:${pg1};--pg1-line:${darkenHex(pg1)};` : "") +
+            (pg2 ? `--pg2:${pg2};--pg2-line:${darkenHex(pg2)};` : "");
+          const cardStyle = (cardBg || patId !== "none" || pgStyle)
+            ? ` style="${cardBg ? `--cbg:${cardBg};` : ""}--cpat:${patCol};${pgStyle}"`
             : "";
           const patCls = patId !== "none" ? ` pat-${patId}` : "";
           const bgCls  = cardBg ? " has-cardbg" : "";
@@ -772,9 +790,6 @@
 
   function updateStatus(force = false) {
     if (!myNick) return;
-
-    /* 🌙 자정 넘김 출석 — 30초마다 오는 이 길에 얹습니다 (위 주석 참고) */
-    try { watchDayRollover(); } catch (e) {}
 
     const goalText = document.getElementById("db-today-goal-text")?.value || "";
     const done = document.getElementById("db-today-done")?.value || "";
@@ -1511,46 +1526,23 @@
   }
 
   /* =====================================================================
-     🌙 자정 넘김 출석 (2026-08-18, 콩 확정)
+     🌙 자정 넘김 출석 — 만들었다가 같은 날 걷어냈습니다 (2026-08-18)
      ---------------------------------------------------------------------
-     출석 도장은 '입장'할 때만 찍혔습니다. 그런데 0813 무음 접속 유지가
-     생기면서 며칠씩 안 끊는 사람이 생겼고 — 밤새 있던 녹차차가 오늘
-     6시간을 일했는데 출석부에는 결석으로 남는 모순이 드러났어요
-     (0818 콩 발견). 연속 출석은 더 심해서, 제일 오래 머문 사람의
-     연속이 끊기는 역설이 생깁니다.
+     접속 유지로 자정을 넘긴 사람이 결석으로 남는 것을 보고(녹차차 사건),
+     "날 바뀐 뒤 작업 1시간이면 자동 도장" 을 넣었었어요. 그런데 순위를
+     연속 출석에서 **출석률**로 바꾸면서 콩이 되돌렸습니다 —
+     연속을 안 따지는 이상, 자정 넘김은 **본인이 직접 챙길 문제**
+     (새벽에도 일했으면 한 번 나갔다 들어오면 됩니다).
 
-     [규칙 — 거저 주지 않습니다]
-     자정을 수동적으로 넘긴 것만으로는 둘째 날 출석이 아닙니다.
-     23:30 입장 → 00:10 퇴근이 이틀로 찍히면 곤란하니까요 (콩).
-       ★ 날이 바뀐 뒤 🔥작업(Write+Job)을 **1시간** 채우면 그때 도장.
-     재는 자는 myTodayWorkMs — 카드의 "오늘 작업 시간" 그대로라
-     자정에 스스로 0으로 돌아가는 값입니다. 성실 멤버("5시간 작업한
-     날")와 같은 결이에요.
-
-     [언제 확인하나] updateStatus 가 30초마다 도니 거기에 얹습니다.
-     새 타이머도, 새 통신도 없어요 — 날이 같으면 비교 한 번으로 끝.
-     도장을 받는 순간 출석부·의무 출석·연속 출석·순위가 전부 맞습니다.
-     ★ 그날 다시 입장하는 사람은 그 입장으로 어차피 찍히므로, 이 문턱이
-       실제로 작동하는 건 "넘기고 그날 다시 안 들어오는 사람"뿐입니다.
-     ★ 출석부의 입장 시각 칸에는 문턱을 채운 시각(01:00쯤)이 찍힙니다 —
-       "새벽까지 이어서 일했다"로 읽으면 자연스러워요.
+     ★ 되살릴 일이 생기면: updateStatus 초입에서 30초마다
+       "ymd(now) ≠ 마지막 도장 날 && myTodayWorkMs() ≥ 1시간" 이면
+       recordAttendance() 한 줄이었습니다. 문턱 없이 자정 즉시 찍으면
+       23:30 입장 → 00:10 퇴근이 이틀로 찍히니 그건 하지 마세요.
      ===================================================================== */
-  const ROLLOVER_WORK_MS = 60 * 60 * 1000;   // 자정 넘긴 뒤 1시간 작업해야 그날 출석
-  let _attDay = null;                        // 마지막으로 도장 찍은 날
-
-  function watchDayRollover() {
-    if (!myNick || !_attDay) return;         // 아직 입장 도장도 없으면 볼 것 없음
-    const today = ymd(Date.now());
-    if (today === _attDay) return;           // 날이 안 바뀌었으면 비교 한 번으로 끝
-    if (Number(window.myTodayWorkMs?.() || 0) >= ROLLOVER_WORK_MS) {
-      recordAttendance();                    // 안에서 _attDay 가 오늘로 바뀌어 다시 안 옵니다
-    }
-  }
 
   async function recordAttendance() {
     if (!myNick) return;
     const day = ymd(Date.now());
-    _attDay = day;   // 🌙 자정 넘김 감시가 이 값을 봅니다 — 중복 도장 방지
 
     try {
       // ---- 공용 로그 ----

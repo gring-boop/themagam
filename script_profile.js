@@ -1078,6 +1078,9 @@ function renderProfilePanel() {
   const curPat = sanitizePattern(p.cardPattern);
   const curPatColor = sanitizeHexColor(p.patColor) || "#D8DEE8";
   const curNickColor = sanitizeHexColor(p.nickColor) || "#5A6473";
+  /* 📚 낱장 색 — 빈 값이면 "테마 기본" (인라인 변수를 아예 안 붙임) */
+  const curPg1 = sanitizeHexColor(p.pageC1) || "";
+  const curPg2 = sanitizeHexColor(p.pageC2) || "";
   /* 카드 글자색 3종 — 옛 단일색(cardTextColor)이 있으면 그걸 물려받습니다 */
   const _legacyInk = sanitizeHexColor(p.cardTextColor) || "";
   const curInkNick = sanitizeHexColor(p.cardNickColor) || _legacyInk;
@@ -1285,6 +1288,35 @@ function renderProfilePanel() {
       <p class="hint">고른 스티커: <b id="prof-stk-sel">없음</b> —
         스티커를 누르면 골라져요. 안 만진 스티커는 기본 자리 그대로입니다.</p>
     </div>
+
+    <!-- 📚 낱장 색 (2026-08-18) — 카드 오른쪽·아래 겹친 종이 두 장.
+         스티커 배치 바로 아래(콩 지정 자리). 위의 배치 카드가 내 진짜
+         카드의 복제본이라, 색을 고르면 저 카드에서 바로 보입니다. -->
+    <div class="set-block">
+      <div class="set-title">📚 낱장 색</div>
+      <p class="hint" style="margin-top:0">
+        카드 가장자리 겹친 종이 두 장이에요. 고른 색이 그대로 진하게
+        들어가요. [기본값]을 누르면 테마 낱장으로 돌아갑니다.</p>
+      <div class="color-row">
+        <span class="slot-name" style="flex:0 0 52px;">첫째 장</span>
+        <input type="color" id="prof-pg1" class="color-well"
+               value="${curPg1 || "#C9BB98"}" aria-label="첫째 장 색 고르기">
+        <input type="text" id="prof-pg1-hex" class="color-hex"
+               value="${curPg1}" placeholder="기본" maxlength="7" spellcheck="false">
+        <button type="button" class="ghost-btn compact" id="prof-pg1-reset">기본값</button>
+      </div>
+      <div class="color-row" style="margin-top:6px;">
+        <span class="slot-name" style="flex:0 0 52px;">둘째 장</span>
+        <input type="color" id="prof-pg2" class="color-well"
+               value="${curPg2 || "#C9BB98"}" aria-label="둘째 장 색 고르기">
+        <input type="text" id="prof-pg2-hex" class="color-hex"
+               value="${curPg2}" placeholder="기본" maxlength="7" spellcheck="false">
+        <button type="button" class="ghost-btn compact" id="prof-pg2-reset">기본값</button>
+      </div>
+      <label class="hint" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:8px;">
+        <input type="checkbox" id="prof-pg-link"> 🔗 두 장 같은 색으로 움직이기
+      </label>
+    </div>
     </div><!-- /3칸 -->
     </div><!-- /prof-cols -->
 
@@ -1465,6 +1497,44 @@ function bindProfilePanel() {
     };
   }
   if (ncReset) ncReset.onclick = () => saveNickColor("#5A6473");
+
+  /* ---- 📚 낱장 색 (2026-08-18) ----
+     저장은 pageC1 · pageC2 두 칸. 빈 문자열이면 "테마 기본"으로 돌아가요
+     (카드 그리기가 빈 값에는 인라인 변수를 아예 안 붙입니다).
+     배치 카드(#prof-stk-card)가 내 진짜 카드의 복제본이라, 저장 →
+     rerenderUserCards → 복제본 갱신으로 바로 보입니다. */
+  function bindPageColor(which) {
+    const well  = document.getElementById(`prof-pg${which}`);
+    const hex   = document.getElementById(`prof-pg${which}-hex`);
+    const reset = document.getElementById(`prof-pg${which}-reset`);
+    const link  = document.getElementById("prof-pg-link");
+
+    function apply(c, fromLink) {
+      c = sanitizeHexColor(c) || "";
+      if (well && c) well.value = c;
+      if (hex) hex.value = c;
+      saveMyProfile(which === 1 ? { pageC1: c } : { pageC2: c });
+      window.rerenderUserCards?.();
+      setTimeout(() => window._renderStkEditor?.(), 250);   // 배치 카드도 새 낱장으로
+      /* 🔗 켜져 있으면 다른 장도 — fromLink 깃발이 무한 왕복을 막습니다 */
+      if (!fromLink && link?.checked) window[`_applyPg${which === 1 ? 2 : 1}`]?.(c, true);
+    }
+    window[`_applyPg${which}`] = apply;
+
+    if (well) well.oninput = () => apply(well.value);
+    if (hex) hex.oninput = () => {
+      const c = sanitizeHexColor(hex.value);
+      if (c) apply(c);
+    };
+    if (reset) reset.onclick = () => apply("");
+  }
+  bindPageColor(1);
+  bindPageColor(2);
+  /* 🔗 를 켜는 순간 둘째 장을 첫째 장에 맞춥니다 */
+  document.getElementById("prof-pg-link")?.addEventListener("change", (e) => {
+    const c = document.getElementById("prof-pg1")?.value;
+    if (e.target.checked && sanitizeHexColor(c)) window._applyPg2?.(c, true);
+  });
 
   /* ---- 카드 배경 · 무늬 ---- */
   const cbWell  = document.getElementById("prof-cardbg");
