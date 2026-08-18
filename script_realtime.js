@@ -773,6 +773,9 @@
   function updateStatus(force = false) {
     if (!myNick) return;
 
+    /* 🌙 자정 넘김 출석 — 30초마다 오는 이 길에 얹습니다 (위 주석 참고) */
+    try { watchDayRollover(); } catch (e) {}
+
     const goalText = document.getElementById("db-today-goal-text")?.value || "";
     const done = document.getElementById("db-today-done")?.value || "";
     const statusChoice = document.getElementById("db-status")?.value || "rest";
@@ -1507,9 +1510,47 @@
     } catch (e) {}
   }
 
+  /* =====================================================================
+     🌙 자정 넘김 출석 (2026-08-18, 콩 확정)
+     ---------------------------------------------------------------------
+     출석 도장은 '입장'할 때만 찍혔습니다. 그런데 0813 무음 접속 유지가
+     생기면서 며칠씩 안 끊는 사람이 생겼고 — 밤새 있던 녹차차가 오늘
+     6시간을 일했는데 출석부에는 결석으로 남는 모순이 드러났어요
+     (0818 콩 발견). 연속 출석은 더 심해서, 제일 오래 머문 사람의
+     연속이 끊기는 역설이 생깁니다.
+
+     [규칙 — 거저 주지 않습니다]
+     자정을 수동적으로 넘긴 것만으로는 둘째 날 출석이 아닙니다.
+     23:30 입장 → 00:10 퇴근이 이틀로 찍히면 곤란하니까요 (콩).
+       ★ 날이 바뀐 뒤 🔥작업(Write+Job)을 **1시간** 채우면 그때 도장.
+     재는 자는 myTodayWorkMs — 카드의 "오늘 작업 시간" 그대로라
+     자정에 스스로 0으로 돌아가는 값입니다. 성실 멤버("5시간 작업한
+     날")와 같은 결이에요.
+
+     [언제 확인하나] updateStatus 가 30초마다 도니 거기에 얹습니다.
+     새 타이머도, 새 통신도 없어요 — 날이 같으면 비교 한 번으로 끝.
+     도장을 받는 순간 출석부·의무 출석·연속 출석·순위가 전부 맞습니다.
+     ★ 그날 다시 입장하는 사람은 그 입장으로 어차피 찍히므로, 이 문턱이
+       실제로 작동하는 건 "넘기고 그날 다시 안 들어오는 사람"뿐입니다.
+     ★ 출석부의 입장 시각 칸에는 문턱을 채운 시각(01:00쯤)이 찍힙니다 —
+       "새벽까지 이어서 일했다"로 읽으면 자연스러워요.
+     ===================================================================== */
+  const ROLLOVER_WORK_MS = 60 * 60 * 1000;   // 자정 넘긴 뒤 1시간 작업해야 그날 출석
+  let _attDay = null;                        // 마지막으로 도장 찍은 날
+
+  function watchDayRollover() {
+    if (!myNick || !_attDay) return;         // 아직 입장 도장도 없으면 볼 것 없음
+    const today = ymd(Date.now());
+    if (today === _attDay) return;           // 날이 안 바뀌었으면 비교 한 번으로 끝
+    if (Number(window.myTodayWorkMs?.() || 0) >= ROLLOVER_WORK_MS) {
+      recordAttendance();                    // 안에서 _attDay 가 오늘로 바뀌어 다시 안 옵니다
+    }
+  }
+
   async function recordAttendance() {
     if (!myNick) return;
     const day = ymd(Date.now());
+    _attDay = day;   // 🌙 자정 넘김 감시가 이 값을 봅니다 — 중복 도장 방지
 
     try {
       // ---- 공용 로그 ----
