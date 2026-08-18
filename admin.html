@@ -328,10 +328,12 @@
     }
     .adm-chart-grid .adm-chart{ min-width: 0; }
     @media (max-width: 900px){ .adm-chart-grid{ grid-template-columns: 1fr; } }
-    /* 🔥 연속 출석 순위 — 16명씩 두 칸 */
+    /* 🏅 출석률 순위 — 세 칸 (2026-08-18 두 칸 → 세 칸: 막대가 너무 길어서).
+       좁아지면 두 칸 → 한 칸으로 접힙니다. */
     .adm-streak-cols{
-      display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px;
+      display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 26px;
     }
+    @media (max-width: 1100px){ .adm-streak-cols{ grid-template-columns: 1fr 1fr; } }
     @media (max-width: 760px){ .adm-streak-cols{ grid-template-columns: 1fr; } }
     .adm-streak-row{
       display: flex; align-items: center; gap: 8px; padding: 5px 2px;
@@ -674,7 +676,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608181552"></script>
+  <script src="script_admin.js?v=202608181558"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

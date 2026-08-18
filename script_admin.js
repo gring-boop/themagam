@@ -1251,9 +1251,13 @@
       </div>`;
     };
 
-    /* 반씩 두 칸 — 인원이 늘어도 저절로 균형. 홀수면 왼쪽이 하나 더 */
-    const 반 = Math.ceil(rows.length / 2);
-    const 왼쪽 = rows.slice(0, 반), 오른쪽 = rows.slice(반);
+    /* 세 칸 (2026-08-18, 두 칸 → 세 칸 — 두 칸일 땐 막대가 길어서
+       붉은 줄이 화면을 꽉 채웠습니다 ㅋㅋ. 칸이 좁아지면 막대도 짧아져요).
+       n등분은 늘 같은 수법 — 올림으로 나눠 앞칸부터 채웁니다. */
+    const 칸수 = 3;
+    const 몫 = Math.ceil(rows.length / 칸수);
+    const 칸들 = [];
+    for (let c = 0; c < 칸수; c++) 칸들.push(rows.slice(c * 몫, (c + 1) * 몫));
     box.innerHTML = `
       <div class="adm-chart-h">
         <span class="adm-chart-t">🏅 출석률</span>
@@ -1261,8 +1265,8 @@
         <span class="adm-chart-lg">출석 ÷ 자기 기준 — 기준은 입장일·휴가에 따라 달라요</span>
       </div>
       <div class="adm-streak-cols">
-        <div>${왼쪽.map((r, i) => 줄(r, i)).join("")}</div>
-        <div>${오른쪽.map((r, i) => 줄(r, i + 반)).join("")}</div>
+        ${칸들.map((칸, c) =>
+          `<div>${칸.map((r, i) => 줄(r, i + c * 몫)).join("")}</div>`).join("")}
       </div>
       <p class="adm-chart-note">막대는 100%에서 꽉 차요 — 기준을 넘긴 분은 숫자로 보세요.
         ✅ 달성 · 🟡 남은 날로 채울 수 있음 · 🔴 남은 날을 다 나와도 모자람.</p>`;
