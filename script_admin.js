@@ -414,6 +414,11 @@
 
       const vacByNick = {};   // { 닉: {날짜:true} }
       const minsByNick = {};  // { 닉: {날짜: 합계분} }
+      /* 🕐 시간대 그래프용 — 흉터를 걸러낸 **원본 구간**({a,b} 목록)도
+         함께 남깁니다. 분 합계(minsByNick)로는 "몇 시에 있었는지" 를
+         알 수 없어서요. 같은 자료를 한 번 더 읽지 않으려는 것뿐,
+         서버 요청은 그대로입니다. */
+      const segsByNick = {};  // { 닉: {날짜: [{a,b}, …]} }
       await Promise.all(nicks.map(async n => {
         try {
           vacByNick[n] = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
@@ -422,6 +427,7 @@
           const segs = (await db.ref(`users/${n}/timeSegs`).orderByKey()
             .startAt(`${ymKey}-01`).endAt(`${ymKey}-31`).once("value")).val() || {};
           const per = {};
+          const rawPer = {};
           Object.keys(segs).forEach(d => {
             /* 같은 구간이 두 번 적힌 흉터는 한 번만 셉니다 (2026-08-13).
                ★ 끝(b)은 몇 초 어긋난 채 중복됩니다 — 한 번은 나가는 순간의
@@ -438,9 +444,11 @@
             let ms = 0;
             Object.values(best).forEach(sg => { ms += sg.b - sg.a; });
             per[d] = ms / 60000;
+            rawPer[d] = Object.values(best).map(sg => ({ a: sg.a, b: sg.b }));
           });
           minsByNick[n] = per;
-        } catch (e) { minsByNick[n] = {}; }
+          segsByNick[n] = rawPer;
+        } catch (e) { minsByNick[n] = {}; segsByNick[n] = {}; }
       }));
 
       /* 날짜별 출석 인원 수 — 그날 attendance 기록(firstAt/at)이 있는 사람만 셉니다.
@@ -634,6 +642,9 @@
       /* ⏱️ 한 달 작업 시간 (2026-08-16) — 표가 이미 읽어 둔 minsByNick 그대로 */
       시간그래프({ ymKey, daysInMonth, base, minsByNick, isThisMonth, todayD });
 
+      /* 🕐 시간대별 접속 (2026-08-18) — 같은 timeSegs 의 원본 구간 재활용 */
+      시간대그래프({ ymKey, daysInMonth, base, segsByNick, isThisMonth, todayD });
+
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
       bindDig(body);
@@ -662,6 +673,7 @@
   let _차트값 = null;
   let _글자값 = null;
   let _시간값 = null;
+  let _시간대값 = null;
   let _차트타이머 = null;
   window.addEventListener("resize", () => {
     clearTimeout(_차트타이머);
@@ -670,6 +682,7 @@
       if (_차트값) { try { 그래프그리기(_차트값); } catch (e) {} }
       if (_글자값) { try { 글자수그래프(_글자값); } catch (e) {} }
       if (_시간값) { try { 시간그래프(_시간값); } catch (e) {} }
+      if (_시간대값) { try { 시간대그래프(_시간대값); } catch (e) {} }
     }, 150);
   });
 
@@ -1029,6 +1042,149 @@
         ${막대}
         <text x="${L}" y="${H - 4}" font-size="10.5" fill="#A0917E">한 사람당 평균</text>
       </svg>`;
+  }
+
+  /* =====================================================================
+     🕐 시간대별 접속 (2026-08-18) — "보통 몇 시에 몇 명이 있나"
+     ---------------------------------------------------------------------
+     [무엇을 세나] 이 달의 시간 기록(timeSegs)을 시간대별로 접습니다.
+     시간대마다 "그 시간에 구간이 걸쳐 있던 사람 수" 를 날마다 세고,
+     날수로 나눈 평균이에요. 아무도 없던 날도 0 으로 셈에 넣습니다 —
+     "있던 날만" 평균하면 숫자가 부풀어요.
+
+     [오늘은 뺍니다] 오늘은 아직 안 끝나서, 지금 이후 시간이 전부 0 으로
+     들어가 평균을 끌어내립니다. 온전한 날만 셉니다.
+
+     [평일/주말 칩] 작가들 패턴이 주말에 다릅니다. 칩을 누르면 그 요일만
+     골라 다시 접어요 — 자료는 손에 든 것 그대로, 서버는 안 갑니다.
+
+     [자정 걸친 체류] timeSegs 는 자정에 날짜별로 갈라져 저장되므로
+     (0813 커밋), 여기서 따로 자를 것이 없습니다.
+     ===================================================================== */
+  let _시간대필터 = "all";   // all | wk | we
+
+  function 시간대그래프(d) {
+    const box = el("adm-hour-chart");
+    if (!box) return;
+    _시간대값 = d;
+
+    const { ymKey, daysInMonth, base, segsByNick, isThisMonth, todayD } = d;
+    /* 온전히 지나간 날까지만 — 이번 달이면 어제까지 */
+    const 끝날 = isThisMonth ? Math.min(todayD - 1, daysInMonth) : daysInMonth;
+    if (끝날 < 1) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">시간대별 접속</span></div>
+        <p class="adm-chart-sub">하루가 온전히 지나야 그릴 수 있어요.</p>`;
+      return;
+    }
+
+    /* 날짜 거르기 — 평일/주말 */
+    const 날들 = [];
+    for (let i = 1; i <= 끝날; i++) {
+      const dow = new Date(base.getFullYear(), base.getMonth(), i).getDay();
+      const 주말인가 = (dow === 0 || dow === 6);
+      if (_시간대필터 === "wk" && 주말인가) continue;
+      if (_시간대필터 === "we" && !주말인가) continue;
+      날들.push(`${ymKey}-${String(i).padStart(2, "0")}`);
+    }
+    if (!날들.length) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">시간대별 접속</span></div>
+        <p class="adm-chart-sub">아직 이 달에 그런 요일이 없어요.</p>`;
+      bind칩(box);
+      return;
+    }
+
+    /* 시간대마다 사람 수 세기.
+       ★ 한 사람이 같은 시간대에 구간을 여러 개 남겨도(쉬었다 다시 시작)
+         **한 명**입니다 — 닉마다 그날 덮은 시간대를 Set 으로 모은 뒤 셉니다. */
+    const 합 = new Array(24).fill(0);
+    날들.forEach(k => {
+      const 날시작 = new Date(k + "T00:00:00").getTime();
+      Object.keys(segsByNick).forEach(닉 => {
+        const segs = (segsByNick[닉] || {})[k];
+        if (!segs || !segs.length) return;
+        const 덮음 = new Set();
+        segs.forEach(sg => {
+          let h0 = Math.floor((sg.a - 날시작) / 3600000);
+          let h1 = Math.ceil((sg.b - 날시작) / 3600000) - 1;
+          h0 = Math.max(0, h0); h1 = Math.min(23, h1);
+          for (let h = h0; h <= h1; h++) 덮음.add(h);
+        });
+        덮음.forEach(h => { 합[h]++; });
+      });
+    });
+    const 평균 = 합.map(v => v / 날들.length);
+    const 최댓값 = Math.max(...평균);
+
+    if (!최댓값) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">시간대별 접속</span></div>
+        <p class="adm-chart-sub">아직 이 달에 쌓인 시간 기록이 없어요.</p>`;
+      bind칩(box);
+      return;
+    }
+
+    const 피크 = 평균.indexOf(최댓값);
+    /* 한산은 낮 시간(6~23시)에서만 — 새벽은 당연히 0이라 정보가 없어요 */
+    let 한산 = 6;
+    for (let h = 6; h <= 23; h++) if (평균[h] < 평균[한산]) 한산 = h;
+
+    const 칸폭 = Math.max(520, Math.round(box.clientWidth || 900));
+    const W = 칸폭, H = 190, L = 30, R = 8, T = 24, B = 26;
+    const 위 = Math.max(1, Math.ceil(최댓값));
+    const bw = (W - L - R) / 24;
+    const Y = (v) => T + (H - T - B) - (v / 위) * (H - T - B);
+
+    let 눈금 = "";
+    const 단위 = 위 <= 4 ? 1 : Math.ceil(위 / 4);
+    for (let g = 단위; g <= 위; g += 단위) {
+      눈금 += `<line x1="${L}" y1="${Y(g).toFixed(1)}" x2="${W - R}" y2="${Y(g).toFixed(1)}" stroke="#EFE6D8" stroke-width="1"/>`
+            + `<text x="${L - 5}" y="${(Y(g) + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#A0917E">${g}</text>`;
+    }
+
+    const 지금h = new Date().getHours();
+    let 막대 = "", 라벨 = "";
+    평균.forEach((v, h) => {
+      const x = L + h * bw;
+      const 높이 = Math.max(v > 0 ? 2 : 0, (v / 위) * (H - T - B));
+      const 색 = h === 피크 ? "#B3372B" : "#D9A296";
+      const 오늘점선 = (isThisMonth && h === 지금h)
+        ? ` stroke="#2B2620" stroke-width="1" stroke-dasharray="3 2"` : "";
+      막대 += `<rect x="${(x + 1.5).toFixed(1)}" y="${(H - B - 높이).toFixed(1)}" width="${(bw - 3).toFixed(1)}" height="${높이.toFixed(1)}" rx="2.5" fill="${색}"${오늘점선}>`
+            + `<title>${h}시 ~ ${h + 1}시 · 평균 ${v.toFixed(1)}명</title></rect>`;
+      if (h === 피크) 라벨 += `<text x="${(x + bw / 2).toFixed(1)}" y="${(H - B - 높이 - 7).toFixed(1)}" text-anchor="middle" font-size="10.5" fill="#B3372B" font-weight="700">${v.toFixed(1)}명</text>`;
+      if (h % 3 === 0) 라벨 += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="#A0917E">${h}시</text>`;
+    });
+
+    const 칩 = (id, 글) =>
+      `<button type="button" class="adm-hour-chip${_시간대필터 === id ? " on" : ""}" data-hour-f="${id}">${글}</button>`;
+
+    box.innerHTML = `
+      <div class="adm-chart-h">
+        <span class="adm-chart-t">시간대별 접속</span>
+        <span style="flex:1"></span>
+        ${칩("all", "전체")}${칩("wk", "평일만")}${칩("we", "주말만")}
+      </div>
+      <p class="adm-word-sum">
+        피크 <b class="warm">${피크}시 (${평균[피크].toFixed(1)}명)</b> ·
+        낮 시간 한산 <b>${한산}시 (${평균[한산].toFixed(1)}명)</b> ·
+        ${날들.length}일 평균
+      </p>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ymKey} 시간대별 평균 접속 인원">
+        ${눈금}
+        <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="#DCCFBC" stroke-width="1"/>
+        ${막대}${라벨}
+      </svg>
+      <p class="adm-chart-note">막대에 마우스를 올리면 정확한 수가 떠요.
+        아무도 없던 날도 0으로 셈에 넣은 평균입니다${isThisMonth ? " (오늘은 아직 안 끝나서 뺐어요)" : ""}.</p>`;
+    bind칩(box);
+  }
+
+  function bind칩(box) {
+    box.querySelectorAll("[data-hour-f]").forEach(b => {
+      b.addEventListener("click", () => {
+        _시간대필터 = b.getAttribute("data-hour-f");
+        if (_시간대값) 시간대그래프(_시간대값);
+      });
+    });
   }
 
   /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제
