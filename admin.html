@@ -347,9 +347,12 @@
     .adm-streak-row.dead .bw i{ background: #C9BCA9; }
     .adm-streak-row .ct{ flex: 0 0 56px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
     .adm-streak-row .ct small{ font-weight: 400; color: #8A7B68; }
+    /* 출석률 옆의 "15/12일" — 비율의 출처. 작고 옅게 */
+    .adm-streak-row .ct.sub{ flex: 0 0 52px; font-weight: 400; font-size: 11px; color: #8A7B68; }
     .adm-streak-row .td{ flex: 0 0 56px; text-align: right; font-size: 10.5px; }
     .adm-streak-row .td.ok{ color: #2E6B2B; }
     .adm-streak-row .td.wait{ color: #B98A12; }
+    .adm-streak-row .td.bad{ color: #A33127; }
     /* ✍️ 글자수 요약 한 줄 — 숫자보다 "몇 명이 참여했나" 가 눈에 남게 */
     .adm-word-sum{
       margin: 0 0 10px; font-size: 13px; color: #6B5B48; line-height: 1.6;
@@ -522,7 +525,9 @@
         <div class="adm-chart" id="adm-hour-chart"></div>
         </div><!-- /adm-chart-grid -->
 
-        <!-- 🔥 연속 출석 순위 (2026-08-18) — 오늘 기준, 16명씩 두 칸 -->
+        <!-- 🏅 출석률 순위 (2026-08-18) — 출석 ÷ 자기 기준, 반씩 두 칸.
+             (처음엔 🔥 연속 출석이었는데, 이 방 규칙은 "매일"이 아니라
+             "한 달 18일"이라 취지에 안 맞아 콩이 바꿨습니다) -->
         <div class="adm-chart" id="adm-streak"></div>
 
         <div class="adm-msg" id="adm-att-msg"></div>
@@ -669,7 +674,7 @@
     </div>
   </div>
 
-  <script src="script_admin.js?v=202608181119"></script>
+  <script src="script_admin.js?v=202608181552"></script>
 
 <!-- =====================================================================
      🕘 입장 기록 — 하루치 입장을 일어난 순서대로 (2026-08-14 간소화)

@@ -419,7 +419,6 @@
          알 수 없어서요. 같은 자료를 한 번 더 읽지 않으려는 것뿐,
          서버 요청은 그대로입니다. */
       const segsByNick = {};  // { 닉: {날짜: [{a,b}, …]} }
-      const streakByNick = {}; // { 닉: {count, lastDay} | null }
       await Promise.all(nicks.map(async n => {
         try {
           vacByNick[n] = (await db.ref(`users/${n}/vacations`).once("value")).val() || {};
@@ -450,11 +449,6 @@
           minsByNick[n] = per;
           segsByNick[n] = rawPer;
         } catch (e) { minsByNick[n] = {}; segsByNick[n] = {}; }
-        /* 🔥 연속 출석 — 입장할 때 각자 브라우저가 이미 계산해 둔 값
-           (attend/streak = {count, lastDay})을 읽기만 합니다. */
-        try {
-          streakByNick[n] = (await db.ref(`users/${n}/attend/streak`).once("value")).val() || null;
-        } catch (e) { streakByNick[n] = null; }
       }));
 
       /* 날짜별 출석 인원 수 — 그날 attendance 기록(firstAt/at)이 있는 사람만 셉니다.
@@ -544,6 +538,7 @@
       }
       head += "</tr>";
 
+      const rateRows = [];   // 🏅 출석률 순위 재료 — 아래 멤버 줄에서 채워집니다
       const rows = nicks.map((n, 순번) => {
         const vacs = vacByNick[n] || {};
         const mins = minsByNick[n] || {};
@@ -603,6 +598,8 @@
           }
         }
         const r = ruleOf({ daysInMonth, beforeN, vacInMonth: vacDays, attended: attDays, daysLeft });
+        /* 🏅 출석률 순위가 씁니다 — 표가 이미 센 값 그대로 (다시 안 셈) */
+        rateRows.push({ n, att: attDays, need: r.need, state: r.state });
         const 표 = { ok: "✅", maybe: "🟡", bad: "🔴" };
         const 말 = { ok: "달성", maybe: "남은 날로 채울 수 있어요",
                      bad: isThisMonth ? "남은 날을 다 나와도 모자라요" : "미달" };
@@ -651,8 +648,8 @@
       /* 🕐 시간대별 접속 (2026-08-18) — 같은 timeSegs 의 원본 구간 재활용 */
       시간대그래프({ ymKey, daysInMonth, base, segsByNick, isThisMonth, todayD });
 
-      /* 🔥 연속 출석 순위 (2026-08-18) — 달과 무관하게 늘 오늘 기준 */
-      연속출석순위(streakByNick);
+      /* 🏅 출석률 순위 (2026-08-18) — 표가 보는 그 달 기준. ‹ › 를 따라갑니다 */
+      출석률순위(rateRows);
 
       body.classList.remove("adm-msg");
       body.innerHTML = `<div class="adm-att-scroll"><table class="adm-att-table">${cntRow}${totRow}${head}${rows}</table></div>`;
@@ -1197,76 +1194,78 @@
   }
 
   /* =====================================================================
-     🔥 연속 출석 순위 (2026-08-18) — 멤버 전원 줄 세우기
+     🏅 출석률 순위 (2026-08-18 — 연속 출석에서 바꿈)
      ---------------------------------------------------------------------
-     attend/streak = {count, lastDay} 는 각자 입장할 때 이미 계산해 둔
-     값입니다. 여기서는 읽어서 줄만 세워요 — 제일 가벼운 통계.
+     [왜 연속이 아니라 비율인가 — 콩]
+     이 방의 규칙은 "한 달 18일 출석"이지 "매일 출석"이 아닙니다.
+     연속 출석 순위는 규칙에 없는 것(매일)을 부추겨서 취지와 어긋났어요.
+     그리고 기준이 사람마다 다릅니다 — 늦게 들어온 사람은 12일, 휴가 낸
+     사람은 그만큼 낮아진 기준. 그래서 **날수가 아니라 비율**로 세웁니다.
 
-     [산 것과 죽은 것]
-       lastDay = 오늘   → 살아 있음, 오늘 ✓
-       lastDay = 어제   → 살아 있음, 오늘 아직 (오늘 지나면 끊길 사람)
-       그보다 오래됨    → 끊김 — 다음 입장 때 1로 돌아갑니다. 맨 아래 흐리게.
-     ★ 휴가를 내도 끊깁니다 (콩 확정 2026-08-18) — 진짜 나온 날만 연속.
+       출석률 = 출석한 날 ÷ 자기 기준(need)   — 100% 넘을 수 있어요
 
-     [두 칸] 인원이 많아 한 줄로 세우면 아래가 한없이 길어집니다.
-     16명씩 나눠 왼쪽 1~16위, 오른쪽 17위~. 달 넘기기와 무관하게
-     늘 오늘 기준이라 다시 그릴 일도 없어요.
+     [재료는 공짜] need·출석일은 출석부 표가 이미 다 계산합니다
+     (ruleOf — 규칙 칸과 같은 셈). 여기는 받아서 줄만 세워요.
+     그래서 달 넘기기 ‹ › 를 따라 **지난 달 순위**도 그대로 나옵니다.
+
+     [기준이 0인 사람] 이 달에 아직 멤버가 아니었거나(입장 전) 휴가로
+     기준이 다 깎인 사람 — 등수를 매길 수 없으니 맨 아래 흐리게.
      ===================================================================== */
-  function 연속출석순위(streakByNick) {
+  function 출석률순위(rateRows) {
     const box = el("adm-streak");
     if (!box) return;
 
-    const 오늘 = dayKey(new Date());
-    const 어제 = dayKey(new Date(Date.now() - 86400000));
-
-    const rows = Object.keys(streakByNick).map(n => {
-      const st = streakByNick[n];
-      const count = Number(st?.count || 0);
-      const last = st?.lastDay || "";
-      const alive = count > 0 && (last === 오늘 || last === 어제);
-      return { n, count: alive ? count : 0, alive, today: last === 오늘 };
-    });
-    /* 산 사람은 일수 내림차순, 끊긴 사람은 맨 아래 가나다 */
+    const rows = rateRows.map(r => ({
+      ...r,
+      rate: r.need > 0 ? r.att / r.need : null
+    }));
+    /* 비율 내림차순 → 같으면 출석일 많은 쪽 → 가나다. 기준 0은 맨 아래 */
     rows.sort((a, b) =>
-      (b.alive - a.alive) || (b.count - a.count) || a.n.localeCompare(b.n, "ko"));
+      ((b.rate !== null) - (a.rate !== null)) ||
+      (b.rate - a.rate) || (b.att - a.att) || a.n.localeCompare(b.n, "ko"));
 
-    if (!rows.length || !rows.some(r => r.alive)) {
-      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">🔥 연속 출석</span></div>
-        <p class="adm-chart-sub">아직 이어지고 있는 연속 출석이 없어요.</p>`;
+    if (!rows.length || rows[0].rate === null) {
+      box.innerHTML = `<div class="adm-chart-h"><span class="adm-chart-t">🏅 출석률</span></div>
+        <p class="adm-chart-sub">아직 이 달에 셀 것이 없어요.</p>`;
       return;
     }
 
-    const max = Math.max(...rows.map(r => r.count), 1);
     const 메달 = ["🥇", "🥈", "🥉"];
+    const 상태표 = { ok: `<span class="td ok">✅ 달성</span>`,
+                     maybe: `<span class="td wait">🟡 가능</span>`,
+                     bad: `<span class="td bad">🔴 위험</span>` };
     const 줄 = (r, i) => {
-      const rk = (i < 3 && r.alive)
+      const 있음 = r.rate !== null;
+      const pct = 있음 ? Math.round(r.rate * 100) : 0;
+      const rk = (i < 3 && 있음 && r.rate > 0)
         ? `<span class="rk m">${메달[i]}</span>` : `<span class="rk">${i + 1}</span>`;
-      const td = !r.alive ? `<span class="td">끊김</span>`
-        : r.today ? `<span class="td ok">오늘 ✓</span>`
-                  : `<span class="td wait">오늘 아직</span>`;
-      const w = r.alive ? Math.max(6, r.count / max * 100) : 3;
-      return `<div class="adm-streak-row${r.alive ? "" : " dead"}">
+      /* 막대는 100% 에서 꽉 참 — 넘긴 만큼은 숫자로 읽습니다.
+         (막대까지 늘리면 1등 막대에 맞춰 다른 모두가 쪼그라들어요) */
+      const w = 있음 ? Math.min(100, Math.max(pct > 0 ? 6 : 0, pct)) : 3;
+      return `<div class="adm-streak-row${있음 ? "" : " dead"}">
         ${rk}<span class="nm">${escapeHtml(r.n)}</span>
-        <span class="bw"><i style="width:${w.toFixed(1)}%"></i></span>
-        <span class="ct">${r.alive ? `${r.count}<small>일</small>` : "—"}</span>${td}
+        <span class="bw"><i style="width:${w}%"></i></span>
+        <span class="ct">${있음 ? `${pct}<small>%</small>` : "—"}</span>
+        <span class="ct sub">${있음 ? `${r.att}/${r.need}<small>일</small>` : ""}</span>
+        ${있음 ? 상태표[r.state] || "" : `<span class="td">기준 없음</span>`}
       </div>`;
     };
 
-    /* 16명씩 두 칸 — 반씩이 아니라 **첫 칸을 꽉 채우고** 넘칩니다.
-       10명일 때 5:5 로 갈리면 오른쪽 칸이 괜히 허전해요. */
-    const 왼쪽 = rows.slice(0, 16), 오른쪽 = rows.slice(16);
+    /* 반씩 두 칸 — 인원이 늘어도 저절로 균형. 홀수면 왼쪽이 하나 더 */
+    const 반 = Math.ceil(rows.length / 2);
+    const 왼쪽 = rows.slice(0, 반), 오른쪽 = rows.slice(반);
     box.innerHTML = `
       <div class="adm-chart-h">
-        <span class="adm-chart-t">🔥 연속 출석</span>
+        <span class="adm-chart-t">🏅 출석률</span>
         <span style="flex:1"></span>
-        <span class="adm-chart-lg">오늘 기준 · 하루 빠지면 1로</span>
+        <span class="adm-chart-lg">출석 ÷ 자기 기준 — 기준은 입장일·휴가에 따라 달라요</span>
       </div>
       <div class="adm-streak-cols">
         <div>${왼쪽.map((r, i) => 줄(r, i)).join("")}</div>
-        <div>${오른쪽.map((r, i) => 줄(r, i + 16)).join("")}</div>
+        <div>${오른쪽.map((r, i) => 줄(r, i + 반)).join("")}</div>
       </div>
-      <p class="adm-chart-note">🏖️ 휴가를 내도 연속은 끊겨요 — 진짜 나온 날만 셉니다.
-        노란 "오늘 아직"인 분은 오늘이 지나면 끊겨요.</p>`;
+      <p class="adm-chart-note">막대는 100%에서 꽉 차요 — 기준을 넘긴 분은 숫자로 보세요.
+        ✅ 달성 · 🟡 남은 날로 채울 수 있음 · 🔴 남은 날을 다 나와도 모자람.</p>`;
   }
 
   /* ---------------------------------------------- ③-1b 탈퇴 인원 삭제
