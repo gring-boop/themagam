@@ -85,6 +85,9 @@
        영상만 남기고 싶은 사람은 위 가장자리를 아래로 끌어 줄이면 되고,
        줄인 키는 이 기기에 남습니다. */
     { id: "music", label: "♪ BGM", stay: true, size: 0.72, move: null, drag: true, resize: true },
+    /* 📁 자료실 (2026-08-18) — 한글·엑셀 같은 자료를 올리고 내려받는 자리.
+       BGM 오른쪽 (콩 지정). 목록이 길어지니 키울 수 있게 resize. */
+    { id: "files", label: "📁 자료실", stay: true, size: 1.35, move: null, drag: true, resize: true },
     /* 📌 오늘 할 일은 **판이 없습니다.** 방 전체의 진척을 한 줄로 보여줄
        뿐이라 펼칠 것이 없어요 — 알약 줄에 글자로 그대로 놓입니다.
        [2026-08-13] 자리를 전체기록 앞으로 — 왼쪽(소통)과 오른쪽(기록)을
@@ -632,6 +635,7 @@
     if (pid === "chatty") { window.markChatRead?.("chatty"); window.scrollChattyToBottom?.(); }
     if (pid === "pub")    window.openPubReview?.();
     if (pid === "help")   window.openHelp?.();
+    if (pid === "files")  window.openFiles?.();
 
     /* 보고 있는 동안에는 표시를 지웁니다 */
     badge(id, 0);
