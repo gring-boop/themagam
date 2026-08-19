@@ -57,6 +57,11 @@
   let _bound = false;
   let _busy = false;
   let _reply = null;                     // { parent, text }
+  /* 🔗 비슷한 질문 연결 (2026-08-18)
+     _pickRef : 쓰는 중에 골라 둔 참고 글 { id, text } — 올릴 때 ref 로 실림
+     _refOpen : 펼쳐 둔 참고 칩의 질문 id 들 (이 화면에서만) */
+  let _pickRef = null;
+  const _refOpen = new Set();
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s)
@@ -91,8 +96,35 @@
       text,
       at: Number(v.at) || 0,
       parent: typeof v.parent === "string" ? v.parent : "",
-      checks: Math.max(0, Math.round(Number(v.checks) || 0))
+      checks: Math.max(0, Math.round(Number(v.checks) || 0)),
+      /* 🔗 참고하는 옛 질문의 글 번호 하나 — 익명은 그대로입니다 */
+      ref: typeof v.ref === "string" ? v.ref : ""
     };
+  }
+
+  /* =====================================================================
+     🔗 비슷한 질문 찾기 (2026-08-18)
+     ---------------------------------------------------------------------
+     같은 물음이 또 올라오면 옛 답을 참고하라고 이어 줍니다.
+     이미 화면에 들고 있는 최근 2주 치(_rows)에서 **낱말 앞 두 글자가
+     겹치는** 질문을 그 자리에서 찾아요 — 서버에 묻지 않아 통신량 0.
+     ★ 더 똑똑한 비교(형태소 등)는 일부러 안 합니다. 질문이 짧아 이
+       정도로 잘 걸리고, 영리하게 만들려다 엉뚱한 걸 물어오면 되레
+       시끄러워요.
+     ===================================================================== */
+  function 낱말(s) {
+    return (String(s || "").match(/[가-힣a-zA-Z]{2,}/g) || []).map(w => w.slice(0, 2));
+  }
+  function 비슷한질문(text) {
+    const tk = 낱말(text);
+    if (!tk.length) return [];
+    return 정렬된질문()
+      .filter(q => {
+        const qt = 낱말(q.text);
+        return tk.some(w => qt.indexOf(w) >= 0);
+      })
+      .sort((a, b) => b.답 - a.답 || b.at - a.at)   // 답 많은 글이 먼저 — 참고 가치순
+      .slice(0, 3);
   }
 
   function 언제(at) {
@@ -152,6 +184,31 @@
       </div>`;
   }
 
+  /* 🔗 참고 칩 + 펼침 — 옛 질문과 그 답들을 그 자리에서 보여줍니다.
+     참고하던 글이 14일이 지나 먼저 사라졌으면 곱게 접습니다. */
+  function 참고HTML(q) {
+    if (!q.ref) return "";
+    const 원본 = _rows.find(r => r.id === q.ref && !r.parent);
+    if (!원본) {
+      return `<div class="help-ref gone">🍂 참고하던 글이 사라졌어요 (여기는 2주만 머무는 곳이라서요)</div>`;
+    }
+    const 열림 = _refOpen.has(q.id);
+    const rs = 답들(원본.id);
+    return `
+      <div class="help-ref${열림 ? " open" : ""}" data-help-ref="${esc(q.id)}" role="button" tabindex="0">
+        🔗 <span class="help-ref-t">비슷한 질문: ${esc(원본.text)}</span>
+        <span class="help-t">${esc(언제(원본.at))} · 답 ${rs.length}</span>
+      </div>
+      ${열림 ? `
+        <div class="help-refbody">
+          <p class="help-ref-q">${esc(원본.text)}</p>
+          ${rs.length
+            ? rs.map(r => `<div class="help-ref-a"><span>${esc(r.text)}</span>
+                           ${r.checks ? `<span class="help-ref-c">💡 ${r.checks}</span>` : ""}</div>`).join("")
+            : `<p class="help-ref-a">아직 답이 없던 글이에요.</p>`}
+        </div>` : ""}`;
+  }
+
   function 질문HTML(q) {
     const as = 답들(q.id);
     const 쓰는중 = _reply && _reply.parent === q.id;
@@ -167,6 +224,7 @@
                                     title="내 글 지우기" aria-label="내 글 지우기">✕</button>` : ""}
         </div>
         <p class="help-q-t">${esc(q.text)}</p>
+        ${참고HTML(q)}
         ${as.map(답HTML).join("")}
         ${쓰는중 ? `
           <div class="help-write">
@@ -207,6 +265,11 @@
          맞춤법이든 단어든, 아래에 후다닥 적어 보세요.</p>`;
 
     box.innerHTML = 머리 + `<div class="help-list">${목록}</div>` + `
+      ${_pickRef ? `
+        <div class="help-pin">🔗 "${esc(_pickRef.text.slice(0, 20))}${_pickRef.text.length > 20 ? "…" : ""}"
+          참고를 달아서 올려요
+          <button type="button" class="help-x" data-help-unpin="1" aria-label="참고 떼기">✕</button>
+        </div>` : ""}
       <div class="help-ask">
         <input type="text" id="help-new" maxlength="${MAX_TEXT}" autocomplete="off"
                placeholder="맞춤법·단어·문장 무엇이든">
@@ -216,7 +279,31 @@
         <button type="button" class="help-send" data-help-act="ask"
                 aria-label="올리기" title="올리기">↑</button>
       </div>
+      <!-- 🔗 비슷한 질문 제안 — 쓰는 중에만 잠깐 나타납니다.
+           ★ 여기는 render() 로 다시 그리면 안 됩니다 — 입력칸이 새로
+             태어나 초점과 조합 중이던 한글이 날아가요 (0813 자소 분리의
+             친척). 그래서 입력 이벤트가 이 상자의 속만 갈아 끼웁니다. -->
+      <div class="help-sug" id="help-sug" hidden></div>
       <p class="help-note">🔒 이름은 서버에도 남지 않아요 · 2주 뒤 사라집니다</p>`;
+  }
+
+  /* 쓰는 중 제안 그리기 — 전체 render() 없이 제 상자 속만 바꿉니다 */
+  function 제안그리기() {
+    const box = el("help-sug");
+    const inp = el("help-new");
+    if (!box || !inp) return;
+    if (_pickRef) { box.hidden = true; return; }       // 이미 골랐으면 조용히
+    const hit = 비슷한질문(inp.value);
+    if (!hit.length) { box.hidden = true; return; }
+    box.innerHTML = `
+      <div class="help-sug-h">💡 비슷한 질문이 있었어요 — 먼저 볼래요?</div>
+      ${hit.map(h => `
+        <button type="button" class="help-sug-i" data-help-sug="${esc(h.id)}">
+          🔗 <span class="help-sug-t">${esc(h.text)}</span>
+          <span class="help-t">답 ${h.답} · ${esc(언제(h.at))}</span>
+        </button>`).join("")}
+      <div class="help-sug-f">누르면 새 글에 🔗 참고 고리가 달려요 · 그냥 올려도 돼요</div>`;
+    box.hidden = false;
   }
 
   /* =====================================================================
@@ -252,7 +339,7 @@
     }
   }
 
-  async function 올리기(text, parent) {
+  async function 올리기(text, parent, refId) {
     const t = String(text || "").trim().slice(0, MAX_TEXT);
     if (!t || _busy || !window.db) return;
     _busy = true;
@@ -260,6 +347,7 @@
       const ref = window.db.ref("help").push();
       const 줄 = { text: t, at: Date.now(), checks: 0 };
       if (parent) 줄.parent = parent;
+      if (refId) 줄.ref = refId;          // 🔗 참고 — 글 번호 하나뿐, 익명 그대로
       await ref.set(줄);
       remember(MINE_KEY, ref.key);      // ← 이 기기에만
       window.dockMarkNew?.("help");     // 알약에 붉은 점 (내 기기는 빼고)
@@ -314,9 +402,45 @@
       const chk = e.target.closest("[data-help-check]");
       if (chk) { 확인(chk.dataset.helpCheck); return; }
 
+      /* 🔗 참고 칩 — 누르면 옛 답이 그 자리에 펼쳐집니다 */
+      const rf = e.target.closest("[data-help-ref]");
+      if (rf) {
+        const id = rf.dataset.helpRef;
+        if (_refOpen.has(id)) _refOpen.delete(id); else _refOpen.add(id);
+        render();
+        return;
+      }
+
+      /* 🔗 제안 고르기 — 새 글에 참고 고리를 달아 둡니다 */
+      const sug = e.target.closest("[data-help-sug]");
+      if (sug) {
+        const q = _rows.find(r => r.id === sug.dataset.helpSug);
+        if (q) {
+          _pickRef = { id: q.id, text: q.text };
+          const keep = el("help-new")?.value || "";   // 쓰던 글 지키기
+          render();
+          const inp = el("help-new");
+          if (inp) { inp.value = keep; inp.focus(); }
+        }
+        return;
+      }
+      const unpin = e.target.closest("[data-help-unpin]");
+      if (unpin) {
+        _pickRef = null;
+        const keep = el("help-new")?.value || "";
+        render();
+        const inp = el("help-new");
+        if (inp) { inp.value = keep; inp.focus(); }
+        return;
+      }
+
       const rep = e.target.closest("[data-help-reply]");
       if (rep) {
         _reply = { parent: rep.dataset.helpReply, text: "" };
+        /* 답 달러 온 사람에게 🔗 참고를 자동으로 펼쳐 줍니다 (콩 선택) —
+           "저번엔 이런 답이 나왔구나" 를 보고 쓰라는 뜻이에요 */
+        const q = _rows.find(r => r.id === rep.dataset.helpReply);
+        if (q?.ref) _refOpen.add(q.id);
         render();
         el("help-reply")?.focus();
         return;
@@ -338,7 +462,9 @@
         const t = String(inp?.value || "").trim();
         if (!t) return;
         if (inp) inp.value = "";
-        올리기(t, "");
+        const rid = _pickRef?.id || "";
+        _pickRef = null;
+        올리기(t, "", rid);
       }
     });
 
@@ -352,7 +478,9 @@
         const v = String(t.value || "").trim();
         if (!v) return;
         t.value = "";
-        올리기(v, "");
+        const rid = _pickRef?.id || "";
+        _pickRef = null;
+        올리기(v, "", rid);
       } else if (_reply) {
         const v = String(t.value || "").trim();
         const p = _reply.parent;
@@ -364,6 +492,9 @@
     /* 답 쓰던 내용은 다시 그려도 살아남게 */
     host.addEventListener("input", (e) => {
       if (e.target?.id === "help-reply" && _reply) _reply.text = e.target.value;
+      /* 🔗 질문을 쓰는 중엔 비슷한 옛 글을 찾아 보여줍니다 —
+         전체 render() 가 아니라 제안 상자 속만 갈아 끼워요 (초점·조합 보호) */
+      if (e.target?.id === "help-new") 제안그리기();
     });
   }
 

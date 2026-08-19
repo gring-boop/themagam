@@ -4659,6 +4659,52 @@ html[data-unzoom] #dock-bar{
 .help-send:hover{ background: var(--accent-softer, var(--fill-1)); }
 .help-send:active{ transform: scale(.96); }
 .help-note{ margin: 0; font-size: 11px; color: var(--text-3, #8A93A2); flex: none; }
+
+/* ── 🔗 비슷한 질문 연결 (2026-08-18) ──
+   보라 계열로 살짝 다른 결 — 이 판의 붉은(SOS)과 구분되는 "참고" 색.
+   점선 테두리는 "붙여 둔 쪽지" 라는 뜻이에요. */
+.help-ref{
+  display: flex; align-items: center; gap: 6px; margin-top: 7px;
+  background: rgba(140,120,200,.09); border: 1px dashed rgba(140,120,200,.5);
+  border-radius: 9px; padding: 6px 9px; font-size: 11.5px; color: #5C4E85;
+  cursor: pointer; user-select: none;
+}
+.help-ref:hover{ background: rgba(140,120,200,.16); }
+.help-ref.gone{ cursor: default; color: var(--text-3, #8A93A2);
+  border-color: rgba(0,0,0,.12); background: rgba(0,0,0,.03); }
+.help-ref-t{ font-weight: 700; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.help-refbody{
+  margin-top: 5px; border-left: 3px solid rgba(140,120,200,.55);
+  background: rgba(140,120,200,.06); border-radius: 0 9px 9px 0; padding: 8px 10px;
+}
+.help-ref-q{ margin: 0 0 5px; font-size: 12px; font-weight: 700; color: #4A3F6B; }
+.help-ref-a{
+  display: flex; gap: 8px; align-items: flex-start; font-size: 12px;
+  background: rgba(140,120,200,.08); border-radius: 8px; padding: 6px 9px; margin-top: 5px;
+}
+.help-ref-a span:first-child{ flex: 1; }
+.help-ref-c{ flex: 0 0 auto; font-size: 10.5px; color: #8a6a12; }
+
+/* 쓰는 중 제안 + 골라 둔 참고 핀 */
+.help-sug{
+  flex: none; margin-top: 6px; background: rgba(140,120,200,.08);
+  border: 1px solid rgba(140,120,200,.35); border-radius: 10px; padding: 8px 10px;
+}
+.help-sug-h{ font-size: 11px; font-weight: 700; color: #5C4E85; margin-bottom: 4px; }
+.help-sug-i{
+  display: flex; gap: 7px; align-items: center; width: 100%;
+  border: none; background: none; font: inherit; font-size: 12px; color: inherit;
+  padding: 5px 6px; border-radius: 7px; cursor: pointer; text-align: left;
+}
+.help-sug-i:hover{ background: rgba(140,120,200,.14); }
+.help-sug-t{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.help-sug-f{ font-size: 10.5px; color: var(--text-3, #8A93A2); margin-top: 4px; }
+.help-pin{
+  flex: none; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+  font-size: 11px; color: #5C4E85; background: rgba(140,120,200,.10);
+  border-radius: 999px; padding: 4px 6px 4px 11px; width: fit-content; max-width: 100%;
+}
 .help-empty{ font-size: 13px; color: var(--text-3, #8A93A2); line-height: 1.7; }
 
 /* =====================================================================
