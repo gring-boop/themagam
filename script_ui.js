@@ -494,11 +494,9 @@
 
     _renderParticipationButton();
 
-    const nsel = document.getElementById("set-narrow-panel");
-    if (nsel) {
-      nsel.value = window.narrowDefault?.() || "chat";
-      nsel.onchange = () => window.setNarrowDefault?.(nsel.value);
-    }
+    /* [철거 2026-08-18] "창이 좁아지면 보여줄 창" 고르기 — 폰 접속자가
+       없고 좁아져도 쓸 만해서 걷었습니다. 좁은 화면은 채팅부터 열리고
+       위쪽 탭으로 옮겨 다닙니다 (script_layout.js 그대로). */
 
     /* 📊 오늘 접속 띠 (2026-08-18) — 스위치의 처음 상태만 맞춰 줍니다.
        켜고 끄는 일은 onchange 의 setPulse 가 합니다 (script_realtime.js) */

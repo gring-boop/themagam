@@ -482,13 +482,17 @@
      정합니다. 쪼갬 나무를 건드리지 않고, 고른 창 하나만 뿌리에 직접
      넣습니다 — 칸 나누기·손잡이 계산을 전부 건너뛰니 훨씬 단단합니다.
      --------------------------------------------------------------- */
-  const NARROW_KEY  = "narrowPanel";     // 기본으로 열릴 창
   const NARROW_CUR  = "narrowPanelCur";  // 마지막으로 보던 창
 
-  function narrowDefault() {
-    const v = AppStore.getItem(NARROW_KEY);
-    return PANEL_IDS.includes(v) ? v : "chat";
-  }
+  /* [철거 2026-08-18] 처음 열릴 창을 **고르는 기능**을 걷었습니다.
+     며칠 살펴보니 폰으로 들어오는 사람이 없었고, 창이 좁아져도 지금
+     배치로 충분히 쓸 만하다는 콩 판단이에요.
+     ★ 좁은 화면 자체는 그대로입니다 — 채팅부터 열리고, 위쪽 탭으로
+       접속자·뽀모에 갈 수 있고, 마지막으로 보던 창도 기억합니다.
+       없앤 것은 "설정에서 첫 창을 고르는 칸" 하나뿐이에요.
+     ★ 되살리려면 여기에 NARROW_KEY 를 되돌리고 setNarrowDefault 를
+       다시 열면 됩니다 (설정 칸은 index.html 채팅 탭에 있었어요). */
+  function narrowDefault() { return "chat"; }
   function narrowCurrent() {
     const v = AppStore.getItem(NARROW_CUR);
     return PANEL_IDS.includes(v) ? v : narrowDefault();
@@ -497,14 +501,6 @@
     return document.body.classList.contains("narrow-chat-focus");
   }
   window.narrowDefault = narrowDefault;
-  window.setNarrowDefault = function (id) {
-    if (!PANEL_IDS.includes(id)) return;
-    AppStore.setItem(NARROW_KEY, id);
-    /* 기본값을 바꾸면 지금 보는 것도 그리로 옮깁니다.
-       설정에서 고르자마자 화면이 안 바뀌면 안 먹힌 줄 알게 되니까요. */
-    AppStore.setItem(NARROW_CUR, id);
-    if (isNarrow()) applyLayout(true);
-  };
 
   function setNarrowPanel(id) {
     if (!PANEL_IDS.includes(id)) return;
