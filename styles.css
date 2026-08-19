@@ -4675,7 +4675,12 @@ html[data-unzoom] #dock-bar{
   position: absolute;
   left: 0; right: 0;
   bottom: calc(100% - var(--sp-2));
-  display: flex; justify-content: center;
+  /* [2026-08-18] 여러 개를 고를 수 있게 되면서 — **두 개씩 한 줄**,
+     넘치면 아랫줄로 접힙니다. 아래에서 위로 쌓이도록 wrap-reverse:
+     띠가 늘어도 알약 줄과 붙은 첫 줄은 자리를 안 옮겨요. */
+  display: flex; flex-wrap: wrap-reverse;
+  justify-content: center; align-content: flex-end;
+  gap: 6px;
   padding: 0 14px 6px;
   pointer-events: none;                 /* 빈자리는 뒤 카드가 받게 */
 }
@@ -4690,6 +4695,9 @@ html[data-unzoom] #dock-bar{
   pointer-events: auto;
   box-shadow: 0 2px 10px rgba(0,0,0,.08);
   max-width: 100%;
+  /* 한 줄에 둘까지 — 띠 하나가 450px 남짓이라 셋째부터는 아랫줄로.
+     화면이 좁으면 저절로 하나씩 섭니다 (flex-wrap 이 알아서). */
+  flex: 0 1 auto;
 }
 .room-pulse .rp-lb{
   align-self: center; margin-right: 7px; white-space: nowrap;

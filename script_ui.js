@@ -504,8 +504,16 @@
        켜고 끄는 일은 onchange 의 setPulse 가 합니다 (script_realtime.js) */
     const pulseChk = document.getElementById("set-pulse");
     if (pulseChk) pulseChk.checked = !!window.isPulseOn?.();
-    const pulseWhat = document.getElementById("set-pulse-what");
-    if (pulseWhat) pulseWhat.value = window.pulseWhat?.() || "live";
+    /* 📊 띠 항목 체크 — 지금 고른 것들에 맞춥니다.
+       하나도 안 남으면 pulseWhat() 이 '오늘 접속' 으로 되돌리므로,
+       그 값을 그대로 비춰 주면 화면과 실제가 어긋나지 않아요. */
+    window.syncPulseChecks = function () {
+      const now = window.pulseWhat?.() || ["live"];
+      document.querySelectorAll(".set-pulse-what").forEach(c => {
+        c.checked = now.indexOf(c.value) >= 0;
+      });
+    };
+    window.syncPulseChecks();
 
     /* 접속자 카드 정렬 (2026-08-13) — 이 기기에만. 바꾸면 그 자리에서 재배열 */
     const csort = document.getElementById("set-card-sort");

@@ -227,19 +227,35 @@
      읽고, 오늘 것은 글자수 기능이 이미 걸어 둔 구독에 얹습니다 —
      지난 날짜를 다시 받지 않아요. 내 작업 시간은 내 노드 하나뿐입니다.
      ===================================================================== */
+  /* [2026-08-18 또 늘림] **여러 개를 한꺼번에** 볼 수 있습니다 (콩).
+     띠 하나가 450px 남짓이라 **두 개씩 한 줄**, 넘치면 아랫줄로 접힙니다:
+
+         내 작업   //  내 글자수
+         오늘 접속  //  전체 글자수
+
+     저장은 쉼표로 이은 목록(pulseWhat). 예전에 하나만 고르던 값도
+     그대로 읽혀요 — "live" 는 한 칸짜리 목록이니까요. */
   const PULSE_KEY = "showPulse";          // 기기별 — 노트북에서 켠 게 폰까지 안 따라가게
-  const PULSE_WHAT_KEY = "pulseWhat";     // live | wall | wmine | tmine
+  const PULSE_WHAT_KEY = "pulseWhat";     // "live,wmine" 처럼 쉼표로 이은 목록
+  const PULSE_ALL = ["live", "wall", "wmine", "tmine"];
   let _pulseRef = null;
   let _pulse = {};                        // { 시: 인원 }
   let _pulseDay = "";                     // 지금 듣고 있는 날짜
-  let _pulseLine = null;                  // 꺾은선 자료 { 날: 값 }
-  let _pulseLineFor = "";                 // 그 자료가 어느 항목·어느 달 것인지
+  const _line = {};                       // 항목별 꺾은선 자료 { what: {날: 값} }
+  const _lineFor = {};                    // 그 자료가 어느 달 것인지 { what: "2026-08" }
 
   function pulseOn() {
     try { return AppStore.getItem(PULSE_KEY) === "1"; } catch (e) { return false; }
   }
+  /** 고른 항목들 — 늘 순서대로, 빈 목록이면 오늘 접속 하나 */
   function pulseWhat() {
-    try { return AppStore.getItem(PULSE_WHAT_KEY) || "live"; } catch (e) { return "live"; }
+    let raw = "";
+    try { raw = AppStore.getItem(PULSE_WHAT_KEY) || ""; } catch (e) {}
+    const got = String(raw).split(",").map(s => s.trim()).filter(s => PULSE_ALL.indexOf(s) >= 0);
+    /* 차례는 고른 순서가 아니라 **늘 같은 차례**로 — 켜고 끌 때마다
+       띠가 자리를 바꾸면 눈이 피곤합니다 */
+    const out = PULSE_ALL.filter(k => got.indexOf(k) >= 0);
+    return out.length ? out : ["live"];
   }
   window.isPulseOn = pulseOn;
   window.pulseWhat = pulseWhat;
@@ -259,10 +275,13 @@
 
   function listenPulse() {
     if (!pulseOn() || !window.db) { stopPulse(); return; }
-    /* 📊 오늘 접속만 실시간 구독이 필요합니다. 꺾은선 셋은 한 번 읽고 끝. */
-    if (pulseWhat() !== "live") { stopPulse(); 꺾은선읽기(); return; }
+    const 고른것 = pulseWhat();
+    /* 꺾은선은 고른 것만 한 번씩 읽습니다 (안 고른 항목은 아예 안 읽어요) */
+    고른것.filter(w => w !== "live").forEach(꺾은선읽기);
+    /* 📊 오늘 접속만 실시간 구독 */
+    if (고른것.indexOf("live") < 0) { stopPulse(); drawPulse(); return; }
     const d = ymd(Date.now());
-    if (_pulseRef && _pulseDay === d) return;
+    if (_pulseRef && _pulseDay === d) { drawPulse(); return; }
     stopPulse();
     _pulseDay = d;
     _pulseRef = db.ref("roomStat/" + d);
@@ -273,15 +292,14 @@
     _pulseRef = null; _pulseDay = "";
   }
 
-  /* 이번 달 꺾은선 자료 — 항목이 바뀌거나 달이 넘어갈 때만 다시 읽습니다 */
-  async function 꺾은선읽기() {
-    const what = pulseWhat();
+  /* 이번 달 꺾은선 자료 — 항목마다 따로, 달이 넘어갈 때만 다시 읽습니다 */
+  async function 꺾은선읽기(what) {
     if (what === "live" || !window.db || !myNick) return;
     const ym = ymd(Date.now()).slice(0, 7);
-    const 표 = what + "|" + ym;
-    if (_pulseLineFor === 표 && _pulseLine) { drawPulse(); return; }
-    _pulseLineFor = 표;
-    _pulseLine = {};
+    if (_lineFor[what] === ym && _line[what]) { drawPulse(); return; }
+    _lineFor[what] = ym;
+    _line[what] = {};
+    const _pulseLine = _line[what];               // 아래 셈이 이 그릇에 담습니다
     drawPulse();                                  // 먼저 빈 띠를 띄워 자리를 잡습니다
     try {
       if (what === "tmine") {
@@ -317,11 +335,12 @@
   }
   /* 글자수 기능이 오늘 값을 갱신하면 띠도 따라옵니다 (지난 날짜는 그대로) */
   window.pulseTouchToday = function (myTotal, roomTotal) {
-    const what = pulseWhat();
-    if (!pulseOn() || what === "live" || what === "tmine" || !_pulseLine) return;
+    if (!pulseOn()) return;
     const d = ymd(Date.now());
-    const n = what === "wmine" ? myTotal : roomTotal;
-    if (typeof n === "number" && n >= 0) { _pulseLine[d] = n; drawPulse(); }
+    let 바뀜 = false;
+    if (_line.wmine && typeof myTotal === "number" && myTotal >= 0) { _line.wmine[d] = myTotal; 바뀜 = true; }
+    if (_line.wall && typeof roomTotal === "number" && roomTotal >= 0) { _line.wall[d] = roomTotal; 바뀜 = true; }
+    if (바뀜) drawPulse();
   };
 
   function drawPulse() {
@@ -337,8 +356,10 @@
       if (!dock || !bar) return;
       dock.insertBefore(box, bar);
     }
-    box.innerHTML = `<div class="rp-wrap">${
-      pulseWhat() === "live" ? 막대띠() : 꺾은선띠()}</div>`;
+    /* 고른 것마다 띠 하나. CSS 가 두 개씩 한 줄로 접습니다 */
+    box.innerHTML = pulseWhat()
+      .map(w => `<div class="rp-wrap">${w === "live" ? 막대띠() : 꺾은선띠(w)}</div>`)
+      .join("");
   }
 
   /* 📊 오늘 접속 인원 — 24칸 막대 */
@@ -363,8 +384,8 @@
   /* ✍️⏱️ 이번 달 추이 — 꺾은선.
      ★ 막대와 같은 높이(39px) 안에 그립니다. 값이 하나도 없으면 선을
        안 그리고 "아직 없어요" 만 — 바닥에 붙은 직선은 고장처럼 보여요. */
-  function 꺾은선띠() {
-    const what = pulseWhat();
+  function 꺾은선띠(what) {
+    const _pulseLine = _line[what] || {};
     const 이름 = { wall: "이번 달 방 전체", wmine: "이번 달 내 글자수", tmine: "이번 달 내 작업" }[what] || "";
     const now = new Date();
     const ym = ymd(Date.now()).slice(0, 7);
@@ -412,13 +433,20 @@
     if (on) listenPulse(); else { stopPulse(); _pulse = {}; }
     drawPulse();
   };
-  /** 설정 드롭다운이 부릅니다 — 항목 갈아 끼우기 */
-  window.setPulseWhat = function (what) {
-    const ok = ["live", "wall", "wmine", "tmine"].indexOf(what) >= 0 ? what : "live";
-    try { AppStore.setItem(PULSE_WHAT_KEY, ok); } catch (e) {}
-    _pulseLine = null; _pulseLineFor = "";     // 다른 항목이니 다시 읽습니다
+  /** 설정 체크박스가 부릅니다 — 항목 켜고 끄기.
+      ★ 껐다 다시 켜도 자료는 그대로 둡니다 (_line 을 안 비움) —
+        같은 달이면 다시 읽을 이유가 없어요. */
+  window.togglePulseWhat = function (what, on) {
+    if (PULSE_ALL.indexOf(what) < 0) return;
+    const now = new Set(pulseWhat());
+    if (on) now.add(what); else now.delete(what);
+    const list = PULSE_ALL.filter(k => now.has(k));
+    try { AppStore.setItem(PULSE_WHAT_KEY, list.join(",")); } catch (e) {}
     listenPulse();
     drawPulse();
+    /* 하나도 안 남으면 pulseWhat() 이 오늘 접속으로 되돌리므로,
+       화면의 체크 상태를 그 값에 다시 맞춰 줍니다 */
+    window.syncPulseChecks?.();
   };
   window.startPulse = listenPulse;
 
