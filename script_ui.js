@@ -500,6 +500,11 @@
       nsel.onchange = () => window.setNarrowDefault?.(nsel.value);
     }
 
+    /* 📊 오늘 접속 띠 (2026-08-18) — 스위치의 처음 상태만 맞춰 줍니다.
+       켜고 끄는 일은 onchange 의 setPulse 가 합니다 (script_realtime.js) */
+    const pulseChk = document.getElementById("set-pulse");
+    if (pulseChk) pulseChk.checked = !!window.isPulseOn?.();
+
     /* 접속자 카드 정렬 (2026-08-13) — 이 기기에만. 바꾸면 그 자리에서 재배열 */
     const csort = document.getElementById("set-card-sort");
     if (csort) {

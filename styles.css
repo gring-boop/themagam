@@ -4660,6 +4660,53 @@ html[data-unzoom] #dock-bar{
 .help-send:active{ transform: scale(.96); }
 .help-note{ margin: 0; font-size: 11px; color: var(--text-3, #8A93A2); flex: none; }
 
+/* ── 📊 오늘 접속 띠 (2026-08-18) ──
+   알약 줄 바로 위, 24칸 막대. 색은 테마 포인트색(--accent)을 따라갑니다
+   — BGM 노브와 같은 결이에요. 기본은 꺼짐이라 이 상자는 켠 사람 화면에만
+   태어납니다(script_realtime.js drawPulse).
+   ★ #dock 안에 넣습니다 — 좁게 보기·배율을 알약 줄과 같이 타야 해요. */
+.room-pulse{
+  flex: none;
+  display: flex; justify-content: center;
+  padding: 0 14px 6px;
+  pointer-events: none;                 /* 빈자리는 뒤 카드가 받게 */
+}
+.room-pulse .rp-wrap{
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 57px;                         /* 콩: 기본의 150% */
+  background: var(--foot-veil, rgba(253,251,247,.62));
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 7px 13px 6px;
+  pointer-events: auto;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  max-width: 100%;
+}
+.room-pulse .rp-lb{
+  align-self: center; margin-right: 7px; white-space: nowrap;
+  font-size: 10.5px; letter-spacing: .06em; color: var(--muted);
+}
+.room-pulse .rp-bars{ display: flex; align-items: flex-end; gap: 3px; height: 100%; }
+.room-pulse .rp-b{
+  width: 10.5px;                        /* 콩: 기본의 150% */
+  border-radius: 3px 3px 0 0;
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  transition: height var(--anim);
+}
+.room-pulse .rp-b.now{ background: var(--accent); }
+.room-pulse .rp-b.future{ background: rgba(0,0,0,.07); }
+.room-pulse .rp-peak{
+  align-self: center; margin-left: 8px; white-space: nowrap;
+  font-size: 11px; font-weight: var(--fw-bold); color: var(--accent);
+}
+/* 좁은 화면에선 막대를 줄여 24칸이 한 줄에 남게 */
+@media (max-width: 640px){
+  .room-pulse .rp-b{ width: 7px; }
+  .room-pulse .rp-lb, .room-pulse .rp-peak{ display: none; }
+}
+/* 채팅에 집중할 때는 띠도 비켜 줍니다 */
+body.narrow-chat-focus .room-pulse{ display: none; }
+
 /* ── 🔗 비슷한 질문 연결 (2026-08-18) ──
    보라 계열로 살짝 다른 결 — 이 판의 붉은(SOS)과 구분되는 "참고" 색.
    점선 테두리는 "붙여 둔 쪽지" 라는 뜻이에요. */

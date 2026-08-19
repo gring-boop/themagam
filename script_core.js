@@ -457,6 +457,10 @@ window.AppSession = AppSession;
       //         (브라우저는 클릭 전에 소리를 못 내게 막습니다. 지금이 그 클릭 직후예요)
       try { await window.afterJoinInitAlive?.(); } catch(e){ console.warn("[afterJoinInitAlive failed]", e); }
 
+      // ✅ 3-2-0) 📊 오늘 접속 띠 — 켜 둔 기기에서만 구독을 겁니다
+      //           (꺼 둔 사람은 읽지도 않아요)
+      try { window.startPulse?.(); } catch(e){ console.warn("[startPulse failed]", e); }
+
       // ✅ 3-2-1) 🛡️ 운영진인지 한 번 확인 — 숨은 문(머리말 인원수 더블클릭)이
       //           이 값을 봅니다. 문을 누를 때마다 서버에 물으면 굼떠 보여요.
       //           못 읽어도 조용히 넘어갑니다 (그러면 문이 안 열릴 뿐).

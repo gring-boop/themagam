@@ -184,8 +184,111 @@
         hc.textContent = `${online.length}명 집필 중`;
         hc.title = online.join(", ");
       }
+      /* 📊 오늘 접속 띠 — 지금 인원을 이 시간대 기록에 남깁니다 */
+      기록해두기(online.length);
     }
   }
+
+  /* =====================================================================
+     📊 오늘 접속 띠 (2026-08-18) — 알약 줄 위 24칸 막대
+     ---------------------------------------------------------------------
+     [무엇을 보여주나] "이 시간대에 몇 명까지 있었나". 평균이 아니라
+     **그 시간의 최다 인원**입니다 (콩 확정) — "지금 방이 붐비나?" 를
+     보는 용도라 이게 맞고, 셈이 단순해서 통신도 최소예요.
+
+     [왜 관리자 페이지 방식을 못 쓰나]
+     저기는 모두의 timeSegs 를 읽어 접습니다. 그런데 0817에 개인정보를
+     좁히면서 **일반 멤버는 남의 timeSegs 를 못 읽습니다.** 그래서 길을
+     달리 냈어요.
+
+     [roomStat/{날짜}/{시} = 그 시간대 최다 인원]
+     각자 하트비트(30초)를 돌 때 "지금 인원이 이 시간 기록보다 많나?" 만
+     보고, 많을 때만 숫자 하나를 덮어씁니다.
+       ★ 보안규칙이 **더 큰 값만** 받습니다. 줄이는 쓰기가 막히면
+         여럿이 동시에 써도 결과가 같아요 — 경쟁 조건이 아예 없습니다.
+       ★ 하루에 몇 번 안 일어나는 쓰기라 통신량은 사실상 0.
+         읽는 쪽도 숫자 24개뿐이라 카드 한 장보다 가볍습니다.
+       ★ 안 켠 사람은 **읽지도 않습니다** (구독을 아예 안 걸어요).
+         기록은 남는 일이라 나중에 켜도 오늘 것이 그대로 보입니다.
+     ===================================================================== */
+  const PULSE_KEY = "showPulse";          // 기기별 — 노트북에서 켠 게 폰까지 안 따라가게
+  let _pulseRef = null;
+  let _pulse = {};                        // { 시: 인원 }
+  let _pulseDay = "";                     // 지금 듣고 있는 날짜
+
+  function pulseOn() {
+    try { return AppStore.getItem(PULSE_KEY) === "1"; } catch (e) { return false; }
+  }
+  window.isPulseOn = pulseOn;
+
+  /* 이 시간대 기록 남기기 — 더 클 때만 (규칙도 같은 조건이라 헛걸음이 없음) */
+  function 기록해두기(n) {
+    if (!myNick || !window.db || !(n > 0)) return;
+    const d = ymd(Date.now());
+    const h = String(new Date().getHours()).padStart(2, "0");
+    /* 내가 아는 값보다 크지 않으면 서버에 묻지도 않습니다 */
+    if (d === _pulseDay && Number(_pulse[h] || 0) >= n) return;
+    try {
+      db.ref(`roomStat/${d}/${h}`).transaction(v =>
+        (Number(v) || 0) >= n ? undefined : n);   // undefined = 그만두기 (쓰기 없음)
+    } catch (e) {}
+  }
+
+  function listenPulse() {
+    const d = ymd(Date.now());
+    if (_pulseRef && _pulseDay === d) return;
+    stopPulse();
+    if (!pulseOn() || !window.db) return;
+    _pulseDay = d;
+    _pulseRef = db.ref("roomStat/" + d);
+    _pulseRef.on("value", s => { _pulse = s.val() || {}; drawPulse(); });
+  }
+  function stopPulse() {
+    try { _pulseRef?.off(); } catch (e) {}
+    _pulseRef = null; _pulseDay = "";
+  }
+
+  function drawPulse() {
+    let box = document.getElementById("room-pulse");
+    if (!pulseOn()) { box?.remove(); return; }
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "room-pulse";
+      box.className = "room-pulse";
+      /* 알약 줄 바로 위 — #dock 안에 넣어야 좁게 보기·배율을 같이 탑니다 */
+      const dock = document.getElementById("dock");
+      const bar = document.getElementById("dock-bar");
+      if (!dock || !bar) return;
+      dock.insertBefore(box, bar);
+    }
+    const 지금 = new Date().getHours();
+    let 최다 = 0;
+    for (let h = 0; h < 24; h++) 최다 = Math.max(최다, Number(_pulse[String(h).padStart(2, "0")] || 0));
+    const 칸 = [];
+    for (let h = 0; h < 24; h++) {
+      const v = Number(_pulse[String(h).padStart(2, "0")] || 0);
+      const 앞날 = h > 지금;
+      const 키 = 앞날 ? 5 : Math.max(5, (최다 ? v / 최다 : 0) * 39 + 3);
+      칸.push(`<span class="rp-b${h === 지금 ? " now" : ""}${앞날 ? " future" : ""}"
+                     style="height:${키.toFixed(1)}px"
+                     title="${h}시 — ${앞날 ? "아직" : v + "명"}"></span>`);
+    }
+    box.innerHTML = `
+      <div class="rp-wrap">
+        <span class="rp-lb">오늘</span>
+        <span class="rp-bars">${칸.join("")}</span>
+        <span class="rp-peak">최다 ${최다}명</span>
+      </div>`;
+  }
+  window.drawPulse = drawPulse;
+
+  /** 설정 스위치가 부릅니다 */
+  window.setPulse = function (on) {
+    try { AppStore.setItem(PULSE_KEY, on ? "1" : "0"); } catch (e) {}
+    if (on) listenPulse(); else { stopPulse(); _pulse = {}; }
+    drawPulse();
+  };
+  window.startPulse = listenPulse;
 
   /* [철거 2026-08-14] 머리말 한줄 공지(📌 config/notice)를 뺐습니다 —
      그 자리에 시계가 앉았어요 (index.html #head-clock, script_ui.js).
