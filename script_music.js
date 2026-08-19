@@ -98,13 +98,16 @@
            전에 접힙니다. 일시정지처럼 쪽지(postMessage)로 명령을 보내는
            우리 슬라이더는 크기와 무관하게 됩니다. 값은 이 기기에 기억.
            [2026-08-14] 왼쪽에 🔂 한 곡 반복 — 볼륨은 7할 폭으로 양보 -->
+      <!-- [2026-08-18 콩] 🔊·🔂 이모지 → VOL·LOOP 글자로. 이모지는 기기마다
+           생김이 달라 이 줄만 장난감 같았어요. 노브는 테마 포인트색(--accent)
+           둥근 점 — 테마를 바꾸면 노브 색도 따라갑니다. -->
       <div class="music-vol-row">
-        <span class="music-vol-ico" aria-hidden="true">🔊</span>
+        <span class="music-vol-ico" aria-hidden="true">VOL</span>
         <input type="range" id="music-vol" min="0" max="100" step="1"
                value="80" aria-label="볼륨">
         <span class="music-vol-val" id="music-vol-val">80</span>
         <button type="button" id="music-loop1" class="music-mode-btn"
-                aria-pressed="false" title="이 곡을 계속 반복">🔂</button>
+                aria-pressed="false" title="이 곡을 계속 반복">LOOP</button>
       </div>
       <div id="music-list" class="music-list"></div>
       <div class="music-add">

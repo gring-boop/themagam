@@ -8853,33 +8853,45 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   margin: 0 auto;
   padding: 0 0 8px;
 }
-.music-vol-ico{ flex: 0 0 auto; font-size: 13px; }
-/* 🔂 한 곡 반복 · ⏭ 이어듣기 — 켜지면 먹색 알약으로 불이 들어옵니다 */
+/* [2026-08-18 콩] "VOL" 글자 라벨 — 작고 넓은 자간, 옅게 */
+.music-vol-ico{
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+/* LOOP · ⏭ — 켜지면 테마 포인트색 알약으로 불이 들어옵니다
+   (2026-08-18 먹색 → 포인트색, 노브와 같은 결) */
 .music-mode-btn{
   flex: 0 0 auto;
   border: 1px solid var(--border);
   background: transparent;
   border-radius: var(--r-full);
-  padding: 2px 7px;
-  font-size: 12px;
+  padding: 3px 11px;
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  letter-spacing: .1em;
   line-height: 1.4;
   cursor: pointer;
   color: var(--muted);
+  transition: background var(--anim-fast), border-color var(--anim-fast), color var(--anim-fast);
 }
-.music-mode-btn:hover{ border-color: var(--accent); }
+.music-mode-btn:hover{ border-color: var(--accent); color: var(--accent); }
 .music-mode-btn[aria-pressed="true"]{
-  background: #38342F;
-  border-color: #38342F;
-  color: #F4EFE9;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #FFFDF6;
 }
-.music-mode-btn.mini{ padding: 1px 6px; font-size: 11px; margin-left: 5px; }
-/* 볼륨 — 가는 먹선 위에 납작한 사각 도장 (2026-08-13 콩이 고른 조합).
-   완전 검정이 아니라 **먹색**(#38342F, 차콜)입니다 — 방장 스티커와 같은 결.
-   채워진 만큼 먹선이 진해지는 건 --vol 을 script_music.js 가 넣어줍니다. */
+.music-mode-btn.mini{ padding: 1px 6px; font-size: 11px; margin-left: 5px; letter-spacing: 0; }
+/* 볼륨 — 가는 선 위에 둥근 점 (2026-08-18 콩 리디자인).
+   예전엔 먹색 사각 도장이었는데, 노브를 **테마 포인트색(--accent)** 둥근
+   점으로 바꿨습니다 — 테마를 바꾸면 노브 색이 따라갑니다.
+   채워진 만큼 선이 물드는 건 --vol 을 script_music.js 가 넣어줍니다. */
 #music-vol{
   -webkit-appearance: none;
   appearance: none;
-  /* [2026-08-14] 🔂 단추가 왼쪽에 붙으면서 먹선은 7할만 (콩 요청) */
+  /* [2026-08-14] LOOP 단추가 붙으면서 선은 7할만 (콩 요청) */
   flex: 0 1 70%; min-width: 0;
   height: 18px;
   background: transparent;
@@ -8889,33 +8901,33 @@ html[data-theme-style="ink"] .pomo-bar-track.day i{ background: var(--me); }
   height: 2px;
   border-radius: 1px;
   background: linear-gradient(90deg,
-    #38342F var(--vol, 80%), rgba(120,100,80,.28) var(--vol, 80%));
+    var(--accent) var(--vol, 80%), rgba(120,100,80,.25) var(--vol, 80%));
 }
 #music-vol::-webkit-slider-thumb{
   -webkit-appearance: none;
   appearance: none;
-  margin-top: -7px;                 /* (16 - 2) / 2 — 먹선 한가운데에 앉게 */
-  width: 9px;
-  height: 16px;
-  border-radius: 3px;
-  background: #38342F;
-  border: 1.5px solid rgba(255,251,244,.8);
-  box-shadow: 0 1px 2px rgba(40,30,20,.35);
+  margin-top: -5.5px;               /* (13 - 2) / 2 — 선 한가운데에 앉게 */
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid rgba(255,255,255,.92);
+  box-shadow: 0 1px 3px rgba(40,30,20,.3);
 }
 #music-vol::-moz-range-track{
   height: 2px; border-radius: 1px;
-  background: rgba(120,100,80,.28);
+  background: rgba(120,100,80,.25);
 }
 #music-vol::-moz-range-progress{
   height: 2px; border-radius: 1px;
-  background: #38342F;
+  background: var(--accent);
 }
 #music-vol::-moz-range-thumb{
-  width: 9px; height: 16px;
-  border-radius: 3px;
-  background: #38342F;
-  border: 1.5px solid rgba(255,251,244,.8);
-  box-shadow: 0 1px 2px rgba(40,30,20,.35);
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid rgba(255,255,255,.92);
+  box-shadow: 0 1px 3px rgba(40,30,20,.3);
 }
 .music-vol-val{
   flex: 0 0 26px;
