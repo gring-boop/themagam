@@ -59,7 +59,17 @@
 
   const el = (id) => document.getElementById(id);
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? "")) : String(s ?? ""));
-  const me = () => window.myNick || "";
+
+  /* ★★ 내 닉네임 읽기 — 이 방에서 여러 번 데인 자리입니다.
+     script_core.js 의 `let myNick` 은 파일 맨 바깥에 있어도 **window 에
+     안 붙습니다** (let 의 규칙). `window.myNick` 만 보면 늘 비어 있어서
+     "먼저 입장한 뒤에 올릴 수 있어요" 가 뜹니다 — 멀쩡히 입장한 사람에게도요.
+     (2026-08-18 실제로 그랬습니다. 대숲·나의 작업이 쓰는 방식 그대로 고침)
+     이름 그대로 읽되, 혼자 방처럼 window 에 넣어 주는 화면도 있어 둘 다 봅니다. */
+  function me() {
+    try { if (typeof myNick === "string" && myNick) return myNick; } catch (e) {}
+    return window.myNick || "";
+  }
 
   function 크기글(n) {
     n = Number(n) || 0;
