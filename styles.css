@@ -4708,6 +4708,21 @@ html[data-unzoom] #dock-bar{
   align-self: center; margin-left: 8px; white-space: nowrap;
   font-size: 11px; font-weight: var(--fw-bold); color: var(--accent);
 }
+/* ✍️⏱️ 이번 달 추이 — 꺾은선 (2026-08-18).
+   막대와 같은 높이·같은 폭 안에 그려서 항목을 바꿔도 띠가 안 흔들립니다.
+   색은 currentColor 로 받아 포인트색을 그대로 씁니다. */
+.room-pulse .rp-line{
+  width: 324px;            /* 24칸 × 13.5 — 막대 띠와 같은 폭 */
+  max-width: 52vw;
+  height: 39px;
+  color: var(--accent);
+  align-self: flex-end;
+  overflow: visible;
+}
+.room-pulse .rp-empty{
+  align-self: center; font-size: 11px; color: var(--muted);
+  padding: 0 10px; white-space: nowrap;
+}
 /* 좁은 화면에선 막대를 줄여 24칸이 한 줄에 남게 */
 @media (max-width: 640px){
   .room-pulse .rp-b{ width: 7px; }

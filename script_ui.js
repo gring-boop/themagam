@@ -504,6 +504,8 @@
        켜고 끄는 일은 onchange 의 setPulse 가 합니다 (script_realtime.js) */
     const pulseChk = document.getElementById("set-pulse");
     if (pulseChk) pulseChk.checked = !!window.isPulseOn?.();
+    const pulseWhat = document.getElementById("set-pulse-what");
+    if (pulseWhat) pulseWhat.value = window.pulseWhat?.() || "live";
 
     /* 접속자 카드 정렬 (2026-08-13) — 이 기기에만. 바꾸면 그 자리에서 재배열 */
     const csort = document.getElementById("set-card-sort");

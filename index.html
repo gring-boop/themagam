@@ -17,12 +17,12 @@
   <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)" />
 
   <!-- 아이콘 -->
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608191523">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608191523">
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=202608191542">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=202608191542">
 
   <!-- 앱처럼 독립 창으로 설치할 수 있게 (PWA).
        설치하지 않으면 지금과 아무것도 달라지지 않습니다. -->
-  <link rel="manifest" href="manifest.json?v=202608191523">
+  <link rel="manifest" href="manifest.json?v=202608191542">
   <!-- [고침 2026-08-09] apple- 붙은 쪽만 두면 크롬이 "낡았다"고 경고합니다.
        표준 이름을 함께 적어 둡니다 (사파리는 여전히 apple- 쪽을 봅니다). -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
        못 받아오면 잠깐 기본 글꼴로 보였다가 바뀝니다(글자가 사라지진 않아요). -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=JetBrains+Mono:wght@600&family=Gamja+Flower&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=202608191523" />
+  <link rel="stylesheet" href="styles.css?v=202608191542" />
 </head>
 
 <body class="dock-mode">
@@ -404,10 +404,22 @@
                    onchange="setPulse(this.checked)">
             <span>알약 줄 위에 보이기</span>
           </label>
+          <div class="set-row" style="margin-top:8px; gap:8px; align-items:center;">
+            <label class="slot-name" for="set-pulse-what" style="flex:0 0 60px;">보여줄 것</label>
+            <select id="set-pulse-what" class="slot-sel"
+                    onchange="setPulseWhat(this.value)">
+              <option value="live">📊 오늘 접속 인원 (막대)</option>
+              <option value="wall">✍️ 이번 달 방 전체 글자수</option>
+              <option value="wmine">✍️ 이번 달 나의 글자수</option>
+              <option value="tmine">⏱️ 이번 달 나의 작업 시간</option>
+            </select>
+          </div>
           <p class="hint">
-            오늘 <b>시간대마다 몇 명까지 있었는지</b>를 작은 막대로 보여줘요.
-            막대에 마우스를 올리면 정확한 수가 뜹니다. 색은 테마 포인트색을 따라가요.
-            <b>이 기기에만 저장</b>되고, 꺼 두면 서버에서 읽지도 않아요.
+            📊 <b>오늘 접속</b>은 시간대마다 몇 명까지 있었는지를 막대로,
+            나머지 셋은 이번 달 하루하루를 <b>꺾은선</b>으로 보여줘요.
+            색은 테마 포인트색을 따라갑니다.
+            <b>이 기기에만 저장</b>되고, 꺼 두면 서버에서 읽지도 않아요.<br>
+            ※ 방 전체 <b>작업 시간</b>은 없어요 — 남의 작업 기록은 본인과 방장만 볼 수 있어서요.
           </p>
         </div>
 
@@ -1152,47 +1164,47 @@
 <!-- script_profile.js는 다른 모듈의 함수를 감싸므로 반드시 마지막에 로드 -->
 <!-- 🧪 시험 모드 — 반드시 **맨 먼저**. script_core.js 가 database() 를
      부르기 전에 갈아 끼워야 합니다. ?demo=1 이 없으면 아무 일도 안 해요. -->
-<script src="script_demo.js?v=202608191523"></script>
+<script src="script_demo.js?v=202608191542"></script>
 <!-- 🧘 혼자 방 (?solo=1) — demo 와 같은 이유로 맨 앞쪽에 실립니다.
      script_core.js 가 database() 를 부르기 전에 갈아 끼워야 해요. -->
-<script src="script_solo.js?v=202608191523"></script>
-<script src="fortune_data.js?v=202608191523"></script>
-<script src="script_core.js?v=202608191523"></script>
-<script src="script_auth.js?v=202608191523"></script>
-<script src="script_ui.js?v=202608191523"></script>
-<script src="script_chat.js?v=202608191523"></script>
-<script src="script_chatty.js?v=202608191523"></script>
-<script src="script_data.js?v=202608191523"></script>
-<script src="script_realtime.js?v=202608191523"></script>
-<script src="script_dock.js?v=202608191523"></script>
-<script src="script_music.js?v=202608191523"></script>
-<script src="script_wordcount.js?v=202608191523"></script>
-<script src="script_timelog.js?v=202608191523"></script>
-<script src="script_idledetect.js?v=202608191523"></script>
-<script src="script_alive.js?v=202608191523"></script>
-<script src="script_profile.js?v=202608191523"></script>
-<script src="script_mywork.js?v=202608191523"></script>
-<script src="script_forest.js?v=202608191523"></script>
-<script src="script_pubreview.js?v=202608191523"></script>
-<script src="script_notice.js?v=202608191523"></script>
-<script src="script_achv.js?v=202608191523"></script>
-<script src="script_reactions.js?v=202608191523"></script>
-<script src="script_note.js?v=202608191523"></script>
+<script src="script_solo.js?v=202608191542"></script>
+<script src="fortune_data.js?v=202608191542"></script>
+<script src="script_core.js?v=202608191542"></script>
+<script src="script_auth.js?v=202608191542"></script>
+<script src="script_ui.js?v=202608191542"></script>
+<script src="script_chat.js?v=202608191542"></script>
+<script src="script_chatty.js?v=202608191542"></script>
+<script src="script_data.js?v=202608191542"></script>
+<script src="script_realtime.js?v=202608191542"></script>
+<script src="script_dock.js?v=202608191542"></script>
+<script src="script_music.js?v=202608191542"></script>
+<script src="script_wordcount.js?v=202608191542"></script>
+<script src="script_timelog.js?v=202608191542"></script>
+<script src="script_idledetect.js?v=202608191542"></script>
+<script src="script_alive.js?v=202608191542"></script>
+<script src="script_profile.js?v=202608191542"></script>
+<script src="script_mywork.js?v=202608191542"></script>
+<script src="script_forest.js?v=202608191542"></script>
+<script src="script_pubreview.js?v=202608191542"></script>
+<script src="script_notice.js?v=202608191542"></script>
+<script src="script_achv.js?v=202608191542"></script>
+<script src="script_reactions.js?v=202608191542"></script>
+<script src="script_note.js?v=202608191542"></script>
 <!-- 오늘 무슨 작업인지 — 카드 왼쪽 위 스티커.
      카드를 그리는 script_realtime.js 보다 늦게 실려도 됩니다:
      그릴 때마다 window.workTagChipHtml 을 그때 찾아 씁니다. -->
-<script src="script_worktag.js?v=202608191523"></script>
+<script src="script_worktag.js?v=202608191542"></script>
 <!-- 채팅 스티커 — script_chat.js 보다 뒤에 실려야 send() 를 감쌀 수 있습니다 -->
-<script src="script_sticker.js?v=202608191523"></script>
-<script src="script_share.js?v=202608191523"></script>
+<script src="script_sticker.js?v=202608191542"></script>
+<script src="script_share.js?v=202608191542"></script>
 <!-- 🔍 화면 확대·축소 — 머리말 [− 18px +] 오른쪽에 나란히.
      다른 파일들은 (window.uiZoom?.() || 1) 처럼 **부를 때** 물어보므로
      싣는 차례는 상관없습니다. 없으면 100% 로 봅니다. -->
 <!-- 🙋 Help — 익명 교정 문답 (2026-08-16). 대숲과 같은 익명 방식입니다. -->
-<script src="script_help.js?v=202608191523"></script>
-<script src="script_zoom.js?v=202608191523"></script>
-<script src="script_manual.js?v=202608191523"></script>
-<script src="script_guard.js?v=202608191523"></script>
+<script src="script_help.js?v=202608191542"></script>
+<script src="script_zoom.js?v=202608191542"></script>
+<script src="script_manual.js?v=202608191542"></script>
+<script src="script_guard.js?v=202608191542"></script>
 
 <script>
   window.addEventListener("load", () => {

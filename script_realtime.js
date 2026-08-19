@@ -211,15 +211,38 @@
        ★ 안 켠 사람은 **읽지도 않습니다** (구독을 아예 안 걸어요).
          기록은 남는 일이라 나중에 켜도 오늘 것이 그대로 보입니다.
      ===================================================================== */
+  /* =====================================================================
+     [2026-08-18 늘림] 띠에 **네 가지**를 갈아 끼웁니다 (설정에서 고름)
+     ---------------------------------------------------------------------
+       live  📊 오늘 접속 인원        막대 — roomStat (위 설명)
+       wall  ✍️ 이번 달 방 전체 글자수  꺾은선 — wordlog (공개 읽기)
+       wmine ✍️ 이번 달 나의 글자수     꺾은선 — wordlog 에서 내 것만
+       tmine ⏱️ 이번 달 나의 작업 시간  꺾은선 — 내 timeSegs (loadSummary)
+
+     ★ 방 전체 **작업 시간**은 없습니다 — 0817에 남의 timeSegs 읽기를
+       막았기 때문입니다. 하려면 공개 합계 노드를 새로 둬야 하는데,
+       관리자 초기화 같은 일이 있으면 합계가 어긋나요.
+
+     [읽기 비용] 한 달치 wordlog 이 54KB 안팎. **열 때 한 번(once)** 만
+     읽고, 오늘 것은 글자수 기능이 이미 걸어 둔 구독에 얹습니다 —
+     지난 날짜를 다시 받지 않아요. 내 작업 시간은 내 노드 하나뿐입니다.
+     ===================================================================== */
   const PULSE_KEY = "showPulse";          // 기기별 — 노트북에서 켠 게 폰까지 안 따라가게
+  const PULSE_WHAT_KEY = "pulseWhat";     // live | wall | wmine | tmine
   let _pulseRef = null;
   let _pulse = {};                        // { 시: 인원 }
   let _pulseDay = "";                     // 지금 듣고 있는 날짜
+  let _pulseLine = null;                  // 꺾은선 자료 { 날: 값 }
+  let _pulseLineFor = "";                 // 그 자료가 어느 항목·어느 달 것인지
 
   function pulseOn() {
     try { return AppStore.getItem(PULSE_KEY) === "1"; } catch (e) { return false; }
   }
+  function pulseWhat() {
+    try { return AppStore.getItem(PULSE_WHAT_KEY) || "live"; } catch (e) { return "live"; }
+  }
   window.isPulseOn = pulseOn;
+  window.pulseWhat = pulseWhat;
 
   /* 이 시간대 기록 남기기 — 더 클 때만 (규칙도 같은 조건이라 헛걸음이 없음) */
   function 기록해두기(n) {
@@ -235,10 +258,12 @@
   }
 
   function listenPulse() {
+    if (!pulseOn() || !window.db) { stopPulse(); return; }
+    /* 📊 오늘 접속만 실시간 구독이 필요합니다. 꺾은선 셋은 한 번 읽고 끝. */
+    if (pulseWhat() !== "live") { stopPulse(); 꺾은선읽기(); return; }
     const d = ymd(Date.now());
     if (_pulseRef && _pulseDay === d) return;
     stopPulse();
-    if (!pulseOn() || !window.db) return;
     _pulseDay = d;
     _pulseRef = db.ref("roomStat/" + d);
     _pulseRef.on("value", s => { _pulse = s.val() || {}; drawPulse(); });
@@ -247,6 +272,57 @@
     try { _pulseRef?.off(); } catch (e) {}
     _pulseRef = null; _pulseDay = "";
   }
+
+  /* 이번 달 꺾은선 자료 — 항목이 바뀌거나 달이 넘어갈 때만 다시 읽습니다 */
+  async function 꺾은선읽기() {
+    const what = pulseWhat();
+    if (what === "live" || !window.db || !myNick) return;
+    const ym = ymd(Date.now()).slice(0, 7);
+    const 표 = what + "|" + ym;
+    if (_pulseLineFor === 표 && _pulseLine) { drawPulse(); return; }
+    _pulseLineFor = 표;
+    _pulseLine = {};
+    drawPulse();                                  // 먼저 빈 띠를 띄워 자리를 잡습니다
+    try {
+      if (what === "tmine") {
+        /* ⏱️ 나의 작업 시간 — 내 노드 하나만 읽습니다 (남의 것은 못 읽어요) */
+        const v = (await db.ref(`users/${myNick}/timeSegs`).orderByKey()
+          .startAt(ym + "-01").endAt(ym + "-31").once("value")).val() || {};
+        Object.keys(v).forEach(d => {
+          /* 같은 구간이 두 번 적힌 흉터는 한 번만 (관리자 쪽과 같은 셈) */
+          const best = {};
+          Object.values(v[d] || {}).forEach(sg => {
+            if (!sg || !(sg.b > sg.a)) return;
+            const k = `${sg.s}|${sg.a}`;
+            if (!best[k] || sg.b > best[k].b) best[k] = sg;
+          });
+          let ms = 0;
+          Object.values(best).forEach(sg => { ms += sg.b - sg.a; });
+          _pulseLine[d] = Math.round(ms / 60000);   // 분
+        });
+      } else {
+        /* ✍️ 글자수 — wordlog 은 공개 읽기. 한 달을 한 번에 (요청 하나) */
+        const v = (await db.ref("wordlog").orderByKey()
+          .startAt(ym + "-01").endAt(ym + "-31").once("value")).val() || {};
+        Object.keys(v).forEach(d => {
+          const 그날 = v[d] || {};
+          let n = 0;
+          if (what === "wmine") n = Math.max(0, Number(그날[myNick]?.total || 0));
+          else Object.values(그날).forEach(r => { n += Math.max(0, Number(r?.total || 0)); });
+          _pulseLine[d] = n;
+        });
+      }
+    } catch (e) { /* 못 읽으면 빈 띠로 둡니다 */ }
+    drawPulse();
+  }
+  /* 글자수 기능이 오늘 값을 갱신하면 띠도 따라옵니다 (지난 날짜는 그대로) */
+  window.pulseTouchToday = function (myTotal, roomTotal) {
+    const what = pulseWhat();
+    if (!pulseOn() || what === "live" || what === "tmine" || !_pulseLine) return;
+    const d = ymd(Date.now());
+    const n = what === "wmine" ? myTotal : roomTotal;
+    if (typeof n === "number" && n >= 0) { _pulseLine[d] = n; drawPulse(); }
+  };
 
   function drawPulse() {
     let box = document.getElementById("room-pulse");
@@ -261,6 +337,12 @@
       if (!dock || !bar) return;
       dock.insertBefore(box, bar);
     }
+    box.innerHTML = `<div class="rp-wrap">${
+      pulseWhat() === "live" ? 막대띠() : 꺾은선띠()}</div>`;
+  }
+
+  /* 📊 오늘 접속 인원 — 24칸 막대 */
+  function 막대띠() {
     const 지금 = new Date().getHours();
     let 최다 = 0;
     for (let h = 0; h < 24; h++) 최다 = Math.max(최다, Number(_pulse[String(h).padStart(2, "0")] || 0));
@@ -273,19 +355,69 @@
                      style="height:${키.toFixed(1)}px"
                      title="${h}시 — ${앞날 ? "아직" : v + "명"}"></span>`);
     }
-    box.innerHTML = `
-      <div class="rp-wrap">
-        <span class="rp-lb">오늘</span>
-        <span class="rp-bars">${칸.join("")}</span>
-        <span class="rp-peak">최다 ${최다}명</span>
-      </div>`;
+    return `<span class="rp-lb">오늘</span>
+            <span class="rp-bars">${칸.join("")}</span>
+            <span class="rp-peak">최다 ${최다}명</span>`;
   }
+
+  /* ✍️⏱️ 이번 달 추이 — 꺾은선.
+     ★ 막대와 같은 높이(39px) 안에 그립니다. 값이 하나도 없으면 선을
+       안 그리고 "아직 없어요" 만 — 바닥에 붙은 직선은 고장처럼 보여요. */
+  function 꺾은선띠() {
+    const what = pulseWhat();
+    const 이름 = { wall: "이번 달 방 전체", wmine: "이번 달 내 글자수", tmine: "이번 달 내 작업" }[what] || "";
+    const now = new Date();
+    const ym = ymd(Date.now()).slice(0, 7);
+    const 날수 = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const 오늘 = now.getDate();
+    const 값 = [];
+    for (let d = 1; d <= 날수; d++) {
+      값.push(Number((_pulseLine || {})[`${ym}-${String(d).padStart(2, "0")}`] || 0));
+    }
+    const 최대 = Math.max(...값, 0);
+    const 합 = 값.reduce((a, b) => a + b, 0);
+    const 꼬리 = what === "tmine" ? 시간글(합) : `${comma(합)}자`;
+
+    if (!최대) {
+      return `<span class="rp-lb">${이름}</span>
+              <span class="rp-empty">아직 쌓인 게 없어요</span>`;
+    }
+    /* 오늘까지만 긋습니다 — 앞날을 0으로 이으면 절벽처럼 뚝 떨어져요 */
+    const W = 24 * 13.5, H = 39;
+    const X = (d) => (날수 <= 1 ? 0 : (d - 1) / (날수 - 1) * W);
+    const Y = (v) => H - (v / 최대) * (H - 3);
+    const 점 = [];
+    for (let d = 1; d <= Math.min(오늘, 날수); d++) 점.push(`${X(d).toFixed(1)},${Y(값[d - 1]).toFixed(1)}`);
+    const 끝 = Math.min(오늘, 날수);
+    return `<span class="rp-lb">${이름}</span>
+      <svg class="rp-line" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"
+           role="img" aria-label="${이름} 추이">
+        <polyline points="${점.join(" ")}" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${X(끝).toFixed(1)}" cy="${Y(값[끝 - 1]).toFixed(1)}" r="2.6" fill="currentColor"/>
+      </svg>
+      <span class="rp-peak">${꼬리}</span>`;
+  }
+
+  function 시간글(분) {
+    const h = Math.floor(분 / 60), m = Math.round(분 % 60);
+    return h ? (m ? `${comma(h)}시간 ${m}분` : `${comma(h)}시간`) : `${m}분`;
+  }
+  function comma(n) { return Number(n || 0).toLocaleString("ko-KR"); }
   window.drawPulse = drawPulse;
 
   /** 설정 스위치가 부릅니다 */
   window.setPulse = function (on) {
     try { AppStore.setItem(PULSE_KEY, on ? "1" : "0"); } catch (e) {}
     if (on) listenPulse(); else { stopPulse(); _pulse = {}; }
+    drawPulse();
+  };
+  /** 설정 드롭다운이 부릅니다 — 항목 갈아 끼우기 */
+  window.setPulseWhat = function (what) {
+    const ok = ["live", "wall", "wmine", "tmine"].indexOf(what) >= 0 ? what : "live";
+    try { AppStore.setItem(PULSE_WHAT_KEY, ok); } catch (e) {}
+    _pulseLine = null; _pulseLineFor = "";     // 다른 항목이니 다시 읽습니다
+    listenPulse();
     drawPulse();
   };
   window.startPulse = listenPulse;
